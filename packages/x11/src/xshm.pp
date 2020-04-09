@@ -11,7 +11,7 @@ const
   libX11='libX11.so.6';
 {$else}
 const
-  libX11='lX11';
+  libX11='X11';
 {$endif}
 
 {
