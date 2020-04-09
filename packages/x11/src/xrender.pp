@@ -7,9 +7,9 @@ uses
 
 {$ifndef os2}
   {$LinkLib c}
-  {$LinkLib X11}
+  {$LinkLib libX11.so.6}
 const
-  libX11='X11';
+  libX11='libX11.so.6';
 {$else}
 const
   libX11='X11';
