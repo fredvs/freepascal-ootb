@@ -483,17 +483,15 @@ Implementation
       end;
 
 
-    Procedure TLinker.AddSharedLibrary(S:TCmdStr);
+   Procedure TLinker.AddSharedLibrary(S:TCmdStr);
       begin
         if s='' then
           exit;
-        { remove prefix 'lib' }
-        if Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix then
-          Delete(s,1,length(target_info.sharedlibprefix));
-        { remove extension if any }
-        if Copy(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext))=target_info.sharedlibext then
-          Delete(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext)+1);
-        { ready to be added }
+           { remove prefix 'lib' only if no extension }
+        if (Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix)
+        and (system.pos(target_info.sharedlibext,s) = 0) then
+         Delete(s,1,length(target_info.sharedlibprefix));
+            
         SharedLibFiles.Concat(S);
       end;
 
@@ -511,21 +509,18 @@ Implementation
         StaticLibFiles.Concat(ns);
       end;
 
-
-    Procedure TLinker.AddSharedCLibrary(S:TCmdStr);
+     Procedure TLinker.AddSharedCLibrary(S:TCmdStr);
       begin
         if s='' then
           exit;
-        { remove prefix 'lib' }
-        if Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix then
-          Delete(s,1,length(target_info.sharedclibprefix));
-        { remove extension if any }
-        if Copy(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext))=target_info.sharedclibext then
-          Delete(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext)+1);
-        { ready to be added }
-        SharedLibFiles.Concat(S);
+      { remove prefix 'lib' only if no extension}
+      if (Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix)
+        and (system.pos(target_info.sharedclibext,s) = 0) then
+         Delete(s,1,length(target_info.sharedclibprefix));   
+    
+       SharedLibFiles.Concat(S);
+     
       end;
-
 
     Procedure TLinker.AddFramework(S:TCmdStr);
       begin
