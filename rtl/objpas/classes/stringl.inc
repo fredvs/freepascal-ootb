@@ -689,7 +689,6 @@ begin
     Exclude(FOptions,soUseLocale);
 end;
 
-
 procedure TStrings.SetWriteBOM(AValue: Boolean);
 begin
   if AValue then
@@ -1019,43 +1018,6 @@ begin
   inherited destroy;
 end;
 
-function TStrings.ToObjectArray: TObjectDynArray;
-
-begin
-  Result:=ToObjectArray(0,Count-1);
-end;
-
-function TStrings.ToObjectArray(aStart,aEnd : Integer): TObjectDynArray;
-Var
-  I : Integer;
-
-begin
-  Result:=Nil;
-  if aStart>aEnd then exit;
-  SetLength(Result,aEnd-aStart+1);
-  For I:=aStart to aEnd do
-    Result[i-aStart]:=Objects[i];
-end;
-
-function TStrings.ToStringArray: TStringDynArray;
-
-begin
-  Result:=ToStringArray(0,Count-1);
-end;
-
-function TStrings.ToStringArray(aStart,aEnd : Integer): TStringDynArray;
-
-Var
-  I : Integer;
-
-begin
-  Result:=Nil;
-  if aStart>aEnd then exit;
-  SetLength(Result,aEnd-aStart+1);
-  For I:=aStart to aEnd do
-    Result[i-aStart]:=Strings[i];
-end;
-
 
 constructor TStrings.Create;
 begin
@@ -1156,18 +1118,6 @@ begin
   finally
     EndUpdate;
   end;
-end;
-
-procedure TStrings.SetStrings(TheStrings: TStrings);
-
-begin
-  AddStrings(TheStrings,True);
-end;
-
-procedure TStrings.SetStrings(TheStrings: array of string);
-
-begin
-  AddStrings(TheStrings,True);
 end;
 
 Procedure TStrings.Assign(Source: TPersistent);
@@ -1738,6 +1688,52 @@ begin
     SetCapacity(0);
 end;
 
+procedure TStringList.QuickSort(L, R: Integer; CompareFn: TStringListSortCompare
+  );
+var
+  Pivot, vL, vR: Integer;
+  ExchangeProc: procedure(Left, Right: Integer) of object;
+begin
+  //if ExchangeItems is override call that, else call (faster) ExchangeItemsInt
+  if TMethod(@Self.ExchangeItems).Code = CodePointer(@TStringList.ExchangeItems) then
+    ExchangeProc := @ExchangeItemsInt
+  else
+    ExchangeProc := @ExchangeItems;
+
+  if R - L <= 1 then begin // a little bit of time saver
+    if L < R then
+      if CompareFn(Self, L, R) > 0 then
+        ExchangeProc(L, R);
+
+    Exit;
+  end;
+
+  vL := L;
+  vR := R;
+
+  Pivot := L + Random(R - L); // they say random is best
+
+  while vL < vR do begin
+    while (vL < Pivot) and (CompareFn(Self, vL, Pivot) <= 0) do
+      Inc(vL);
+
+    while (vR > Pivot) and (CompareFn(Self, vR, Pivot) > 0) do
+      Dec(vR);
+
+    ExchangeProc(vL, vR);
+
+    if Pivot = vL then // swap pivot if we just hit it from one side
+      Pivot := vR
+    else if Pivot = vR then
+      Pivot := vL;
+  end;
+
+  if Pivot - 1 >= L then
+    QuickSort(L, Pivot - 1, CompareFn);
+  if Pivot + 1 <= R then
+    QuickSort(Pivot + 1, R, CompareFn);
+end;
+
 
 procedure TStringList.InsertItem(Index: Integer; const S: string);
 begin
@@ -2081,54 +2077,10 @@ end;
 procedure TStringList.CustomSort(CompareFn: TStringListSortCompare);
 
 begin
-  CustomSort(CompareFn, SortBase.DefaultSortingAlgorithm);
-end;
-
-type
-  PStringList_CustomSort_Context = ^TStringList_CustomSort_Context;
-  TStringList_CustomSort_Context = record
-    List: TStringList;
-    ListStartPtr: Pointer;
-    CompareFn: TStringListSortCompare;
-  end;
-
-function TStringList_CustomSort_Comparer(Item1, Item2, Context: Pointer): Integer;
-begin
-  with PStringList_CustomSort_Context(Context)^ do
-    Result := CompareFn(List,
-                        (Item1 - ListStartPtr) div SizeOf(TStringItem),
-                        (Item2 - ListStartPtr) div SizeOf(TStringItem));
-end;
-
-procedure TStringList_CustomSort_Exchanger(Item1, Item2, Context: Pointer);
-begin
-  with PStringList_CustomSort_Context(Context)^ do
-    List.ExchangeItems((Item1 - ListStartPtr) div SizeOf(TStringItem),
-                       (Item2 - ListStartPtr) div SizeOf(TStringItem));
-end;
-
-procedure TStringList.CustomSort(CompareFn: TStringListSortCompare; SortingAlgorithm: PSortingAlgorithm);
-var
-  Context: TStringList_CustomSort_Context;
-begin
   If (FCount>1) and (FForceSort or (FSortStyle<>sslAuto))  then
     begin
     Changing;
-
-    Context.List := Self;
-    Context.ListStartPtr := FList;
-    Context.CompareFn := CompareFn;
-
-    //if ExchangeItems is overriden call that, else call (faster) ItemListSorter_ContextComparer
-    if TMethod(@Self.ExchangeItems).Code = CodePointer(@TStringList.ExchangeItems) then
-      SortingAlgorithm^.ItemListSorter_ContextComparer(
-        FList, FCount, SizeOf(TStringItem), @TStringList_CustomSort_Comparer,
-        @Context)
-    else
-      SortingAlgorithm^.ItemListSorter_CustomItemExchanger_ContextComparer(
-        FList, FCount, SizeOf(TStringItem), @TStringList_CustomSort_Comparer,
-        @TStringList_CustomSort_Exchanger, @Context);
-
+    QuickSort(0,FCount-1, CompareFn);
     Changed;
     end;
 end;
@@ -2144,12 +2096,6 @@ procedure TStringList.Sort;
 
 begin
   CustomSort(@StringListAnsiCompare);
-end;
-
-procedure TStringList.Sort(SortingAlgorithm: PSortingAlgorithm);
-
-begin
-  CustomSort(@StringListAnsiCompare, SortingAlgorithm);
 end;
 
 {$else}
@@ -2338,46 +2284,32 @@ begin
   Changed;
 end;
 
-type
-  PStringList_CustomSort_Context = ^TStringList_CustomSort_Context;
-  TStringList_CustomSort_Context = record
-    List: TStringList;
-    ListStartPtr: Pointer;
-    ItemSize: SizeUInt;
-    IndexBase: Integer;
-    CompareFn: TStringListSortCompare;
-  end;
-
-function TStringList_CustomSort_Comparer(Item1, Item2, Context: Pointer): Integer;
-begin
-  with PStringList_CustomSort_Context(Context)^ do
-    Result := CompareFn(List,
-                        ((Item1 - ListStartPtr) div ItemSize) + IndexBase,
-                        ((Item2 - ListStartPtr) div ItemSize) + IndexBase);
-end;
-
-procedure TStringList_CustomSort_Exchanger(Item1, Item2, Context: Pointer);
-begin
-  with PStringList_CustomSort_Context(Context)^ do
-    List.Exchange(((Item1 - ListStartPtr) div ItemSize) + IndexBase,
-                  ((Item2 - ListStartPtr) div ItemSize) + IndexBase);
-end;
-
 procedure TStringList.QuickSort(L, R: Integer; CompareFn: TStringListSortCompare);
-var
-  Context: TStringList_CustomSort_Context;
+var 
+  I, J, Pivot: Integer;
 begin
-  if L > R then
-    exit;
-  Context.List := Self;
-  Context.ListStartPtr := FMap.Items[L];
-  Context.CompareFn := CompareFn;
-  Context.ItemSize := FMap.KeySize + FMap.DataSize;
-  Context.IndexBase := L;
-
-  DefaultSortingAlgorithm^.ItemListSorter_CustomItemExchanger_ContextComparer(
-    Context.ListStartPtr, R - L + 1, Context.ItemSize, @TStringList_CustomSort_Comparer,
-    @TStringList_CustomSort_Exchanger, @Context);
+  repeat
+    I := L;
+    J := R;
+    Pivot := (L + R) div 2;
+    repeat
+      while CompareFn(Self, I, Pivot) < 0 do Inc(I);
+      while CompareFn(Self, J, Pivot) > 0 do Dec(J);
+      if I <= J then
+      begin
+        FMap.InternalExchange(I, J); // No check, indices are correct.
+        if Pivot = I then
+          Pivot := J
+        else if Pivot = J then
+          Pivot := I;
+        Inc(I);
+        Dec(j);
+      end;
+    until I > J;
+    if L < J then 
+      QuickSort(L,J, CompareFn);
+    L := I;
+  until I >= R;
 end;
 
 procedure TStringList.CustomSort(CompareFn: TStringListSortCompare);
@@ -2390,44 +2322,12 @@ begin
   end;
 end;
 
-procedure TStringList.CustomSort(CompareFn: TStringListSortCompare; SortingAlgorithm: PSortingAlgorithm);
-var
-  Context: TStringList_CustomSort_Context;
-begin
-  if not Sorted and (FMap.Count > 1) then
-  begin
-    Changing;
-
-    Context.List := Self;
-    Context.ListStartPtr := FMap.Items[0];
-    Context.CompareFn := CompareFn;
-    Context.ItemSize := FMap.KeySize + FMap.DataSize;
-    Context.IndexBase := 0;
-
-    SortingAlgorithm^.ItemListSorter_CustomItemExchanger_ContextComparer(
-      Context.ListStartPtr, FMap.Count, Context.ItemSize, @TStringList_CustomSort_Comparer,
-      @TStringList_CustomSort_Exchanger, @Context);
-
-    Changed;
-  end;
-end;
-
 procedure TStringList.Sort;
 begin
   if not Sorted and (FMap.Count > 1) then
   begin
     Changing;
     FMap.Sort;
-    Changed;
-  end;
-end;
-
-procedure TStringList.Sort(SortingAlgorithm: PSortingAlgorithm);
-begin
-  if not Sorted and (FMap.Count > 1) then
-  begin
-    Changing;
-    FMap.Sort(SortingAlgorithm);
     Changed;
   end;
 end;

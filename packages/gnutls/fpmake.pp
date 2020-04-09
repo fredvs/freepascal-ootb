@@ -14,12 +14,12 @@ begin
 
     P:=AddPackage('gnutls');
     P.Dependencies.Add('fcl-net');
-    P.ShortName:='gtls';
+    P.ShortName:='gnutls';
     P.Description := 'Interface units for GNU TLS libraries supporting SSL-encrypted network communication.';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.SourcePath.Add('src');
     P.OSes := AllUnixOSes+AllWindowsOSes-[qnx];
     if Defaults.CPU=jvm then

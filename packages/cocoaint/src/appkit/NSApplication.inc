@@ -151,9 +151,9 @@ type
     _previousKeyWindow: id;
     _unusedApp: cshort;
     _running: cshort;
-    _appFlags: bitpacked record
+    __appFlags: bitpacked record
       case byte of
-        0: (_anonBitField__appFlags0: cuint);
+        0: (_anonBitField___appFlags0: cuint);
         1: (
           _hidden: 0..1;
           _appleEventActivationInProgress: 0..1;
@@ -683,7 +683,7 @@ type
 {$endif}
 
 {$ifdef FUNCTIONS}
-function NSApplicationMain(argc: cint; argv: PPChar { variable size array of PChar }): cint; cdecl; external;
+function NSApplicationMain(argc: cint; argv: PChar { variable size array of PChar }): cint; cdecl; external;
 function NSApplicationLoad: ObjCBOOL; cdecl; external;
 function NSShowsServicesMenuItem(itemName: NSString): ObjCBOOL; cdecl; external;
 function NSSetShowsServicesMenuItem(itemName: NSString; enabled: ObjCBOOL): NSInteger; cdecl; external;

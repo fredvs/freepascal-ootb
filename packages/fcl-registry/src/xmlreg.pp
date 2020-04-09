@@ -10,7 +10,7 @@ uses
 
 Type
 
-  TDataType = (dtUnknown,dtDWORD,dtString,dtBinary,dtStrings,dtQWord);
+  TDataType = (dtUnknown,dtDWORD,dtString,dtBinary,dtStrings);
   TDataInfo = record
     DataType : TDataType;
     DataSize : Integer;
@@ -81,7 +81,6 @@ Type
     // These interpret the Data buffer as unicode data
     Function GetValueDataUnicode(Name : UnicodeString; Out DataType : TDataType; Var Data; Var DataSize : Integer) : Boolean;
     Function SetValueDataUnicode(Name : UnicodeString; DataType : TDataType; Const Data; DataSize : Integer) : Boolean;
-    Property CurrentKey: UnicodeString read FCurrentKey; //used by TRegistry
     Property FileName : String Read FFileName Write SetFileName;
     Property RootKey : UnicodeString Read FRootKey Write SetRootkey;
     Property AutoFlush : Boolean Read FAutoFlush Write FAutoFlush;
@@ -235,23 +234,13 @@ end;
 Function TXmlRegistry.DeleteKey(KeyPath : UnicodeString) : Boolean;
 
 Var
-  N, Curr : TDomElement;
-  Node: TDOMNode;
+  N : TDomElement;
 
 begin
  N:=FindKey(KeyPath);
  Result:=(N<>Nil);
  If Result then
    begin
-   //if a key has subkeys, result shall be false and nothing shall be deleted
-   Curr:=N;
-   Node:=Curr.FirstChild;
-   While Assigned(Node) do
-     begin
-     If (Node.NodeType=ELEMENT_NODE) and (Node.NodeName=SKey) then
-       Exit(False);
-     Node:=Node.NextSibling;
-     end;
    (N.ParentNode as TDomElement).RemoveChild(N);
    FDirty:=True;
    MaybeFlush;
@@ -317,7 +306,6 @@ Var
   U : UnicodeString;
   HasData: Boolean;
   D : DWord;
-  Q : QWord;
   
 begin
   //writeln('TXmlRegistry.DoGetValueData: Name=',Name,' IsUnicode=',IsUnicode);
@@ -343,12 +331,6 @@ begin
                   Result:=HasData and TryStrToDWord(String(DataNode.NodeValue),D) and (DataSize>=NS);
                   if Result then
                     PCardinal(@Data)^:=D;
-                  end;
-        dtQWORD : begin   // DataNode is required
-                  NS:=SizeOf(QWORD);
-                  Result:=HasData and TryStrToQWord(String(DataNode.NodeValue),Q) and (DataSize>=NS);
-                  if Result then
-                    PUInt64(@Data)^:=Q;
                   end;
         dtString : // DataNode is optional
                    if HasData then
@@ -414,7 +396,6 @@ begin
 
     Case DataType of
       dtDWORD : SW:=UnicodeString(IntToStr(PCardinal(@Data)^));
-      dtQWORD : SW:=UnicodeString(IntToStr(PUInt64(@Data)^));
       dtString : begin
                  if IsUnicode then
                    SW:=UnicodeString(PUnicodeChar(@Data))

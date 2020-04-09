@@ -23,8 +23,6 @@ type
   { pthread_t is defined as an "unsigned long" }
   TThreadID = PtrUInt;
 
-  TOSTimestamp = Int64;
-
   PRTLCriticalSection = ^TRTLCriticalSection;
 {$macro on}
 {$define MUTEXTYPENAME := TRTLCriticalSection}

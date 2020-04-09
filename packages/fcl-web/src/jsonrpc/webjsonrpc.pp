@@ -20,7 +20,7 @@ unit webjsonrpc;
 interface
 
 uses
-  Classes, SysUtils, fpjson, fpjsonrpc, httpdefs, fphttp, jsonparser, uriparser;
+  Classes, SysUtils, fpjson, fpjsonrpc, httpdefs, fphttp, jsonparser;
 
 Type
 { ---------------------------------------------------------------------
@@ -106,8 +106,6 @@ Type
     Property Response: TResponse Read FResponse;
     // Response Content-Type. If left empty, application/json is used.
     Property ResponseContentType : String Read FResponseContentType Write FResponseContentType;
-    // Must we handle CORS ?
-    Property CORS;
   end;
 
   { TJSONRPCDataModule }
@@ -119,7 +117,6 @@ Type
     Property Dispatcher;
     Property DispatchOptions;
     Property ResponseContentType;
-    Property CORS;
   end;
 
 implementation
@@ -242,7 +239,6 @@ begin
   Result:=S;
 end;
 
-
 procedure TCustomJSONRPCModule.Notification(AComponent: TComponent;
   Operation: TOperation);
 begin
@@ -269,31 +265,26 @@ Var
   R : TJSONStringType;
 
 begin
-  if SameText(ARequest.Method,'OPTIONS') then
-  if not CORS.HandleRequest(aRequest,aResponse,[hcDetect,hcSend]) then
-    begin
-    If (Dispatcher=Nil) then
-      Dispatcher:=CreateDispatcher;
-    Disp:=Dispatcher;
-    Res:=DispatchRequest(ARequest,Disp);
-    try
-      CORS.HandleRequest(aRequest,aResponse,[]);
-      If Assigned(Res) then
-        begin
-        AResponse.FreeContentStream:=True;
-        AResponse.ContentStream:=TMemoryStream.Create;
-        R:=Res.AsJSON;
-        if Length(R)>0 then
-          AResponse.ContentStream.WriteBuffer(R[1],Length(R));
-        AResponse.ContentLength:=AResponse.ContentStream.Size;
-        R:=''; // Free up mem
-        AResponse.ContentType:=GetResponseContentType;
-        end;
-      AResponse.SendResponse;
-    finally
-      Res.Free;
-    end;
-    end;
+  If (Dispatcher=Nil) then
+    Dispatcher:=CreateDispatcher;
+  Disp:=Dispatcher;
+  Res:=DispatchRequest(ARequest,Disp);
+  try
+    If Assigned(Res) then
+      begin
+      AResponse.FreeContentStream:=True;
+      AResponse.ContentStream:=TMemoryStream.Create;
+      R:=Res.AsJSON;
+      if Length(R)>0 then
+        AResponse.ContentStream.WriteBuffer(R[1],Length(R));
+      AResponse.ContentLength:=AResponse.ContentStream.Size;
+      R:=''; // Free up mem
+      AResponse.ContentType:=GetResponseContentType;
+      end;
+    AResponse.SendResponse;
+  finally
+    Res.Free;
+  end;
 end;
 
 { TJSONRPCSessionContext }

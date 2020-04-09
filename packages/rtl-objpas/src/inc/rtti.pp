@@ -199,7 +199,6 @@ type
   protected
     function GetHandle: Pointer; virtual; abstract;
   public
-    function GetAttributes: specialize TArray<TCustomAttribute>; virtual; abstract;
     property Handle: Pointer read GetHandle;
   end;
 
@@ -217,8 +216,6 @@ type
   TRttiType = class(TRttiNamedObject)
   private
     FTypeInfo: PTypeInfo;
-    FAttributesResolved: boolean;
-    FAttributes: specialize TArray<TCustomAttribute>;
     FMethods: specialize TArray<TRttiMethod>;
     function GetAsInstance: TRttiInstanceType;
   protected
@@ -235,8 +232,6 @@ type
     function GetBaseType: TRttiType; virtual;
   public
     constructor Create(ATypeInfo : PTypeInfo);
-    destructor Destroy; override;
-    function GetAttributes: specialize TArray<TCustomAttribute>; override;
     function GetProperties: specialize TArray<TRttiProperty>; virtual;
     function GetProperty(const AName: string): TRttiProperty; virtual;
     function GetMethods: specialize TArray<TRttiMethod>; virtual;
@@ -328,8 +323,6 @@ type
   TRttiProperty = class(TRttiMember)
   private
     FPropInfo: PPropInfo;
-    FAttributesResolved: boolean;
-    FAttributes: specialize TArray<TCustomAttribute>;
     function GetPropertyType: TRttiType;
     function GetIsWritable: boolean;
     function GetIsReadable: boolean;
@@ -339,8 +332,6 @@ type
     function GetHandle: Pointer; override;
   public
     constructor Create(AParent: TRttiType; APropInfo: PPropInfo);
-    destructor Destroy; override;
-    function GetAttributes: specialize TArray<TCustomAttribute>; override;
     function GetValue(Instance: pointer): TValue;
     procedure SetValue(Instance: pointer; const AValue: TValue);
     property PropertyType: TRttiType read GetPropertyType;
@@ -973,46 +964,6 @@ asm
   move.l #RawThunkPlaceholderContext, (a0)
   move.l #RawThunkPlaceholderProc, a0
   jmp (a0)
-RawThunkEnd:
-end;
-{$elseif defined(cpuriscv64)}
-const
-  RawThunkPlaceholderProc = $8765876587658765;
-  RawThunkPlaceholderContext = $4321432143214321;
-
-type
-  TRawThunkProc = PtrUInt;
-  TRawThunkContext = PtrUInt;
-
-procedure RawThunk; assembler; nostackframe;
-asm
-  ld x5, .LProc
-  ld x10, .LContext
-  jalr x0, x5, 0
-.LProc:
-  .quad RawThunkPlaceholderProc
-.LContext:
-  .quad RawThunkPlaceholderContext
-RawThunkEnd:
-end;
-{$elseif defined(cpuriscv32)}
-const
-  RawThunkPlaceholderProc = $87658765;
-  RawThunkPlaceholderContext = $43214321;
-
-type
-  TRawThunkProc = PtrUInt;
-  TRawThunkContext = PtrUInt;
-
-procedure RawThunk; assembler; nostackframe;
-asm
-  lw x5, .LProc
-  lw x10, .LContext
-  jalr x0, x5, 0
-.LProc:
-  .long RawThunkPlaceholderProc
-.LContext:
-  .long RawThunkPlaceholderContext
 RawThunkEnd:
 end;
 {$endif}
@@ -3844,34 +3795,6 @@ begin
   FPropInfo := APropInfo;
 end;
 
-destructor TRttiProperty.Destroy;
-var
-  attr: TCustomAttribute;
-begin
-  for attr in FAttributes do
-    attr.Free;
-  inherited Destroy;
-end;
-
-function TRttiProperty.GetAttributes: specialize TArray<TCustomAttribute>;
-var
-  i: SizeInt;
-  at: PAttributeTable;
-begin
-  if not FAttributesResolved then
-    begin
-      at := FPropInfo^.AttributeTable;
-      if Assigned(at) then
-        begin
-          SetLength(FAttributes, at^.AttributeCount);
-          for i := 0 to High(FAttributes) do
-            FAttributes[i] := TCustomAttribute(GetAttribute(at, i));
-        end;
-      FAttributesResolved:=true;
-    end;
-  result := FAttributes;
-end;
-
 function TRttiProperty.GetValue(Instance: pointer): TValue;
 
   procedure ValueFromBool(value: Int64);
@@ -4155,34 +4078,6 @@ begin
   FTypeInfo:=ATypeInfo;
   if assigned(FTypeInfo) then
     FTypeData:=GetTypeData(ATypeInfo);
-end;
-
-destructor TRttiType.Destroy;
-var
-  attr: TCustomAttribute;
-begin
-  for attr in FAttributes do
-    attr.Free;
-  inherited;
-end;
-
-function TRttiType.GetAttributes: specialize TArray<TCustomAttribute>;
-var
-  i: Integer;
-  at: PAttributeTable;
-begin
-  if not FAttributesResolved then
-    begin
-    at := GetAttributeTable(FTypeInfo);
-    if Assigned(at) then
-      begin
-      setlength(FAttributes,at^.AttributeCount);
-      for i := 0 to at^.AttributeCount-1 do
-        FAttributes[i]:=GetAttribute(at,i);
-      end;
-    FAttributesResolved:=true;
-    end;
-  result := FAttributes;
 end;
 
 function TRttiType.GetProperties: specialize TArray<TRttiProperty>;

@@ -15,10 +15,8 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-fpcres');
-    P.ShortName:='fprs';
-    P.OSes:=AllOSes-[atari,embedded,msdos,win16,macos,palmos];
-    //P.OSes:=[win32,win64,wince,haiku,linux,freebsd,openbsd,netbsd,darwin,iphonesim,solaris,os2,emx,aix,aros,amiga,morphos];
-
+    P.ShortName:='fpres';
+    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -30,7 +28,9 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
+
+    P.OSes:=[win32,win64,wince,haiku,linux,freebsd,openbsd,netbsd,darwin,iphonesim,solaris,os2,emx,aix,aros,amiga,morphos];
 
     P.Dependencies.Add('fcl-res');
     P.Dependencies.Add('paszlib');

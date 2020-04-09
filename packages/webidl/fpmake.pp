@@ -13,11 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('webidl');
-    P.ShortName:='widl';
+    P.ShortName:='webidl';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Dependencies.Add('fcl-base');
     P.Author := 'Michael Van Canneyt';
     P.License := 'LGPL with modification, ';

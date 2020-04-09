@@ -1,4 +1,3 @@
-{ %OPT=-CE }
 program fpu;
 
 {$mode delphi}

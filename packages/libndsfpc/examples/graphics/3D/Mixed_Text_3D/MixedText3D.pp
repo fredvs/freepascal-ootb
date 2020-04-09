@@ -47,9 +47,6 @@ begin
 	glEnd();										// Done Drawing The Quad
 end;
 
-var
-  keys: integer;
-
 begin
 	// initialize the geometry engine
 	glInit();	
@@ -101,10 +98,6 @@ begin
  
 		// wait for the screen to refresh
 		swiWaitForVBlank();
-   
-    scanKeys();
-		keys := keysDown();
-		if (keys and KEY_START) <> 0 then break;
 
 		printf(#$1b'[15;5H rtri  = %f     '#10, rtri);
 		printf(#$1b'[16;5H rquad = %f     '#10, rquad);

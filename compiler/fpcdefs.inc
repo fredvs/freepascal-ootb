@@ -7,14 +7,17 @@
 
 { This reduces the memory requirements a lot }
 {$PACKENUM 1}
+{$ifndef FPC_BIG_ENDIAN}
+{ $define USE_PACKSET1}
+{$endif}
+
+{$ifdef USE_PACKSET1}
 {$PACKSET 1}
+{$endif USE_PACKSET1}
 
 { We don't use exceptions, so turn off the implicit
   exceptions in the constructors }
 {$IMPLICITEXCEPTIONS OFF}
-
-{ We don't want C operators to be used inside the compiler }
-{$COPERATORS OFF}
 
 { This define enables codepage-aware compiler messages handling. Turning it on
   forces code page conversion from the codepage, specified in the .msg file to
@@ -31,15 +34,10 @@
 
 {$define USEEXCEPT}
 
-{$ifdef VER3_0}
-  { fix bootstrapping dfa gives warnings on 3.2+ code due to changed case behaviour }
-  {$OPTIMIZATION NODFA}
-{$endif VER3_0}
-
 { This fake CPU is used to allow incorporation of globtype unit
   into utils/ppudump without any CPU specific code PM }
 {$ifdef generic_cpu}
-  {$define #cpu32bit}
+  {$define cpu32bit}
   {$define cpu32bitaddr}
   {$define cpu32bitalu}
   {$define cpuflags}
@@ -93,7 +91,6 @@
   {$define SUPPORT_SAFECALL}
   {$define SUPPORT_GET_FRAME}
   {$define cpucapabilities}
-  {$define fpucapabilities}
   {$define cpucg64shiftsupport}
 {$endif i386}
 
@@ -111,7 +108,6 @@
   {$define SUPPORT_SAFECALL}
   {$define SUPPORT_GET_FRAME}
   {$define cpucapabilities}
-  {$define fpucapabilities}
 {$endif x86_64}
 
 {$ifdef sparc}
@@ -151,7 +147,6 @@
   {$define cpumm}
   {$define cpurox}
   {$define cpurefshaveindexreg}
-  {$define SUPPORT_SAFECALL}
   {$define SUPPORT_GET_FRAME}
 {$endif powerpc}
 
@@ -164,7 +159,6 @@
   {$define cpurox}
   {$define cpurefshaveindexreg}
   {$define cpuno32bitops}
-  {$define SUPPORT_SAFECALL}
 {$endif powerpc64}
 
 {$ifdef arm}
@@ -178,7 +172,6 @@
   {$define cputargethasfixedstack}
   {$define cpurefshaveindexreg}
   {$define cpucapabilities}
-  {$define fpucapabilities}
   {$define SUPPORT_SAFECALL}
   {$define SUPPORT_GET_FRAME}
   { default to armel }
@@ -208,7 +201,6 @@
   {$define cpufpemu}
   {$define cpurefshaveindexreg}
   {$define cpucapabilities}
-  {$define fpucapabilities}
   {$define cpuneedsmulhelper}
   {$define cpuneedsdivhelper}
   {$define cpu_uses_separate_address_registers}
@@ -282,45 +274,6 @@
   {$define SUPPORT_SAFECALL}
 {$endif aarch64}
 
-{$ifdef riscv32}
-  {$define riscv}
-  {$define cpu32bit}
-  {$define cpu32bitaddr}
-  {$define cpu32bitalu}
-  {$define cpufpemu}
-  {$define cputargethasfixedstack}
-  {$define cpuneedsmulhelper}
-  {$define cpuneedsdivhelper}
-  {$define cpucapabilities}
-  {$define cpurequiresproperalignment}
-{$endif riscv32}
-
-{$ifdef riscv64}
-  {$define riscv}
-  {$define cpu64bit}
-  {$define cpu64bitaddr}
-  {$define cpu64bitalu}
-  {$define cpufpemu}
-  {$define cputargethasfixedstack}
-  {$define cpuneedsmulhelper}
-  {$define cpuneedsdivhelper}
-  {$define cpucapabilities}
-  {$define cpurequiresproperalignment}
-{$endif riscv64}
-
-{$ifdef xtensa}
-  {$define cpu32bit}
-  {$define cpu32bitaddr}
-  {$define cpu32bitalu}
-  {$define cpufpemu}
-  {$define cpuflags} { xtensa has a boolean extension }
-  {$define cputargethasfixedstack}
-  {$define cpuneedsmulhelper}
-  {$define cpuneedsdivhelper}
-  {$define cpucapabilities}
-  {$define cpurequiresproperalignment}
-{$endif xtensa}
-
 { Stabs is not officially supported on 64 bit targets by gdb, except on Mac OS X
   (but there we don't support it)
 }
@@ -341,9 +294,9 @@
 }
 {$ifdef llvm}
   {$undef SUPPORT_MMX}
-  {$undef cpuneedsmulhelper}
-  {$undef cpuneedsdivhelper}
+  {$undef cpu16bitalu}
+  {$undef cpu32bitalu}
+  {$define cpu64bitalu}
   {$define cpuhighleveltarget}
-  {$define cpucg64shiftsupport}
   {$define symansistr}
 {$endif}

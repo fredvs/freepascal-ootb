@@ -52,9 +52,10 @@ unit iso7185;
 
     Function Eof(var f:TypedFile): Boolean;
 
-{$ifndef FPUNONE}
 {$ifdef FPC_CURRENCY_IS_INT64}
+{$ifndef FPUNONE}
     function round(c : currency) : int64;
+{$endif FPUNONE}
 {$ifndef cpujvm}
     function round(c : comp) : int64;
 {$else not cpujvm}
@@ -62,7 +63,6 @@ unit iso7185;
 {$endif not cpujvm}
 {$endif FPC_CURRENCY_IS_INT64}
     function Round(d : ValReal) : int64;
-{$endif FPUNONE}
 
   implementation
 
@@ -250,8 +250,8 @@ unit iso7185;
       End;
 
 
-{$ifndef FPUNONE}
 {$ifdef FPC_CURRENCY_IS_INT64}
+{$ifndef FPUNONE}
     function round(c : currency) : int64;
       begin
         if c>=0.0 then
@@ -259,6 +259,7 @@ unit iso7185;
         else
           Round:=Trunc(c-0.5);
       end;
+{$endif FPUNONE}
 
 
 {$ifndef cpujvm}
@@ -288,7 +289,6 @@ unit iso7185;
         else
           Round:=Trunc(d-0.5);
       end;
-{$endif FPUNONE}
 
 begin
   { we shouldn't do this because it might confuse user programs, but for now it

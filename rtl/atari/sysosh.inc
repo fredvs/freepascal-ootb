@@ -23,8 +23,7 @@ type
   THandle = Longint;
 {$endif CPU64}
   TThreadID = THandle;
-  TOSTimestamp = Longint;
-
+  
   PRTLCriticalSection = ^TRTLCriticalSection;
   TRTLCriticalSection = record
    Locked: boolean

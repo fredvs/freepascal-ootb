@@ -24,7 +24,8 @@ unit avrsim;
 
     procedure PASCALMAIN; external name 'PASCALMAIN';
 
-    procedure _FPC_haltproc; public name '_haltproc'; noreturn;
+    procedure _FPC_haltproc(exitcode : longint); public name '_haltproc'; noreturn;
+
       begin
         EXITCODEREG:=exitcode;
         HALTREQUEST:=1;

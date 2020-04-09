@@ -1046,13 +1046,6 @@
   (
     opcode  : A_LDR;
     ops     : 2;
-    optypes : (ot_reglo,ot_memoryam2,ot_none,ot_none,ot_none,ot_none);
-    code    : #103#152#0#2;
-    flags   : if_thumb or if_armv4t
-  ),
-  (
-    opcode  : A_LDR;
-    ops     : 2;
     optypes : (ot_reglo,ot_memoryam6,ot_none,ot_none,ot_none,ot_none);
     code    : #103#72#0#2;
     flags   : if_thumb or if_armv4t
@@ -1355,13 +1348,6 @@
     opcode  : A_MSR;
     ops     : 2;
     optypes : (ot_regf,ot_reg32,ot_none,ot_none,ot_none,ot_none);
-    code    : #18#1#32#240;
-    flags   : if_arm32 or if_armv4
-  ),
-  (
-    opcode  : A_MSR;
-    ops     : 2;
-    optypes : (ot_regs,ot_reg32,ot_none,ot_none,ot_none,ot_none);
     code    : #18#1#32#240;
     flags   : if_arm32 or if_armv4
   ),
@@ -2020,13 +2006,6 @@
     opcode  : A_STR;
     ops     : 2;
     optypes : (ot_reglo,ot_memoryam5,ot_none,ot_none,ot_none,ot_none);
-    code    : #103#144#0#2;
-    flags   : if_thumb or if_armv4t
-  ),
-  (
-    opcode  : A_STR;
-    ops     : 2;
-    optypes : (ot_reglo,ot_memoryam2,ot_none,ot_none,ot_none,ot_none);
     code    : #103#144#0#2;
     flags   : if_thumb or if_armv4t
   ),
@@ -6341,13 +6320,6 @@
     optypes : (ot_none,ot_none,ot_none,ot_none,ot_none,ot_none);
     code    : #0;
     flags   : if_arm32 or if_armv4t
-  ),
-  (
-    opcode  : A_VEOR;
-    ops     : 3;
-    optypes : (ot_vreg,ot_vreg,ot_vreg,ot_none,ot_none,ot_none);
-    code    : #66#243#0#1#16;
-    flags   : if_arm32 or if_neon
   ),
   (
     opcode  : A_TAN;

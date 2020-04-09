@@ -2981,7 +2981,7 @@ function TPasElement.GetModule: TPasModule;
 Var
   p : TPaselement;
 begin
-  if Self is TPasPackage then
+  if self is  TPasPackage then
     Result := nil
   else
     begin

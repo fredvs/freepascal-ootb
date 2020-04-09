@@ -44,7 +44,7 @@ unit cpupi;
   implementation
 
     uses
-       globals,systems,verbose,
+       globals,systems,
        cpubase,
        aasmtai,aasmdata,
        tgobj,
@@ -80,8 +80,7 @@ unit cpupi;
       begin
         { because of the limited branch distance of cond. branches, they must be replaced
           sometimes by normal jmps and an inverse branch }
-        if not(finalizeavrcode(aktproccode)) then
-          message1(cg_w_cannot_compile_subroutine,procdef.fullprocname(false));
+        finalizeavrcode(aktproccode);
       end;
 
 begin

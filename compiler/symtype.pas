@@ -55,9 +55,6 @@ interface
         protected
          { whether this def is already registered in the unit's def list }
          function registered : boolean;
-         { initialize the defid field; only call from a constructor as it threats
-           0 as an invalid value! }
-         procedure init_defid;
         public
          typesym    : tsym;  { which type the definition was generated this def }
          { stabs debugging }
@@ -276,13 +273,6 @@ implementation
       end;
 
 
-    procedure tdef.init_defid;
-      begin
-        if defid=0 then
-          defid:=defid_not_registered;
-      end;
-
-
     constructor tdef.create(dt:tdeftyp);
       begin
          inherited create;
@@ -292,7 +282,7 @@ implementation
          defoptions:=[];
          dbg_state:=dbg_state_unused;
          stab_number:=0;
-         init_defid;
+         defid:=defid_not_registered;
       end;
 
 
@@ -882,6 +872,8 @@ implementation
                   if len<>1 then
                     internalerror(200306232);
                 end;
+              else
+                internalerror(200212277);
             end;
           end;
       end;
@@ -992,6 +984,8 @@ implementation
                 getderef(hderef);
                 p.addconstderef(slt,idx,hderef);
               end;
+            else
+              internalerror(200110204);
           end;
         until false;
         getpropaccesslist:=tpropaccesslist(p);

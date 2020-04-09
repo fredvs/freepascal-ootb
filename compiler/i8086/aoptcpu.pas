@@ -37,6 +37,7 @@ unit aoptcpu;
       TCpuAsmOptimizer = class(TX86AsmOptimizer)
         function PeepHoleOptPass1Cpu(var p : tai) : boolean; override;
         function PostPeepHoleOptsCpu(var p : tai) : boolean; override;
+        procedure PostPeepHoleOpts; override;
       End;
 
   Implementation
@@ -137,12 +138,8 @@ unit aoptcpu;
                   end;
                 A_SUB:
                   result:=OptPass1Sub(p);
-                else
-                  ;
               end;
             end
-          else
-            ;
         end;
       end;
 
@@ -162,18 +159,16 @@ unit aoptcpu;
                 A_OR,
                 A_TEST:
                   Result:=PostPeepholeOptTestOr(p);
-                else
-                  ;
               end;
-
-              { Optimise any reference-type operands (if Result is True, the
-                instruction will be checked on the next iteration) }
-              if not Result then
-                OptimizeRefs(taicpu(p));
             end;
-          else
-            ;
         end;
+      end;
+
+
+    procedure TCpuAsmOptimizer.PostPeepHoleOpts;
+      begin
+        inherited;
+        OptReferences;
       end;
 
 begin

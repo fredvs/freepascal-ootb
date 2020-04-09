@@ -439,8 +439,6 @@ implementation
                         if is_open_string(hdef) then
                           hdef:=cshortstringtype;
                        end;
-                      else
-                        ;
                     end;
                   end;
                 if (target_info.system in [system_powerpc_morphos,system_m68k_amiga]) then
@@ -514,8 +512,10 @@ implementation
         until not try_to_consume(_SEMICOLON);
 
         if explicit_paraloc then
-          include(pd.procoptions,po_explicitparaloc);
-
+          begin
+            pd.has_paraloc_info:=callerside;
+            include(pd.procoptions,po_explicitparaloc);
+          end;
         { remove parasymtable from stack }
         sc.free;
         { reset object options }
@@ -833,11 +833,6 @@ implementation
                   begin
                     messagepos1(impltype.fileinfo,sym_e_generic_type_param_mismatch,impltype.realname);
                     messagepos1(decltype.fileinfo,sym_e_generic_type_param_decl,decltype.realname);
-                    result:=false;
-                  end;
-                if df_genconstraint in impltype.typedef.defoptions then
-                  begin
-                    messagepos(tstoreddef(impltype.typedef).genconstraintdata.fileinfo,parser_e_generic_constraints_not_allowed_here);
                     result:=false;
                   end;
               end;
@@ -1338,7 +1333,7 @@ implementation
 {
             if ((pd.returndef=cvarianttype) or (pd.returndef=colevarianttype)) and
                not(cs_compilesystem in current_settings.moduleswitches) then
-              include(current_module.moduleflags,mf_uses_variants);
+              current_module.flags:=current_module.flags or uf_uses_variants;
 }
             if is_dispinterface(pd.struct) and not is_automatable(pd.returndef) then
               Message1(type_e_not_automatable,pd.returndef.typename);
@@ -1535,13 +1530,6 @@ implementation
             internalerror(2015052202);
         end;
 
-        if (pd.proccalloption in cdecl_pocalls) and
-           (pd.paras.count>0) and
-           is_array_of_const(tparavarsym(pd.paras[pd.paras.count-1]).vardef) then
-          begin
-            include(pd.procoptions,po_variadic);
-          end;
-
         { file types can't be function results }
         if assigned(pd) and
            (pd.returndef.typ=filedef) then
@@ -1711,7 +1699,7 @@ implementation
             // we can't add hidden params here because record is not yet defined
             // and therefore record size which has influence on paramter passing rules may change too
             // look at record_dec to see where calling conventions are applied (issue #0021044)
-            handle_calling_convention(result,hcc_default_actions_intf_struct);
+            handle_calling_convention(result,[hcc_declaration,hcc_check]);
 
             { add definition to procsym }
             proc_add_definition(result);
@@ -2135,8 +2123,6 @@ procedure pd_syscall(pd:tabstractprocdef);
                 else
                   include(pd.procoptions,get_default_syscall);
               end;
-          else
-            internalerror(2019050526);
         end;
       end;
 
@@ -2393,7 +2379,7 @@ type
    end;
 const
   {Should contain the number of procedure directives we support.}
-  num_proc_directives=53;
+  num_proc_directives=52;
   proc_direcdata:array[1..num_proc_directives] of proc_dir_rec=
    (
     (
@@ -2549,16 +2535,7 @@ const
       pooption : [po_inline];
       mutexclpocall : [pocall_safecall];
       mutexclpotype : [potype_constructor,potype_destructor,potype_class_constructor,potype_class_destructor];
-      mutexclpo     : [po_noinline,po_exports,po_external,po_interrupt,po_virtualmethod,po_iocheck]
-    ),(
-      idtok:_NOINLINE;
-      pd_flags : [pd_interface,pd_implemen,pd_body,pd_notobjintf];
-      handler  : nil;
-      pocall   : pocall_none;
-      pooption : [po_noinline];
-      mutexclpocall : [];
-      mutexclpotype : [];
-      mutexclpo     : [po_inline,po_external]
+      mutexclpo     : [po_exports,po_external,po_interrupt,po_virtualmethod,po_iocheck]
     ),(
       idtok:_INTERNCONST;
       pd_flags : [pd_interface,pd_body,pd_notobject,pd_notobjintf,pd_notrecord,pd_nothelper];
@@ -2570,7 +2547,7 @@ const
       mutexclpo     : []
     ),(
       idtok:_INTERNPROC;
-      pd_flags : [pd_interface,pd_implemen,pd_notobject,pd_notobjintf,pd_notrecord,pd_nothelper];
+      pd_flags : [pd_interface,pd_notobject,pd_notobjintf,pd_notrecord,pd_nothelper];
       handler  : @pd_internproc;
       pocall   : pocall_internproc;
       pooption : [];
@@ -2581,11 +2558,7 @@ const
       idtok:_INTERRUPT;
       pd_flags : [pd_implemen,pd_body,pd_notobject,pd_notobjintf,pd_notrecord,pd_nothelper];
       handler  : @pd_interrupt;
-{$ifdef i386}
       pocall   : pocall_oldfpccall;
-{$else i386}
-      pocall   : pocall_stdcall;
-{$endif i386}
       pooption : [po_interrupt];
       mutexclpocall : [pocall_internproc,pocall_cdecl,pocall_cppdecl,pocall_stdcall,pocall_mwpascal,
                        pocall_pascal,pocall_far16,pocall_oldfpccall,pocall_sysv_abi_cdecl,pocall_ms_abi_cdecl];
@@ -2929,7 +2902,8 @@ const
       }
       var
         p     : longint;
-        name : TIDString;
+        name,
+        other : TIDString;
         po_comp : tprocoptions;
         tokenloc : TFilePosInfo;
       begin
@@ -2954,8 +2928,6 @@ const
                  end
                else
                  exit;
-             else
-               ;
            end;
          end;
 
@@ -3236,8 +3208,6 @@ const
                 begin
                   pd.aliasnames.insert(target_info.Cprefix+pd.cplusplusmangledname);
                 end;
-              else
-                ;
             end;
             { prevent adding the alias a second time }
             include(pd.procoptions,po_has_public_name);
@@ -3291,14 +3261,9 @@ const
         else
           stoprecording:=false;
 
-        while (token=_ID) or
-            (
-              not (m_prefixed_attributes in current_settings.modeswitches) and
-              (token=_LECKKLAMMER)
-            ) do
+        while token in [_ID,_LECKKLAMMER] do
          begin
-           if not (m_prefixed_attributes in current_settings.modeswitches) and
-              try_to_consume(_LECKKLAMMER) then
+           if try_to_consume(_LECKKLAMMER) then
             begin
               repeat
                 parse_proc_direc(pd,pdflags);

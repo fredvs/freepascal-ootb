@@ -47,9 +47,9 @@ type
     {$if defined(__LP64__)}
     _tabViewMinimumSizeConstraint: NSLayoutConstraint;
     {$endif}
-    _delegateRespondTo: bitpacked record
+    __NSTabViewDelegateRespondTo: bitpacked record
       case byte of
-        0: (_anonBitField__delegateRespondTo0: cuint);
+        0: (_anonBitField___NSTabViewDelegateRespondTo0: cuint);
         1: (
           shouldSelectTabViewItem: 0..1;
           willSelectTabViewItem: 0..1;
@@ -58,9 +58,9 @@ type
           reserved: 0..((1 shl 28)-1);
         );
       end;
-    _flags: bitpacked record
+    __NSTabViewFlags: bitpacked record
       case byte of
-        0: (_anonBitField__flags0: cuint);
+        0: (_anonBitField___NSTabViewFlags0: cuint);
         1: (
           needsLayout: 0..1;
           controlTint: 0..((1 shl 3)-1);

@@ -7,11 +7,6 @@
 
 #define DTCM_DATA	__attribute__((section(".dtcm")))
 #define DTCM_BSS	__attribute__((section(".sbss")))
-
-#define TWL_CODE	__attribute__((section(".twl")))
-#define TWL_DATA	__attribute__((section(".twl")))
-#define TWL_BSS		__attribute__((section(".twl_bss")))
-
 #define ALIGN(m)	__attribute__((aligned (m)))
 
 #define PACKED __attribute__ ((packed))
@@ -101,9 +96,7 @@ typedef volatile s16          vs16;
 typedef volatile s32          vs32;
 typedef volatile s64          vs64;
 }
-  sec_t = cuint32;
-  ssize_t = cint;
-  size_t = cuint;
+
 
   //IntFn = function: pointer;
   VoidFn = function: pointer; cdecl;

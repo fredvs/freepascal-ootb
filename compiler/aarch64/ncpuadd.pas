@@ -34,7 +34,6 @@ interface
           function  GetResFlags(unsigned:Boolean):TResFlags;
           function  GetFPUResFlags:TResFlags;
        protected
-          function use_fma : boolean;override;
           procedure second_addfloat;override;
           procedure second_cmpfloat;override;
           procedure second_cmpboolean;override;
@@ -62,12 +61,6 @@ interface
 {*****************************************************************************
                                taarch64addnode
 *****************************************************************************}
-
-    function taarch64addnode.use_fma : boolean;
-      begin
-        Result:=true;
-      end;
-
 
     function taarch64addnode.GetResFlags(unsigned:Boolean):TResFlags;
       begin
@@ -218,7 +211,6 @@ interface
 
         current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg_reg(op,
            location.register,left.location.register,right.location.register));
-        cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
       end;
 
 
@@ -239,7 +231,6 @@ interface
         { signalling compare so we can get exceptions }
         current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(A_FCMPE,
              left.location.register,right.location.register));
-        cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
       end;
 
 

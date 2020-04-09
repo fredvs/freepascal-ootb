@@ -12,7 +12,14 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
+{$i globdir.inc}
 unit FPCompil;
+
+{2.0 compatibility}
+{$ifdef VER2_0}
+  {$macro on}
+  {$define resourcestring := const}
+{$endif}
 
 interface
 
@@ -24,8 +31,6 @@ interface
 { $define VERBOSETXT}
 
 {$mode objfpc}
-
-{$i globdir.inc}
 
 uses
   { We need to include the exceptions from SysUtils, but the types from
@@ -385,7 +390,7 @@ procedure TCompilerMessageListBox.SelectFirstError;
   var
     P : PCompilerMessage;
 begin
-  P:=List^.FirstThat(TCallbackFunBoolParam(@IsError));
+  P:=List^.FirstThat(@IsError);
   If Assigned(P) then
     Begin
       FocusItem(List^.IndexOf(P));
@@ -856,7 +861,7 @@ procedure ResetErrorMessages;
        PSourceWindow(P)^.Editor^.SetErrorMessage('');
   end;
 begin
-  Desktop^.ForEach(TCallbackProcParam(@ResetErrorLine));
+  Desktop^.ForEach(@ResetErrorLine);
 end;
 
 

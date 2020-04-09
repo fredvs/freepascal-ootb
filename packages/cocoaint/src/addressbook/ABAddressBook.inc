@@ -38,9 +38,9 @@ type
     _reserved1: id;
     _reserved6: pointer;
     _reserved7: pointer;
-    _flags: bitpacked record
+    __ABBookflags: bitpacked record
       case byte of
-        0: (_anonBitField__flags0: cuint);
+        0: (_anonBitField___ABBookflags0: cuint);
         1: (
           hasUnsavedChanges_: 0..1;
           readOnly: 0..1;

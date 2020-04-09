@@ -13,11 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libenet');
-    P.ShortName:='lnet';
+    P.ShortName:='libenet';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.SourcePath.Add('src');
     P.SourcePath.Add('examples');
     P.IncludePath.Add('src');

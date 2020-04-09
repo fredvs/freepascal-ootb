@@ -12,7 +12,7 @@ program tgetnumericvalue3;
   
 uses     
   SysUtils,
-  unicodedata,character;
+  character;
     
 {$ifndef FPC}
   type UnicodeChar = WideChar;   

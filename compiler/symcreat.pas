@@ -27,7 +27,7 @@ unit symcreat;
 interface
 
   uses
-    finput,tokens,scanner,globtype,cclasses,
+    finput,tokens,scanner,globtype,
     aasmdata,
     symconst,symbase,symtype,symdef,symsym,
     node;
@@ -124,15 +124,14 @@ interface
   procedure call_through_new_name(orgpd: tprocdef; const newname: TSymStr);
 
   function generate_pkg_stub(pd:tprocdef):tnode;
-  procedure generate_attr_constrs(attrs:tfpobjectlist);
 
 
 
 implementation
 
   uses
-    cutils,globals,verbose,systems,comphook,fmodule,constexp,
-    symtable,defutil,symutil,procinfo,
+    cutils,cclasses,globals,verbose,systems,comphook,fmodule,constexp,
+    symtable,defutil,symutil,
     pbase,pdecobj,pdecsub,psub,ptconst,pparautl,
 {$ifdef jvm}
     pjvm,jvmdef,
@@ -353,7 +352,7 @@ implementation
             end;
           { if we get here, we did not find it in the current objectdef ->
             add }
-          childpd:=tprocdef(parentpd.getcopyas(procdef,pc_normal_no_hidden,''));
+          childpd:=tprocdef(parentpd.getcopy);
           { get rid of the import name for inherited virtual class methods,
             it has to be regenerated rather than amended }
           if [po_classmethod,po_virtualmethod]<=childpd.procoptions then
@@ -1025,6 +1024,7 @@ implementation
         setverbosity('W+');
     end;
 
+
   procedure add_synthetic_method_implementations_for_st(st: tsymtable);
     var
       i   : longint;
@@ -1090,20 +1090,6 @@ implementation
               implement_jvm_procvar_intconstr(pd);
             tsk_jvm_virtual_clmethod:
               implement_jvm_virtual_clmethod(pd);
-{$else}
-            tsk_jvm_enum_values,
-            tsk_jvm_enum_valueof,
-            tsk_jvm_enum_classconstr,
-            tsk_jvm_enum_jumps_constr,
-            tsk_jvm_enum_fpcordinal,
-            tsk_jvm_enum_fpcvalueof,
-            tsk_jvm_enum_long2set,
-            tsk_jvm_enum_bitset2set,
-            tsk_jvm_enum_set2set,
-            tsk_jvm_procvar_invoke,
-            tsk_jvm_procvar_intconstr,
-            tsk_jvm_virtual_clmethod:
-              internalerror(2011032801);
 {$endif jvm}
             tsk_field_getter:
               implement_field_getter(pd);
@@ -1115,6 +1101,8 @@ implementation
               implement_interface_wrapper(pd);
             tsk_call_no_parameters:
               implement_call_no_parameters(pd);
+            else
+              internalerror(2011032801);
           end;
         end;
     end;
@@ -1394,10 +1382,7 @@ implementation
       hstaticvs.visibility:=fieldvs.visibility;
 {$else jvm}
       include(hstaticvs.symoptions,sp_internal);
-      if df_generic in tdef(recst.defowner).defoptions then
-        tabstractrecordsymtable(recst).insert(hstaticvs)
-      else
-        tabstractrecordsymtable(recst).get_unit_symtable.insert(hstaticvs);
+      tabstractrecordsymtable(recst).get_unit_symtable.insert(hstaticvs);
 {$endif jvm}
       { generate the symbol for the access }
       sl:=tpropaccesslist.create;
@@ -1435,8 +1420,11 @@ implementation
       newpd:=tprocdef(orgpd.getcopyas(procdef,pc_bareproc,''));
       insert_funcret_para(newpd);
       newpd.procoptions:=newpd.procoptions+orgpd.procoptions*[po_external,po_has_importname,po_has_importdll];
-      stringdispose(orgpd.import_name);
-      stringdispose(orgpd.import_dll);
+      newpd.import_name:=orgpd.import_name;
+      orgpd.import_name:=nil;
+      newpd.import_dll:=orgpd.import_dll;
+      orgpd.import_dll:=nil;
+      newpd.import_nr:=orgpd.import_nr;
       orgpd.import_nr:=0;
       newpd.setmangledname(newname);
       finish_copied_procdef(newpd,'__FPC_IMPL_EXTERNAL_REDIRECT_'+newname,current_module.localsymtable,nil);
@@ -1463,59 +1451,6 @@ implementation
         end
       else
         result:=cnothingnode.create;
-    end;
-
-  procedure generate_attr_constrs(attrs:tfpobjectlist);
-    var
-      ps : tprocsym;
-      pd : tprocdef;
-      pi : tcgprocinfo;
-      i : sizeint;
-      attr : trtti_attribute;
-    begin
-      if attrs.count=0 then
-        exit;
-      { if this isn't set then this unit shouldn't have any attributes }
-      if not assigned(class_tcustomattribute) then
-        internalerror(2019071003);
-      for i:=0 to attrs.count-1 do
-        begin
-          attr:=trtti_attribute(attrs[i]);
-          {Generate a procsym for main}
-          ps:=cprocsym.create('$rttiattrconstr$'+tostr(i));
-          { always register the symbol }
-          ps.register_sym;
-          { the RTTI always references this symbol }
-          inc(ps.refs);
-          current_module.localsymtable.insert(ps);
-          pd:=cprocdef.create(normal_function_level,true);
-          { always register the def }
-          pd.register_def;
-          pd.procsym:=ps;
-          ps.ProcdefList.Add(pd);
-          { set procdef options }
-          pd.proctypeoption:=potype_function;
-          pd.proccalloption:=pocall_default;
-          include(pd.procoptions,po_hascallingconvention);
-          pd.returndef:=class_tcustomattribute;
-          insert_funcret_para(pd);
-          pd.calcparas;
-          pd.forwarddef:=false;
-          pd.aliasnames.insert(pd.mangledname);
-          handle_calling_convention(pd,hcc_default_actions_impl);
-          { set procinfo and current_procinfo.procdef }
-          pi:=tcgprocinfo(cprocinfo.create(nil));
-          pi.procdef:=pd;
-          { we always do a call, namely to the constructor }
-          include(pi.flags,pi_do_call);
-          insert_funcret_local(pd);
-          pi.code:=cassignmentnode.create(
-                      cloadnode.create(pd.funcretsym,pd.localst),
-                      attr.constructorcall.getcopy
-                    );
-          pi.generate_code;
-          attr.constructorpd:=pd;
-        end;
     end;
 
 end.

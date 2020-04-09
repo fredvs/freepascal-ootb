@@ -15,10 +15,6 @@
 {$i globdir.inc}
 unit WCEdit;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,Drivers,Views,
@@ -340,7 +336,7 @@ begin
   if not assigned(EditorInfos) then
     GetEditorInfo:=DefaultEditorInfo
   else
-    GetEditorInfo:=EditorInfos^.FirstThat(TCallbackFunBoolParam(@Match));
+    GetEditorInfo:=EditorInfos^.FirstThat(@Match);
 end;
 
 function TLine.GetFlags: longint;
@@ -481,7 +477,7 @@ begin
 end;
 begin
   if Assigned(Lines) then
-    Lines^.ForEach(TCallbackProcParam(@AddIt));
+    Lines^.ForEach(@AddIt);
 end;
 
 procedure TCodeEditorCore.SetContent(ALines: PUnsortedStringCollection);
@@ -492,7 +488,7 @@ end;
 begin
   DeleteAllLines;
   if Assigned(ALines) then
-    ALines^.ForEach(TCallbackProcParam(@AddIt));
+    ALines^.ForEach(@AddIt);
   LimitsChanged;
 end;
 
@@ -545,7 +541,7 @@ end;
 begin
   if Idx=-1 then Idx:=Lines^.Count;
   I:=0;
-  Bindings^.ForEach(TCallbackProcParam(@RegLine));
+  Bindings^.ForEach(@RegLine);
   Lines^.AtInsert(Idx,Line);
 end;
 

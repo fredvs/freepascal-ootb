@@ -20,8 +20,7 @@ type
   { fd are int in C also for 64bit targets (x86_64) }
   THandle = Longint;
   TThreadID = THandle;
-  TOSTimestamp = Int64;
-
+  
   { pthread_mutex_t }
   PRTLCriticalSection = ^TRTLCriticalSection;
   TRTLCriticalSection = record

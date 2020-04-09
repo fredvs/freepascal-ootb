@@ -16,7 +16,6 @@ unit System;
 
 interface
 
-{$define FPC_IS_SYSTEM}
 {$DEFINE FPC_ANSI_TEXTFILEREC}
 
 { include system-independent routine headers }

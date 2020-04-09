@@ -15,10 +15,6 @@
 {$R-}
 unit WNGHelp;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,
@@ -113,8 +109,8 @@ type
         IndexLoaded: boolean;
 {        NextHelpCtx: longint;}
         function ReadHeader: boolean;
-        function ReadContainer(EnumProc: TCallbackProcParam): boolean;
-        function ReadTopicRec(LineEnumProc: TCallbackProcParam; LinkEnumProc: TCallbackProcParam): boolean;
+        function ReadContainer(EnumProc: pointer): boolean;
+        function ReadTopicRec(LineEnumProc: pointer; LinkEnumProc: pointer): boolean;
         function ReadRecord(var R: TRecord; ReadData: boolean): boolean;
       end;
 
@@ -232,7 +228,7 @@ begin
   ReadHeader:=OK;
 end;
 
-function TNGHelpFile.ReadContainer(EnumProc: TCallbackProcParam): boolean;
+function TNGHelpFile.ReadContainer(EnumProc: pointer): boolean;
 var OK: boolean;
     R: TRecord;
     I: longint;
@@ -263,7 +259,7 @@ begin
   ReadContainer:=OK;
 end;
 
-function TNGHelpFile.ReadTopicRec(LineEnumProc, LinkEnumProc: TCallbackProcParam): boolean;
+function TNGHelpFile.ReadTopicRec(LineEnumProc, LinkEnumProc: pointer): boolean;
 var OK: boolean;
     R: TRecord;
     I: sw_integer;
@@ -384,7 +380,7 @@ begin
       OK:=ReadRecord(R,false);
       if (OK=false) then Break;
       case R.SClass of
-        ng_rtContainer : begin F^.Seek(L); OK:=ReadContainer(TCallbackProcParam(@AddToIndex)); end;
+        ng_rtContainer : begin F^.Seek(L); OK:=ReadContainer(@AddToIndex); end;
         ng_rtTopic     : ;
       else
        begin
@@ -481,14 +477,14 @@ begin
         begin
           F^.Seek(T^.FileOfs);
           AddLine('');
-          OK:=ReadContainer(TCallbackProcParam(@AddToTopic));
+          OK:=ReadContainer(@AddToTopic);
           RenderTopic(Lines,T);
         end;
       ng_rtTopic     :
         begin
           F^.Seek(T^.FileOfs);
           AddLine('');
-          OK:=ReadTopicRec(TCallbackProcParam(@AddTopicLine),TCallbackProcParam(@AddLink));
+          OK:=ReadTopicRec(@AddTopicLine,@AddLink);
           TranslateLines(Lines);
           AddLine('');
           { include copyright info }

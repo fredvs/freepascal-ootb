@@ -742,8 +742,6 @@ implementation
 {$endif SPARC64}
                 ;
             end;
-          else
-            ;
         end;
         if setflags then
           begin
@@ -767,8 +765,6 @@ implementation
                   ovloc.loc:=LOC_FLAGS;
                   ovloc.resflags.Init(NR_ICC,F_NE);
                 end;
-              else
-                ;
             end;
           end
         else
@@ -804,8 +800,6 @@ implementation
                   ovloc.loc:=LOC_FLAGS;
                   ovloc.resflags.Init(NR_ICC,F_NE);
                 end;
-              else
-                ;
             end;
           end
         else
@@ -1113,9 +1107,9 @@ implementation
         paraloc1.init;
         paraloc2.init;
         paraloc3.init;
-        paramanager.getcgtempparaloc(list,pd,1,paraloc1);
-        paramanager.getcgtempparaloc(list,pd,2,paraloc2);
-        paramanager.getcgtempparaloc(list,pd,3,paraloc3);
+        paramanager.getintparaloc(list,pd,1,paraloc1);
+        paramanager.getintparaloc(list,pd,2,paraloc2);
+        paramanager.getintparaloc(list,pd,3,paraloc3);
         a_load_const_cgpara(list,OS_SINT,len,paraloc3);
         a_loadaddr_ref_cgpara(list,dest,paraloc2);
         a_loadaddr_ref_cgpara(list,source,paraloc1);

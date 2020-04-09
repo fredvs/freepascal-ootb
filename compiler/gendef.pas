@@ -136,8 +136,6 @@ begin
         if dllversion<>'' then
           writeln(t,'VERSION '+dllversion);
       end;
-    else
-      ;
   end;
 
 {write imports}

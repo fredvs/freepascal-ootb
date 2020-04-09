@@ -14,30 +14,13 @@
 
  **********************************************************************}
 
-function align(addr : PtrUInt;alignment : PtrUInt) : PtrUInt;{$ifdef SYSTEMINLINE}inline;{$endif}
-  var
-    tmp: PtrUInt;
-  begin
-    tmp:=addr+PtrUInt(alignment-1);
-    result:=tmp-(tmp mod alignment)
-  end;
-
-
-{$ifndef cpujvm}
-function align(addr : Pointer;alignment : PtrUInt) : Pointer;{$ifdef SYSTEMINLINE}inline;{$endif}
-  var
-    tmp: PtrUInt;
-  begin
-    tmp:=PtrUInt(addr)+(alignment-1);
-    result:=pointer(ptruint(tmp-(tmp mod alignment)));
-  end;
-{$endif}
 
 {****************************************************************************
                                Primitives
 ****************************************************************************}
 type
   pstring = ^shortstring;
+
 
 {$ifndef FPC_HAS_SHORTSTR_SHORTSTR_INTERN_CHARMOVE}
 {$define FPC_HAS_SHORTSTR_SHORTSTR_INTERN_CHARMOVE}
@@ -76,7 +59,7 @@ begin
         then
         begin
           { Align on native pointer size }
-          aligncount:=(sizeof(PtrUInt)-PtrInt(pdest)) and (sizeof(PtrUInt)-1);
+          aligncount:=(PtrUInt(pdest) and (sizeof(PtrUInt)-1));
           dec(count,aligncount);
           pend:=psrc+aligncount;
           while psrc<pend do
@@ -1548,10 +1531,7 @@ end;
         else
           q2 := f2;
         { the q1*q2 is coded as call to mul_byte }
-{$push}
-{$Q+}
         q3 := q1 * q2;
-{$pop}
 
         if (q1 <> 0) and (q2 <> 0) and
           ((q1 > q3) or (q2 > q3) or
@@ -1560,7 +1540,7 @@ end;
           (q3 shr 7 <> 0) and
            ((q3 <> byte(byte(1) shl 7)) or not(sign))
           ) then
-          FPC_Overflow();
+          HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
 
         if sign then
           fpc_mul_shortint_checkoverflow := -q3
@@ -1572,7 +1552,7 @@ end;
 {$ifndef FPC_SYSTEM_HAS_MUL_BYTE}
     function fpc_mul_byte(f1,f2 : byte) : byte;[public,alias: 'FPC_MUL_BYTE']; compilerproc;
       var
-        bitpos : byte;
+        _f1, bitpos : byte;
         b : byte;
       begin
         fpc_mul_byte := 0;
@@ -1581,7 +1561,10 @@ end;
         for b := 0 to 7 do
           begin
             if (f2 and bitpos) <> 0 then
-              fpc_mul_byte := fpc_mul_byte + f1;
+              begin
+                _f1 := fpc_mul_byte;
+                fpc_mul_byte := fpc_mul_byte + f1;
+              end;
             f1 := f1 shl 1;
             bitpos := bitpos shl 1;
           end;
@@ -1608,7 +1591,7 @@ end;
                   overflow occurs                                      }
                 if f1overflowed or ((_f1 <> 0) and (f1 <> 0) and
                   ((_f1 > fpc_mul_byte_checkoverflow) or (f1 > fpc_mul_byte_checkoverflow))) then
-                  FPC_Overflow();
+                  HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
               end;
             { when bootstrapping, we forget about overflow checking for qword :) }
             f1overflowed := f1overflowed or ((f1 and (1 shl 7)) <> 0);
@@ -1649,10 +1632,7 @@ end;
         else
           q2:=f2;
         { the q1*q2 is coded as call to mulword }
-{$push}
-{$Q+}
         q3:=q1*q2;
-{$pop}
 
         if (q1 <> 0) and (q2 <>0) and
           ((q1>q3) or (q2>q3) or
@@ -1661,7 +1641,7 @@ end;
           (q3 shr 15<>0) and
            ((q3<>word(word(1) shl 15)) or not(sign))
           ) then
-          FPC_Overflow();
+          HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
 
         if sign then
           fpc_mul_integer_checkoverflow:=-q3
@@ -1674,7 +1654,7 @@ end;
 {$ifndef FPC_SYSTEM_HAS_MUL_WORD}
     function fpc_mul_word(f1,f2 : word) : word;[public,alias: 'FPC_MUL_WORD']; compilerproc;
       var
-        bitpos : word;
+        _f1,bitpos : word;
         b : byte;
       begin
         fpc_mul_word:=0;
@@ -1683,7 +1663,10 @@ end;
         for b:=0 to 15 do
           begin
             if (f2 and bitpos)<>0 then
-              fpc_mul_word:=fpc_mul_word+f1;
+              begin
+                _f1:=fpc_mul_word;
+                fpc_mul_word:=fpc_mul_word+f1;
+              end;
             f1:=f1 shl 1;
             bitpos:=bitpos shl 1;
           end;
@@ -1710,7 +1693,7 @@ end;
                   overflow occurs                                      }
                 if f1overflowed or ((_f1<>0) and (f1<>0) and
                   ((_f1>fpc_mul_word_checkoverflow) or (f1>fpc_mul_word_checkoverflow))) then
-                  FPC_Overflow();
+                  HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
               end;
             { when bootstrapping, we forget about overflow checking for qword :) }
             f1overflowed:=f1overflowed or ((f1 and (1 shl 15))<>0);
@@ -1752,19 +1735,16 @@ end;
         else
           q2:=f2;
         { the q1*q2 is coded as call to muldword }
-{$push}
-{$Q+}
         q3:=q1*q2;
-{$pop}
 
         if (q1 <> 0) and (q2 <>0) and
           ((q1>q3) or (q2>q3) or
           { the bit 31 can be only set if we have $8000 0000 }
           { and sign is true                                 }
-          (q3 shr 31<>0) and
+          (q3 shr 15<>0) and
            ((q3<>dword(dword(1) shl 31)) or not(sign))
           ) then
-          FPC_Overflow();
+          HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
 
         if sign then
           fpc_mul_longint_checkoverflow:=-q3
@@ -1777,7 +1757,7 @@ end;
 {$ifndef FPC_SYSTEM_HAS_MUL_DWORD}
     function fpc_mul_dword(f1,f2 : dword) : dword;[public,alias: 'FPC_MUL_DWORD']; compilerproc;
       var
-        bitpos : dword;
+        _f1,bitpos : dword;
         b : byte;
       begin
         fpc_mul_dword:=0;
@@ -1786,7 +1766,10 @@ end;
         for b:=0 to 31 do
           begin
             if (f2 and bitpos)<>0 then
-              fpc_mul_dword:=fpc_mul_dword+f1;
+              begin
+                _f1:=fpc_mul_dword;
+                fpc_mul_dword:=fpc_mul_dword+f1;
+              end;
             f1:=f1 shl 1;
             bitpos:=bitpos shl 1;
           end;
@@ -1813,7 +1796,7 @@ end;
                   overflow occurs                                      }
                 if f1overflowed or ((_f1<>0) and (f1<>0) and
                   ((_f1>fpc_mul_dword_checkoverflow) or (f1>fpc_mul_dword_checkoverflow))) then
-                  FPC_Overflow();
+                  HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
               end;
             { when bootstrapping, we forget about overflow checking for qword :) }
             f1overflowed:=f1overflowed or ((f1 and (dword(1) shl 31))<>0);
@@ -2439,6 +2422,27 @@ procedure inclocked(var l:int64);
 {$ifndef FPC_SYSTEM_HAS_SPTR}
 {_$error Sptr must be defined for each processor }
 {$endif ndef FPC_SYSTEM_HAS_SPTR}
+
+
+
+function align(addr : PtrUInt;alignment : PtrUInt) : PtrUInt;{$ifdef SYSTEMINLINE}inline;{$endif}
+  var
+    tmp: PtrUInt;
+  begin
+    tmp:=addr+PtrUInt(alignment-1);
+    result:=tmp-(tmp mod alignment)
+  end;
+
+
+{$ifndef cpujvm}
+function align(addr : Pointer;alignment : PtrUInt) : Pointer;{$ifdef SYSTEMINLINE}inline;{$endif}
+  var
+    tmp: PtrUInt;
+  begin
+    tmp:=PtrUInt(addr)+(alignment-1);
+    result:=pointer(tmp-(tmp mod alignment));
+  end;
+{$endif}
 
 {****************************************************************************
                                  Str()

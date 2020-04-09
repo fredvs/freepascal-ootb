@@ -35,14 +35,6 @@
 {                                                          }
 UNIT Objects;
 
-{$ifdef cpullvm}
-{$define TYPED_LOCAL_CALLBACKS}
-{$endif}
-
-{$ifdef TYPED_LOCAL_CALLBACKS}
-{$modeswitch nestedprocvars}
-{$endif}
-
 {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>}
                                   INTERFACE
 {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>}
@@ -132,24 +124,6 @@ CONST
 {***************************************************************************}
 {                          PUBLIC TYPE DEFINITIONS                          }
 {***************************************************************************}
-
-{ Callbacks }
-TYPE
-{$ifndef TYPED_LOCAL_CALLBACKS}
-   TCallbackFun = CodePointer;
-   TCallbackProc = CodePointer;
-   TCallbackFunParam = CodePointer;
-   TCallbackFunBool = CodePointer;
-   TCallbackFunBoolParam = CodePointer;
-   TCallbackProcParam = CodePointer;
-{$else}
-   TCallbackFun = Function: Pointer is nested;
-   TCallbackProc = Procedure is nested;
-   TCallbackFunParam = Function(Item: Pointer): Pointer is nested;
-   TCallbackFunBool = Function: Boolean is nested;
-   TCallbackFunBoolParam = Function(Item: Pointer): Boolean is nested;
-   TCallbackProcParam = Procedure(Item: Pointer) is nested;
-{$endif}
 
 {---------------------------------------------------------------------------}
 {                               CHARACTER SET                               }
@@ -438,8 +412,8 @@ TYPE
       FUNCTION At (Index: Sw_Integer): Pointer;
       FUNCTION IndexOf (Item: Pointer): Sw_Integer;                  Virtual;
       FUNCTION GetItem (Var S: TStream): Pointer;                    Virtual;
-      FUNCTION LastThat (Test: TCallbackFunBoolParam): Pointer;
-      FUNCTION FirstThat (Test: TCallbackFunBoolParam): Pointer;
+      FUNCTION LastThat (Test: CodePointer): Pointer;
+      FUNCTION FirstThat (Test: CodePointer): Pointer;
       PROCEDURE Pack;
       PROCEDURE FreeAll;
       PROCEDURE DeleteAll;
@@ -449,7 +423,7 @@ TYPE
       PROCEDURE AtFree (Index: Sw_Integer);
       PROCEDURE FreeItem (Item: Pointer);                            Virtual;
       PROCEDURE AtDelete (Index: Sw_Integer);
-      PROCEDURE ForEach (Action: TCallbackProcParam);
+      PROCEDURE ForEach (Action: CodePointer);
       PROCEDURE SetLimit (ALimit: Sw_Integer);                       Virtual;
       PROCEDURE Error (Code, Info: Integer);                         Virtual;
       PROCEDURE AtPut (Index: Sw_Integer; Item: Pointer);
@@ -628,14 +602,9 @@ function CallPointerMethod(Method: codepointer; Obj: pointer; Param1: pointer): 
   Func     Pointer to the local function (which must be far-coded).
   Frame    Frame pointer of the wrapping function.
 }
-function CallVoidLocal(Func: TCallbackFun; Frame: Pointer): pointer;inline;
-function CallPointerLocal(Func: TCallbackFunParam; Frame: Pointer; Param1: pointer): pointer;inline;
-{$ifdef TYPED_LOCAL_CALLBACKS}
-function CallVoidLocal(Func: TCallbackProc; Frame: Pointer): pointer;inline;
-function CallPointerLocal(Func: TCallbackProcParam; Frame: Pointer; Param1: pointer): pointer;inline;
-function CallVoidLocal(Func: TCallbackFunBool; Frame: Pointer): Boolean;inline;
-function CallPointerLocal(Func: TCallbackFunBoolParam; Frame: Pointer; Param1: pointer): Boolean;inline;
-{$endif}
+
+function CallVoidLocal(Func: codepointer; Frame: Pointer): pointer;inline;
+function CallPointerLocal(Func: codepointer; Frame: Pointer; Param1: pointer): pointer;inline;
 
 { Calls of functions/procedures local to methods.
 
@@ -643,14 +612,8 @@ function CallPointerLocal(Func: TCallbackFunBoolParam; Frame: Pointer; Param1: p
   Frame    Frame pointer of the wrapping method.
   Obj      Pointer to the object that the method belongs to.
 }
-function CallVoidMethodLocal(Func: TCallbackFun; Frame: Pointer; Obj: pointer): pointer;inline;
-function CallPointerMethodLocal(Func: TCallbackFunParam; Frame: Pointer; Obj: pointer; Param1: pointer): pointer;inline;
-{$ifdef TYPED_LOCAL_CALLBACKS}
-function CallVoidMethodLocal(Func: TCallbackFunBool; Frame: Pointer; Obj: pointer): Boolean;inline;
-function CallPointerMethodLocal(Func: TCallbackFunBoolParam; Frame: Pointer; Obj: pointer; Param1: pointer): Boolean;inline;
-function CallVoidMethodLocal(Func: TCallbackProc; Frame: Pointer; Obj: pointer): pointer;inline;
-function CallPointerMethodLocal(Func: TCallbackProcParam; Frame: Pointer; Obj: pointer; Param1: pointer): pointer;inline;
-{$endif}
+function CallVoidMethodLocal(Func: codepointer; Frame: Pointer; Obj: pointer): pointer;inline;
+function CallPointerMethodLocal(Func: codepointer; Frame: Pointer; Obj: pointer; Param1: pointer): pointer;inline;
 
 
 {+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}
@@ -832,7 +795,7 @@ end;
 {$error CallPointerMethod function not implemented}
 {$endif not FPC_CallPointerMethod_Implemented}
 
-{$ifndef TYPED_LOCAL_CALLBACKS}
+
 function CallVoidLocal(Func: codepointer; Frame: Pointer): pointer;inline;
 begin
 {$ifdef cpui8086}
@@ -872,83 +835,8 @@ begin
 {$endif cpui8086}
 end;
 
-{$else}
-
-function CallVoidLocal(Func: TCallbackFun; Frame: Pointer): pointer;inline;
-begin
-  CallVoidLocal:=Func();
-end;
 
 
-function CallVoidLocal(Func: TCallbackProc; Frame: Pointer): pointer;inline;
-begin
-  Func();
-  CallVoidLocal:=nil;
-end;
-
-
-function CallVoidLocal(Func: TCallbackFunBool; Frame: Pointer): boolean;inline;
-begin
-  CallVoidLocal:=Func();
-end;
-
-function CallPointerLocal(Func: TCallbackFunParam; Frame: Pointer; Param1: pointer): pointer;inline;
-begin
-  CallPointerLocal:=Func(Param1);
-end;
-
-
-function CallPointerLocal(Func: TCallbackProcParam; Frame: Pointer; Param1: pointer): pointer;inline;
-begin
-  Func(Param1);
-  CallPointerLocal:=nil;
-end;
-
-
-function CallPointerLocal(Func: TCallbackFunBoolParam; Frame: Pointer; Param1: pointer): boolean;inline;
-begin
-  CallPointerLocal:=Func(Param1);
-end;
-
-
-function CallVoidMethodLocal(Func: TCallbackFun; Frame: Pointer; Obj: pointer): pointer;inline;
-begin
-  CallVoidMethodLocal := Func();
-end;
-
-
-function CallVoidMethodLocal(Func: TCallbackFunBool; Frame: Pointer; Obj: pointer): Boolean;inline;
-begin
-  CallVoidMethodLocal := Func();
-end;
-
-
-function CallVoidMethodLocal(Func: TCallbackProc; Frame: Pointer; Obj: pointer): pointer;inline;
-begin
-  Func();
-  CallVoidMethodLocal := nil;
-end;
-
-
-function CallPointerMethodLocal(Func: TCallbackFunParam; Frame: Pointer; Obj: pointer; Param1: pointer): pointer;inline;
-begin
-  CallPointerMethodLocal := Func(Param1);
-end;
-
-
-function CallPointerMethodLocal(Func: TCallbackFunBoolParam; Frame: Pointer; Obj: pointer; Param1: pointer): Boolean;inline;
-begin
-  CallPointerMethodLocal := Func(Param1);
-end;
-
-
-function CallPointerMethodLocal(Func: TCallbackProcParam; Frame: Pointer; Obj: pointer; Param1: pointer): pointer;inline;
-begin
-  Func(Param1);
-  CallPointerMethodLocal := nil;
-end;
-
-{$endif}
 
 {***************************************************************************}
 {                      PRIVATE INITIALIZED VARIABLES                        }
@@ -2046,7 +1934,7 @@ END;
 {$PUSH}
 {$W+}
 
-FUNCTION TCollection.LastThat (Test: TCallbackFunBoolParam): Pointer;
+FUNCTION TCollection.LastThat (Test: CodePointer): Pointer;
 VAR I: LongInt;
 
 BEGIN
@@ -2075,7 +1963,7 @@ END;
 {--TCollection--------------------------------------------------------------}
 {  FirstThat -> Platforms DOS/DPMI/WIN/OS2 - Checked 22May96 LdB            }
 {---------------------------------------------------------------------------}
-FUNCTION TCollection.FirstThat (Test: TCallbackFunBoolParam): Pointer;
+FUNCTION TCollection.FirstThat (Test: CodePointer): Pointer;
 VAR I: LongInt;
 BEGIN
    For I := 1 To Count Do Begin                       { Up from first item }
@@ -2204,7 +2092,7 @@ END;
 
 {$PUSH}
 {$W+}
-PROCEDURE TCollection.ForEach (Action: TCallbackProcParam);
+PROCEDURE TCollection.ForEach (Action: CodePointer);
 VAR I: LongInt;
 BEGIN
    For I := 1 To Count Do                             { Up from first item }
@@ -2787,9 +2675,7 @@ END;
 FUNCTION TResourceFile.SwitchTo (AStream: PStream; Pack: Boolean): PStream;
 VAR NewBasePos: LongInt;
 
-   PROCEDURE DoCopyResource (_Item: Pointer);{$IFNDEF FPC}FAR;{$ENDIF}
-   var
-     Item: PResourceItem absolute _Item;
+   PROCEDURE DoCopyResource (Item: PResourceItem);{$IFNDEF FPC}FAR;{$ENDIF}
    BEGIN
      Stream^.Seek(BasePos + Item^.Posn);              { Move stream position }
      Item^.Posn := AStream^.GetPos - NewBasePos;      { Hold new position }

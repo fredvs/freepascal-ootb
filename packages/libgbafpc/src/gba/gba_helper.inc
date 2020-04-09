@@ -1,5 +1,5 @@
 (*
-  $Id$
+  $Id: gba_helper.inc 14344 2009-12-06 19:37:58Z Legolas $
   ------------------------------------------------------------------------------
   This lib is a raw porting of tonclib library for gba (you can find it at
   http://user.chem.tue.nl/jakvijn/index.htm).

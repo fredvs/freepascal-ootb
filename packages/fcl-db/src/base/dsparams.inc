@@ -44,42 +44,27 @@ end;
 
 { TParams }
 
-function TParams.GetItem(Index: Integer): TParam;
+Function TParams.GetItem(Index: Integer): TParam;
 begin
   Result:=(Inherited GetItem(Index)) as TParam;
 end;
 
-function TParams.GetParamValue(const ParamName: string): Variant;
+Function TParams.GetParamValue(const ParamName: string): Variant;
 begin
   Result:=ParamByName(ParamName).Value;
 end;
 
-procedure TParams.SetItem(Index: Integer; Value: TParam);
+Procedure TParams.SetItem(Index: Integer; Value: TParam);
 begin
   Inherited SetItem(Index,Value);
 end;
 
-procedure TParams.SetParamValue(const ParamName: string; const Value: Variant);
+Procedure TParams.SetParamValue(const ParamName: string; const Value: Variant);
 begin
   ParamByName(ParamName).Value:=Value;
 end;
 
-function TParams.CreateParseOpts(DoCreate, EscapeSlash, EscapeRepeat: Boolean): TSQLParseOptions;
-
-  Procedure SetO(B : Boolean; O : TSQLParseOption);
-
-  begin
-    if B then Include(Result,O);
-  end;
-
-begin
-  Result:=[];
-  SetO(DoCreate,spoCreate);
-  SetO(EscapeSlash,spoEscapeSlash);
-  SetO(EscapeRepeat,spoEscapeRepeat);
-end;
-
-procedure TParams.AssignTo(Dest: TPersistent);
+Procedure TParams.AssignTo(Dest: TPersistent);
 begin
  if (Dest is TParams) then
    TParams(Dest).Assign(Self)
@@ -87,7 +72,7 @@ begin
    inherited AssignTo(Dest);
 end;
 
-function TParams.GetDataSet: TDataSet;
+Function TParams.GetDataSet: TDataSet;
 begin
   If (FOwner is TDataset) Then
     Result:=TDataset(FOwner)
@@ -95,17 +80,17 @@ begin
     Result:=Nil;
 end;
 
-function TParams.GetOwner: TPersistent;
+Function TParams.GetOwner: TPersistent;
 begin
   Result:=FOwner;
 end;
 
-class function TParams.ParamClass: TParamClass;
+Class Function TParams.ParamClass: TParamClass;
 begin
   Result:=TParam;
 end;
 
-constructor TParams.Create(AOwner: TPersistent; AItemClass: TCollectionItemClass
+Constructor TParams.Create(AOwner: TPersistent; AItemClass: TCollectionItemClass
   );
 begin
   Inherited Create(AItemClass);
@@ -113,22 +98,22 @@ begin
 end;
 
 
-constructor TParams.Create(AOwner: TPersistent);
+Constructor TParams.Create(AOwner: TPersistent);
 begin
   Create(AOwner,ParamClass);
 end;
 
-constructor TParams.Create;
+Constructor TParams.Create;
 begin
   Create(TPersistent(Nil));
 end;
 
-procedure TParams.AddParam(Value: TParam);
+Procedure TParams.AddParam(Value: TParam);
 begin
   Value.Collection:=Self;
 end;
 
-procedure TParams.AssignValues(Value: TParams);
+Procedure TParams.AssignValues(Value: TParams);
 
 Var
   I : Integer;
@@ -144,7 +129,7 @@ begin
     end;
 end;
 
-function TParams.CreateParam(FldType: TFieldType; const ParamName: string;
+Function TParams.CreateParam(FldType: TFieldType; const ParamName: string;
   ParamType: TParamType): TParam;
 
 begin
@@ -154,7 +139,7 @@ begin
   Result.ParamType:=ParamType;
 end;
 
-function TParams.FindParam(const Value: string): TParam;
+Function TParams.FindParam(const Value: string): TParam;
 
 Var
   I : Integer;
@@ -169,7 +154,7 @@ begin
       Dec(i);
 end;
 
-procedure TParams.GetParamList(List: TList; const ParamNames: string);
+Procedure TParams.GetParamList(List: TList; const ParamNames: string);
 
 Var
   P: TParam;
@@ -187,7 +172,7 @@ begin
   until StrPos > Length(ParamNames);
 end;
 
-function TParams.IsEqual(Value: TParams): Boolean;
+Function TParams.IsEqual(Value: TParams): Boolean;
 
 Var
   I : Integer;
@@ -202,53 +187,45 @@ begin
     end;
 end;
 
-function TParams.GetEnumerator: TParamsEnumerator;
+Function TParams.GetEnumerator: TParamsEnumerator;
 begin
   Result:=TParamsEnumerator.Create(Self);
 end;
 
-function TParams.ParamByName(const Value: string): TParam;
+Function TParams.ParamByName(const Value: string): TParam;
 begin
   Result:=FindParam(Value);
   If (Result=Nil) then
     DatabaseErrorFmt(SParameterNotFound,[Value],Dataset);
 end;
 
-function TParams.ParseSQL(SQL: String; DoCreate: Boolean): String;
+Function TParams.ParseSQL(SQL: String; DoCreate: Boolean): String;
 
-var
-  pb : TParamBinding;
-  rs : string;
-  PO : TSQLParseOptions;
+var pb : TParamBinding;
+    rs : string;
 
 begin
-  PO:=CreateParseOpts(DoCreate,True,True);
-  Result := DoParseSQL(SQL,PO,psInterbase, pb, ' ',rs);
+  Result := ParseSQL(SQL,DoCreate,True,True,psInterbase, pb, rs);
 end;
 
-function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
+Function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
   EscapeRepeat: Boolean; ParameterStyle: TParamStyle): String;
 
 var pb : TParamBinding;
     rs : string;
-    PO : TSQLParseOptions;
 
 begin
-  PO:=CreateParseOpts(DoCreate,EscapeSlash,EscapeRepeat);
-  Result := DoParseSQL(SQL,PO,ParameterStyle,pb,' ',rs);
+  Result := ParseSQL(SQL,DoCreate,EscapeSlash,EscapeRepeat,ParameterStyle,pb, rs);
 end;
 
-function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
+Function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
   EscapeRepeat: Boolean; ParameterStyle: TParamStyle; out
   ParamBinding: TParambinding): String;
 
-var
-  rs : string;
-  PO : TSQLParseOptions;
+var rs : string;
 
 begin
-  PO:=CreateParseOpts(DoCreate,EscapeSlash, EscapeRepeat);
-  Result := DoParseSQL(SQL,PO, ParameterStyle,ParamBinding,' ',rs);
+  Result := ParseSQL(SQL,DoCreate,EscapeSlash, EscapeRepeat, ParameterStyle,ParamBinding, rs);
 end;
 
 function SkipComments(var p: PChar; EscapeSlash, EscapeRepeat : Boolean) : Boolean;
@@ -297,27 +274,9 @@ begin
   end; {case}
 end;
 
-
-function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
+Function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
   EscapeRepeat: Boolean; ParameterStyle: TParamStyle; out
   ParamBinding: TParambinding; out ReplaceString: string): String;
-
-var
-  PO : TSQLParseOptions;
-
-begin
-  PO:=CreateParseOpts(DoCreate,EscapeSlash, EscapeRepeat);
-  Result:=DoParseSQL(SQL,PO,ParameterStyle,ParamBinding,' ',ReplaceString);
-end;
-
-function TParams.ParseSQL(SQL: String; Options: TSQLParseOptions; ParameterStyle: TParamStyle; out ParamBinding: TParambinding;
-  MacroChar: Char; out ReplaceString: string): String;
-begin
-  Result:=DoParseSQL(SQL,Options,ParameterStyle,ParamBinding,MacroChar,ReplaceString);
-end;
-
-function TParams.DoParseSQL(SQL: String; Options : TSQLParseOptions; ParameterStyle: TParamStyle; out
-  ParamBinding: TParambinding; MacroChar : Char; out ReplaceString: string): String;
 
 type
   // used for ParamPart
@@ -340,12 +299,11 @@ var
   NewQueryLength:integer;
   NewQuery:string;
   NewQueryIndex,BufIndex,CopyLen,i:integer;    // Parambinding will have length ParamCount in the end
-  ParamDelim : Set of char;
   b:integer;
   tmpParam:TParam;
 
 begin
-  if spoCreate in Options then Clear;
+  if DoCreate then Clear;
   // Parse the SQL and build ParamBinding
   ParamCount:=0;
   NewQueryLength:=Length(SQL);
@@ -359,19 +317,16 @@ begin
 
   p:=PChar(SQL);
   BufStart:=p; // used to calculate ParamPart.Start values
-  if spoUseMacro in options then
-    ParamDelim:=[MacroChar]
-  else
-    ParamDelim:=[':','?'];
   repeat
-    while SkipComments(p,spoEscapeSlash in Options ,spoEscapeRepeat in options) do ;
-    if p^ in ParamDelim then // parameter
+    while SkipComments(p,EscapeSlash,EscapeRepeat) do ;
+    case p^ of
+      ':','?': // parameter
         begin
           IgnorePart := False;
-          if (P^<>'?') then
+          if p^=':' then
           begin // find parameter name
             Inc(p);
-            if p^ in [':','=',' '] then  // ignore ::, since some databases (postgres) uses this as a cast (wb 4813)
+            if p^ in [':','=',' '] then  // ignore ::, since some databases uses this as a cast (wb 4813)
             begin
               IgnorePart := True;
               Inc(p);
@@ -381,7 +336,7 @@ begin
               if p^='"' then // Check if the parameter-name is between quotes
                 begin
                 ParamNameStart:=p;
-                SkipQuotesString(p,'"',spoEscapeSlash in Options,spoEscapeRepeat in Options);
+                SkipQuotesString(p,'"',EscapeSlash,EscapeRepeat);
                 // Do not include the quotes in ParamName, but they must be included
                 // when the parameter is replaced by some place-holder.
                 ParamName:=Copy(ParamNameStart+1,1,p-ParamNameStart-2);
@@ -412,7 +367,7 @@ begin
               SetLength(ParamBinding,NewLength);
             end;
 
-            if spoCreate in Options then
+            if DoCreate then
               begin
               // Check if this is the first occurance of the parameter
               tmpParam := FindParam(ParamName);
@@ -450,12 +405,11 @@ begin
             // update NewQueryLength
             Dec(NewQueryLength,p-ParamNameStart);
           end;
-        end
-      else
-        if P^ = #0 then
-          Break// end of SQL
-        else
-          Inc(p);
+        end;
+      #0:Break; // end of SQL
+    else
+      Inc(p);
+    end;
   until false;
 
   SetLength(ParamPart,ParamCount);
@@ -504,11 +458,12 @@ begin
   end
   else
     NewQuery:=SQL;
+
   Result := NewQuery;
 end;
 
 
-procedure TParams.RemoveParam(Value: TParam);
+Procedure TParams.RemoveParam(Value: TParam);
 begin
    Value.Collection:=Nil;
 end;
@@ -1244,7 +1199,7 @@ begin
 end;
 
 
-procedure TParams.CopyParamValuesFromDataset(ADataset: TDataset;
+Procedure TParams.CopyParamValuesFromDataset(ADataSet: TDataSet;
   CopyBound: Boolean);
 
 Var

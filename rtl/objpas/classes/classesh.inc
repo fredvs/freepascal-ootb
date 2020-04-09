@@ -242,7 +242,7 @@ Type
     function Add(Item: Pointer): Integer; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
     procedure Clear;
     procedure Delete(Index: Integer); {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    class procedure Error(const Msg: string; Data: PtrInt); static;
+    class procedure Error(const Msg: string; Data: PtrInt);
     procedure Exchange(Index1, Index2: Integer);
     function Expand: TFPList; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
     function Extract(Item: Pointer): Pointer;
@@ -257,9 +257,6 @@ Type
     function Remove(Item: Pointer): Integer;
     procedure Pack;
     procedure Sort(Compare: TListSortCompare);
-    procedure Sort(Compare: TListSortCompare; SortingAlgorithm: PSortingAlgorithm);
-    procedure Sort(Compare: TListSortComparer_Context; Context: Pointer);
-    procedure Sort(Compare: TListSortComparer_Context; Context: Pointer; SortingAlgorithm: PSortingAlgorithm);
     procedure ForEachCall(proc2call:TListCallback;arg:pointer);
     procedure ForEachCall(proc2call:TListStaticCallback;arg:pointer);
     property Capacity: Integer read FCapacity write SetCapacity;
@@ -276,7 +273,6 @@ Type
   public
     procedure Assign(Source: TFPList);
     procedure Sort(Compare: TListSortCompare);
-    procedure Sort(Compare: TListSortCompare; SortingAlgorithm: PSortingAlgorithm);
     procedure ForEachCall(Proc2call: TListCallback; Arg: Pointer);
     procedure ForEachCall(Proc2call: TListStaticCallback; Arg: Pointer);
   end;
@@ -288,9 +284,15 @@ Type
   TListNotification = (lnAdded, lnExtracted, lnDeleted);
   TList = class;
 
-  TListEnumerator = class(TFPListEnumerator)
+  TListEnumerator = class
+  private
+    FList: TList;
+    FPosition: Integer;
   public
     constructor Create(AList: TList);
+    function GetCurrent: Pointer;
+    function MoveNext: Boolean;
+    property Current: Pointer read GetCurrent;
   end;
 
   TList = class(TObject,IFPObserved)
@@ -306,15 +308,15 @@ Type
     procedure DoOr(ListA, ListB : TList);
     procedure DoXOr(ListA, ListB : TList);
   protected
-    function Get(Index: Integer): Pointer; inline;
+    function Get(Index: Integer): Pointer;
     procedure Grow; virtual;
     procedure Put(Index: Integer; Item: Pointer);
     procedure Notify(Ptr: Pointer; Action: TListNotification); virtual;
-    procedure SetCapacity(NewCapacity: Integer); inline;
-    function GetCapacity: Integer; inline;
+    procedure SetCapacity(NewCapacity: Integer);
+    function GetCapacity: integer;
     procedure SetCount(NewCount: Integer);
-    function GetCount: Integer; inline;
-    function GetList: PPointerList; inline;
+    function GetCount: integer;
+    function GetList: PPointerList;
   public
     constructor Create;
     destructor Destroy; override;
@@ -329,19 +331,16 @@ Type
     procedure Exchange(Index1, Index2: Integer);
     function Expand: TList;
     function Extract(item: Pointer): Pointer;
-    function First: Pointer; inline;
+    function First: Pointer;
     function GetEnumerator: TListEnumerator;
-    function IndexOf(Item: Pointer): Integer; inline;
+    function IndexOf(Item: Pointer): Integer;
     procedure Insert(Index: Integer; Item: Pointer);
-    function Last: Pointer; inline;
-    procedure Move(CurIndex, NewIndex: Integer); inline;
+    function Last: Pointer;
+    procedure Move(CurIndex, NewIndex: Integer);
     procedure Assign (ListA: TList; AOperator: TListAssignOp=laCopy; ListB: TList=nil);
     function Remove(Item: Pointer): Integer;
-    procedure Pack; inline;
-    procedure Sort(Compare: TListSortCompare); inline;
-    procedure Sort(Compare: TListSortCompare; SortingAlgorithm: PSortingAlgorithm); inline;
-    procedure Sort(Compare: TListSortComparer_Context; Context: Pointer); inline;
-    procedure Sort(Compare: TListSortComparer_Context; Context: Pointer; SortingAlgorithm: PSortingAlgorithm); inline;
+    procedure Pack;
+    procedure Sort(Compare: TListSortCompare);
     property Capacity: Integer read GetCapacity write SetCapacity;
     property Count: Integer read GetCount write SetCount;
     property Items[Index: Integer]: Pointer read Get write Put; default;
@@ -694,10 +693,6 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function ToObjectArray(aStart,aEnd : Integer) : TObjectDynArray; overload;
-    function ToObjectArray: TObjectDynArray; overload;
-    function ToStringArray(aStart,aEnd : Integer) : TStringDynArray; overload;
-    function ToStringArray: TStringDynArray; overload;
     function Add(const S: string): Integer; virtual; overload;
     function AddObject(const S: string; AObject: TObject): Integer; virtual; overload;
     function Add(const Fmt : string; const Args : Array of const): Integer; overload;
@@ -708,8 +703,6 @@ type
     procedure AddStrings(TheStrings: TStrings; ClearFirst : Boolean); overload;
     procedure AddStrings(const TheStrings: array of string); overload; virtual;
     procedure AddStrings(const TheStrings: array of string; ClearFirst : Boolean); overload;
-    procedure SetStrings(TheStrings: TStrings); overload; virtual;
-    procedure SetStrings(TheStrings: array of string); overload; virtual;
     Procedure AddText(Const S : String); virtual;
     procedure AddCommaText(const S: String);
     procedure AddDelimitedText(const S: String; ADelimiter: char; AStrictDelimiter: Boolean); overload;
@@ -830,6 +823,7 @@ type
     function GetSorted: Boolean;
     procedure Grow;
     procedure InternalClear(FromIndex : Integer = 0; ClearOnly : Boolean = False);
+    procedure QuickSort(L, R: Integer; CompareFn: TStringListSortCompare);
     procedure SetSorted(Value: Boolean);
     procedure SetCaseSensitive(b : boolean);
     procedure SetSortStyle(AValue: TStringsSortStyle);
@@ -860,9 +854,7 @@ type
     function IndexOf(const S: string): Integer; override;
     procedure Insert(Index: Integer; const S: string); override;
     procedure Sort; virtual;
-    procedure Sort(SortingAlgorithm: PSortingAlgorithm); virtual;
     procedure CustomSort(CompareFn: TStringListSortCompare); virtual;
-    procedure CustomSort(CompareFn: TStringListSortCompare; SortingAlgorithm: PSortingAlgorithm); virtual;
     property Duplicates: TDuplicates read FDuplicates write FDuplicates;
     property Sorted: Boolean read GetSorted write SetSorted;
     property CaseSensitive: Boolean read FCaseSensitive write SetCaseSensitive;
@@ -917,9 +909,7 @@ type
     function IndexOf(const S: string): Integer; override;
     procedure Insert(Index: Integer; const S: string); override;
     procedure Sort; virtual;
-    procedure Sort(SortingAlgorithm: PSortingAlgorithm); virtual;
     procedure CustomSort(CompareFn: TStringListSortCompare);
-    procedure CustomSort(CompareFn: TStringListSortCompare; SortingAlgorithm: PSortingAlgorithm);
     property Duplicates: TDuplicates read GetDuplicates write SetDuplicates;
     property Sorted: Boolean read GetSorted write SetSorted;
     property CaseSensitive: Boolean read FCaseSensitive write SetCaseSensitive;
@@ -949,162 +939,13 @@ type
     procedure SetSize(const NewSize: Int64); virtual;overload;
     procedure ReadNotImplemented;
     procedure WriteNotImplemented;
-    function ReadMaxSizeData(Var Buffer; aSize,aCount : NativeInt) : NativeInt;
-    Procedure ReadExactSizeData(Var Buffer; aSize,aCount : NativeInt);
-    function WriteMaxSizeData(Const Buffer; aSize,aCount : NativeInt) : NativeInt;
-    Procedure WriteExactSizeData(Const Buffer; aSize,aCount : NativeInt);
   public
     function Read(var Buffer; Count: Longint): Longint; virtual; overload;
-    function Read(var Buffer: TBytes; Count: Longint): Longint; overload;
-    function Read( Buffer : TBytes; aOffset, Count: Longint): Longint; overload;
-
-    function Write(const Buffer: TBytes; Offset, Count: Longint): Longint; overload;
-    function Write(const Buffer: TBytes; Count: Longint): Longint; overload;
     function Write(const Buffer; Count: Longint): Longint; virtual; overload;
-
     function Seek(Offset: Longint; Origin: Word): Longint; virtual; overload;
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; virtual; overload;
-
-    function ReadData(Buffer: Pointer; Count: NativeInt): NativeInt; overload;
-    function ReadData(Buffer: TBytes; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Boolean): NativeInt; overload;
-    function ReadData(var Buffer: Boolean; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: AnsiChar): NativeInt; overload;
-    function ReadData(var Buffer: AnsiChar; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: WideChar): NativeInt; overload;
-    function ReadData(var Buffer: WideChar; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Int8): NativeInt; overload;
-    function ReadData(var Buffer: Int8; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: UInt8): NativeInt; overload;
-    function ReadData(var Buffer: UInt8; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Int16): NativeInt; overload;
-    function ReadData(var Buffer: Int16; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: UInt16): NativeInt; overload;
-    function ReadData(var Buffer: UInt16; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Int32): NativeInt; overload;
-    function ReadData(var Buffer: Int32; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: UInt32): NativeInt; overload;
-    function ReadData(var Buffer: UInt32; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Int64): NativeInt; overload;
-    function ReadData(var Buffer: Int64; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: UInt64): NativeInt; overload;
-    function ReadData(var Buffer: UInt64; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Single): NativeInt; overload;
-    function ReadData(var Buffer: Single; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: Double): NativeInt; overload;
-    function ReadData(var Buffer: Double; Count: NativeInt): NativeInt; overload;
-{$IFDEF FPC_HAS_TYPE_EXTENDED}
-    function ReadData(var Buffer: Extended): NativeInt; overload;
-    function ReadData(var Buffer: Extended; Count: NativeInt): NativeInt; overload;
-    function ReadData(var Buffer: TExtended80Rec): NativeInt; overload;
-    function ReadData(var Buffer: TExtended80Rec; Count: NativeInt): NativeInt; overload;
-{$ENDIF}
     procedure ReadBuffer(var Buffer; Count: Longint);
-    procedure ReadBuffer(var Buffer: TBytes; Count: NativeInt); overload;
-    procedure ReadBuffer(var Buffer: TBytes; Offset, Count: NativeInt); overload;
-
-    procedure ReadBufferData(var Buffer: Boolean); overload;
-    procedure ReadBufferData(var Buffer: Boolean; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: AnsiChar); overload;
-    procedure ReadBufferData(var Buffer: AnsiChar; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: WideChar); overload;
-    procedure ReadBufferData(var Buffer: WideChar; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: Int8); overload;
-    procedure ReadBufferData(var Buffer: Int8; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: UInt8); overload;
-    procedure ReadBufferData(var Buffer: UInt8; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: Int16); overload;
-    procedure ReadBufferData(var Buffer: Int16; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: UInt16); overload;
-    procedure ReadBufferData(var Buffer: UInt16; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: Int32); overload;
-    procedure ReadBufferData(var Buffer: Int32; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: UInt32); overload;
-    procedure ReadBufferData(var Buffer: UInt32; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: Int64); overload;
-    procedure ReadBufferData(var Buffer: Int64; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: UInt64); overload;
-    procedure ReadBufferData(var Buffer: UInt64; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: Single); overload;
-    procedure ReadBufferData(var Buffer: Single; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: Double); overload;
-    procedure ReadBufferData(var Buffer: Double; Count: NativeInt); overload;
-{$IFDEF FPC_HAS_TYPE_EXTENDED}
-    procedure ReadBufferData(var Buffer: Extended); overload;
-    procedure ReadBufferData(var Buffer: Extended; Count: NativeInt); overload;
-    procedure ReadBufferData(var Buffer: TExtended80Rec); overload;
-    procedure ReadBufferData(var Buffer: TExtended80Rec; Count: NativeInt); overload;
-{$ENDIF}
     procedure WriteBuffer(const Buffer; Count: Longint);
-    procedure WriteBuffer(const Buffer: TBytes; Count: NativeInt); overload;
-    procedure WriteBuffer(const Buffer: TBytes; Offset, Count: NativeInt); overload;
-
-    function WriteData(const Buffer: TBytes; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Pointer; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Boolean): NativeInt; overload;
-    function WriteData(const Buffer: Boolean; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: AnsiChar): NativeInt; overload;
-    function WriteData(const Buffer: AnsiChar; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: WideChar): NativeInt; overload;
-    function WriteData(const Buffer: WideChar; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Int8): NativeInt; overload;
-    function WriteData(const Buffer: Int8; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: UInt8): NativeInt; overload;
-    function WriteData(const Buffer: UInt8; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Int16): NativeInt; overload;
-    function WriteData(const Buffer: Int16; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: UInt16): NativeInt; overload;
-    function WriteData(const Buffer: UInt16; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Int32): NativeInt; overload;
-    function WriteData(const Buffer: Int32; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: UInt32): NativeInt; overload;
-    function WriteData(const Buffer: UInt32; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Int64): NativeInt; overload;
-    function WriteData(const Buffer: Int64; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: UInt64): NativeInt; overload;
-    function WriteData(const Buffer: UInt64; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Single): NativeInt; overload;
-    function WriteData(const Buffer: Single; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: Double): NativeInt; overload;
-    function WriteData(const Buffer: Double; Count: NativeInt): NativeInt; overload;
-{$IFDEF FPC_HAS_TYPE_EXTENDED}
-    function WriteData(const Buffer: Extended): NativeInt; overload;
-    function WriteData(const Buffer: Extended; Count: NativeInt): NativeInt; overload;
-    function WriteData(const Buffer: TExtended80Rec): NativeInt; overload;
-    function WriteData(const Buffer: TExtended80Rec; Count: NativeInt): NativeInt; overload;
-{$ENDIF}
-    procedure WriteBufferData(Buffer: Int32); overload;
-    procedure WriteBufferData(Buffer: Int32; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: Boolean); overload;
-    procedure WriteBufferData(Buffer: Boolean; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: AnsiChar); overload;
-    procedure WriteBufferData(Buffer: AnsiChar; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: WideChar); overload;
-    procedure WriteBufferData(Buffer: WideChar; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: Int8); overload;
-    procedure WriteBufferData(Buffer: Int8; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: UInt8); overload;
-    procedure WriteBufferData(Buffer: UInt8; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: Int16); overload;
-    procedure WriteBufferData(Buffer: Int16; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: UInt16); overload;
-    procedure WriteBufferData(Buffer: UInt16; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: UInt32); overload;
-    procedure WriteBufferData(Buffer: UInt32; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: Int64); overload;
-    procedure WriteBufferData(Buffer: Int64; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: UInt64); overload;
-    procedure WriteBufferData(Buffer: UInt64; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: Single); overload;
-    procedure WriteBufferData(Buffer: Single; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: Double); overload;
-    procedure WriteBufferData(Buffer: Double; Count: NativeInt); overload;
-{$IFDEF FPC_HAS_TYPE_EXTENDED}
-    procedure WriteBufferData(Buffer: Extended); overload;
-    procedure WriteBufferData(Buffer: Extended; Count: NativeInt); overload;
-    procedure WriteBufferData(Buffer: TExtended80Rec); overload;
-    procedure WriteBufferData(Buffer: TExtended80Rec; Count: NativeInt); overload;
-{$ENDIF}
     function CopyFrom(Source: TStream; Count: Int64): Int64;
     function ReadComponent(Instance: TComponent): TComponent;
     function ReadComponentRes(Instance: TComponent): TComponent;
@@ -1194,7 +1035,6 @@ type
   private
     FMemory: Pointer;
     FSize, FPosition: PtrInt;
-    FSizeBoundsSeek : Boolean;
   protected
     Function GetSize : Int64; Override;
     function GetPosition: Int64; Override;
@@ -1205,7 +1045,6 @@ type
     procedure SaveToStream(Stream: TStream);
     procedure SaveToFile(const FileName: string);
     property Memory: Pointer read FMemory;
-    Property SizeBoundsSeek : Boolean Read FSizeBoundsSeek Write FSizeBoundsSeek;
   end;
 
 { TMemoryStream }

@@ -234,6 +234,8 @@ uses
 
     end;
 
+  procedure create_hlcodegen;
+
 
   const
     opcmp2if: array[topcmp] of tasmop = (A_None,
@@ -346,8 +348,6 @@ implementation
               a:=shortint(a);
             u16bit:
               a:=smallint(a);
-            else
-              ;
           end;
         end;
       a_load_const_stack(list,size,a,typ);
@@ -643,8 +643,6 @@ implementation
                      (fromloc.reference.indexbase<>NR_STACK_POINTER_REG) then
                     g_allocload_reg_reg(list,voidpointertype,fromloc.reference.indexbase,toloc.reference.indexbase,R_ADDRESSREGISTER);
                 end;
-              else
-                ;
             end;
           end;
         else
@@ -728,8 +726,6 @@ implementation
                     end;
                   procvardef:
                     g_call_system_proc(list,'fpc_initialize_array_procvar',[],nil);
-                  else
-                    internalerror(2019051025);
                 end;
                 tg.ungettemp(list,recref);
               end;
@@ -860,8 +856,6 @@ implementation
             a_op_const_stack(list,OP_XOR,size,cardinal($80000000));
           OS_64,OS_S64:
             a_op_const_stack(list,OP_XOR,size,tcgint($8000000000000000));
-          else
-            ;
         end;
       end;
 
@@ -877,11 +871,7 @@ implementation
           OS_32,OS_S32:
             result:=a xor cardinal($80000000);
           OS_64,OS_S64:
-{$push}{$r-}
             result:=a xor tcgint($8000000000000000);
-{$pop}
-          else
-            ;
         end;
       end;
 
@@ -1530,8 +1520,6 @@ implementation
                 handled:=true;
               end;
           end;
-        else
-          ;
       end;
       if not handled then
         inherited;
@@ -2249,8 +2237,6 @@ implementation
               a_op_const_stack(list,OP_AND,s32inttype,65535);
           OS_S16:
             list.concat(taicpu.op_none(a_i2s));
-          else
-            ;
         end;
     end;
 
@@ -2567,7 +2553,7 @@ implementation
       result:=get_call_result_cgpara(pd,forceresdef);
     end;
 
-  procedure create_hlcodegen_cpu;
+  procedure create_hlcodegen;
     begin
       hlcg:=thlcgjvm.create;
       create_codegen;
@@ -2575,5 +2561,4 @@ implementation
 
 begin
   chlcgobj:=thlcgjvm;
-  create_hlcodegen:=@create_hlcodegen_cpu;
 end.

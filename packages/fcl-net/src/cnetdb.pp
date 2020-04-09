@@ -233,7 +233,7 @@ type
 {$if defined(LINUX) or defined(OPENBSD)}
 {$define FIRST_ADDR_THEN_CANONNAME}
 {$endif}
-{$if defined(FREEBSD) or defined(NETBSD) or defined(DRAGONFLY) or defined(SOLARIS) or defined(ANDROID)}
+{$if defined(FREEBSD) or defined(NETBSD) or defined(DRAGONFLY) or defined(SOLARIS)}
 {$define FIRST_CANONNAME_THEN_ADDR}
 {$endif}
 {$if not defined(FIRST_CANONNAME_THEN_ADDR) and not defined(FIRST_ADDR_THEN_CANONNAME)}

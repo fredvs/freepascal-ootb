@@ -29,8 +29,6 @@ begin
   
 end;
 
-var
-  keys: cint;
 
 begin	
   consoleDemoInit();
@@ -40,11 +38,10 @@ begin
   while true do
   begin	
     scanKeys();
-    keys := keysDown();
-    if (keys and KEY_A) <> 0 then 
+    
+    if (keysDown() and KEY_A) <> 0 then 
       Calibrate();
-    if (keys and KEY_START) <> 0 then 
-      break;
+  
     consoleClear();
     if motion_init() <> 0 then
       iprintf('Nds is inserted'#10)

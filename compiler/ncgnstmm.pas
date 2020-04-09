@@ -60,15 +60,10 @@ implementation
         nextpi      : tprocinfo;
       begin
         result:=inherited;
-        if assigned(result) or
-           (assigned(current_procinfo) and
-            (df_generic in current_procinfo.procdef.defoptions)) then
+        if assigned(result) then
           exit;
         currpi:=current_procinfo.parent;
-        { current_procinfo.parent is not assigned for specialised generic routines in the
-          top-level scope }
-        while assigned(currpi) and
-              (currpi.procdef.parast.symtablelevel>=parentpd.parast.symtablelevel) do
+        while (currpi.procdef.parast.symtablelevel>=parentpd.parast.symtablelevel) do
           begin
             if not assigned(currpi.procdef.parentfpstruct) then
               build_parentfpstruct(currpi.procdef);
@@ -77,17 +72,13 @@ implementation
         { mark all parent parentfp parameters for inclusion in the struct that
           holds all locals accessed from nested routines }
         currpi:=current_procinfo.parent;
-        if assigned(currpi) then
+        nextpi:=currpi.parent;
+        while (currpi.procdef.parast.symtablelevel>parentpd.parast.symtablelevel) do
           begin
-            nextpi:=currpi.parent;
-            while assigned(currpi) and
-                  (currpi.procdef.parast.symtablelevel>parentpd.parast.symtablelevel) do
-              begin
-                hsym:=tparavarsym(currpi.procdef.parast.Find('parentfp'));
-                maybe_add_sym_to_parentfpstruct(currpi.procdef,hsym,nextpi.procdef.parentfpstructptrtype,false);
-                currpi:=nextpi;
-                nextpi:=nextpi.parent;
-              end;
+            hsym:=tparavarsym(currpi.procdef.parast.Find('parentfp'));
+            maybe_add_sym_to_parentfpstruct(currpi.procdef,hsym,nextpi.procdef.parentfpstructptrtype,false);
+            currpi:=nextpi;
+            nextpi:=nextpi.parent;
           end;
       end;
 

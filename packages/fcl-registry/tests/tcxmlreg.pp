@@ -66,6 +66,7 @@ procedure TTestXMLRegistry.TestReadBufDataString;
 
 Var
   S1,S2 : String;
+  I : Smallint;
   DS : Integer;
   dt : TDataType;
 

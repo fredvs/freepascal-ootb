@@ -315,7 +315,7 @@ interface
         { is in unsigned VAR!!                              }
         if mboverflow then
          begin
-           if needoverflowcheck then
+           if cs_check_overflow in current_settings.localswitches  then
             begin
               current_asmdata.getjumplabel(hl4);
               if unsigned then
@@ -581,8 +581,6 @@ interface
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.falselabel);
               unequaln:
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
-              else
-                internalerror(2019051024);
            end;
         end;
 
@@ -627,8 +625,6 @@ interface
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.falselabel);
               unequaln:
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
-              else
-                internalerror(2019051023);
            end;
         end;
 
@@ -654,8 +650,6 @@ interface
                    cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
                    cg.a_jmp_always(current_asmdata.CurrAsmList,location.falselabel);
                 end;
-              else
-                internalerror(2019051022);
            end;
         end;
 
@@ -808,8 +802,6 @@ interface
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.falselabel);
               unequaln:
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
-              else
-                internalerror(2019051021);
            end;
         end;
 
@@ -835,8 +827,6 @@ interface
                    cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
                    cg.a_jmp_always(current_asmdata.CurrAsmList,location.falselabel);
                 end;
-              else
-                internalerror(2019051020);
            end;
         end;
 
@@ -1002,7 +992,6 @@ interface
         ref:Treference;
         use_ref:boolean;
         hl4 : tasmlabel;
-        overflowcheck: boolean;
 
     const
       asmops: array[boolean] of tasmop = (A_IMUL, A_MUL);
@@ -1013,12 +1002,10 @@ interface
 
       pass_left_right;
 
-      overflowcheck:=needoverflowcheck;
-
       { MUL is faster than IMUL on the 8086 & 8088 (and equal in speed on 286+),
         but it's only safe to use in place of IMUL when overflow checking is off
         and we're doing a 16-bit>16-bit multiplication }
-      if not overflowcheck and
+      if not (cs_check_overflow in current_settings.localswitches) and
         (not is_32bitint(resultdef)) then
         unsigned:=true;
 
@@ -1051,7 +1038,7 @@ interface
         emit_ref(asmops[unsigned],S_W,ref)
       else
         emit_reg(asmops[unsigned],S_W,reg);
-      if overflowcheck and
+      if (cs_check_overflow in current_settings.localswitches) and
         { 16->32 bit cannot overflow }
         (not is_32bitint(resultdef)) then
         begin

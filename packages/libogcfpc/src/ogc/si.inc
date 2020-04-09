@@ -66,8 +66,9 @@ type
 
 
 function SI_Sync: cuint32; cdecl; external;
+
 function SI_Busy: cuint32; cdecl; external;
-procedure SI_SetXY(line: cuint16; cnt: cuint8); cdecl; external;
+
 function SI_IsChanBusy(chan: cint32): cuint32; cdecl; external;
 
 procedure SI_EnablePolling(poll: cuint32); cdecl; external;
@@ -81,7 +82,7 @@ function SI_GetStatus(chan: cint32): cuint32; cdecl; external;
 function SI_GetResponse(chan: cint32; buf: pointer): cuint32; cdecl; external;
 
 function SI_GetResponseRaw(chan: cint32): cuint32; cdecl; external;
-procedure SI_SetSamplingRate(samplingrate: cuint32); cdecl; external;
+
 procedure SI_RefreshSamplingRate; cdecl; external;
 
 function SI_Transfer(chan: cint32; out_: pointer; out_len: cuint32;

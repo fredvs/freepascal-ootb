@@ -1,7 +1,6 @@
 {$mode delphi}
 {$modeswitch objectivec1}
 {$modeswitch cvar}
-{$packrecords c}
 
 {$ifndef COCOAALL}
 {$error "You must compile with -dCOCOAALL to use COCOAALL."}
@@ -200,7 +199,6 @@
 unit CocoaAll;
 interface
 
-{$linkframework Cocoa}
 {$linkframework Foundation}
 {linkframework CoreImage}
 {$linkframework QuartzCore}

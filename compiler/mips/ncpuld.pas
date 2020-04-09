@@ -55,8 +55,6 @@ begin
     paravarsym :
       if([vo_is_dll_var,vo_is_external] * tabstractvarsym(symtableentry).varoptions <> []) then
         include(current_procinfo.flags,pi_needs_got);
-    else
-      ;
   end;
 end;
 

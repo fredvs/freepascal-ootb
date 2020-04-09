@@ -215,7 +215,7 @@ interface
           procedure readnumber;
           function  readid:string;
           function  readval:longint;
-          function  readcomment(include_special_char: boolean = false):string;
+          function  readcomment:string;
           function  readquotedstring:string;
           function  readstate:char;
           function  readoptionalstate(fallback:char):char;
@@ -524,17 +524,12 @@ implementation
 
            HandleModeSwitches(m_none,changeinit);
 
-           { turn on bitpacking and case checking for mode macpas and iso pascal,
-             as well as extended pascal }
+           { turn on bitpacking for mode macpas and iso pascal as well as extended pascal }
            if ([m_mac,m_iso,m_extpas] * current_settings.modeswitches <> []) then
              begin
                include(current_settings.localswitches,cs_bitpacking);
-               include(current_settings.localswitches,cs_check_all_case_coverage);
                if changeinit then
-                 begin
-                   include(init_settings.localswitches,cs_bitpacking);
-                   include(init_settings.localswitches,cs_check_all_case_coverage);
-                 end;
+                 include(init_settings.localswitches,cs_bitpacking);
              end;
 
            { support goto/label by default in delphi/tp7/mac/iso/extpas modes }
@@ -616,11 +611,7 @@ implementation
               undef_system_macro('FPC_GPC')
 {$endif}
             else if (m_mac in oldmodeswitches) then
-              undef_system_macro('FPC_MACPAS')
-            else if (m_iso in oldmodeswitches) then
-              undef_system_macro('FPC_ISO')
-            else if (m_extpas in oldmodeswitches) then
-              undef_system_macro('FPC_EXTENDEDPASCAL');
+              undef_system_macro('FPC_MACPAS');
 
             { define new symbol in delphi,objfpc,tp,gpc,macpas mode }
             if (m_delphi in current_settings.modeswitches) then
@@ -634,11 +625,7 @@ implementation
               def_system_macro('FPC_GPC')
 {$endif}
             else if (m_mac in current_settings.modeswitches) then
-              def_system_macro('FPC_MACPAS')
-            else if (m_iso in current_settings.modeswitches) then
-              def_system_macro('FPC_ISO')
-            else if (m_extpas in current_settings.modeswitches) then
-              def_system_macro('FPC_EXTENDEDPASCAL');
+              def_system_macro('FPC_MACPAS');
          end;
 
         SetCompileMode:=b;
@@ -1499,9 +1486,7 @@ type
                               tokentoconsume:=_STRING;
                             end;
                         end
-                      else
-                        ;
-                    end;
+                      end;
                   end
                 else
                   begin
@@ -2014,8 +1999,6 @@ type
                                     result.free;
                                     result:=texprvalue.create_int(tenumsym(srsym).value);
                                   end;
-                                else
-                                  ;
                               end;
                           end
                         end
@@ -3033,9 +3016,6 @@ type
             alignment.procalign:=tokenreadlongint;
             alignment.loopalign:=tokenreadlongint;
             alignment.jumpalign:=tokenreadlongint;
-            alignment.jumpalignskipmax:=tokenreadlongint;
-            alignment.coalescealign:=tokenreadlongint;
-            alignment.coalescealignskipmax:=tokenreadlongint;
             alignment.constalignmin:=tokenreadlongint;
             alignment.constalignmax:=tokenreadlongint;
             alignment.varalignmin:=tokenreadlongint;
@@ -3076,8 +3056,6 @@ type
             minfpconstprec:=tfloattype(tokenreadenum(sizeof(tfloattype)));
 
             disabledircache:=boolean(tokenreadbyte);
-
-            tlsmodel:=ttlsmodel(tokenreadenum(sizeof(ttlsmodel)));
 { TH: Since the field was conditional originally, it was not stored in PPUs.  }
 { While adding ControllerSupport constant, I decided not to store ct_none     }
 { on targets not supporting controllers, but this might be changed here and   }
@@ -3118,9 +3096,6 @@ type
             tokenwritelongint(alignment.procalign);
             tokenwritelongint(alignment.loopalign);
             tokenwritelongint(alignment.jumpalign);
-            tokenwritelongint(alignment.jumpalignskipmax);
-            tokenwritelongint(alignment.coalescealign);
-            tokenwritelongint(alignment.coalescealignskipmax);
             tokenwritelongint(alignment.constalignmin);
             tokenwritelongint(alignment.constalignmax);
             tokenwritelongint(alignment.varalignmin);
@@ -3159,9 +3134,6 @@ type
             tokenwriteenum(minfpconstprec,sizeof(tfloattype));
 
             recordtokenbuf.write(byte(disabledircache),1);
-
-            tokenwriteenum(tlsmodel,sizeof(tlsmodel));
-
 { TH: See note about controllertype field in tokenreadsettings. }
 {$PUSH}
  {$WARN 6018 OFF} (* Unreachable code due to compile time evaluation *)
@@ -3236,15 +3208,6 @@ type
           end;
 
         { file pos changes? }
-        if current_tokenpos.fileindex<>last_filepos.fileindex then
-          begin
-            s:=ST_FILEINDEX;
-            writetoken(t);
-            recordtokenbuf.write(s,1);
-            tokenwriteword(current_tokenpos.fileindex);
-            last_filepos.fileindex:=current_tokenpos.fileindex;
-            last_filepos.line:=0;
-          end;
         if current_tokenpos.line<>last_filepos.line then
           begin
             s:=ST_LINE;
@@ -3252,7 +3215,6 @@ type
             recordtokenbuf.write(s,1);
             tokenwritelongint(current_tokenpos.line);
             last_filepos.line:=current_tokenpos.line;
-            last_filepos.column:=0;
           end;
         if current_tokenpos.column<>last_filepos.column then
           begin
@@ -3270,6 +3232,14 @@ type
                 tokenwriteword(current_tokenpos.column);
               end;
             last_filepos.column:=current_tokenpos.column;
+          end;
+        if current_tokenpos.fileindex<>last_filepos.fileindex then
+          begin
+            s:=ST_FILEINDEX;
+            writetoken(t);
+            recordtokenbuf.write(s,1);
+            tokenwriteword(current_tokenpos.fileindex);
+            last_filepos.fileindex:=current_tokenpos.fileindex;
           end;
 
         writetoken(token);
@@ -3308,8 +3278,6 @@ type
               recordtokenbuf.write(orgpattern[0],1);
               recordtokenbuf.write(orgpattern[1],length(orgpattern));
             end;
-          else
-            ;
         end;
       end;
 
@@ -3482,11 +3450,11 @@ type
                         current_tokenpos.fileindex:=tokenreadword;
                         current_filepos:=current_tokenpos;
                       end;
+                    else
+                      internalerror(2006103010);
                   end;
                 continue;
               end;
-            else
-              ;
           end;
           break;
         until false;
@@ -3831,14 +3799,14 @@ type
         valuedescr: String;
       begin
         if assigned(preprocstack) and
-           (preprocstack.typ in [pp_if,pp_ifdef,pp_ifndef,pp_elseif]) then
+           (preprocstack.typ in [pp_if,pp_elseif]) then
          begin
            { when the branch is accepted we use pp_elseif so we know that
              all the next branches need to be rejected. when this branch is still
              not accepted then leave it at pp_if }
            if (preprocstack.typ=pp_elseif) then
              preprocstack.accept:=false
-           else if (preprocstack.typ in [pp_if,pp_ifdef,pp_ifndef]) and preprocstack.accept then
+           else if (preprocstack.typ=pp_if) and preprocstack.accept then
                begin
                  preprocstack.accept:=false;
                  preprocstack.typ:=pp_elseif;
@@ -4149,7 +4117,7 @@ type
       end;
 
 
-    function tscannerfile.readcomment(include_special_char: boolean):string;
+    function tscannerfile.readcomment:string;
       var
         i : longint;
       begin
@@ -4158,29 +4126,15 @@ type
           case c of
             '{' :
               begin
-                if (include_special_char) and (i<255) then
-                begin
-                  inc(i);
-                  readcomment[i]:=c;
-                end;
-
                 if current_commentstyle=comment_tp then
                   inc_comment_level;
               end;
             '}' :
               begin
-                if (include_special_char) and (i<255) then
-                begin
-                  inc(i);
-                  readcomment[i]:=c;
-                end;
-
                 if current_commentstyle=comment_tp then
                   begin
                     readchar;
                     dec_comment_level;
-
-
                     if comment_level=0 then
                       break
                     else

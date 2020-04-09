@@ -31,8 +31,7 @@ uses
 {$ifdef FPC_TESTGENERICS}
   fgl,
 {$endif}
-  rtlconsts,
-  sortbase;
+  rtlconsts;
 
 {$i classesh.inc}
 

@@ -26,7 +26,6 @@ uses
   rtlconsts,
   sysutils,
   types,
-  sortbase,
 {$ifdef FPC_TESTGENERICS}
   fgl,
 {$endif}

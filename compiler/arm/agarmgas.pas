@@ -49,7 +49,6 @@ unit agarmgas;
 
       TArmAppleGNUAssembler=class(TAppleGNUassembler)
         constructor CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean); override;
-        function MakeCmdLine: TCmdStr; override;
         procedure WriteExtraHeader; override;
       end;
 
@@ -95,9 +94,7 @@ unit agarmgas;
       begin
         inherited;
         InstrWriter := TArmInstrWriter.create(self);
-{$ifndef llvm}
         if GenerateThumb2Code then
-{$endif}
           TArmInstrWriter(InstrWriter).unified_syntax:=true;
       end;
 
@@ -105,26 +102,18 @@ unit agarmgas;
     function TArmGNUAssembler.MakeCmdLine: TCmdStr;
       begin
         result:=inherited MakeCmdLine;
-        case current_settings.fputype of
-          fpu_soft:
-            result:='-mfpu=softvfp '+result;
-          fpu_vfpv2:
-            result:='-mfpu=vfpv2 '+result;
-          fpu_vfpv3:
-            result:='-mfpu=vfpv3 '+result;
-          fpu_neon_vfpv3:
-            result:='-mfpu=neon-vfpv3 '+result;
-          fpu_vfpv3_d16:
-            result:='-mfpu=vfpv3-d16 '+result;
-          fpu_fpv4_s16:
-            result:='-mfpu=fpv4-sp-d16 '+result;
-          fpu_vfpv4:
-            result:='-mfpu=vfpv4 '+result;
-          fpu_neon_vfpv4:
-            result:='-mfpu=neon-vfpv4 '+result;
-          else
-            ;
-        end;
+        if (current_settings.fputype = fpu_soft) then
+          result:='-mfpu=softvfp '+result;
+        if (current_settings.fputype = fpu_vfpv2) then
+          result:='-mfpu=vfpv2 '+result;
+        if (current_settings.fputype = fpu_vfpv3) then
+          result:='-mfpu=vfpv3 '+result;
+        if (current_settings.fputype = fpu_vfpv3_d16) then
+          result:='-mfpu=vfpv3-d16 '+result;
+        if (current_settings.fputype = fpu_fpv4_s16) then
+          result:='-mfpu=fpv4-sp-d16 '+result;
+        if (current_settings.fputype = fpu_vfpv4) then
+          result:='-mfpu=vfpv4 '+result;
 
         if GenerateThumb2Code then
           result:='-march='+cputype_to_gas_march[current_settings.cputype]+' -mthumb -mthumb-interwork '+result
@@ -135,11 +124,7 @@ unit agarmgas;
 
         if target_info.abi = abi_eabihf then
           { options based on what gcc uses on debian armhf }
-          result:='-mfloat-abi=hard -meabi=5 '+result
-        else if (target_info.abi = abi_eabi) and not(current_settings.fputype = fpu_soft) then
-          result:='-mfloat-abi=softfp -meabi=5 '+result
-        else if (target_info.abi = abi_eabi) and (current_settings.fputype = fpu_soft) then
-          result:='-mfloat-abi=soft -meabi=5 '+result;
+          result:='-mfloat-abi=hard -meabi=5 '+result;
       end;
 
     procedure TArmGNUAssembler.WriteExtraHeader;
@@ -160,18 +145,6 @@ unit agarmgas;
         TArmInstrWriter(InstrWriter).unified_syntax:=true;
       end;
 
-
-    function TArmAppleGNUAssembler.MakeCmdLine: TCmdStr;
-      begin
-        result:=inherited MakeCmdLine;
-	if (asminfo^.id = as_clang) then
-          begin
-            if fputypestrllvm[current_settings.fputype] <> '' then
-              result:='-m'+fputypestrllvm[current_settings.fputype]+' '+result;
-            { Apple arm always uses softfp floating point ABI }
-            result:='-mfloat-abi=softfp '+result;
-          end;
-      end;
 
     procedure TArmAppleGNUAssembler.WriteExtraHeader;
       begin
@@ -207,9 +180,7 @@ unit agarmgas;
                 if offset<>0 then
                   s:=s+tostr_with_plus(offset);
                 if refaddr=addr_pic then
-                  s:=s+'(PLT)'
-                else if refaddr=addr_tlscall then
-                  s:=s+'(tlscall)';
+                  s:=s+'(PLT)';
               end
             else
               begin
@@ -230,8 +201,6 @@ unit agarmgas;
                        s:=s+', rrx'
                      else if shiftmode <> SM_None then
                        s:=s+', '+gas_shiftmode2str[shiftmode]+' #'+tostr(shiftimm);
-                     if offset<>0 then
-                       Internalerror(2019012601);
                   end
                 else if offset<>0 then
                   s:=s+', #'+tostr(offset);
@@ -241,8 +210,6 @@ unit agarmgas;
                     s:=s+']';
                   AM_PREINDEXED:
                     s:=s+']!';
-                  else
-                    ;
                 end;
               end;
 

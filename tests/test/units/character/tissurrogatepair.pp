@@ -12,15 +12,11 @@ program tissurrogatepair;
   
 uses     
   SysUtils,
-  unicodedata,character;
+  character;
     
 {$ifndef FPC}
   type UnicodeChar = WideChar;   
 {$endif}
-
-const
-  { test only a spare grid, else the test runs too long (testing all combinations means dist=1) }
-  dist = 8;
     
 procedure DoError(ACode : Integer; ACodePoint1, ACodePoint2 : Integer); overload;
 begin
@@ -31,6 +27,13 @@ begin
   );
   Halt(Acode);
 end;
+
+const
+  LOW_SURROGATE_BEGIN  = Word($DC00);
+  LOW_SURROGATE_END    = Word($DFFF);
+
+  HIGH_SURROGATE_BEGIN = Word($D800);
+  HIGH_SURROGATE_END   = Word($DBFF);
 
 var
   e, i , j: Integer;
@@ -44,12 +47,12 @@ begin
   end;
 
   Inc(e);
-  for i := Low(Word) to High(Word) div dist do begin
-    if (i*dist < HIGH_SURROGATE_BEGIN) or (i*dist > HIGH_SURROGATE_END) then begin
-      for j := Low(Word) to High(Word) div dist do begin
-        if (j*dist < LOW_SURROGATE_BEGIN) or (j*dist > LOW_SURROGATE_END) then begin
-          if TCharacter.IsSurrogatePair(UnicodeChar(i*dist),UnicodeChar(j*dist)) then
-            DoError(e,i*dist,j*dist);
+  for i := Low(Word) to High(Word) do begin
+    if (i < HIGH_SURROGATE_BEGIN) or (i > HIGH_SURROGATE_END) then begin
+      for j := Low(Word) to High(Word) do begin
+        if (j < LOW_SURROGATE_BEGIN) or (j > LOW_SURROGATE_END) then begin
+          if TCharacter.IsSurrogatePair(UnicodeChar(i),UnicodeChar(j)) then
+            DoError(e,i,j);
         end;
       end;
     end;

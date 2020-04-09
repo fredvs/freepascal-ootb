@@ -123,18 +123,13 @@ implementation
     { Insert the used object file for this unit in the used list for this unit }
       begin
         current_module.linkunitofiles.add(current_module.objfilename,link_static);
-        current_module.headerflags:=current_module.headerflags or uf_static_linked;
+        current_module.flags:=current_module.flags or uf_static_linked;
 
         if create_smartlink_library then
-          begin
-            current_module.linkunitstaticlibs.add(current_module.staticlibfilename ,link_smart);
-            current_module.headerflags:=current_module.headerflags or uf_smart_linked;
-          end;
-        if cs_lto in current_settings.moduleswitches then
-          begin
-            current_module.linkunitofiles.add(ChangeFileExt(current_module.objfilename,LTOExt),link_lto);
-            current_module.headerflags:=current_module.headerflags or uf_lto_linked;
-          end;
+         begin
+           current_module.linkunitstaticlibs.add(current_module.staticlibfilename ,link_smart);
+           current_module.flags:=current_module.flags or uf_smart_linked;
+         end;
       end;
 
 
@@ -168,12 +163,13 @@ implementation
         if not CheckResourcesUsed then exit;
 
         hp:=tused_unit(usedunits.first);
-        found:=mf_has_resourcefiles in current_module.moduleflags;
-        while Assigned(hp) and not found do
-          begin
-            found:=mf_has_resourcefiles in hp.u.moduleflags;
+        found:=((current_module.flags and uf_has_resourcefiles)=uf_has_resourcefiles);
+        If not found then
+          While Assigned(hp) and not found do
+            begin
+            Found:=((hp.u.flags and uf_has_resourcefiles)=uf_has_resourcefiles);
             hp:=tused_unit(hp.next);
-          end;
+            end;
         CheckResourcesUsed:=found;
       end;
 
@@ -214,7 +210,7 @@ implementation
       begin
         { Do we need the variants unit? Skip this
           for VarUtils unit for bootstrapping }
-        if not(mf_uses_variants in current_module.moduleflags) or
+        if (current_module.flags and uf_uses_variants=0) or
            (current_module.modulename^='VARUTILS') then
           exit;
         { Variants unit already loaded? }
@@ -408,7 +404,7 @@ implementation
 {$push}
 {$warn 6018 off} { Unreachable code due to compile time evaluation }
         { CPU targets with microcontroller support can add a controller specific unit }
-        if ControllerSupport and (target_info.system in (systems_embedded+systems_freertos)) and
+        if ControllerSupport and (target_info.system in systems_embedded) and
           (current_settings.controllertype<>ct_none) and
           (embedded_controllers[current_settings.controllertype].controllerunitstr<>'') then
           AddUnit(embedded_controllers[current_settings.controllertype].controllerunitstr);
@@ -670,7 +666,7 @@ implementation
         st.insert(ps);
         pd:=tprocdef(cnodeutils.create_main_procdef(target_info.cprefix+name,potype,ps));
         { We don't need a local symtable, change it into the static symtable }
-        if not (potype in [potype_mainstub,potype_pkgstub,potype_libmainstub]) then
+        if not (potype in [potype_mainstub,potype_pkgstub]) then
           begin
             pd.localst.free;
             pd.localst:=st;
@@ -726,21 +722,21 @@ implementation
 {$endif i386 or sparcgen}
       end;
 
-    function gen_implicit_initfinal(flag:tmoduleflag;st:TSymtable):tcgprocinfo;
+    function gen_implicit_initfinal(flag:word;st:TSymtable):tcgprocinfo;
       begin
         { create procdef }
         case flag of
-          mf_init :
+          uf_init :
             begin
               result:=create_main_proc(make_mangledname('',current_module.localsymtable,'init_implicit$'),potype_unitinit,st);
-              result.procdef.aliasnames.concat(make_mangledname('INIT$',current_module.localsymtable,''));
+              result.procdef.aliasnames.insert(make_mangledname('INIT$',current_module.localsymtable,''));
             end;
-          mf_finalize :
+          uf_finalize :
             begin
               result:=create_main_proc(make_mangledname('',current_module.localsymtable,'finalize_implicit$'),potype_unitfinalize,st);
-              result.procdef.aliasnames.concat(make_mangledname('FINALIZE$',current_module.localsymtable,''));
+              result.procdef.aliasnames.insert(make_mangledname('FINALIZE$',current_module.localsymtable,''));
               if (not current_module.is_unit) then
-                result.procdef.aliasnames.concat('PASCALFINALIZE');
+                result.procdef.aliasnames.insert('PASCALFINALIZE');
             end;
           else
             internalerror(200304253);
@@ -886,10 +882,6 @@ type
          current_module.SetFileName(main_file.path+main_file.name,true);
          current_module.SetModuleName(unitname);
 
-{$ifdef DEBUG_NODE_XML}
-         XMLInitializeNodeFile('unit', unitname);
-{$endif DEBUG_NODE_XML}
-
          { check for system unit }
          new(s2);
          s2^:=upper(ChangeFileExt(ExtractFileName(main_file.name),''));
@@ -1027,10 +1019,6 @@ type
             Message1(unit_f_errors_in_unit,tostr(Errorcount));
             status.skip_error:=true;
             symtablestack.pop(current_module.globalsymtable);
-
-{$ifdef DEBUG_NODE_XML}
-            XMLFinalizeNodeFile('unit');
-{$endif DEBUG_NODE_XML}
             exit;
           end;
 
@@ -1093,7 +1081,7 @@ type
 
              { Compile the unit }
              init_procinfo:=create_main_proc(make_mangledname('',current_module.localsymtable,'init$'),potype_unitinit,current_module.localsymtable);
-             init_procinfo.procdef.aliasnames.concat(make_mangledname('INIT$',current_module.localsymtable,''));
+             init_procinfo.procdef.aliasnames.insert(make_mangledname('INIT$',current_module.localsymtable,''));
              init_procinfo.parse_body;
              { save file pos for debuginfo }
              current_module.mainfilepos:=init_procinfo.entrypos;
@@ -1103,7 +1091,7 @@ type
                begin
                  { Compile the finalize }
                  finalize_procinfo:=create_main_proc(make_mangledname('',current_module.localsymtable,'finalize$'),potype_unitfinalize,current_module.localsymtable);
-                 finalize_procinfo.procdef.aliasnames.concat(make_mangledname('FINALIZE$',current_module.localsymtable,''));
+                 finalize_procinfo.procdef.aliasnames.insert(make_mangledname('FINALIZE$',current_module.localsymtable,''));
                  finalize_procinfo.parse_body;
                end
            end;
@@ -1217,9 +1205,6 @@ type
          add_synthetic_method_implementations(current_module.globalsymtable);
          add_synthetic_method_implementations(current_module.localsymtable);
 
-         { generate construction functions for all attributes in the unit }
-         generate_attr_constrs(current_module.used_rtti_attrs);
-
          { if the unit contains ansi/widestrings, initialization and
            finalization code must be forced }
          force_init_final:=tglobalsymtable(current_module.globalsymtable).needs_init_final or
@@ -1242,7 +1227,7 @@ type
                  release_proc_symbol(init_procinfo.procdef);
                  release_main_proc(init_procinfo);
                end;
-             init_procinfo:=gen_implicit_initfinal(mf_init,current_module.localsymtable);
+             init_procinfo:=gen_implicit_initfinal(uf_init,current_module.localsymtable);
            end;
          if (force_init_final or cnodeutils.force_final) and
             (
@@ -1256,7 +1241,7 @@ type
                  release_proc_symbol(finalize_procinfo.procdef);
                  release_main_proc(finalize_procinfo);
                end;
-             finalize_procinfo:=gen_implicit_initfinal(mf_finalize,current_module.localsymtable);
+             finalize_procinfo:=gen_implicit_initfinal(uf_finalize,current_module.localsymtable);
            end;
 
          { Now both init and finalize bodies are read and it is known
@@ -1270,7 +1255,7 @@ type
                begin
                  init_procinfo.code:=cnodeutils.wrap_proc_body(init_procinfo.procdef,init_procinfo.code);
                  init_procinfo.generate_code;
-                 include(current_module.moduleflags,mf_init);
+                 current_module.flags:=current_module.flags or uf_init;
                end
              else
                release_proc_symbol(init_procinfo.procdef);
@@ -1285,7 +1270,7 @@ type
                begin
                  finalize_procinfo.code:=cnodeutils.wrap_proc_body(finalize_procinfo.procdef,finalize_procinfo.code);
                  finalize_procinfo.generate_code;
-                 include(current_module.moduleflags,mf_finalize);
+                 current_module.flags:=current_module.flags or uf_finalize;
                end
              else
                release_proc_symbol(finalize_procinfo.procdef);
@@ -1327,10 +1312,6 @@ type
             module_is_done;
             if not immediate then
               restore_global_state(globalstate,true);
-
-{$ifdef DEBUG_NODE_XML}
-            XMLFinalizeNodeFile('unit');
-{$endif DEBUG_NODE_XML}
             exit;
           end;
 
@@ -1371,9 +1352,8 @@ type
            insertobjectfile
          else
            begin
-             current_module.headerflags:=current_module.headerflags or uf_no_link;
-             exclude(current_module.moduleflags,mf_has_stabs_debuginfo);
-             exclude(current_module.moduleflags,mf_has_dwarf_debuginfo);
+             current_module.flags:=current_module.flags or uf_no_link;
+             current_module.flags:=current_module.flags and not (uf_has_stabs_debuginfo or uf_has_dwarf_debuginfo);
            end;
 
          if ag then
@@ -1420,10 +1400,6 @@ type
             module_is_done;
             if not immediate then
               restore_global_state(globalstate,true);
-
-{$ifdef DEBUG_NODE_XML}
-            XMLFinalizeNodeFile('unit');
-{$endif DEBUG_NODE_XML}
             exit;
           end;
 
@@ -1483,9 +1459,6 @@ type
                 waitingmodule.end_of_parsing;
               end;
           end;
-{$ifdef DEBUG_NODE_XML}
-        XMLFinalizeNodeFile('unit');
-{$endif DEBUG_NODE_XML}
       end;
 
 
@@ -1566,10 +1539,6 @@ type
            read, all following directives are parsed as well }
 
          setupglobalswitches;
-
-{$ifdef DEBUG_NODE_XML}
-         XMLInitializeNodeFile('package', module_name);
-{$endif DEBUG_NODE_XML}
 
          consume(_SEMICOLON);
 
@@ -1674,7 +1643,7 @@ type
            begin
              if (hp<>current_module) and not assigned(hp.package) then
                begin
-                 if mf_package_deny in hp.moduleflags then
+                 if (hp.flags and uf_package_deny) <> 0 then
                    message1(package_e_unit_deny_package,hp.realmodulename^);
                  { part of the package's used, aka contained units? }
                  uu:=tused_unit(current_module.used_units.first);
@@ -1717,13 +1686,13 @@ type
          { should we force unit initialization? }
          force_init_final:=tstaticsymtable(current_module.localsymtable).needs_init_final;
          if force_init_final or cnodeutils.force_init then
-           {init_procinfo:=gen_implicit_initfinal(mf_init,current_module.localsymtable)};
+           {init_procinfo:=gen_implicit_initfinal(uf_init,current_module.localsymtable)};
 
          { Add symbol to the exports section for win32 so smartlinking a
            DLL will include the edata section }
          if assigned(exportlib) and
             (target_info.system in [system_i386_win32,system_i386_wdosx]) and
-            (mf_has_exports in current_module.moduleflags) then
+            ((current_module.flags and uf_has_exports)<>0) then
            current_asmdata.asmlists[al_procedures].concat(tai_const.createname(make_mangledname('EDATA',current_module.localsymtable,''),0));
 
          { all labels must be defined before generating code }
@@ -1748,15 +1717,10 @@ type
 
          if target_info.system in systems_all_windows+systems_nativent then
            begin
-             main_procinfo:=create_main_proc('_PkgEntryPoint',potype_pkgstub,current_module.localsymtable);
-             main_procinfo.procdef.aliasnames.concat('_DLLMainCRTStartup');
+             main_procinfo:=create_main_proc('_DLLMainCRTStartup',potype_pkgstub,current_module.localsymtable);
              main_procinfo.code:=generate_pkg_stub(main_procinfo.procdef);
              main_procinfo.generate_code;
            end;
-
-{$ifdef DEBUG_NODE_XML}
-         XMLFinalizeNodeFile('package');
-{$endif DEBUG_NODE_XML}
 
          { leave when we got an error }
          if (Errorcount>0) and not status.skip_error then
@@ -1934,13 +1898,13 @@ type
       var
          main_file : tinputfile;
          hp,hp2    : tmodule;
-         initpd    : tprocdef;
          finalize_procinfo,
          init_procinfo,
          main_procinfo : tcgprocinfo;
          force_init_final : boolean;
          resources_used : boolean;
          program_uses_checkpointer : boolean;
+         initname,
          program_name : ansistring;
          consume_semicolon_after_uses : boolean;
          ps : tprogramparasym;
@@ -2022,10 +1986,6 @@ type
               setupglobalswitches;
 
               consume(_SEMICOLON);
-
-{$ifdef DEBUG_NODE_XML}
-              XMLInitializeNodeFile('library', program_name);
-{$endif DEBUG_NODE_XML}
            end
          else
            { is there an program head ? }
@@ -2072,10 +2032,6 @@ type
               setupglobalswitches;
 
               consume(_SEMICOLON);
-
-{$ifdef DEBUG_NODE_XML}
-              XMLInitializeNodeFile('program', program_name);
-{$endif DEBUG_NODE_XML}
             end
          else
            begin
@@ -2084,10 +2040,6 @@ type
 
              { setup things using the switches }
              setupglobalswitches;
-
-{$ifdef DEBUG_NODE_XML}
-             XMLInitializeNodeFile('program', current_module.realmodulename^);
-{$endif DEBUG_NODE_XML}
            end;
 
          { load all packages, so we know whether a unit is contained inside a
@@ -2172,28 +2124,24 @@ type
            from the bootstrap code.}
          if islibrary then
           begin
-            initpd:=nil;
-            { ToDo: other systems that use indirect entry info, but check back with Windows! }
-            { we need to call FPC_LIBMAIN in sysinit which in turn will call PascalMain -> create dummy stub }
-            if target_info.system in systems_darwin then
-              begin
-                main_procinfo:=create_main_proc(make_mangledname('sysinitcallthrough',current_module.localsymtable,'stub'),potype_libmainstub,current_module.localsymtable);
-                call_through_new_name(main_procinfo.procdef,target_info.cprefix+'FPC_LIBMAIN');
-                initpd:=main_procinfo.procdef;
-                main_procinfo.free;
-              end;
-
             main_procinfo:=create_main_proc(make_mangledname('',current_module.localsymtable,mainaliasname),potype_proginit,current_module.localsymtable);
             { Win32 startup code needs a single name }
             if not(target_info.system in (systems_darwin+systems_aix)) then
-              main_procinfo.procdef.aliasnames.concat('PASCALMAIN')
+              main_procinfo.procdef.aliasnames.insert('PASCALMAIN')
             else
-              main_procinfo.procdef.aliasnames.concat(target_info.Cprefix+'PASCALMAIN');
+              main_procinfo.procdef.aliasnames.insert(target_info.Cprefix+'PASCALMAIN');
 
-            if not(target_info.system in systems_darwin) then
-              initpd:=main_procinfo.procdef;
-
-            cnodeutils.RegisterModuleInitFunction(initpd);
+            { ToDo: systems that use indirect entry info, but check back with Windows! }
+            if target_info.system in systems_darwin then
+              { we need to call FPC_LIBMAIN in sysinit which in turn will call PascalMain }
+              initname:=target_info.cprefix+'FPC_LIBMAIN'
+            else
+              initname:=main_procinfo.procdef.mangledname;
+            { setinitname may generate a new section -> don't add to the
+              current list, because we assume this remains a text section
+              -- add to pure assembler section, so in case of special directives
+                they are directly added to the assembler output by llvm }
+            exportlib.setinitname(current_asmdata.AsmLists[al_pure_assembler],initname);
           end
          else if (target_info.system in ([system_i386_netware,system_i386_netwlibc,system_powerpc_macos]+systems_darwin+systems_aix)) then
            begin
@@ -2213,7 +2161,7 @@ type
          else
            begin
              main_procinfo:=create_main_proc(mainaliasname,potype_proginit,current_module.localsymtable);
-             main_procinfo.procdef.aliasnames.concat('PASCALMAIN');
+             main_procinfo.procdef.aliasnames.insert('PASCALMAIN');
            end;
          main_procinfo.parse_body;
          { save file pos for debuginfo }
@@ -2225,7 +2173,7 @@ type
               { Parse the finalize }
               finalize_procinfo:=create_main_proc(make_mangledname('',current_module.localsymtable,'finalize$'),potype_unitfinalize,current_module.localsymtable);
               finalize_procinfo.procdef.aliasnames.insert(make_mangledname('FINALIZE$',current_module.localsymtable,''));
-              finalize_procinfo.procdef.aliasnames.concat('PASCALFINALIZE');
+              finalize_procinfo.procdef.aliasnames.insert('PASCALFINALIZE');
               finalize_procinfo.parse_body;
            end;
 
@@ -2240,19 +2188,16 @@ type
            the compiler }
          add_synthetic_method_implementations(current_module.localsymtable);
 
-         { generate construction functions for all attributes in the program }
-         generate_attr_constrs(current_module.used_rtti_attrs);
-
          { should we force unit initialization? }
          force_init_final:=tstaticsymtable(current_module.localsymtable).needs_init_final;
          if force_init_final or cnodeutils.force_init then
-           init_procinfo:=gen_implicit_initfinal(mf_init,current_module.localsymtable);
+           init_procinfo:=gen_implicit_initfinal(uf_init,current_module.localsymtable);
 
          { Add symbol to the exports section for win32 so smartlinking a
            DLL will include the edata section }
          if assigned(exportlib) and
             (target_info.system in [system_i386_win32,system_i386_wdosx]) and
-            (mf_has_exports in current_module.moduleflags) then
+            ((current_module.flags and uf_has_exports)<>0) then
            current_asmdata.asmlists[al_procedures].concat(tai_const.createname(make_mangledname('EDATA',current_module.localsymtable,''),0));
 
          if (force_init_final or cnodeutils.force_final) and
@@ -2267,7 +2212,7 @@ type
                  release_proc_symbol(finalize_procinfo.procdef);
                  release_main_proc(finalize_procinfo);
                end;
-             finalize_procinfo:=gen_implicit_initfinal(mf_finalize,current_module.localsymtable);
+             finalize_procinfo:=gen_implicit_initfinal(uf_finalize,current_module.localsymtable);
            end;
 
           { the finalization routine of libraries is generic (and all libraries need to }
@@ -2275,7 +2220,7 @@ type
           { Place in "pure assembler" list so that the llvm assembler writer
             directly emits the generated directives }
           if (islibrary) then
-            cnodeutils.RegisterModuleFiniFunction(search_system_proc('fpc_lib_exit'));
+            exportlib.setfininame(current_asmdata.asmlists[al_pure_assembler],'FPC_LIB_EXIT');
 
          { all labels must be defined before generating code }
          if Errorcount=0 then
@@ -2288,7 +2233,7 @@ type
          if assigned(init_procinfo) then
            begin
              { initialization can be implicit only }
-             include(current_module.moduleflags,mf_init);
+             current_module.flags:=current_module.flags or uf_init;
              init_procinfo.code:=cnodeutils.wrap_proc_body(init_procinfo.procdef,init_procinfo.code);
              init_procinfo.generate_code;
              init_procinfo.resetprocdef;
@@ -2302,7 +2247,7 @@ type
                begin
                  finalize_procinfo.code:=cnodeutils.wrap_proc_body(finalize_procinfo.procdef,finalize_procinfo.code);
                  finalize_procinfo.generate_code;
-                 include(current_module.moduleflags,mf_finalize);
+                 current_module.flags:=current_module.flags or uf_finalize;
                end;
              finalize_procinfo.resetprocdef;
              release_main_proc(finalize_procinfo);
@@ -2312,13 +2257,6 @@ type
 
          { consume the last point }
          consume(_POINT);
-
-{$ifdef DEBUG_NODE_XML}
-         if IsLibrary then
-           XMLFinalizeNodeFile('library')
-         else
-           XMLFinalizeNodeFile('program');
-{$endif DEBUG_NODE_XML}
 
          { reset wpo flags for all defs }
          reset_all_defs;
@@ -2476,10 +2414,10 @@ type
                  hp:=tmodule(loaded_units.first);
                  while assigned(hp) do
                   begin
-                    if (hp<>sysinitmod) and not assigned(hp.package) then
+                    if (hp<>sysinitmod) and (hp.flags and uf_in_library=0) then
                       begin
                         linker.AddModuleFiles(hp);
-                        if mf_checkpointer_called in hp.moduleflags then
+                        if (hp.flags and uf_checkpointer_called)<>0 then
                           program_uses_checkpointer:=true;
                       end;
                     hp2:=tmodule(hp.next);

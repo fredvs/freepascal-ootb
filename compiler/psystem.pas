@@ -103,7 +103,6 @@ implementation
 {$endif SUPPORT_GET_FRAME}
         systemunit.insert(csyssym.create('Unaligned',in_unaligned_x));
         systemunit.insert(csyssym.create('Aligned',in_aligned_x));
-        systemunit.insert(csyssym.create('Volatile',in_volatile_x));
         systemunit.insert(csyssym.create('ObjCSelector',in_objc_selector_x)); { objc only }
         systemunit.insert(csyssym.create('ObjCEncode',in_objc_encode_x)); { objc only }
         systemunit.insert(csyssym.create('Default',in_default_x));
@@ -112,7 +111,6 @@ implementation
         systemunit.insert(csyssym.create('Delete',in_delete_x_y_z));
         systemunit.insert(csyssym.create('GetTypeKind',in_gettypekind_x));
         systemunit.insert(csyssym.create('IsManagedType',in_ismanagedtype_x));
-        systemunit.insert(csyssym.create('fpc_eh_return_data_regno', in_const_eh_return_data_regno));
         systemunit.insert(cconstsym.create_ord('False',constord,0,pasbool1type));
         systemunit.insert(cconstsym.create_ord('True',constord,1,pasbool1type));
       end;
@@ -243,9 +241,7 @@ implementation
               s64floattype:=cfloatdef.create(s64real,true);
               s80floattype:=cfloatdef.create(s80real,true);
               sc80floattype:=cfloatdef.create(sc80real,true);
-            end
-          else
-            begin
+            end else begin
               s32floattype:=nil;
               s64floattype:=nil;
               s80floattype:=nil;
@@ -266,16 +262,8 @@ implementation
         s8inttype:=corddef.create(s8bit,int64(-128),127,true);
         u16inttype:=corddef.create(u16bit,0,65535,true);
         s16inttype:=corddef.create(s16bit,int64(-32768),32767,true);
-        s24inttype:=corddef.create(customint,-(int64(1) shl 23),1 shl 23 - 1,true);
-        u24inttype:=corddef.create(customint,0,1 shl 24 - 1,true);
         u32inttype:=corddef.create(u32bit,0,high(longword),true);
         s32inttype:=corddef.create(s32bit,int64(low(longint)),int64(high(longint)),true);
-        s40inttype:=corddef.create(customint,-(int64(1) shl 39),int64(1) shl 39 - 1,true);
-        u40inttype:=corddef.create(customint,0,int64(1) shl 40 - 1,true);
-        s48inttype:=corddef.create(customint,-(int64(1) shl 47),int64(1) shl 47 - 1,true);
-        u48inttype:=corddef.create(customint,0,int64(1) shl 48 - 1,true);
-        s56inttype:=corddef.create(customint,-(int64(1) shl 55),int64(1) shl 55 - 1,true);
-        u56inttype:=corddef.create(customint,0,int64(1) shl 56 - 1,true);
         u64inttype:=corddef.create(u64bit,low(qword),high(qword),true);
         s64inttype:=corddef.create(s64bit,low(int64),high(int64),true);
         { upper/lower bound not yet properly set for 128 bit types, as we don't
@@ -360,22 +348,10 @@ implementation
         create_fpu_types;
         s64currencytype:=corddef.create(scurrency,low(int64),high(int64),true);
 {$endif mips}
-{$ifdef riscv32}
-        create_fpu_types;
-        s64currencytype:=corddef.create(scurrency,low(int64),high(int64),true);
-{$endif riscv32}
-{$ifdef riscv64}
-        create_fpu_types;
-        s64currencytype:=corddef.create(scurrency,low(int64),high(int64),true);
-{$endif riscv64}
 {$ifdef jvm}
         create_fpu_types;
         s64currencytype:=corddef.create(scurrency,low(int64),high(int64),true);
 {$endif jvm}
-{$ifdef xtensa}
-        create_fpu_types;
-        s64currencytype:=corddef.create(scurrency,low(int64),high(int64),true);
-{$endif xtensa}
         set_default_int_types;
         { some other definitions }
         charpointertype:=cpointerdef.create(cansichartype);
@@ -403,21 +379,6 @@ implementation
         wordfarpointertype:=tcpupointerdefclass(cpointerdef).createx86(u16inttype,x86pt_far);
         longintfarpointertype:=tcpupointerdefclass(cpointerdef).createx86(s32inttype,x86pt_far);
   {$endif i8086}
-        x86_m64type:=carraydef.create(0,1,s32inttype);
-        x86_m128type:=carraydef.create(0,3,s32inttype);
-        x86_m128dtype:=carraydef.create(0,1,s32inttype);
-        x86_m128itype:=carraydef.create(0,3,s32inttype);
-        x86_m256type:=carraydef.create(0,7,s32inttype);
-        x86_m256dtype:=carraydef.create(0,3,s32inttype);
-        x86_m256itype:=carraydef.create(0,7,s32inttype);
-
-        tarraydef(x86_m64type).elementdef:=s32floattype;
-        tarraydef(x86_m128type).elementdef:=s32floattype;
-        tarraydef(x86_m128dtype).elementdef:=s64floattype;
-        tarraydef(x86_m128itype).elementdef:=s32floattype;
-        tarraydef(x86_m256type).elementdef:=s32floattype;
-        tarraydef(x86_m256dtype).elementdef:=s64floattype;
-        tarraydef(x86_m256itype).elementdef:=s32floattype;
 {$endif x86}
         set_default_ptr_types;
         openchararraytype:=carraydef.create_openarray;
@@ -482,13 +443,6 @@ implementation
         addtype('FarPointer',voidfarpointertype);
         addtype('HugePointer',voidhugepointertype);
   {$endif i8086}
-        addtype('__m64',x86_m64type);
-        addtype('__m128', x86_m128type);
-        addtype('__m128d',x86_m128dtype);
-        addtype('__m128i',x86_m128itype);
-        addtype('__m256', x86_m256type);
-        addtype('__m256d',x86_m256dtype);
-        addtype('__m256i',x86_m256itype);
 {$endif x86}
         addtype('ShortString',cshortstringtype);
 {$ifdef support_longstring}
@@ -538,16 +492,8 @@ implementation
         addtype('$shortint',s8inttype);
         addtype('$word',u16inttype);
         addtype('$smallint',s16inttype);
-        addtype('$sint24',s24inttype);
-        addtype('$uint24',u24inttype);
         addtype('$ulong',u32inttype);
         addtype('$longint',s32inttype);
-        addtype('$sint40',s40inttype);
-        addtype('$uint40',u40inttype);
-        addtype('$sint48',s48inttype);
-        addtype('$uint48',u48inttype);
-        addtype('$sint56',s56inttype);
-        addtype('$uint56',u56inttype);
         addtype('$qword',u64inttype);
         addtype('$int64',s64inttype);
         addtype('$uint128',u128inttype);
@@ -571,10 +517,6 @@ implementation
         addtype('$qwordbool',bool64type);
 {$ifdef llvm}
         addtype('$llvmbool1',llvmbool1type);
-        llvm_metadatatype:=cpointerdef.create(voidtype);
-        { if this gets renamed, also adjust agllvm so it still writes the identifier of this type as "metadata" }
-        addtype('$metadata',llvm_metadatatype);
-        addtype('LLVMMetadata',llvm_metadatatype);
 {$endif llvm}
         addtype('$char_pointer',charpointertype);
         addtype('$widechar_pointer',widecharpointertype);
@@ -597,13 +539,6 @@ implementation
         addtype('$word_farpointer',wordfarpointertype);
         addtype('$longint_farpointer',longintfarpointertype);
   {$endif i8086}
-        addtype('$__m64',  x86_m64type);
-        addtype('$__m128', x86_m128type);
-        addtype('$__m128d',x86_m128dtype);
-        addtype('$__m128i',x86_m128itype);
-        addtype('$__m256', x86_m256type);
-        addtype('$__m256d',x86_m256dtype);
-        addtype('$__m256i',x86_m256itype);
 {$endif x86}
         addtype('$openchararray',openchararraytype);
         addtype('$file',cfiletype);
@@ -623,7 +558,7 @@ implementation
         if not(target_info.system in systems_managed_vm) then
           begin
             { Add a type for virtual method tables }
-            hrecst:=trecordsymtable.create('',current_settings.packrecords,current_settings.alignment.recordalignmin);
+            hrecst:=trecordsymtable.create('',current_settings.packrecords,current_settings.alignment.recordalignmin,current_settings.alignment.maxCrecordalign);
             vmttype:=crecorddef.create('',hrecst);
             pvmttype:=cpointerdef.create(vmttype);
             { can't use addtype for pvmt because the rtti of the pointed
@@ -648,13 +583,13 @@ implementation
             addtype('$vtblarray',vmtarraytype);
           end;
         { Add a type for methodpointers }
-        hrecst:=trecordsymtable.create('',1,current_settings.alignment.recordalignmin);
+        hrecst:=trecordsymtable.create('',1,current_settings.alignment.recordalignmin,current_settings.alignment.maxCrecordalign);
         addfield(hrecst,cfieldvarsym.create('$proc',vs_value,voidcodepointertype,[]));
         addfield(hrecst,cfieldvarsym.create('$self',vs_value,voidpointertype,[]));
         methodpointertype:=crecorddef.create('',hrecst);
         addtype('$methodpointer',methodpointertype);
         { Add a type for nested proc pointers }
-        hrecst:=trecordsymtable.create('',1,current_settings.alignment.recordalignmin);
+        hrecst:=trecordsymtable.create('',1,current_settings.alignment.recordalignmin,current_settings.alignment.maxCrecordalign);
         addfield(hrecst,cfieldvarsym.create('$proc',vs_value,voidcodepointertype,[]));
         addfield(hrecst,cfieldvarsym.create('$parentfp',vs_value,parentfpvoidpointertype,[]));
         nestedprocpointertype:=crecorddef.create('',hrecst);
@@ -690,16 +625,8 @@ implementation
         loadtype('shortint',s8inttype);
         loadtype('word',u16inttype);
         loadtype('smallint',s16inttype);
-        loadtype('uint24',u24inttype);
-        loadtype('sint24',s24inttype);
         loadtype('ulong',u32inttype);
         loadtype('longint',s32inttype);
-        loadtype('uint40',u40inttype);
-        loadtype('sint40',s40inttype);
-        loadtype('uint48',u48inttype);
-        loadtype('sint48',s48inttype);
-        loadtype('uint56',u56inttype);
-        loadtype('sint56',s56inttype);
         loadtype('qword',u64inttype);
         loadtype('int64',s64inttype);
         loadtype('uint128',u128inttype);
@@ -756,17 +683,9 @@ implementation
         loadtype('word_farpointer',wordfarpointertype);
         loadtype('longint_farpointer',longintfarpointertype);
   {$endif i8086}
-        loadtype('__m64',  x86_m64type);
-        loadtype('__m128', x86_m128type);
-        loadtype('__m128d',x86_m128dtype);
-        loadtype('__m128i',x86_m128itype);
-        loadtype('__m256', x86_m256type);
-        loadtype('__m256d',x86_m256dtype);
-        loadtype('__m256i',x86_m256itype);
 {$endif x86}
 {$ifdef llvm}
         loadtype('llvmbool1',llvmbool1type);
-        loadtype('metadata',llvm_metadatatype);
 {$endif llvm}
         loadtype('file',cfiletype);
         if not(target_info.system in systems_managed_vm) then

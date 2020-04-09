@@ -15,10 +15,6 @@
 {$R-}
 unit WWinHelp;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,
@@ -229,7 +225,7 @@ type
         function UsesHallCompression: boolean;
         procedure ExtractTopicOffset(TopicOffset: longint; var TopicBlockNo, TopicBlockOffset: word);
         function  ReadTopicBlock(BlockNo: word; var T: TTopicBlock; ReadData: boolean): boolean;
-        function  ProcessTopicBlock(BlockNo: longint; EnumProc: TCallbackFunBoolParam): boolean;
+        function  ProcessTopicBlock(BlockNo: longint; EnumProc: pointer): boolean;
         procedure PhraseDecompress(SrcBufP: pointer; SrcBufSize: longint; DestBufP: pointer; DestBufSize: longint);
         procedure HallDecompress(SrcBufP: pointer; SrcBufSize: longint; DestBufP: pointer; DestBufSize: longint);
       end;
@@ -1169,7 +1165,7 @@ begin
   end;
 end;
 
-function TWinHelpFile.ProcessTopicBlock(BlockNo: longint; EnumProc: TCallbackFunBoolParam): boolean;
+function TWinHelpFile.ProcessTopicBlock(BlockNo: longint; EnumProc: pointer): boolean;
 var TB: TTopicBlock;
     TL: TWinHelpTopicLink;
     BlockFileOfs: longint;
@@ -1647,14 +1643,14 @@ begin
   begin
     ExtractTopicOffset(T^.FileOfs,BlockNo,BlockOfs);
     TopicStartPos:=-1; GotIt:=false;
-    OK:=ProcessTopicBlock(BlockNo,TCallbackFunBoolParam(@SearchTopicStart));
+    OK:=ProcessTopicBlock(BlockNo,@SearchTopicStart);
     OK:=OK and GotIt and (TopicStartPos<>-1);
     if OK then
     begin
       CurLine:='';
       New(Lines, Init(1000,1000));
       LastEmittedChar:=-1;
-      OK:=ProcessTopicBlock(BlockNo,TCallbackFunBoolParam(@RenderTopicProc));
+      OK:=ProcessTopicBlock(BlockNo,@RenderTopicProc);
       FlushLine;
       BuildTopic(Lines,T);
       Dispose(Lines, Done);

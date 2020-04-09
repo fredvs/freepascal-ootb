@@ -261,6 +261,10 @@ unit cgcpu;
                                 reference_reset_symbol(tmpref,dirref.symbol,0,sizeof(pint),[]);
                                 tmpref.refaddr:=addr_pic;
                                 tmpref.base:=current_procinfo.got;
+{$ifdef EXTDEBUG}
+				if not (pi_needs_got in current_procinfo.flags) then
+				  Comment(V_warning,'pi_needs_got not included');
+{$endif EXTDEBUG}
                                 include(current_procinfo.flags,pi_needs_got);
                                 list.concat(taicpu.op_ref(A_PUSH,S_L,tmpref));
                               end
@@ -308,14 +312,7 @@ unit cgcpu;
           list.concat(Taicpu.op_none(A_EMMS,S_NO));
 
         { remove stackframe }
-        if not(nostackframe) and
-          { we do not need an exit stack frame when we never return
-
-            * the final ret is left so the peephole optimizer can easily do call/ret -> jmp or call conversions
-            * the entry stack frame must be normally generated because the subroutine could be still left by
-              an exception and then the unwinding code might need to restore the registers stored by the entry code
-          }
-          not(po_noreturn in current_procinfo.procdef.procoptions) then
+        if not nostackframe then
           begin
             if (current_procinfo.framepointer=NR_STACK_POINTER_REG) or
                (current_procinfo.procdef.proctypeoption=potype_exceptfilter) then
@@ -326,7 +323,6 @@ unit cgcpu;
                   internal_restore_regs(list,true);
                 if (current_procinfo.procdef.proctypeoption=potype_exceptfilter) then
                   list.concat(Taicpu.op_reg(A_POP,tcgsize2opsize[OS_ADDR],NR_FRAME_POINTER_REG));
-                current_asmdata.asmcfi.cfa_def_cfa_offset(list,sizeof(pint));
               end
             else
               begin
@@ -519,8 +515,6 @@ unit cgcpu;
           S_B : list.concat(Taicpu.Op_none(A_MOVSB,S_NO));
           S_W : list.concat(Taicpu.Op_none(A_MOVSW,S_NO));
           S_L : list.concat(Taicpu.Op_none(A_MOVSD,S_NO));
-          else
-            internalerror(2019050901);
         end;
         ungetcpuregister(list,NR_EDI);
         ungetcpuregister(list,NR_ECX);
@@ -545,16 +539,14 @@ unit cgcpu;
         tmpreg: TRegister;
       begin
         { allocate PIC register }
-        if (tf_pic_uses_got in target_info.flags) and
-          (pi_needs_got in current_procinfo.flags) then
+        if (cs_create_pic in current_settings.moduleswitches) and
+           (tf_pic_uses_got in target_info.flags) and
+           (pi_needs_got in current_procinfo.flags) then
           begin
             if not (target_info.system in [system_i386_darwin,system_i386_iphonesim]) then
               begin
                 { Use ECX as a temp register by default }
-                if current_procinfo.got = NR_EBX then
-                  tmpreg:=NR_EBX
-                else
-                  tmpreg:=NR_ECX;
+                tmpreg:=NR_ECX;
                 { Allocate registers used for parameters to make sure they
                   never allocated during this PIC init code }
                 for i:=0 to current_procinfo.procdef.paras.Count - 1 do
@@ -879,8 +871,6 @@ unit cgcpu;
               cg.ungetcpuregister(list,NR_ECX);
               exit;
             end;
-          else
-            ;
         end;
         get_64bit_ops(op,op1,op2);
         if op in [OP_ADD,OP_SUB] then
@@ -948,8 +938,6 @@ unit cgcpu;
                           list.concat(taicpu.op_const_reg(A_RCR,S_L,value,reg.reglo));
                           cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
                         end;
-                      else
-                        internalerror(2019050902);
                     end
                   else if value>31 then
                     case op of
@@ -1063,8 +1051,6 @@ unit cgcpu;
                           list.concat(taicpu.op_const_ref(A_RCR,S_L,value,tempref));
                           cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
                         end;
-                      else
-                        internalerror(2019050901);
                     end
                   else if value>31 then
                     case op of

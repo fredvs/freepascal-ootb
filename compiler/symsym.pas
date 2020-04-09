@@ -46,17 +46,10 @@ interface
           procedure ppuwrite_platform(ppufile: tcompilerppufile);virtual;
           procedure ppuload_platform(ppufile: tcompilerppufile);virtual;
        public
-          { this is Nil if the symbol has no RTTI attributes }
-          rtti_attribute_list : trtti_attribute_list;
           constructor create(st:tsymtyp;const n : string);
           constructor ppuload(st:tsymtyp;ppufile:tcompilerppufile);
           destructor destroy;override;
           procedure ppuwrite(ppufile:tcompilerppufile);virtual;
-          { this is called directly after ppuload }
-          procedure ppuload_subentries(ppufile:tcompilerppufile);virtual;
-          { this is called directly after ppuwrite }
-          procedure ppuwrite_subentries(ppufile:tcompilerppufile);virtual;
-          procedure deref; override;
           procedure buildderef; override;
           procedure register_sym; override;
        end;
@@ -179,9 +172,13 @@ interface
           varspez       : tvarspez;  { sets the type of access }
           varregable    : tvarregable;
           varstate      : tvarstate;
-          {could also be part of tabstractnormalvarsym, but there's
-           one byte left here till the next 4 byte alignment        }
-          varsymaccess  : tvarsymaccessflags;
+          { Has the address of this variable potentially escaped the
+            block in which is was declared?
+            could also be part of tabstractnormalvarsym, but there's
+            one byte left here till the next 4 byte alignment        }
+          addr_taken     : boolean;
+          { true if the variable is accessed in a different scope }
+          different_scope  : boolean;
           constructor create(st:tsymtyp;const n : string;vsp:tvarspez;def:tdef;vopts:tvaroptions);
           constructor ppuload(st:tsymtyp;ppufile:tcompilerppufile);
           procedure ppuwrite(ppufile:tcompilerppufile);override;
@@ -194,17 +191,11 @@ interface
           _vardef     : tdef;
           vardefderef : tderef;
 
-          function get_addr_taken: boolean;
-          function get_different_scope: boolean;
           procedure setregable;
           procedure setvardef(const def: tdef);
           procedure setvardef_and_regable(def:tdef);
-          procedure set_addr_taken(AValue: boolean);
-          procedure set_different_scope(AValue: boolean);
         public
           property vardef: tdef read _vardef write setvardef_and_regable;
-          property addr_taken: boolean read get_addr_taken write set_addr_taken;
-          property different_scope: boolean read get_different_scope write set_different_scope;
       end;
 
       tfieldvarsym = class(tabstractvarsym)
@@ -509,7 +500,7 @@ implementation
        paramgr,
        procinfo,
        { ppu }
-       entfile,ppu
+       entfile
        ;
 
 {****************************************************************************
@@ -570,12 +561,11 @@ implementation
          current_module.symlist[SymId]:=self;
          ppufile.getposinfo(fileinfo);
          visibility:=tvisibility(ppufile.getbyte);
-         ppufile.getset(tppuset2(symoptions));
+         ppufile.getsmallset(symoptions);
          if sp_has_deprecated_msg in symoptions then
            deprecatedmsg:=ppufile.getpshortstring
          else
            deprecatedmsg:=nil;
-         rtti_attribute_list:=trtti_attribute_list.ppuload(ppufile);
       end;
 
 
@@ -596,31 +586,10 @@ implementation
          }
          oldintfcrc:=ppufile.do_interface_crc;
          ppufile.do_interface_crc:=false;
-         ppufile.putset(tppuset2(symoptions));
+         ppufile.putsmallset(symoptions);
          if sp_has_deprecated_msg in symoptions then
            ppufile.putstring(deprecatedmsg^);
          ppufile.do_interface_crc:=oldintfcrc;
-         trtti_attribute_list.ppuwrite(rtti_attribute_list,ppufile);
-      end;
-
-
-    procedure tstoredsym.ppuload_subentries(ppufile: tcompilerppufile);
-      begin
-        trtti_attribute_list.ppuload_subentries(rtti_attribute_list,ppufile);
-      end;
-
-
-    procedure tstoredsym.ppuwrite_subentries(ppufile: tcompilerppufile);
-      begin
-        trtti_attribute_list.ppuwrite_subentries(rtti_attribute_list,ppufile);
-      end;
-
-
-    procedure tstoredsym.deref;
-      begin
-        inherited;
-        if assigned(rtti_attribute_list) then
-          rtti_attribute_list.deref;
       end;
 
 
@@ -629,8 +598,6 @@ implementation
         inherited;
         if not registered then
           register_sym;
-        if assigned(rtti_attribute_list) then
-          rtti_attribute_list.buildderef;
       end;
 
 
@@ -654,7 +621,6 @@ implementation
 
     destructor tstoredsym.destroy;
       begin
-        rtti_attribute_list.free;
         inherited destroy;
       end;
 
@@ -1382,7 +1348,7 @@ implementation
         pap : tpropaccesslisttypes;
       begin
          inherited ppuload(propertysym,ppufile);
-         ppufile.getset(tppuset2(propoptions));
+         ppufile.getsmallset(propoptions);
          if ppo_overrides in propoptions then
            ppufile.getderef(overriddenpropsymderef);
          ppufile.getderef(propdefderef);
@@ -1604,7 +1570,7 @@ implementation
         pap : tpropaccesslisttypes;
       begin
         inherited ppuwrite(ppufile);
-        ppufile.putset(tppuset2(propoptions));
+        ppufile.putsmallset(propoptions);
         if ppo_overrides in propoptions then
           ppufile.putderef(overriddenpropsymderef);
         ppufile.putderef(propdefderef);
@@ -1640,9 +1606,10 @@ implementation
          varstate:=vs_readwritten;
          varspez:=tvarspez(ppufile.getbyte);
          varregable:=tvarregable(ppufile.getbyte);
-         ppufile.getset(tppuset1(varsymaccess));
+         addr_taken:=ppufile.getboolean;
+         different_scope:=ppufile.getboolean;
          ppufile.getderef(vardefderef);
-         ppufile.getset(tppuset4(varoptions));
+         ppufile.getsmallset(varoptions);
       end;
 
 
@@ -1672,10 +1639,11 @@ implementation
          oldintfcrc:=ppufile.do_crc;
          ppufile.do_crc:=false;
          ppufile.putbyte(byte(varregable));
-         ppufile.putset(tppuset1(varsymaccess));
+         ppufile.putboolean(addr_taken);
+         ppufile.putboolean(different_scope);
          ppufile.do_crc:=oldintfcrc;
          ppufile.putderef(vardefderef);
-         ppufile.putset(tppuset4(varoptions));
+         ppufile.putsmallset(varoptions);
       end;
 
 
@@ -1731,28 +1699,8 @@ implementation
       end;
 
 
-    procedure tabstractvarsym.set_addr_taken(AValue: boolean);
-      begin
-        if AValue then
-          include(varsymaccess, vsa_addr_taken)
-        else
-          exclude(varsymaccess, vsa_addr_taken);
-      end;
-
-
-    procedure tabstractvarsym.set_different_scope(AValue: boolean);
-      begin
-        if AValue then
-          include(varsymaccess, vsa_different_scope)
-        else
-          exclude(varsymaccess, vsa_different_scope);
-      end;
-
-
     procedure tabstractvarsym.setregable;
       begin
-        if vo_volatile in varoptions then
-          exit;
          { can we load the value into a register ? }
         if not assigned(owner) or
            (owner.symtabletype in [localsymtable, parasymtable]) or
@@ -1784,25 +1732,8 @@ implementation
                   varregable:=vr_mmreg
                 else
                   varregable:=vr_fpureg;
-              end
-            else if is_vector(vardef) and
-              fits_in_mm_register(vardef) then
-              begin
-                varregable:=vr_mmreg;
               end;
           end;
-      end;
-
-
-    function tabstractvarsym.get_addr_taken: boolean;
-      begin
-        result:=vsa_addr_taken in varsymaccess;
-      end;
-
-
-    function tabstractvarsym.get_different_scope: boolean;
-      begin
-        result:=vsa_different_scope in varsymaccess;
       end;
 
 
@@ -1936,8 +1867,7 @@ implementation
             { globalasmsym is called normally before the body of a subroutine is parsed
               so we cannot know if it will be auto inlined, so make all symbols of it
               global if asked }
-            (not(po_noinline in current_procinfo.procdef.procoptions) and
-             (cs_opt_autoinline in current_settings.optimizerswitches)))
+            (cs_opt_autoinline in current_settings.optimizerswitches))
           ) or
           (vo_is_public in varoptions);
       end;
@@ -2488,7 +2418,7 @@ implementation
              begin
                ppufile.getderef(constdefderef);
                new(ps);
-               ppufile.getset(tppuset32(ps^));
+               ppufile.getnormalset(ps^);
                value.valueptr:=ps;
              end;
            constguid :
@@ -2509,12 +2439,6 @@ implementation
     destructor tconstsym.destroy;
       begin
         case consttyp of
-          constnone:
-            internalerror(2019050703);
-          constord,
-          constpointer,
-          constnil:
-            ;
           conststring,
           constresourcestring :
             freemem(pchar(value.valueptr),value.len+1);
@@ -2596,7 +2520,7 @@ implementation
            constset :
              begin
                ppufile.putderef(constdefderef);
-               ppufile.putset(tppuset32(value.valueptr^));
+               ppufile.putnormalset(value.valueptr^);
              end;
            constguid :
              begin

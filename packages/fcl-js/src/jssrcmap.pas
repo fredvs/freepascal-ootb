@@ -734,7 +734,7 @@ begin
       if LastGeneratedLine<Item.GeneratedLine then
         begin
         // new line
-        LastGeneratedColumn:=0; // column is reset every generated line
+        //LastGeneratedColumn:=0;
         for j:=LastGeneratedLine+1 to Item.GeneratedLine do
           begin
           AddChar(';');
@@ -869,7 +869,6 @@ begin
       begin
       // next line
       inc(GeneratedLine);
-      LastColumn:=0;
       inc(p);
       end;
     else
@@ -1119,9 +1118,7 @@ begin
   SetLength(s,aStream.Size-aStream.Position);
   if s<>'' then
     aStream.Read(s[1],length(s));
-  if LeftStr(s,4)=')]}''' then
-    Delete(s,1,4)
-  else if LeftStr(s,3)=')]}' then
+  if LeftStr(s,3)=')]}' then
     Delete(s,1,3);
   P:=TJSONParser.Create(s,[joUTF8]);
   try

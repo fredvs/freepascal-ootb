@@ -11,7 +11,6 @@ begin
   if s<>'FPC' then
     halt(1);
   close(f);
-  erase(f);
   writeln('ok');
 end.
 

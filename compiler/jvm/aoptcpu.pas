@@ -135,8 +135,6 @@ Implementation
                RemoveCommutativeSwap(p) then
               exit(true)
           end;
-        else
-          ;
       end;
     end;
 

@@ -42,10 +42,7 @@ begin
 		iprintf('fatInitDefault failure: terminating'#10);
 	end;
 
-  while true do
-  begin
+	while true do
 		swiWaitForVBlank();
-    scanKeys();
-    if (keysDown() and KEY_START) <> 0 then break;
-  end;
+
 end.

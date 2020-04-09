@@ -118,7 +118,7 @@ Type
   end;
 
   { TIDLConstDefinition }
-  TConstType = (ctFloat,ctInteger,ctBoolean,ctInfinity,ctNegInfinity,ctNan,ctNull,ctString,ctEmptyArray,ctEmptyObject);
+  TConstType = (ctFloat,ctInteger,ctBoolean,ctInfinity,ctNegInfinity,ctNan,ctNull,ctString,ctEmptyArray);
   TIDLConstDefinition = Class(TIDLDefinition)
   private
     FConstType: TConstType;
@@ -207,7 +207,6 @@ Type
   private
     FDefaultValue: String;
     FHasDefaultValue: Boolean;
-    FHasEllipsis: Boolean;
     FIsOptional: Boolean;
     FType: TIDLTypeDefDefinition;
     procedure SetType(AValue: TIDLTypeDefDefinition);
@@ -219,12 +218,11 @@ Type
     Property ArgumentType : TIDLTypeDefDefinition Read FType Write SetType;
     Property IsOptional : Boolean Read FIsOptional Write FIsOptional;
     Property HasDefaultValue : Boolean Read FHasDefaultValue Write FHasDefaultValue;
-    Property HasEllipsis : Boolean Read FHasEllipsis Write FHasEllipsis;
     Property DefaultValue : String Read FDefaultValue Write FDefaultValue;
   end;
 
   { TIDLFunctionDefinition }
-  TFunctionOption = (foCallBack,foStatic,foStringifier,foGetter, foSetter, foDeleter, foLegacyCaller, foConstructor);
+  TFunctionOption = (foCallBack,foStatic,foStringifier,foGetter, foSetter, foDeleter, foLegacyCaller);
   TFunctionOptions = Set of TFunctionOption;
 
   TIDLFunctionDefinition = Class(TIDLDefinition)

@@ -139,7 +139,6 @@ begin
       anyhasalias:=false;
       { if the procedure has the exported name as one of its aliases, we don't
         need a separate stub }
-      pd:=nil;
       for i:=0 to tprocsym(hp.sym).procdeflist.count-1 do
         begin
           pd:=tprocdef(tprocsym(hp.sym).procdeflist[i]);

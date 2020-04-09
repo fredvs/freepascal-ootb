@@ -440,8 +440,6 @@ unit cgobj;
 
           { initialize the pic/got register }
           procedure g_maybe_got_init(list: TAsmList); virtual;
-          { initialize the tls register if needed }
-          procedure g_maybe_tls_init(list : TAsmList); virtual;
           { allocallcpuregisters, a_call_name, deallocallcpuregisters sequence }
           procedure g_call(list: TAsmList; const s: string);
           { Generate code to exit an unwind-protected region. The default implementation
@@ -450,11 +448,6 @@ unit cgobj;
           { Generate code for integer division by constant,
             generic version is suitable for 3-address CPUs }
           procedure g_div_const_reg_reg(list:tasmlist; size: TCgSize; a: tcgint; src,dst: tregister); virtual;
-
-          { some CPUs do not support hardware fpu exceptions, this procedure is called after instructions which
-            might set FPU exception related flags, so it has to check these flags if needed and throw an exeception }
-          procedure g_check_for_fpu_exception(list : TAsmList; force,clear : boolean); virtual;
-          procedure maybe_check_for_fpu_exception(list: TAsmList);
 
          protected
           function g_indirect_sym_load(list:TAsmList;const symname: string; const flags: tindsymflags): tregister;virtual;
@@ -578,8 +571,8 @@ unit cgobj;
 implementation
 
     uses
-       globals,systems,fmodule,
-       verbose,paramgr,symsym,symtable,
+       globals,systems,
+       verbose,paramgr,symsym,
        tgobj,cutils,procinfo;
 
 {*****************************************************************************
@@ -1143,7 +1136,8 @@ implementation
                      OS_F64,
                      OS_F128:
                        a_loadmm_ref_reg(list,location^.size,location^.size,tmpref,location^.register,mms_movescalar);
-                     OS_M8..OS_M512:
+                     OS_M8..OS_M128,
+                     OS_MS8..OS_MS128:
                        a_loadmm_ref_reg(list,location^.size,location^.size,tmpref,location^.register,nil);
                      else
                        internalerror(2010053101);
@@ -1229,12 +1223,8 @@ implementation
                 shifted to the top of the to 4 resp. 8 byte register on the
                 caller side and needs to be stored with those bytes at the
                 start of the reference -> don't shift right }
-              else if (paraloc.shiftval<0)
-{$ifdef CPU64BITALU}
-                      and ((-paraloc.shiftval) in [56{for byte},48{for two bytes},32{for four bytes}])
-{$else}
-                      and ((-paraloc.shiftval) in [24{for byte},16{for two bytes}])
-{$endif} then
+              else if (paraloc.shiftval<0) and
+                      ((-paraloc.shiftval) in [8,16,32]) then
                 begin
                   a_op_const_reg_reg(list,OP_SHR,OS_INT,-paraloc.shiftval,paraloc.register,paraloc.register);
                   { convert to a register of 1/2/4 bytes in size, since the
@@ -1352,7 +1342,8 @@ implementation
                 OS_F64,
                 OS_F128:
                   a_loadmm_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref,mms_movescalar);
-                OS_M8..OS_M512:
+                OS_M8..OS_M128,
+                OS_MS8..OS_MS128:
                   a_loadmm_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref,nil);
                 else
                   internalerror(2010053102);
@@ -1408,7 +1399,8 @@ implementation
                        OS_F64,
                        OS_F128:
                         a_loadmm_reg_reg(list,paraloc.size,regsize,paraloc.register,reg,mms_movescalar);
-                       OS_M8..OS_M512:
+                       OS_M8..OS_M128,
+                       OS_MS8..OS_MS128:
                          a_loadmm_reg_reg(list,paraloc.size,paraloc.size,paraloc.register,reg,nil);
                        else
                          internalerror(2010053102);
@@ -1795,14 +1787,10 @@ implementation
                 a:=a and 15;
               OS_8,OS_S8:
                 a:=a and 7;
-              else
-                internalerror(2019050521);
             end;
             if a = 0 then
               op:=OP_NONE;
           end;
-        else
-          ;
         end;
       end;
 
@@ -1945,20 +1933,11 @@ implementation
     procedure tcg.a_op_const_ref(list : TAsmList; Op: TOpCG; size: TCGSize; a: tcgint; const ref: TReference);
       var
         tmpreg : tregister;
-        tmpref : treference;
       begin
-        if assigned(ref.symbol) then
-          begin
-            tmpreg:=getaddressregister(list);
-            a_loadaddr_ref_reg(list,ref,tmpreg);
-            reference_reset_base(tmpref,tmpreg,0,ref.temppos,ref.alignment,[]);
-          end
-        else
-          tmpref:=ref;
         tmpreg:=getintregister(list,size);
-        a_load_ref_reg(list,size,size,tmpref,tmpreg);
+        a_load_ref_reg(list,size,size,ref,tmpreg);
         a_op_const_reg(list,op,size,a,tmpreg);
-        a_load_reg_ref(list,size,size,tmpreg,tmpref);
+        a_load_reg_ref(list,size,size,tmpreg,ref);
       end;
 
 
@@ -1978,18 +1957,9 @@ implementation
     procedure tcg.a_op_reg_ref(list : TAsmList; Op: TOpCG; size: TCGSize;reg: TRegister;  const ref: TReference);
       var
         tmpreg : tregister;
-        tmpref : treference;
       begin
-        if assigned(ref.symbol) then
-          begin
-            tmpreg:=getaddressregister(list);
-            a_loadaddr_ref_reg(list,ref,tmpreg);
-            reference_reset_base(tmpref,tmpreg,0,ref.temppos,ref.alignment,[]);
-          end
-        else
-          tmpref:=ref;
         tmpreg:=getintregister(list,size);
-        a_load_ref_reg(list,size,size,tmpref,tmpreg);
+        a_load_ref_reg(list,size,size,ref,tmpreg);
         if op in [OP_NEG,OP_NOT] then
           begin
             if reg<>NR_NO then
@@ -1998,7 +1968,7 @@ implementation
           end
         else
           a_op_reg_reg(list,op,size,reg,tmpreg);
-        a_load_reg_ref(list,size,size,tmpreg,tmpref);
+        a_load_reg_ref(list,size,size,tmpreg,ref);
       end;
 
 
@@ -2129,8 +2099,6 @@ implementation
                     a_load_const_reg(list,OS_16,0,dst);
                     exit;
                   end;
-                else
-                  ;
               end;
           end;
         OP_SHR:
@@ -2143,13 +2111,9 @@ implementation
                     a_load_const_reg(list,OS_16,0,GetNextReg(dst));
                     exit;
                   end;
-                else
-                  ;
               end;
           end;
 {$endif cpu16bitalu}
-        else
-          ;
       end;
       a_load_reg_reg(list,size,size,src,dst);
       a_op_const_reg(list,op,size,a,dst);
@@ -2799,8 +2763,6 @@ implementation
               { a_load_ref_reg will turn this into a pic-load if needed }
               a_load_ref_reg(list,OS_ADDR,OS_ADDR,ref,result);
             end;
-          else
-            ;
         end;
       end;
 
@@ -2809,17 +2771,9 @@ implementation
       begin
       end;
 
-
-    procedure tcg.g_maybe_tls_init(list: TAsmList);
-      begin
-      end;
-
-
     procedure tcg.g_call(list: TAsmList;const s: string);
       begin
         allocallcpuregisters(list);
-        if systemunit<>current_module.globalsymtable then
-          current_module.add_extern_asmsym(s,AB_EXTERNAL,AT_FUNCTION);
         a_call_name(list,s,false);
         deallocallcpuregisters(list);
       end;
@@ -2933,18 +2887,6 @@ implementation
           InternalError(2014060601);
       end;
 
-
-    procedure tcg.g_check_for_fpu_exception(list: TAsmList;force,clear : boolean);
-      begin
-        { empty by default }
-      end;
-
-
-    procedure tcg.maybe_check_for_fpu_exception(list: TAsmList);
-      begin
-        current_procinfo.FPUExceptionCheckNeeded:=true;
-        g_check_for_fpu_exception(list,false,true);
-      end;
 
 {*****************************************************************************
                                     TCG64

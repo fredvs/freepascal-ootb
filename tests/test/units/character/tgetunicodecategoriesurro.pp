@@ -12,7 +12,7 @@ program tgetunicodecategoriesurro;
   
 uses     
   SysUtils,
-  unicodedata,character;
+  character;
     
 {$ifndef FPC}
   type UnicodeChar = WideChar;   

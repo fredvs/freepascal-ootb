@@ -36,24 +36,11 @@ override TESTOPT+=-CX
 endif
 TESTCOMPILER:=$(FPC) $(TESTOPT)
 
-FPCFPMAKE=$(NATIVE_FPC)
-
 ifdef CROSSCOMPILE
 override CROSSOPT:=$(OPT)
 override OPT=
 override BUILDFULLNATIVE=
-
-# Check if there is a native compiler (ppc) which is built during building a cross-compiler.
-DEV_FPC=$(wildcard $(CURDIR)/../../compiler/ppc$(SRCEXEEXT))
-ifneq ($(DEV_FPC), )
-  # Use this native compiler to build fpmake, since RTL is already compiled by this compiler
-  # and using an other native compiler may produce PPU incompatibility errors.
-  FPCFPMAKE=$(DEV_FPC)
 endif
-
-endif
-
-export FPCFPMAKE
 
 #############################
 # RTL
@@ -64,11 +51,11 @@ INSTALLOPT=INSTALL_PREFIX=$(DUMMYINSTALLDIR) INSTALL_UNITDIR=$(BASEDIR)/$(COMPIL
 
 rtl-stamp.$(FULL_TARGET):
 ifneq ($(inOS2),)
-        $(MAKE) -C ../../rtl all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)" FPC=$(FPC)
+        $(MAKE) -C ../../rtl all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)"
 else
-        $(MAKE) -C ../../rtl all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)' FPC=$(FPC)
+        $(MAKE) -C ../../rtl all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)'
 endif
-        $(MAKE) -C ../../rtl install $(INSTALLOPT) OPT= CROSSOPT= FPC=$(FPC)
+        $(MAKE) -C ../../rtl install $(INSTALLOPT) OPT= CROSSOPT=
         $(ECHO) Compiled > rtl-stamp.$(FULL_TARGET)
 
 cleanrtl:
@@ -121,11 +108,11 @@ PACKAGESDIR=$(FPCDIR)/packages
 
 packages-stamp.$(FULL_TARGET):
 ifneq ($(inOS2),)
-        $(MAKE) -C ../../packages all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)" FPC=$(FPC)
+        $(MAKE) -C ../../packages all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)"
 else
-        $(MAKE) -C ../../packages all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)' FPC=$(FPC)
+        $(MAKE) -C ../../packages all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)'
 endif
-        $(MAKE) -C ../../packages install $(INSTALLOPT) OPT= CROSSOPT= FPC=$(FPC)
+        $(MAKE) -C ../../packages install $(INSTALLOPT) OPT= CROSSOPT=
         $(ECHO) Compiled > packages-stamp.$(FULL_TARGET)
 
 cleanpackages:

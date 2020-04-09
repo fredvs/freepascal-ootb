@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('numlib');
-    P.ShortName := 'nlib';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
     P.OSes := AllUnixOSes+AllWindowsOSes+AllAmigaLikeOSes-[qnx];

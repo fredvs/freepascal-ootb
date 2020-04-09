@@ -17,7 +17,6 @@ unit System;
 
 interface
 
-{$define FPC_IS_SYSTEM}
 {$define StdErrToConsole}
 {$define useLongNamespaceByDefault}
 {$define autoHeapRelease}

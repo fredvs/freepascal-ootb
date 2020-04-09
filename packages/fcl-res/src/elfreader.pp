@@ -290,10 +290,6 @@ begin
                     fMachineType:=emtmipsel
                   else
                     fMachineType:=emtmips;
-      EM_RISCV  : if fBits=ELFCLASS32 then
-                    fMachineType:=emtriscv32
-                  else
-                    fMachineType:=emtriscv64;
     end;
   finally
     subreader.Free;

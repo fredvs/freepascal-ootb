@@ -21,7 +21,6 @@
   *********************************************************************
   * }
 
-{$PACKRECORDS 2}
 
 const
   UNIT_MICROHZ      = 0;
@@ -39,21 +38,21 @@ const
 
 type
   PTimeVal = ^TTimeVal;
-  TTimeVal = record
+  TTimeVal = packed record
     tv_secs : DWord;
     tv_micro: DWord;
   end;
 
 type
   PEClockVal = ^TEClockVal;
-  TEClockVal = record
+  TEClockVal = packed record
     ev_hi: DWord;
     ev_lo: DWord;
   end;
 
 type
   PTimeRequest = ^TTimeRequest;
-  TTimeRequest = record
+  TTimeRequest = packed record
     tr_node: TIORequest;
     tr_time: TTimeVal;
   end;
@@ -63,4 +62,6 @@ const
    TR_ADDREQUEST = (CMD_NONSTD);
    TR_GETSYSTIME = (CMD_NONSTD + 1);
    TR_SETSYSTIME = (CMD_NONSTD + 2);
+
+
 

@@ -285,8 +285,6 @@ begin
 
     // wait for the screen to refresh
     swiWaitForVBlank();
-    
-    if (held and KEY_START) <> 0 then break;
   end;
 
 end.

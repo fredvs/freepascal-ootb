@@ -8,15 +8,10 @@ unit buildrtl;
 
       ctypes, strings,
       rtlconsts, sysconst, math, types,
-
-      exeinfo,
-{$ifdef cpui386}
       lineinfo,
-{$endif}
-
-      typinfo, sortbase, fgl, classes,
+      typinfo, fgl, classes,
       charset, character, getopts,
-      fpwidestring, fpintres;
+      fpintres;
 
   implementation
 

@@ -1,5 +1,4 @@
 { %skiptarget=go32v2 }
-{ %OPT=-CE }
 
 {$mode objfpc}
 

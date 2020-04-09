@@ -34,9 +34,6 @@ type
     procedure pass_generate_code; override;
   end;
 
-  tllvmshlshrnode = class(tcgshlshrnode)
-  end;
-
   Tllvmunaryminusnode = class(tcgunaryminusnode)
     procedure emit_float_sign_change(r: tregister; _size : tdef);override;
   end;
@@ -157,7 +154,9 @@ end;
 
 begin
   cmoddivnode := tllvmmoddivnode;
+(*
   cshlshrnode := tllvmshlshrnode;
+*)
   cnotnode    := tllvmnotnode;
   cunaryminusnode := Tllvmunaryminusnode;
 end.

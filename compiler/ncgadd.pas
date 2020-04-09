@@ -66,8 +66,6 @@ interface
           procedure second_cmpsmallset;virtual;abstract;
           procedure second_cmp64bit;virtual;abstract;
           procedure second_cmpordinal;virtual;abstract;
-
-          function needoverflowcheck: boolean;
        end;
 
   implementation
@@ -148,7 +146,7 @@ interface
     procedure tcgaddnode.set_result_location_reg;
       begin
         location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
+{$ifndef cpu64bitalu}
         if location.size in [OS_64,OS_S64] then
           begin
             location.register64.reglo := cg.getintregister(current_asmdata.CurrAsmList,OS_32);
@@ -437,7 +435,7 @@ interface
               else
                  internalerror(200203247);
             end;
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
+{$ifndef cpu64bitalu}
             if right.location.size in [OS_64,OS_S64] then
               begin
                 if right.location.loc <> LOC_CONSTANT then
@@ -520,9 +518,11 @@ interface
 
         checkoverflow:=
           checkoverflow and
-          needoverflowcheck;
+          (left.resultdef.typ<>pointerdef) and
+          (right.resultdef.typ<>pointerdef) and
+          (cs_check_overflow in current_settings.localswitches) and not(nf_internal in flags);
 
-{$if defined(cpu64bitalu) or defined(cpuhighleveltarget)}
+{$ifdef cpu64bitalu}
         case nodetype of
           xorn,orn,andn,addn:
             begin
@@ -563,7 +563,7 @@ interface
           else
             internalerror(2002072803);
         end;
-{$else cpu64bitalu or cpuhighleveltarget}
+{$else cpu64bitalu}
         case nodetype of
           xorn,orn,andn,addn:
             begin
@@ -609,7 +609,7 @@ interface
           else
             internalerror(2002072803);
         end;
-{$endif cpu64bitalu or cpuhighleveltarget}
+{$endif cpu64bitalu}
 
         { emit overflow check if enabled }
         if checkoverflow then
@@ -761,15 +761,6 @@ interface
     procedure tcgaddnode.second_cmpboolean;
       begin
         second_cmpordinal;
-      end;
-
-    function tcgaddnode.needoverflowcheck: boolean;
-      begin
-        result:=
-          (cs_check_overflow in current_settings.localswitches) and
-          (left.resultdef.typ<>pointerdef) and
-          (right.resultdef.typ<>pointerdef) and
-          not(nf_internal in flags);
       end;
 
 

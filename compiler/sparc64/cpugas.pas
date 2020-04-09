@@ -115,8 +115,6 @@ implementation
             result:='%gdop_hix2('+result+')';
           addr_gdop_lox22:
             result:='%gdop_lox2('+result+')';
-          else
-            ;
         end;
 
         if assigned(ref.symbol) or (ref.offset<>0) then

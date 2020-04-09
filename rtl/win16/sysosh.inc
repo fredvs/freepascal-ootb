@@ -19,7 +19,6 @@
 type
   THandle = Word;
   TThreadID = THandle;
-  TOSTimestamp = Longint;
 
    PRTLCriticalSection = ^TRTLCriticalSection;
    TRTLCriticalSection = record

@@ -143,22 +143,6 @@ uses
       RS_XMM13       = $0d;
       RS_XMM14       = $0e;
       RS_XMM15       = $0f;
-      RS_XMM16       = $10;
-      RS_XMM17       = $11;
-      RS_XMM18       = $12;
-      RS_XMM19       = $13;
-      RS_XMM20       = $14;
-      RS_XMM21       = $15;
-      RS_XMM22       = $16;
-      RS_XMM23       = $17;
-      RS_XMM24       = $18;
-      RS_XMM25       = $19;
-      RS_XMM26       = $1a;
-      RS_XMM27       = $1b;
-      RS_XMM28       = $1c;
-      RS_XMM29       = $1d;
-      RS_XMM30       = $1e;
-      RS_XMM31       = $1f;
 
 {$if defined(x86_64)}
       RS_RFLAGS      = $06;
@@ -250,6 +234,10 @@ uses
       RS_DEFAULTFLAGS = RS_FLAGS;
       NR_DEFAULTFLAGS = NR_FLAGS;
 {$endif}
+
+   type
+      totherregisterset = set of tregisterindex;
+
 
 {*****************************************************************************
                                 Conditions
@@ -348,13 +336,9 @@ topsize2memsize: array[topsize] of integer =
     function std_regname(r:Tregister):string;
     function dwarf_reg(r:tregister):shortint;
     function dwarf_reg_no_error(r:tregister):shortint;
-    function eh_return_data_regno(nr: longint): longint;
 
     function inverse_cond(const c: TAsmCond): TAsmCond; {$ifdef USEINLINE}inline;{$endif USEINLINE}
     function conditions_equal(const c1, c2: TAsmCond): boolean; {$ifdef USEINLINE}inline;{$endif USEINLINE}
-
-    { Checks if Subset is a subset of c (e.g. "less than" is a subset of "less than or equal" }
-    function condition_in(const Subset, c: TAsmCond): Boolean;
 
     { checks whether two segment registers are normally equal in the current memory model }
     function segment_regs_equal(r1,r2:tregister):boolean;
@@ -463,11 +447,11 @@ implementation
               else
                 internalerror(2009071902);
             end;
-          OS_M128:
+          OS_M128,OS_MS128,OS_MF128,OS_MD128:
             cgsize2subreg:=R_SUBMMX;
-          OS_M256:
+          OS_M256,OS_MS256,OS_MF256,OS_MD256:
             cgsize2subreg:=R_SUBMMY;
-          OS_M512:
+          OS_M512,OS_MS512,OS_MF512,OS_MD512:
             cgsize2subreg:=R_SUBMMZ;
           OS_NO:
             { error message should have been thrown already before, so avoid only
@@ -481,7 +465,7 @@ implementation
 
     function reg_cgsize(const reg: tregister): tcgsize;
       const subreg2cgsize:array[Tsubregister] of Tcgsize =
-            (OS_NO,OS_8,OS_8,OS_16,OS_32,OS_64,OS_NO,OS_NO,OS_NO,OS_F32,OS_F64,OS_NO,OS_M128,OS_M256,OS_M512,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO);
+            (OS_NO,OS_8,OS_8,OS_16,OS_32,OS_64,OS_NO,OS_NO,OS_NO,OS_F32,OS_F64,OS_NO,OS_M128,OS_M256,OS_M512,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO);
       begin
         case getregtype(reg) of
           R_INTREGISTER :
@@ -502,12 +486,7 @@ implementation
 {$endif x86_64}
               else
                 reg_cgsize:=OS_32
-            end;
-          R_ADDRESSREGISTER:
-            case reg of
-              NR_K0..NR_K7: reg_cgsize:=OS_64;
-              else internalerror(2003031801);
-            end;
+            end
           else
             internalerror(2003031801);
           end;
@@ -517,7 +496,7 @@ implementation
     function reg2opsize(r:Tregister):topsize;
       const
         subreg2opsize : array[tsubregister] of topsize =
-          (S_NO,S_B,S_B,S_W,S_L,S_Q,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO);
+          (S_NO,S_B,S_B,S_W,S_L,S_Q,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO);
       begin
         reg2opsize:=S_L;
         case getregtype(r) of
@@ -534,8 +513,6 @@ implementation
                 NR_CS,NR_DS,NR_ES,
                 NR_SS,NR_FS,NR_GS :
                   reg2opsize:=S_W;
-                else
-                  ;
               end;
             end;
           else
@@ -597,12 +574,11 @@ implementation
 
     function is_segment_reg(r:tregister):boolean;
       begin
+        result:=false;
         case r of
           NR_CS,NR_DS,NR_ES,
           NR_SS,NR_FS,NR_GS :
             result:=true;
-          else
-            result:=false;
         end;
       end;
 
@@ -614,18 +590,8 @@ implementation
         { for the name the sub reg doesn't matter }
         hr:=r;
         if (getregtype(hr)=R_MMREGISTER) and
-           (getsubreg(hr)<>R_SUBMMY) and
-           (getsubreg(hr)<>R_SUBMMZ) then
+           (getsubreg(hr)<>R_SUBMMY) then
           setsubreg(hr,R_SUBMMX);
-
-        //// TG TODO check
-        //if (getregtype(hr)=R_MMREGISTER) then
-        // case getsubreg(hr) of
-        //   R_SUBMMX: setsubreg(hr,R_SUBMMX);
-        //   R_SUBMMY: setsubreg(hr,R_SUBMMY);
-        //   R_SUBMMZ: setsubreg(hr,R_SUBMMZ);
-        //  else setsubreg(hr,R_SUBMMX);
-        // end;
         result:=findreg_by_number_table(hr,regnumber_index);
       end;
 
@@ -669,49 +635,6 @@ implementation
       end;
 
 
-    { Checks if Subset is a subset of c (e.g. "less than" is a subset of "less than or equal" }
-    function condition_in(const Subset, c: TAsmCond): Boolean;
-      begin
-        Result := (c = C_None) or conditions_equal(Subset, c);
-        if not Result then
-          case Subset of
-            C_A,  C_NBE:
-              Result := (c in [C_A,  C_AE, C_NB, C_NBE]);
-            C_AE, C_NB:
-              Result := (c in [C_AE, C_NB]);
-            C_B,  C_NAE:
-              Result := (c in [C_B,  C_BE, C_C,  C_NA, C_NAE]);
-            C_BE, C_NA:
-              Result := (c in [C_BE, C_NA]);
-            C_C:
-              { C_B  / C_NAE: CF = 1
-                C_BE / C_NA:  CF = 1 or ZF = 1 }
-              Result := (c in [C_B,  C_BE, C_NA, C_NAE]);
-            C_E,  C_Z:
-              Result := (c in [C_AE, C_BE, C_E,  C_NA, C_NB, C_NG, C_NL]);
-            C_G,  C_NLE:
-              Result := (c in [C_G,  C_GE, C_NL, C_NLE]);
-            C_GE, C_NL:
-              Result := (c in [C_GE, C_NL]);
-            C_L,  C_NGE:
-              Result := (c in [C_L,  C_LE, C_NG, C_NGE]);
-            C_LE, C_NG:
-              Result := (c in [C_LE, C_NG]);
-            C_NC:
-              { C_A  / C_NBE: CF = 0 and ZF = 0; not a subset because ZF has to be zero as well
-                C_AE / C_NB:  CF = 0 }
-              Result := (c in [C_AE, C_NB]);
-            C_NE, C_NZ:
-              Result := (c in [C_NE, C_NZ, C_A,  C_B,  C_NAE,C_NBE,C_L,  C_G,  C_NLE,C_NGE]);
-            C_NP, C_PO:
-              Result := (c in [C_NP, C_PO]);
-            C_P,  C_PE:
-              Result := (c in [C_P,  C_PE]);
-            else
-              Result := False;
-          end;
-      end;
-
     function dwarf_reg(r:tregister):shortint;
       begin
         result:=regdwarf_table[findreg_by_number(r)];
@@ -722,21 +645,6 @@ implementation
     function dwarf_reg_no_error(r:tregister):shortint;
       begin
         result:=regdwarf_table[findreg_by_number(r)];
-      end;
-
-
-    function eh_return_data_regno(nr: longint): longint;
-      begin
-         case nr of
-           0: result:=0;
-{$ifdef x86_64}
-           1: result:=1;
-{$else}
-           1: result:=2;
-{$endif}
-           else
-             result:=-1;
-         end;
       end;
 
 
@@ -770,6 +678,8 @@ implementation
           mm_compact,mm_large,mm_huge:
             { all segment registers are different in these models }
             exit(false);
+          else
+            internalerror(2013062302);
         end;
 {$elseif defined(i386) or defined(x86_64)}
         { DS=SS=ES }
@@ -922,7 +832,7 @@ implementation
           A_LODS,A_OUTS:
             result:=-1;
           else
-            internalerror(2017101204);
+            internalerror(2017101202);
         end;
       end;
 

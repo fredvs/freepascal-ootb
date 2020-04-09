@@ -1,15 +1,15 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="12"/>
+    <Version Value="9"/>
     <General>
       <Flags>
         <SaveOnlyProjectUnits Value="True"/>
         <MainUnitHasCreateFormStatements Value="False"/>
         <Runnable Value="False"/>
-        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
       <Title Value="FPC JSON-RPC demo "/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
@@ -17,47 +17,51 @@
     <VersionInfo>
       <Language Value=""/>
       <CharSet Value=""/>
+      <StringTable ProductVersion=""/>
     </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="default" Default="True"/>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|ppw|o|so);*~;backup"/>
     </PublishOptions>
     <RunParams>
       <local>
-        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T &apos;Lazarus Run Output&apos; -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
+        <FormatVersion Value="1"/>
+        <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T 'Lazarus Run Output' -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
       </local>
-      <FormatVersion Value="2"/>
-      <Modes Count="1">
-        <Mode0 Name="default">
-          <local>
-            <LaunchingApplication PathPlusParams="/usr/X11R6/bin/xterm -T &apos;Lazarus Run Output&apos; -e $(LazarusDir)/tools/runwait.sh $(TargetCmdLine)"/>
-          </local>
-        </Mode0>
-      </Modes>
     </RunParams>
-    <RequiredPackages Count="1">
+    <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="FCL"/>
+        <PackageName Value="WebLaz"/>
       </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+      <Item3>
+        <PackageName Value="FCL"/>
+      </Item3>
     </RequiredPackages>
     <Units Count="2">
       <Unit0>
         <Filename Value="demo.lpr"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="demo"/>
       </Unit0>
       <Unit1>
         <Filename Value="wmdemo.pp"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="EchoModule"/>
-        <HasResources Value="True"/>
+        <ComponentName Value="FPWebModule1"/>
         <ResourceBaseClass Value="DataModule"/>
+        <UnitName Value="wmdemo"/>
       </Unit1>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
-    <Version Value="11"/>
+    <Version Value="10"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
     </SearchPaths>
@@ -66,6 +70,12 @@
         <UseHeaptrc Value="True"/>
       </Debugging>
     </Linking>
+    <Other>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

@@ -45,7 +45,7 @@ unit cpupara;
           function push_addr_param(varspez:tvarspez;def : tdef;calloption : tproccalloption) : boolean;override;
           function get_funcretloc(p : tabstractprocdef; side: tcallercallee; forcetempdef: tdef): tcgpara;override;
           procedure createtempparaloc(list: TAsmList;calloption : tproccalloption;parasym : tparavarsym;can_use_final_stack_loc : boolean;var cgpara:TCGPara);override;
-          function create_varargs_paraloc_info(p : tabstractprocdef; side: tcallercallee; varargspara:tvarargsparalist):longint;override;
+          function create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;override;
           function parsefuncretloc(p : tabstractprocdef; const s : string) : boolean;override;
           function get_volatile_registers_int(calloption:tproccalloption):tcpuregisterset;override;
           function get_volatile_registers_address(calloption:tproccalloption):tcpuregisterset;override;
@@ -104,21 +104,21 @@ unit cpupara;
 
     function tcpuparamanager.get_saved_registers_int(calloption:tproccalloption):tcpuregisterarray;
       const
-        saved_regs: {$ifndef VER3_0}tcpuregisterarray{$else}array[0..5] of tsuperregister{$endif} = (RS_D2,RS_D3,RS_D4,RS_D5,RS_D6,RS_D7);
+        saved_regs: array[0..5] of tsuperregister = (RS_D2,RS_D3,RS_D4,RS_D5,RS_D6,RS_D7);
       begin
         result:=saved_regs;
       end;
 
     function tcpuparamanager.get_saved_registers_address(calloption:tproccalloption):tcpuregisterarray;
       const
-        saved_addr_regs: {$ifndef VER3_0}tcpuregisterarray{$else}array[0..4] of tsuperregister{$endif} = (RS_A2,RS_A3,RS_A4,RS_A5,RS_A6);
+        saved_addr_regs: array[0..4] of tsuperregister = (RS_A2,RS_A3,RS_A4,RS_A5,RS_A6);
       begin
         result:=saved_addr_regs;
       end;
 
     function tcpuparamanager.get_saved_registers_fpu(calloption:tproccalloption):tcpuregisterarray;
       const
-        saved_fpu_regs: {$ifndef VER3_0}tcpuregisterarray{$else}array[0..5] of tsuperregister{$endif} = (RS_FP2,RS_FP3,RS_FP4,RS_FP5,RS_FP6,RS_FP7);
+        saved_fpu_regs: array[0..5] of tsuperregister = (RS_FP2,RS_FP3,RS_FP4,RS_FP5,RS_FP6,RS_FP7);
       begin
         result:=saved_fpu_regs;
       end;
@@ -180,8 +180,6 @@ unit cpupara;
           procvardef :
             { Handling of methods must match that of records }
             result:=false;
-           else
-             ;
         end;
       end;
 
@@ -197,8 +195,6 @@ unit cpupara;
                 result:=false;
                 exit;
               end;
-          else
-            ;
         end;
         result:=inherited ret_in_param(def,pd);
       end;
@@ -340,8 +336,11 @@ unit cpupara;
 
             { syscall for AmigaOS can have already a paraloc set }
             if (vo_has_explicit_paraloc in hp.varoptions) then
-              continue;
-
+              begin
+                if not(vo_is_syscall_lib in hp.varoptions) then
+                  internalerror(200506051);
+                continue;
+              end;
             hp.paraloc[side].reset;
 
             { currently only support C-style array of const }
@@ -522,7 +521,7 @@ unit cpupara;
                             paraloc^.size:=paracgsize;
                             paraloc^.def:=paradef;
                             paraloc^.loc:=LOC_FPUREGISTER;
-                            paraloc^.register:=newreg(R_FPUREGISTER,floatparasupregs[floatparareg],R_SUBNONE);
+                            paraloc^.register:=newreg(R_FPUREGISTER,floatparasupregs[floatparareg],R_SUBWHOLE);
                             inc(floatparareg);
                           end;
                       end
@@ -642,8 +641,6 @@ unit cpupara;
                         break;
                       dec(i);
                     end;
-                  else
-                    ;
                 end;
               end;
           end;
@@ -678,27 +675,18 @@ unit cpupara;
         inherited createtempparaloc(list,calloption,parasym,can_use_final_stack_loc,cgpara);
       end;
 
-    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; side: tcallercallee; varargspara:tvarargsparalist):longint;
+    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;
       var
         cur_stack_offset: aword;
       begin
         cur_stack_offset:=0;
 
-        result:=create_stdcall_paraloc_info(p,side,p.paras,cur_stack_offset);
+        result:=create_stdcall_paraloc_info(p,callerside,p.paras,cur_stack_offset);
         if (p.proccalloption in cstylearrayofconst) then
-          begin
-            { just continue loading the parameters in the registers }
-            if assigned(varargspara) then
-              begin
-                if side=callerside then
-                  result:=create_stdcall_paraloc_info(p,side,varargspara,cur_stack_offset)
-                else
-                  internalerror(2019021923);
-              end;
-          end
+          { just continue loading the parameters in the registers }
+          result:=create_stdcall_paraloc_info(p,callerside,varargspara,cur_stack_offset)
         else
           internalerror(200410231);
-        create_funcretloc_info(p,side);
       end;
 
 

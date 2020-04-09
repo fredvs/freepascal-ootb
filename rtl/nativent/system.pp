@@ -15,7 +15,6 @@
 unit System;
 interface
 
-{$define FPC_IS_SYSTEM}
 {$ifdef SYSTEMDEBUG}
   {$define SYSTEMEXCEPTIONDEBUG}
 {$endif SYSTEMDEBUG}

@@ -44,9 +44,6 @@ implementation
     {$ifndef NOTARGETBSD}
       ,t_bsd
     {$endif}
-    {$ifndef NOTARGETDARWIN}
-      ,t_darwin
-    {$endif}
     {$ifndef NOTARGETSUNOS}
       ,t_sunos
     {$endif}
@@ -109,6 +106,7 @@ implementation
 
       ,ogcoff
       ,ogelf
+      ,ogmacho
       ,cpuelf
 
 {**************************************

@@ -114,7 +114,6 @@ interface
     SHT_GNU_verdef = $6ffffffd;
     SHT_GNU_verneed = $6ffffffe;
     SHT_GNU_versym = $6fffffff;
-    SHT_ARM_ATTRIBUTES = $70000003;
 
     { ElfSechdr.sh_flags }
     SHF_WRITE     = 1;
@@ -140,11 +139,6 @@ interface
     STT_COMMON  = 5;
     STT_TLS     = 6;
     STT_GNU_IFUNC = 10;
-
-    STV_DEFAULT = 0;
-    STV_INTERNAL = 1;
-    STV_HIDDEN = 2;
-    STV_PROTECTED = 3;
 
     { program header types }
     PT_NULL     = 0;
@@ -441,9 +435,6 @@ interface
     procedure MaybeSwapElfverneed(var h: TElfverneed);
     procedure MaybeSwapElfvernaux(var h: TElfvernaux);
 
-    function GetElfSymbolVisibility(other: byte): byte; inline;
-    procedure SetElfSymbolVisibility(var other: byte; vis: byte); inline;
-
 implementation
 
     uses
@@ -689,17 +680,6 @@ implementation
               vna_name:=swapendian(vna_name);
               vna_next:=swapendian(vna_next);
             end;
-      end;
-
-
-    function GetElfSymbolVisibility(other: byte): byte; inline;
-      begin
-        result:=other and 3;
-      end;
-
-    procedure SetElfSymbolVisibility(var other: byte; vis: byte);
-      begin
-        other:=(other and not(3)) or vis;
       end;
 
 end.

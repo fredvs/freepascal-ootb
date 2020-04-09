@@ -173,11 +173,11 @@ begin
   else
     begin
       // Now try if a local config-file exists
-      cfgfile:=GetFppkgConfigFile(Options.PreferGlobal,False);
+      cfgfile:=GetFppkgConfigFile(False,False);
       if not FileExists(cfgfile) then
         begin
           // If not, try to find a global configuration file
-          cfgfile:=GetFppkgConfigFile(not Options.PreferGlobal,False);
+          cfgfile:=GetFppkgConfigFile(True,False);
           if not FileExists(cfgfile) then
             begin
               // Create a new configuration file

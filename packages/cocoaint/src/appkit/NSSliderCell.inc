@@ -40,9 +40,9 @@ type
     _maxValue: double;
     _minValue: double;
     _trackRect: NSRect;
-    _scFlags: bitpacked record
+    __sliderCellFlags: bitpacked record
       case byte of
-        0: (_anonBitField___scFlags0: cuint);
+        0: (_anonBitField___sliderCellFlags0: cuint);
         1: (
           weAreVertical: 0..1;
           weAreVerticalSet: 0..1;

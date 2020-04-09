@@ -21,7 +21,6 @@ interface
 
 Uses BaseUnix;
 
-{$ifndef cpullvm}
 function ReadPortB (Port : Longint): Byte;inline;
 function ReadPortW (Port : Longint): Word;inline;
 function ReadPortL (Port : Longint): Longint;inline;
@@ -40,7 +39,6 @@ Procedure WritePortL (Port : Longint; Value : Longint);inline;
 Procedure WritePortW (Port : Longint; Value : Word);inline;
 Procedure WritePortW (Port : Longint; Var Buf; Count: longint);
 Procedure WritePortl (Port : Longint; Var Buf; Count: longint);
-{$endif}
 
 Function  fpIOperm (From,Num : Cardinal; Value : cint) : cint;
 Function  fpIoPL(Level : cint) : cint;
@@ -63,7 +61,6 @@ function fpc_x86_inportw(p:word):word; begin fpc_x86_inportw:=0; end;
 function fpc_x86_inportl(p:word):longint; begin fpc_x86_inportl:=0; end;
 {$ENDIF VER3_0}
 
-{$ifndef cpullvm}
 Procedure WritePort (Port : Longint; Value : Byte);inline;
 {
   Writes 'Value' to port 'Port'
@@ -333,7 +330,6 @@ begin
 {$endif CPUX86_64}        
   end;
 end;
-{$endif cpullvm}
 
 {$if defined(linux) or defined(android)}
 Function  fpIOperm (From,Num : Cardinal; Value : cint) : cint;

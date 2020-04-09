@@ -1,5 +1,4 @@
 { %TARGET=win32,win64,wince,linux,android }
-{ %OPT=-CE }
 program tsafecall3;
 
 {$mode objfpc}{$H+}

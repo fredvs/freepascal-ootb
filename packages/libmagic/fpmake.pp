@@ -13,11 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libmagic');
-    P.ShortName:='lmag';
+    P.ShortName:='magic';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Author := 'Library: libmagic';
     P.License := 'Library: GPL, header: LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';

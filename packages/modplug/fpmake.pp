@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('modplug');
-    P.ShortName := 'mplg';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.OSes := [linux];
     P.SourcePath.Add('src');
 

@@ -44,18 +44,7 @@ interface
        talignmentinfo = packed record
          procalign,
          loopalign,
-         { alignment for labels after unconditional jumps, this must be a power of two }
          jumpalign,
-         { max. alignment for labels after unconditional jumps:
-           the compiler tries to align jumpalign, however, to do so it inserts at maximum jumpalignskipmax bytes or uses
-           the next smaller power of two of jumpalign }
-         jumpalignskipmax,
-         { alignment for labels where two flows of the program flow coalesce, this must be a power of two }
-         coalescealign,
-         { max. alignment for labels where two flows of the program flow coalesce
-           the compiler tries to align to coalescealign, however, to do so it inserts at maximum coalescealignskipmax bytes or uses
-           the next smaller power of two of coalescealign }
-         coalescealignskipmax,
          constalignmin,
          constalignmax,
          varalignmin,
@@ -76,7 +65,6 @@ interface
          ,af_no_debug
          ,af_stabs_use_function_absolute_addresses
          ,af_no_stabs
-         ,af_llvm
        );
 
        pasminfo = ^tasminfo;
@@ -166,19 +154,7 @@ interface
             tf_x86_far_procs_push_odd_bp,
             { indicates that this target can use dynamic packages otherwise an
               error will be generated if a package file is compiled }
-            tf_supports_packages,
-            { use PSABI/Dwarf-based "zero cost" exception handling }
-            tf_use_psabieh,
-            { use high level cfi directives to generate call frame information }
-            tf_use_hlcfi,
-            { supports symbol order file (to ensure symbols in vectorised sections are kept in the correct order) }
-            tf_supports_symbolorderfile,
-            { supports hidden/private extern symbols: visible across object files, but local/private in exe/library }
-            tf_supports_hidden_symbols,
-            { units are initialized by direct calls and not table driven,
-              in particular for a small amount of units, this results in smaller
-              executables }
-            tf_init_final_units_by_calls
+            tf_supports_packages
        );
 
        psysteminfo = ^tsysteminfo;
@@ -256,8 +232,7 @@ interface
        systems_android = [system_arm_android, system_aarch64_android, system_i386_android, system_x86_64_android, system_mipsel_android];
        systems_linux = [system_i386_linux,system_x86_64_linux,system_powerpc_linux,system_powerpc64_linux,
                        system_arm_linux,system_sparc_linux,system_sparc64_linux,system_m68k_linux,
-                       system_x86_6432_linux,system_mipseb_linux,system_mipsel_linux,system_aarch64_linux,
-                       system_riscv32_linux,system_riscv64_linux,system_xtensa_linux];
+                       system_x86_6432_linux,system_mipseb_linux,system_mipsel_linux,system_aarch64_linux];
        systems_dragonfly = [system_x86_64_dragonfly];
        systems_freebsd = [system_i386_freebsd,
                           system_x86_64_freebsd];
@@ -299,11 +274,7 @@ interface
                            system_mips_embedded,system_arm_embedded,
                            system_powerpc64_embedded,system_avr_embedded,
                            system_jvm_java32,system_mipseb_embedded,system_mipsel_embedded,
-                           system_i8086_embedded,system_riscv32_embedded,system_riscv64_embedded,
-                           system_xtensa_embedded];
-
-       { all FreeRTOS systems }
-       systems_freertos = [system_xtensa_freertos];
+                           system_i8086_embedded];
 
        { all systems that allow section directive }
        systems_allow_section = systems_embedded;
@@ -363,15 +334,13 @@ interface
        systems_indirect_entry_information = systems_darwin+[system_i386_win32,system_x86_64_win64,system_x86_64_linux];
 
        { all systems for which weak linking has been tested/is supported }
-       systems_weak_linking = systems_darwin + systems_solaris + systems_linux + systems_android + systems_openbsd + systems_freebsd;
+       systems_weak_linking = systems_darwin + systems_solaris + systems_linux + systems_android + systems_openbsd;
 
        systems_internal_sysinit = [system_i386_win32,system_x86_64_win64,
                                    system_i386_linux,system_powerpc64_linux,system_sparc64_linux,system_x86_64_linux,
-                                   system_xtensa_linux,
                                    system_m68k_atari,system_m68k_palmos,
-                                   system_i386_haiku,system_x86_64_haiku,
                                    system_i386_openbsd,system_x86_64_openbsd,
-                                   system_riscv32_linux,system_riscv64_linux
+                                   system_i386_haiku,system_x86_64_haiku
                                   ]+systems_darwin+systems_amigalike;
 
        { all systems that use garbage collection for reference-counted types }
@@ -430,7 +399,7 @@ interface
        cpu2str : array[TSystemCpu] of string[10] =
             ('','i386','m68k','alpha','powerpc','sparc','vm','ia64','x86_64',
              'mips','arm', 'powerpc64', 'avr', 'mipsel','jvm', 'i8086',
-             'aarch64', 'wasm', 'sparc64', 'riscv32', 'riscv64', 'xtensa');
+             'aarch64', 'wasm', 'sparc64');
 
        abiinfo : array[tabi] of tabiinfo = (
          (name: 'DEFAULT'; supported: true),
@@ -443,32 +412,8 @@ interface
          (name: 'EABIHF' ; supported:{$ifdef FPC_ARMHF}true{$else}false{$endif}),
          (name: 'OLDWIN32GNU'; supported:{$ifdef I386}true{$else}false{$endif}),
          (name: 'AARCH64IOS'; supported:{$ifdef aarch64}true{$else}false{$endif}),
-         (name: 'RISCVHF'; supported:{$if defined(riscv32) or defined(riscv64)}true{$else}false{$endif}),
-         (name: 'LINUX386_SYSV'; supported:{$if defined(i386)}true{$else}false{$endif}),
-         (name: 'WINDOWED'; supported:{$if defined(xtensa)}true{$else}false{$endif}),
-         (name: 'CALL0'; supported:{$if defined(xtensa)}true{$else}false{$endif})
+         (name: 'LINUX386_SYSV'; supported:{$if defined(i386)}true{$else}false{$endif})
        );
-
-       { x86 asm modes with an Intel-style syntax }
-       asmmodes_x86_intel = [
-{$ifdef i8086}
-         asmmode_standard,
-{$endif i8086}
-         asmmode_i8086_intel,
-         asmmode_i386_intel,
-         asmmode_x86_64_intel
-       ];
-
-       { x86 asm modes with an AT&T-style syntax }
-       asmmodes_x86_att = [
-{$if defined(i386) or defined(x86_64)}
-         asmmode_standard,
-{$endif}
-         asmmode_i8086_att,
-         asmmode_i386_att,
-         asmmode_x86_64_att,
-         asmmode_x86_64_gas
-       ];
 
     var
        targetinfos   : array[tsystem] of psysteminfo;
@@ -714,14 +659,6 @@ begin
        jumpalign:=s.jumpalign
      else if s.jumpalign<>0 then
        result:=false;
-     if (s.coalescealign in [1,2,4,8,16,32,64,128]) or (s.coalescealign=256) then
-       coalescealign:=s.coalescealign
-     else if s.coalescealign<>0 then
-       result:=false;
-     if s.jumpalignskipmax>0 then
-       jumpalignskipmax:=s.jumpalignskipmax;
-     if s.coalescealign>0 then
-       coalescealignskipmax:=s.coalescealignskipmax;
      { general update rules:
        minimum: if higher then update
        maximum: if lower then update or if undefined then update }
@@ -1110,19 +1047,6 @@ begin
 {$ifdef wasm}
   default_target(system_wasm_wasm32);
 {$endif}
-
-{$ifdef riscv32}
-  default_target(system_riscv32_linux);
-{$endif riscv32}
-
-{$ifdef riscv64}
-  default_target(system_riscv64_linux);
-{$endif riscv64}
-
-{$ifdef xtensa}
-  default_target(system_xtensa_embedded);
-{$endif xtensa}
-
 end;
 
 

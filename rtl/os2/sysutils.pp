@@ -214,7 +214,7 @@ begin
    OSErrorWatch (RC);
 end;
 
-function FileAge (const FileName: RawByteString): Int64;
+function FileAge (const FileName: RawByteString): longint;
 var Handle: longint;
 begin
     Handle := FileOpen (FileName, 0);
@@ -250,7 +250,10 @@ begin
 end;
 
 
-type    PSearchRec = ^TSearchRec;
+type    TRec = record
+            T, D: word;
+        end;
+        PSearchRec = ^TSearchRec;
 
 Function InternalFindFirst (Const Path : RawByteString; Attr : Longint; out Rslt : TAbstractSearchRec; var Name: RawByteString) : Longint;
 
@@ -280,7 +283,8 @@ begin
   if Err = 0 then
    begin
     Rslt.ExcludeAttr := 0;
-    Rslt.Time := cardinal (FStat^.DateLastWrite) shl 16 + FStat^.TimeLastWrite;
+    TRec (Rslt.Time).T := FStat^.TimeLastWrite;
+    TRec (Rslt.Time).D := FStat^.DateLastWrite;
     if FSApi64 then
      begin
       Rslt.Size := FStat^.FileSize;
@@ -320,7 +324,8 @@ begin
   if Err = 0 then
   begin
     Rslt.ExcludeAttr := 0;
-    Rslt.Time := cardinal (FStat^.DateLastWrite) shl 16 + FStat^.TimeLastWrite;
+    TRec (Rslt.Time).T := FStat^.TimeLastWrite;
+    TRec (Rslt.Time).D := FStat^.DateLastWrite;
     if FSApi64 then
      begin
       Rslt.Size := FStat^.FileSize;
@@ -351,7 +356,7 @@ begin
 end;
 
 
-function FileGetDate (Handle: THandle): Int64;
+function FileGetDate (Handle: THandle): longint;
 var
   FStat: TFileStatus3;
   Time: Longint;
@@ -360,9 +365,9 @@ begin
   RC := DosQueryFileInfo(Handle, ilStandard, @FStat, SizeOf(FStat));
   if RC = 0 then
   begin
-    Time := FStat.TimeLastWrite + dword (FStat.DateLastWrite) shl 16;
+    Time := FStat.TimeLastWrite + longint (FStat.DateLastWrite) shl 16;
     if Time = 0 then
-      Time := FStat.TimeCreation + dword (FStat.DateCreation) shl 16;
+      Time := FStat.TimeCreation + longint (FStat.DateCreation) shl 16;
   end else
    begin
     Time:=0;
@@ -371,7 +376,7 @@ begin
   FileGetDate:=Time;
 end;
 
-function FileSetDate (Handle: THandle; Age: Int64): longint;
+function FileSetDate (Handle: THandle; Age: longint): longint;
 var
   FStat: PFileStatus3;
   RC: cardinal;
@@ -385,10 +390,10 @@ begin
    end
   else
    begin
-    FStat^.DateLastAccess := Hi (dword (Age));
-    FStat^.DateLastWrite := Hi (dword (Age));
-    FStat^.TimeLastAccess := Lo (dword (Age));
-    FStat^.TimeLastWrite := Lo (dword (Age));
+    FStat^.DateLastAccess := Hi (Age);
+    FStat^.DateLastWrite := Hi (Age);
+    FStat^.TimeLastAccess := Lo (Age);
+    FStat^.TimeLastWrite := Lo (Age);
     RC := DosSetFileInfo (Handle, ilStandard, FStat, SizeOf (FStat^));
     if RC <> 0 then
      begin

@@ -789,8 +789,6 @@ var
   _SS : Cardinal;
 {$endif cpu386}
 
-procedure fpc_lib_exit_intern; external name 'FPC_LIB_EXIT';
-
 function Dll_entry : longbool;[public, alias : '_FPC_DLL_Entry'];
 begin
    IsLibrary:=true;
@@ -815,7 +813,7 @@ begin
        end;
      DLL_PROCESS_DETACH :
        begin
-         Fpc_Lib_Exit_intern;
+         Lib_Exit;
          if assigned(Dll_Process_Detach_Hook) then
            Dll_Process_Detach_Hook(DllParam);
        end;

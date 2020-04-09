@@ -15,7 +15,7 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-instantfpc');
-    P.ShortName:='ifpc';
+    P.ShortName:='instantfpc';
     P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
@@ -28,7 +28,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     P.Dependencies.Add('fcl-process');
     P.Options.Add('-S2h');

@@ -152,51 +152,35 @@ begin
     for other arm flavours, this cannot hurt }
 {$ifdef FPC_ARMHF}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/arm-linux-gnueabihf',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/arm-linux-gnueabihf',true);
 {$endif FPC_ARMHF}
 {$ifdef FPC_ARMEL}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/arm-linux-gnueabi',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/arm-linux-gnueabi',true);
 {$endif}
 {$endif arm}
 {$ifdef x86_64}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/x86_64-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/x86_64-linux-gnu',true);
 {$endif x86_64}
 {$ifdef i386}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/i386-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/i386-linux-gnu',true);
 {$endif i386}
 {$ifdef aarch64}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/aarch64-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/aarch64-linux-gnu',true);
 {$endif aarch64}
 {$ifdef powerpc}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/powerpc-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/powerpc-linux-gnu',true);
 {$endif powerpc}
 {$ifdef m68k}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/m68k-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/m68k-linux-gnu',true);
 {$endif m68k}
 {$ifdef mipsel}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/mipsel-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/mipsel-linux-gnu',true);
 {$endif mipsel}
 {$ifdef mips}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/mips-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/mips-linux-gnu',true);
 {$endif mips}
 {$ifdef sparc64}
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/sparc64-linux-gnu',true);
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/sparc64-linux-gnu',true);
 {$endif sparc64}
-{$ifdef riscv32}
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/riscv32-linux-gnu',true);
-{$endif riscv32}
-{$ifdef riscv64}
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/riscv64-linux-gnu',true);
-{$endif riscv64}
     end;
 end;
 
@@ -249,18 +233,6 @@ const defdynlinker='/lib/ld-linux-aarch64.so.1';
 {$ifdef sparc64}
   const defdynlinker='/lib64/ld-linux.so.2';
 {$endif sparc64}
-
-{$ifdef riscv32}
-  const defdynlinker='/lib32/ld.so.1';
-{$endif riscv32}
-
-{$ifdef riscv64}
-  const defdynlinker='/lib/ld-linux-riscv64-lp64d.so.1';
-{$endif riscv64}
-
-{$ifdef xtensa}
-  const defdynlinker='/lib/ld.so.1';
-{$endif xtensa}
 
 
 procedure SetupDynlinker(out DynamicLinker:string;out libctype:TLibcType);
@@ -366,9 +338,6 @@ const
                    platform_select='-EB';
   {$endif}
 {$endif}
-{$ifdef riscv32}   platform_select='-m elf32lriscv';{$endif}
-{$ifdef riscv64}   platform_select='-m elf64lriscv';{$endif}
-{$ifdef xtensa}    platform_select='';{$endif}
 
 var
   platformopt: string;
@@ -381,14 +350,10 @@ begin
   else
     platformopt:=' -b elf64-powerpc -m elf64ppc';
 {$endif powerpc64}
-{$ifdef arm}
-  platformopt:=' -z noexecstack';
-{$endif arm}
-
   with Info do
    begin
-     ExeCmd[1]:='ld '+platform_select+platformopt+' $OPT $DYNLINK $STATIC $GCSECTIONS $STRIP $MAP $LTO -L. -o $EXE';
-     DllCmd[1]:='ld '+platform_select+' $OPT $INIT $FINI $SONAME $MAP $LTO -shared $GCSECTIONS -L. -o $EXE';
+     ExeCmd[1]:='ld '+platform_select+platformopt+' $OPT $DYNLINK $STATIC $GCSECTIONS $STRIP $MAP -L. -o $EXE';
+     DllCmd[1]:='ld '+platform_select+' $OPT $INIT $FINI $SONAME $MAP -shared $GCSECTIONS -L. -o $EXE';
      { when we want to cross-link we need to override default library paths;
        when targeting binutils 2.19 or later, we use the "INSERT" command to
        augment the default linkerscript, which also requires -T (normally that
@@ -468,7 +433,7 @@ Var
   s,s1,s2      : TCmdStr;
   found1,
   found2       : boolean;
-  linksToSharedLibFiles, libraryadded: boolean;
+  linksToSharedLibFiles : boolean;
 begin
   result:=False;
 { set special options for some targets }
@@ -582,7 +547,7 @@ begin
 
       { Write sharedlibraries like -l<lib>, also add the needed dynamic linker
         here to be sure that it gets linked this is needed for glibc2 systems (PFV) }
-      if isdll and not linklibc then
+      if (isdll) then
        begin
          Add('INPUT(');
          Add(sysrootpath+info.DynamicLinker);
@@ -597,29 +562,22 @@ begin
             (TCmdStrListItem(SharedLibFiles.First).Str<>'c') or
             reorder then
            begin
-             libraryadded:=false;
              Add('INPUT(');
              While not SharedLibFiles.Empty do
-               begin
-                 S:=SharedLibFiles.GetFirst;
-                 if (s<>'c') or reorder then
-                  begin
-                    i:=Pos(target_info.sharedlibext,S);
-                    if i>0 then
-                     Delete(S,i,255);
-                    Add('-l'+s);
-                    libraryadded:=true;
-                  end
-                 else
-                   linklibc:=true;
-               end;
-             { link explicitly against the dyn. linker in case we are using section threadvars and
-               if we link against any other library. We need __tls_get_addr from the dyn. linker in this case.
-               This does not hurt as in case we use a dyn. library we depend on the dyn. linker anyways.
-
-               All this does not apply if we link anyways against libc }
-             if libraryadded and not(linklibc) and not(isdll) and (tf_section_threadvars in target_info.flags) then
-               Add('-l:'+ExtractFileName(defdynlinker));
+              begin
+                S:=SharedLibFiles.GetFirst;
+                if (s<>'c') or reorder then
+                 begin
+                   i:=Pos(target_info.sharedlibext,S);
+                   if i>0 then
+                    Delete(S,i,255);
+                   Add('-l'+s);
+                 end
+                else
+                 begin
+                  linklibc:=true;
+              end;
+              end;
              Add(')');
            end
          else
@@ -1335,76 +1293,13 @@ begin
             add('    KEEP (*(.fini))');
             add('  } =0x90909090');
             add('  PROVIDE (_etext = .);');
-            add('  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }');
-            add('  .rodata1        : { *(.rodata1) }');
-            add('  .eh_frame_hdr : { *(.eh_frame_hdr) }');
-            add('  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }');
-            add('  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table');
-            add('  .gcc_except_table.*) }');
-            add('  /* These sections are generated by the Sun/Oracle C++ compiler.  */');
-            add('  .exception_ranges   : ONLY_IF_RO { *(.exception_ranges');
-            add('  .exception_ranges*) }');
-            add('  /* Adjust the address for the data segment.  We want to adjust up to');
-            add('     the same address within the page on the next page up.  */');
-            add('  . = ALIGN (CONSTANT (MAXPAGESIZE)) - ((CONSTANT (MAXPAGESIZE) - .) & (CONSTANT (MAXPAGESIZE) - 1)); . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));');
-            add('  /* Exception handling  */');
-            add('  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }');
-            add('  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }');
-            add('  .exception_ranges   : ONLY_IF_RW { *(.exception_ranges .exception_ranges*) }');
-            add('  /* Thread Local Storage sections  */');
-            add('  .tdata          : { *(.tdata .tdata.* .gnu.linkonce.td.*) }');
-            add('  .tbss           : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }');
-            add('  .preinit_array     :');
+            add('  .rodata         :');
             add('  {');
-            add('    PROVIDE_HIDDEN (__preinit_array_start = .);');
-            add('    KEEP (*(.preinit_array))');
-            add('    PROVIDE_HIDDEN (__preinit_array_end = .);');
+            add('    *(.rodata .rodata.* .gnu.linkonce.r.*)');
             add('  }');
-            add('  .init_array     :');
-            add('  {');
-            add('    PROVIDE_HIDDEN (__init_array_start = .);');
-            add('    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))');
-            add('    KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))');
-            add('    PROVIDE_HIDDEN (__init_array_end = .);');
-            add('  }');
-            add('  .fini_array     :');
-            add('  {');
-            add('    PROVIDE_HIDDEN (__fini_array_start = .);');
-            add('    KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))');
-            add('    KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))');
-            add('    PROVIDE_HIDDEN (__fini_array_end = .);');
-            add('  }');
-            add('  .ctors          :');
-            add('  {');
-            add('    /* gcc uses crtbegin.o to find the start of');
-            add('       the constructors, so we make sure it is');
-            add('       first.  Because this is a wildcard, it');
-            add('       doesn''t matter if the user does not');
-            add('       actually link against crtbegin.o; the');
-            add('       linker won''t look for a file to match a');
-            add('       wildcard.  The wildcard also means that it');
-            add('       doesn''t matter which directory crtbegin.o');
-            add('       is in.  */');
-            add('    KEEP (*crtbegin.o(.ctors))');
-            add('    KEEP (*crtbegin?.o(.ctors))');
-            add('    /* We don''t want to include the .ctor section from');
-            add('       the crtend.o file until after the sorted ctors.');
-            add('       The .ctor section from the crtend file contains the');
-            add('       end of ctors marker and it must be last */');
-            add('    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))');
-            add('    KEEP (*(SORT(.ctors.*)))');
-            add('    KEEP (*(.ctors))');
-            add('  }');
-            add('  .dtors          :');
-            add('  {');
-            add('    KEEP (*crtbegin.o(.dtors))');
-            add('    KEEP (*crtbegin?.o(.dtors))');
-            add('    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))');
-            add('    KEEP (*(SORT(.dtors.*)))');
-            add('    KEEP (*(.dtors))');
-            add('  }');
-            add('  .jcr            : { KEEP (*(.jcr)) }');
-            add('  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }');
+            {Adjust the address for the data segment.  We want to adjust up to
+             the same address within the page on the next page up.}
+            add('  . = ALIGN (0x1000) - ((0x1000 - .) & (0x1000 - 1));');
             add('  .dynamic        : { *(.dynamic) }');
             add('  .got            : { *(.got) }');
             add('  .got.plt        : { *(.got.plt) }');
@@ -1459,8 +1354,7 @@ var
   i : longint;
   binstr,
   cmdstr,
-  mapstr,
-  ltostr  : TCmdStr;
+  mapstr : TCmdStr;
   success : boolean;
   DynLinkStr : string;
   GCSectionsStr,
@@ -1476,7 +1370,6 @@ begin
   GCSectionsStr:='';
   DynLinkStr:='';
   mapstr:='';
-  ltostr:='';
   if (cs_link_staticflag in current_settings.globalswitches) then
    StaticStr:='-static';
   if (cs_link_strip in current_settings.globalswitches) and
@@ -1497,15 +1390,6 @@ begin
        DynLinkStr:=DynLinkStr+' --rpath-link '+rlinkpath;
    End;
 
-  { add custom LTO library if using custom clang }
-  if (cs_lto in current_settings.moduleswitches) and
-     not(cs_link_on_target in current_settings.globalswitches) and
-     (utilsdirectory<>'') and
-     FileExists(utilsdirectory+'/../lib/LLVMgold.so',true) then
-    begin
-      ltostr:='-plugin '+maybequoted(utilsdirectory+'/../lib/LLVMgold.so ');
-    end;
-
 { Write used files and libraries }
   WriteResponseFile(false);
 
@@ -1519,15 +1403,10 @@ begin
   Replace(cmdstr,'$GCSECTIONS',GCSectionsStr);
   Replace(cmdstr,'$DYNLINK',DynLinkStr);
   Replace(cmdstr,'$MAP',mapstr);
-  Replace(cmdstr,'$LTO',ltostr);
 
   { create dynamic symbol table? }
   if HasExports then
     cmdstr:=cmdstr+' -E';
-
-  { create eh_frame_hdr section? }
-  if tf_use_psabieh in target_info.flags then
-    cmdstr:=cmdstr+ ' --eh-frame-hdr';
 
   success:=DoExec(FindUtil(utilsprefix+BinStr),CmdStr,true,false);
 
@@ -1563,13 +1442,11 @@ var
   SoNameStr : string[80];
   binstr,
   cmdstr,
-  mapstr,
-  ltostr : TCmdStr;
+  mapstr : TCmdStr;
   success : boolean;
 begin
   MakeSharedLibrary:=false;
   mapstr:='';
-  ltostr:='';
   if not(cs_link_nolink in current_settings.globalswitches) then
    Message1(exec_i_linking,current_module.sharedlibfilename);
   if (cs_link_smart in current_settings.globalswitches) and
@@ -1589,15 +1466,6 @@ begin
   if (cs_link_map in current_settings.globalswitches) then
      mapstr:='-Map '+maybequoted(ChangeFileExt(current_module.sharedlibfilename,'.map'));
 
-  { add custom LTO library if using custom clang }
-  if (cs_lto in current_settings.moduleswitches) and
-     not(cs_link_on_target in current_settings.globalswitches) and
-     (utilsdirectory<>'') and
-     FileExists(utilsdirectory+'/../lib/LLVMgold.so',true) then
-    begin
-      ltostr:='-plugin '+maybequoted(utilsdirectory+'/../lib/LLVMgold.so ');
-    end;
-
 { Call linker }
   SplitBinCmd(Info.DllCmd[1],binstr,cmdstr);
   Replace(cmdstr,'$EXE',maybequoted(current_module.sharedlibfilename));
@@ -1607,7 +1475,6 @@ begin
   Replace(cmdstr,'$FINI',FiniStr);
   Replace(cmdstr,'$SONAME',SoNameStr);
   Replace(cmdstr,'$MAP',mapstr);
-  Replace(cmdstr,'$LTO',ltostr);
   Replace(cmdstr,'$GCSECTIONS',GCSectionsStr);
   success:=DoExec(FindUtil(utilsprefix+binstr),cmdstr,true,false);
 
@@ -2025,21 +1892,5 @@ initialization
   RegisterTarget(system_mipseb_linux_info);
 {$endif MIPSEL}
 {$endif MIPS}
-{$ifdef riscv32}
-  RegisterImport(system_riscv32_linux,timportliblinux);
-  RegisterExport(system_riscv32_linux,texportliblinux);
-  RegisterTarget(system_riscv32_linux_info);
-{$endif riscv32}
-{$ifdef riscv64}
-  RegisterImport(system_riscv64_linux,timportliblinux);
-  RegisterExport(system_riscv64_linux,texportliblinux);
-  RegisterTarget(system_riscv64_linux_info);
-{$endif riscv64}
-{$ifdef xtensa}
-  RegisterImport(system_xtensa_linux,timportliblinux);
-  RegisterExport(system_xtensa_linux,texportliblinux);
-  RegisterTarget(system_xtensa_linux_info);
-{$endif xtensa}
   RegisterRes(res_elf_info,TWinLikeResourceFile);
 end.
-

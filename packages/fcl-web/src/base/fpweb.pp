@@ -164,7 +164,6 @@ Type
     Property OnNewSession;
     Property OnSessionExpired;
     Property AfterInitModule;
-    Property CORS;
   end;
 
   EFPWebError = Class(EHTTP);
@@ -489,37 +488,31 @@ begin
 {$endif cgidebug}
   FRequest := ARequest; //So everything in the web module can access the current request variables
   FResponse := AResponse;//So everything in the web module can access the current response variables
-  try
-    CheckSession(ARequest);
-    DoBeforeRequest(ARequest);
-    B:=False;
-    InitSession(AResponse);
-    if not CORS.HandleRequest(aRequest,aResponse,[hcDetect,hcSend]) then
+  CheckSession(ARequest);
+  DoBeforeRequest(ARequest);
+  B:=False;
+  InitSession(AResponse);
+  DoOnRequest(ARequest,AResponse,B);
+  If B then
+    begin
+    if not AResponse.ContentSent then
+      AResponse.SendContent;
+    end
+  else
+    if FTemplate.HasContent then
+      GetTemplateContent(ARequest,AResponse)
+    else if HandleActions(ARequest) then
       begin
-      DoOnRequest(ARequest,AResponse,B);
-      If B then
-        begin
-        if not AResponse.ContentSent then
-          AResponse.SendContent;
-        end
-      else
-        if FTemplate.HasContent then
-          GetTemplateContent(ARequest,AResponse)
-        else if HandleActions(ARequest) then
-          begin
-          Actions.HandleRequest(ARequest,AResponse,B);
-          FTemplate.Template := '';//if apache mod, then need to clear for next call because it is a webmodule global property,
-          FTemplate.FileName := '';//so following calls are OK and the above FTemplate.HasContent is not becoming True
-          If Not B then
-            Raise EFPWebError.Create(SErrRequestNotHandled);
-          end;
+      Actions.HandleRequest(ARequest,AResponse,B);
+      FTemplate.Template := '';//if apache mod, then need to clear for next call because it is a webmodule global property,
+      FTemplate.FileName := '';//so following calls are OK and the above FTemplate.HasContent is not becoming True
+      If Not B then
+        Raise EFPWebError.Create(SErrRequestNotHandled);
       end;
-    DoAfterResponse(AResponse);
-    UpdateSession(AResponse);
-  finally
-    FRequest := Nil;
-    FResponse := Nil;
-  end;
+  DoAfterResponse(AResponse);
+  UpdateSession(AResponse);
+  FRequest := Nil;
+  FResponse := Nil;
   // Clean up session for the case the webmodule is used again
   DoneSession;
 {$ifdef cgidebug}

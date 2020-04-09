@@ -46,6 +46,8 @@ uses
       procedure a_jmp_external_name(list: TAsmList; const externalname: TSymStr);override;
   end;
 
+  procedure create_hlcodegen;
+
 implementation
 
   uses
@@ -135,8 +137,6 @@ implementation
                 fromreg:=cg.getintregister(list,OS_INT);
                 cg.a_load_const_reg(list,OS_INT,-1,fromreg);
               end;
-            else
-              ;
           end;
           list.concat(taicpu.op_reg_reg_const_const(A_INS,sreg.subsetreg,fromreg,
             sreg.startbit,sreg.bitlen));
@@ -204,7 +204,7 @@ implementation
     if make_global then
       List.concat(Tai_symbol.Createname_global(labelname, AT_FUNCTION, 0, procdef))
     else
-      List.concat(Tai_symbol.Createname_hidden(labelname, AT_FUNCTION, 0, procdef));
+      List.concat(Tai_symbol.Createname(labelname, AT_FUNCTION, 0, procdef));
 
     IsVirtual:=(po_virtualmethod in procdef.procoptions) and
         not is_objectpascal_helper(procdef.struct);
@@ -275,7 +275,7 @@ implementation
   end;
 
 
-  procedure create_hlcodegen_cpu;
+  procedure create_hlcodegen;
     begin
       hlcg:=thlcgmips.create;
       create_codegen;
@@ -283,5 +283,4 @@ implementation
 
 begin
   chlcgobj:=thlcgmips;
-  create_hlcodegen:=@create_hlcodegen_cpu;
 end.

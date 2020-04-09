@@ -16,7 +16,6 @@ unit System;
 
 interface
 
-{$define FPC_IS_SYSTEM}
 {$DEFINE HAS_MEMORYMANAGER}
 {$DEFINE FPC_ANSI_TEXTFILEREC}
 

@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('amunits');
-    P.ShortName := 'amu';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     P.Author := 'Nils Sjoholm';
     P.License := 'LGPL with modification';
@@ -122,7 +121,6 @@ begin
 
     P.ExamplePath.Add('examples');
     P.ExamplePath.Add('examples/otherlibs');
-    T:=P.Targets.AddExampleProgram('amicube.pas');
     T:=P.Targets.AddExampleProgram('simple_timer.pas');
     T:=P.Targets.AddExampleProgram('getfontasl.pas');
     T:=P.Targets.AddExampleProgram('asltest.pas');

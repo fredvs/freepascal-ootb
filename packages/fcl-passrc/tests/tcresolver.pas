@@ -370,7 +370,7 @@ type
     Procedure TestUnit_DottedUnit;
     Procedure TestUnit_DottedExpr;
     Procedure TestUnit_DuplicateDottedUsesFail;
-    Procedure TestUnit_DuplicateUsesDiffName;
+    Procedure TestUnit_DuplicateUsesDiffNameFail;
     Procedure TestUnit_Unit1DotUnit2Fail;
     Procedure TestUnit_InFilename;
     Procedure TestUnit_InFilenameAliasDelphiFail;
@@ -379,7 +379,6 @@ type
     Procedure TestUnit_UnitNotFoundErrorPos;
     Procedure TestUnit_AccessIndirectUsedUnitFail;
     Procedure TestUnit_Intf1Impl2Intf1;
-    Procedure TestUnit_Intf1Impl2Intf1_Duplicate;
 
     // procs
     Procedure TestProcParam;
@@ -475,7 +474,7 @@ type
     Procedure TestAnonymousProc_Typecast_ObjFPC;
     Procedure TestAnonymousProc_Typecast_Delphi;
     Procedure TestAnonymousProc_TypecastToResultFail;
-    Procedure TestAnonymousProc_WithDo;
+    Procedure TestAnonymousProc_With;
     Procedure TestAnonymousProc_ExceptOn;
     Procedure TestAnonymousProc_Nested;
     Procedure TestAnonymousProc_ForLoop;
@@ -485,9 +484,9 @@ type
     Procedure TestRecordVariant;
     Procedure TestRecordVariantNested;
     Procedure TestRecord_WriteConstParamFail;
-    Procedure TestRecord_WriteConstParam_WithDoFail;
+    Procedure TestRecord_WriteConstParam_WithFail;
     Procedure TestRecord_WriteNestedConstParamFail;
-    Procedure TestRecord_WriteNestedConstParamWithDoFail;
+    Procedure TestRecord_WriteNestedConstParamWithFail;
     Procedure TestRecord_TypeCast;
     Procedure TestRecord_NewDispose;
     Procedure TestRecord_Const;
@@ -592,7 +591,7 @@ type
     Procedure TestClass_OperatorAsOnNonTypeFail;
     Procedure TestClassAsFuncResult;
     Procedure TestClassTypeCast;
-    Procedure TestClassTypeCastUnrelatedWarn;
+    Procedure TestClassTypeCastUnrelatedFail;
     Procedure TestClass_TypeCastSelf;
     Procedure TestClass_TypeCaseMultipleParamsFail;
     Procedure TestClass_TypeCastAssign;
@@ -612,7 +611,7 @@ type
     Procedure TestClass_ConDestructor_CallInherited;
     Procedure TestClass_Constructor_Inherited;
     Procedure TestClass_SubObject;
-    Procedure TestClass_WithDoClassInstance;
+    Procedure TestClass_WithClassInstance;
     Procedure TestClass_ProcedureExternal;
     Procedure TestClass_ReintroducePublicVarFail;
     Procedure TestClass_ReintroducePrivateVar;
@@ -765,11 +764,11 @@ type
     Procedure TestClassInterface_PassTypecastIntfToClassAsVarParamFail;
     Procedure TestClassInterface_GUID;
 
-    // with-do
-    Procedure TestWithDo1;
-    Procedure TestWithDo2;
-    Procedure TestWithDoFuncResult;
-    Procedure TestWithDoConstructor;
+    // with
+    Procedure TestWithBlock1;
+    Procedure TestWithBlock2;
+    Procedure TestWithBlockFuncResult;
+    Procedure TestWithBlockConstructor;
 
     // arrays
     Procedure TestDynArrayOfLongint;
@@ -853,7 +852,6 @@ type
     Procedure TestAssignProcToFunctionFail;
     Procedure TestAssignProcWrongArgsFail;
     Procedure TestAssignProcWrongArgAccessFail;
-    Procedure TestProcType_SameSignatureObjFPC;
     Procedure TestProcType_AssignNestedProcFail;
     Procedure TestArrayOfProc;
     Procedure TestProcType_Assigned;
@@ -925,9 +923,8 @@ type
     Procedure TestClassHelper_NestedInheritedParentFail;
     Procedure TestClassHelper_AccessFields;
     Procedure TestClassHelper_HelperDotClassMethodFail;
-    Procedure TestClassHelper_WithDoHelperFail;
+    Procedure TestClassHelper_WithHelperFail;
     Procedure TestClassHelper_AsTypeFail;
-    Procedure TestClassHelper_WithDo;
     Procedure TestClassHelper_ClassMethod;
     Procedure TestClassHelper_Enumerator;
     Procedure TestClassHelper_FromUnitInterface;
@@ -2389,13 +2386,8 @@ function TCustomTestResolver.OnPasResolverFindUnit(SrcResolver: TPasResolver;
     {$ENDIF}
     CurEngine:=FindModuleWithFilename(aFilename);
     if CurEngine=nil then exit(false);
-    if CurEngine.Module=nil then
-      begin
-      aModule:=InitUnit(CurEngine);
-      if aModule=nil then exit(false);
-      end
-    else
-      aModule:=CurEngine.Module;
+    aModule:=InitUnit(CurEngine);
+    if aModule=nil then exit(false);
     OnPasResolverFindUnit:=aModule;
     Result:=true;
   end;
@@ -5932,7 +5924,7 @@ begin
     nParserDuplicateIdentifier);
 end;
 
-procedure TTestResolver.TestUnit_DuplicateUsesDiffName;
+procedure TTestResolver.TestUnit_DuplicateUsesDiffNameFail;
 begin
   MainFilename:='unitdots.main1.pas';
   AddModuleWithIntfImplSrc('unitdots.unit1.pp',
@@ -5950,7 +5942,8 @@ begin
   '  if unit1.j1=0 then ;',
   '  if unitdots.unit1.j1=0 then ;',
   '']);
-  ParseProgram;
+  CheckParserException('Duplicate identifier "unit1" at token ";" in file unitdots.main1.pas at line 2 column 27',
+    nParserDuplicateIdentifier);
 end;
 
 procedure TTestResolver.TestUnit_Unit1DotUnit2Fail;
@@ -6094,27 +6087,6 @@ begin
   Add([
   'interface',
   'uses unit1;',
-  'var i: number;',
-  'implementation']);
-  ParseUnit;
-end;
-
-procedure TTestResolver.TestUnit_Intf1Impl2Intf1_Duplicate;
-begin
-  AddModuleWithIntfImplSrc('unit1.pp',
-    LinesToStr([
-    'type number = longint;']),
-    LinesToStr([
-    'uses afile;',
-    'procedure DoIt;',
-    'begin',
-    '  i:=3;',
-    'end;']));
-
-  StartUnit(true);
-  Add([
-  'interface',
-  'uses unit1, foo in ''unit1.pp'';',
   'var i: number;',
   'implementation']);
   ParseUnit;
@@ -7867,7 +7839,7 @@ begin
     nIllegalTypeConversionTo);
 end;
 
-procedure TTestResolver.TestAnonymousProc_WithDo;
+procedure TTestResolver.TestAnonymousProc_With;
 begin
   StartProgram(false);
   Add([
@@ -8053,7 +8025,7 @@ begin
   CheckResolverException(sVariableIdentifierExpected,nVariableIdentifierExpected);
 end;
 
-procedure TTestResolver.TestRecord_WriteConstParam_WithDoFail;
+procedure TTestResolver.TestRecord_WriteConstParam_WithFail;
 begin
   StartProgram(false);
   Add('type');
@@ -8086,7 +8058,7 @@ begin
   CheckResolverException(sVariableIdentifierExpected,nVariableIdentifierExpected);
 end;
 
-procedure TTestResolver.TestRecord_WriteNestedConstParamWithDoFail;
+procedure TTestResolver.TestRecord_WriteNestedConstParamWithFail;
 begin
   StartProgram(false);
   Add('type');
@@ -10352,28 +10324,26 @@ begin
   ParseProgram;
 end;
 
-procedure TTestResolver.TestClassTypeCastUnrelatedWarn;
+procedure TTestResolver.TestClassTypeCastUnrelatedFail;
 begin
   StartProgram(false);
-  Add([
-  'type',
-  '  {#TOBJ}TObject = class',
-  '  end;',
-  '  {#A}TClassA = class',
-  '    id: longint;',
-  '  end;',
-  '  {#B}TClassB = class',
-  '    Name: string;',
-  '  end;',
-  'var',
-  '  {#o}{=TOBJ}o: TObject;',
-  '  {#va}{=A}va: TClassA;',
-  '  {#vb}{=B}vb: TClassB;',
-  'begin',
-  '  {@vb}vb:=TClassB({@va}va);']);
-  ParseProgram;
-  CheckResolverHint(mtWarning,nClassTypesAreNotRelatedXY,'Class types "TClassA" and "TClassB" are not related');
-  CheckResolverUnexpectedHints;
+  Add('type');
+  Add('  {#TOBJ}TObject = class');
+  Add('  end;');
+  Add('  {#A}TClassA = class');
+  Add('    id: longint;');
+  Add('  end;');
+  Add('  {#B}TClassB = class');
+  Add('    Name: string;');
+  Add('  end;');
+  Add('var');
+  Add('  {#o}{=TOBJ}o: TObject;');
+  Add('  {#va}{=A}va: TClassA;');
+  Add('  {#vb}{=B}vb: TClassB;');
+  Add('begin');
+  Add('  {@vb}vb:=TClassB({@va}va);');
+  CheckResolverException('Illegal type conversion: "TClassA" to "class TClassB"',
+    nIllegalTypeConversionTo);
 end;
 
 procedure TTestResolver.TestClass_TypeCastSelf;
@@ -10928,7 +10898,7 @@ begin
   ParseProgram;
 end;
 
-procedure TTestResolver.TestClass_WithDoClassInstance;
+procedure TTestResolver.TestClass_WithClassInstance;
 var
   aMarker: PSrcMarker;
   Elements: TFPList;
@@ -13931,7 +13901,7 @@ begin
   CheckResolverException('not readable',nNotReadable);
 end;
 
-procedure TTestResolver.TestWithDo1;
+procedure TTestResolver.TestWithBlock1;
 begin
   StartProgram(false);
   Add('type');
@@ -13948,7 +13918,7 @@ begin
   ParseProgram;
 end;
 
-procedure TTestResolver.TestWithDo2;
+procedure TTestResolver.TestWithBlock2;
 begin
   StartProgram(false);
   Add('type');
@@ -13976,7 +13946,7 @@ begin
   ParseProgram;
 end;
 
-procedure TTestResolver.TestWithDoFuncResult;
+procedure TTestResolver.TestWithBlockFuncResult;
 begin
   StartProgram(false);
   Add('type');
@@ -14004,7 +13974,7 @@ begin
   ParseProgram;
 end;
 
-procedure TTestResolver.TestWithDoConstructor;
+procedure TTestResolver.TestWithBlockConstructor;
 begin
   StartProgram(false);
   Add('type');
@@ -14307,8 +14277,7 @@ begin
   Add('begin');
   Add('  doit({#a}getarr[1+1]);');
   Add('  doit({#b}getarr()[2+1]);');
-  Add('  doit({#c}getarr(7)[3+1]);');
-  ParseProgram;
+  Add('  doit({#b}getarr(7)[3+1]);');
   aMarker:=FirstSrcMarker;
   while aMarker<>nil do
     begin
@@ -15631,25 +15600,6 @@ begin
   Add('  p:=@ProcA;');
   CheckResolverException('Incompatible type arg no. 1: Got "access modifier const", expected "default"',
     nIncompatibleTypeArgNo);
-end;
-
-procedure TTestResolver.TestProcType_SameSignatureObjFPC;
-begin
-  StartProgram(false);
-  Add([
-  '{$mode objfpc}',
-  'type',
-  '  TRun = procedure(a: Word);',
-  '  TRunIt = procedure(a: TRun);',
-  '  TFly = procedure(a: Word);',
-  'procedure FlyIt(a: TFly);',
-  'begin',
-  'end;',
-  'var RunIt: TRunIt;',
-  'begin',
-  '  RunIt:=@FlyIt;',
-  '']);
-  ParseProgram;
 end;
 
 procedure TTestResolver.TestProcType_AssignNestedProcFail;
@@ -17212,7 +17162,7 @@ begin
   CheckResolverException(sHelpersCannotBeUsedAsTypes,nHelpersCannotBeUsedAsTypes);
 end;
 
-procedure TTestResolver.TestClassHelper_WithDoHelperFail;
+procedure TTestResolver.TestClassHelper_WithHelperFail;
 begin
   StartProgram(false);
   Add([
@@ -17238,92 +17188,6 @@ begin
   'begin',
   '']);
   CheckResolverException(sHelpersCannotBeUsedAsTypes,nHelpersCannotBeUsedAsTypes);
-end;
-
-procedure TTestResolver.TestClassHelper_WithDo;
-var
-  aMarker: PSrcMarker;
-  Elements: TFPList;
-  ActualWith, ExpectedWith: Boolean;
-  i: Integer;
-  El: TPasElement;
-  Ref: TResolvedReference;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  TObject = class end;',
-  '  TBird = class',
-  '    procedure Run;',
-  '  end;',
-  '  THelper = class helper for TBird',
-  '    procedure Foo(w: word = 1);',
-  '  end;',
-  'procedure TBird.Run;',
-  'var b: TBird;',
-  'begin',
-  '  b.{#a1_not}Foo;',
-  '  b.{#b1_not}Foo();',
-  '  b.{#c1_not}Foo(2);',
-  '  with b do begin',
-  '    {#d1_with}Foo;',
-  '    {#e1_with}Foo();',
-  '    {#f1_with}Foo(3);',
-  '  end;',
-  'end;',
-  'procedure THelper.Foo(w: word);',
-  'var b: TBird;',
-  'begin',
-  '  b.{#a2_not}Foo;',
-  '  b.{#b2_not}Foo();',
-  '  b.{#c2_not}Foo(2);',
-  '  with b do begin',
-  '    {#d2_with}Foo;',
-  '    {#e2_with}Foo();',
-  '    {#f2_with}Foo(3);',
-  '  end;',
-  'end;',
-  'var b: TBird;',
-  'begin',
-  '  b.{#a3_not}Foo;',
-  '  b.{#b3_not}Foo();',
-  '  b.{#c3_not}Foo(4);',
-  '  with b do begin',
-  '    {#d3_with}Foo;',
-  '    {#e3_with}Foo();',
-  '    {#f3_with}Foo(5);',
-  '  end;',
-  '']);
-  ParseProgram;
-
-  aMarker:=FirstSrcMarker;
-  while aMarker<>nil do
-    begin
-    //writeln('TTestResolver.TestClassHelper_WithDo ',aMarker^.Identifier,' ',aMarker^.StartCol,' ',aMarker^.EndCol);
-    Elements:=FindElementsAt(aMarker);
-    try
-      ActualWith:=false;
-      for i:=0 to Elements.Count-1 do
-        begin
-        El:=TPasElement(Elements[i]);
-        writeln('TTestResolver.TestClassHelper_WithDo ',aMarker^.Identifier,' ',i,'/',Elements.Count,' El=',GetObjName(El),' ',GetObjName(El.CustomData));
-        if not (El.CustomData is TResolvedReference) then continue;
-        Ref:=TResolvedReference(El.CustomData);
-        if Ref.WithExprScope<>nil then
-          ActualWith:=true;
-        break;
-        end;
-      ExpectedWith:=RightStr(aMarker^.Identifier,5)='_with';
-      if ActualWith<>ExpectedWith then
-        if ExpectedWith then
-          RaiseErrorAtSrcMarker('expected Ref.WithExprScope<>nil at "#'+aMarker^.Identifier+'"',aMarker)
-        else
-          RaiseErrorAtSrcMarker('expected Ref.WithExprScope=nil at "#'+aMarker^.Identifier+'"',aMarker);
-    finally
-      Elements.Free;
-    end;
-    aMarker:=aMarker^.Next;
-    end;
 end;
 
 procedure TTestResolver.TestClassHelper_ClassMethod;
@@ -17429,10 +17293,9 @@ begin
     '  TObject = class',
     '  public',
     '    Id: word;',
-    '    FSize: string;',
     '  end;',
-    '  TOb21Helper = class helper for TObject',
-    '    property Size: string read FSize write FSize;',
+    '  TObjHelper = class helper for TObject',
+    '    property Size: word read ID write ID;',
     '  end;',
     '']),
     '');
@@ -17440,7 +17303,7 @@ begin
     LinesToStr([
     'uses unit2;',
     'type',
-    '  TOb3Helper = class helper for TObject',
+    '  TObjHelper = class helper for TObject',
     '    property Size: word read ID write ID;',
     '  end;',
     '']),
@@ -17450,7 +17313,6 @@ begin
   'uses unit2, unit3;',
   'var o: TObject;',
   'begin',
-  '  o.Size:=3;', // last unit wins
   '  o.Size:=o.Size;']);
   ParseProgram;
 end;

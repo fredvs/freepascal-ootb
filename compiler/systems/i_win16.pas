@@ -63,7 +63,7 @@ unit i_win16;
             objext       : '.o';
             resext       : '.res';
             resobjext    : '.or';
-            sharedlibext : '.dll';
+            sharedlibext : '';
             staticlibext : '.a';
             staticlibprefix : '';
             sharedlibprefix : '';
@@ -78,11 +78,7 @@ unit i_win16;
             dirsep       : '\';
             assem        : as_i8086_omf;
             assemextern  : as_i8086_nasmobj;
-{$ifdef WIN16_INTERNAL_LINKER}
-            link         : ld_int_win16;
-{$else}
             link         : ld_win16;
-{$endif}
             linkextern   : ld_win16;
 {$ifdef USE_SCRIPTED_WLIB}
             ar           : ar_watcom_wlib_omf_scripted;
@@ -98,9 +94,6 @@ unit i_win16;
                 procalign       : 1;
                 loopalign       : 1;
                 jumpalign       : 0;
-                jumpalignskipmax    : 0;
-                coalescealign   : 0;
-                coalescealignskipmax: 0;
                 constalignmin   : 0;
                 constalignmax   : 2;
                 varalignmin     : 0;

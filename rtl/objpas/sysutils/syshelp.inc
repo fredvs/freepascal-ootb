@@ -1225,12 +1225,9 @@ begin
     begin
     T:=SubString(LastSep);
 //    Writeln('Examining >',T,'< at pos,',LastSep,' till pos ',Sep);
-    If (T<>'') or (not (TStringSplitOptions.ExcludeEmpty=Options)) then
-      begin
-      MaybeGrow(Len);
-      Result[Len]:=T;
-      Inc(Len);
-      end;
+    MaybeGrow(Len);
+    Result[Len]:=T;
+    Inc(Len);
     end;
   SetLength(Result,Len);
 end;
@@ -1311,12 +1308,9 @@ begin
     begin
     T:=SubString(LastSep);
 //    Writeln('Examining >',T,'< at pos,',LastSep,' till pos ',Sep);
-    If (T<>'') or (not (TStringSplitOptions.ExcludeEmpty=Options)) then
-      begin
-      MaybeGrow(Len);
-      Result[Len]:=T;
-      Inc(Len);
-      end;
+    MaybeGrow(Len);
+    Result[Len]:=T;
+    Inc(Len);
     end;
   SetLength(Result,Len);
 end;

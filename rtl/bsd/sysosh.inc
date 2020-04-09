@@ -21,8 +21,7 @@ type
   THandle = Longint;
   TThreadRec = record end;
   TThreadID  = ^TThreadRec;
-  TOSTimestamp = Int64;
-
+  
   { pthread_mutex_t }
   PRTLCriticalSection = ^TRTLCriticalSection;
   TRTLCriticalSection = {$i pmutext.inc}

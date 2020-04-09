@@ -1098,8 +1098,6 @@ procedure TCGMIPS.a_jmp_flags(list: tasmlist; const f: TResFlags; l: tasmlabel);
           end;
           exit;
         end;
-      else
-        ;
     end;
     if f.use_const then
       a_cmp_const_reg_label(list,OS_INT,f.cond,f.value,f.reg1,l)
@@ -1138,8 +1136,6 @@ procedure TCGMIPS.g_flags2reg(list: tasmlist; size: tcgsize; const f: tresflags;
             end;
           exit;
         end;
-      else
-        ;
     end;
     if (f.cond in [OC_EQ,OC_NE]) then
       begin
@@ -1338,8 +1334,6 @@ begin
   list.concat(Taicpu.op_const_const(A_P_MASK,aint(mask),-(LocalSize-lastintoffset)));
   list.concat(Taicpu.op_const_const(A_P_FMASK,aint(Fmask),-(LocalSize-lastfpuoffset)));
   list.concat(Taicpu.op_none(A_P_SET_NOREORDER));
-  if tcpuprocinfo(current_procinfo).setnoat then
-    list.concat(Taicpu.op_none(A_P_SET_NOAT));
   if (cs_create_pic in current_settings.moduleswitches) and
      (pi_needs_got in current_procinfo.flags) then
     begin
@@ -1468,7 +1462,6 @@ begin
            list.concat(taicpu.op_reg(A_JR, NR_R31));
            { correct stack pointer in the delay slot }
            list.concat(taicpu.op_reg_reg_reg(A_ADD,NR_STACK_POINTER_REG,NR_STACK_POINTER_REG,NR_R1));
-           tcpuprocinfo(current_procinfo).setnoat:=true;
          end;
        list.concat(Taicpu.op_none(A_P_SET_MACRO));
        list.concat(Taicpu.op_none(A_P_SET_REORDER));
@@ -1489,9 +1482,9 @@ begin
   paraloc1.init;
   paraloc2.init;
   paraloc3.init;
-  paramanager.getcgtempparaloc(list, pd, 1, paraloc1);
-  paramanager.getcgtempparaloc(list, pd, 2, paraloc2);
-  paramanager.getcgtempparaloc(list, pd, 3, paraloc3);
+  paramanager.getintparaloc(list, pd, 1, paraloc1);
+  paramanager.getintparaloc(list, pd, 2, paraloc2);
+  paramanager.getintparaloc(list, pd, 3, paraloc3);
   a_load_const_cgpara(list, OS_SINT, len, paraloc3);
   a_loadaddr_ref_cgpara(list, dest, paraloc2);
   a_loadaddr_ref_cgpara(list, Source, paraloc1);
@@ -1680,7 +1673,6 @@ procedure TCGMIPS.g_profilecode(list:TAsmList);
     list.concat(taicpu.op_reg_reg(A_MOVE,NR_R1,NR_RA));
     list.concat(taicpu.op_reg_reg_const(A_ADDIU,NR_SP,NR_SP,-8));
     a_call_sym_pic(list,current_asmdata.RefAsmSymbol('_mcount',AT_FUNCTION));
-    tcpuprocinfo(current_procinfo).setnoat:=true;
   end;
 
 

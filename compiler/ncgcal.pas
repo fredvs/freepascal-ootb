@@ -275,7 +275,7 @@ implementation
       begin
         { allow passing of a constant to a const formaldef }
         if (parasym.varspez=vs_const) and
-           not(left.location.loc in [LOC_CREFERENCE,LOC_REFERENCE]) then
+           (left.location.loc in [LOC_CONSTANT,LOC_REGISTER]) then
           hlcg.location_force_mem(current_asmdata.CurrAsmList,left.location,left.resultdef);
         push_addr_para;
       end;
@@ -501,7 +501,7 @@ implementation
         hlcg.location_force_reg(current_asmdata.CurrAsmList,right.location,right.resultdef,cpointerdef.getreusable(literaldef),true);
         { load the invoke pointer }
         hlcg.reference_reset_base(href,right.resultdef,right.location.register,0,ctempposinvalid,right.resultdef.alignment,[]);
-        callprocdef:=cprocvardef.getreusableprocaddr(procdefinition,pc_address_only);
+        callprocdef:=cprocvardef.getreusableprocaddr(procdefinition);
         toreg:=hlcg.getaddressregister(current_asmdata.CurrAsmList,callprocdef);
         hlcg.g_load_field_reg_by_name(current_asmdata.CurrAsmList,literaldef,callprocdef,'INVOKE',href,toreg);
      end;
@@ -549,8 +549,6 @@ implementation
                  hlcg.g_finalize(current_asmdata.CurrAsmList,resultdef,location.reference);
                tg.ungetiftemp(current_asmdata.CurrAsmList,location.reference);
             end;
-          else
-            ;
         end;
       end;
 
@@ -613,7 +611,7 @@ implementation
             case location.loc of
               LOC_REGISTER :
                 begin
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
+{$ifndef cpu64bitalu}
                   if location.size in [OS_64,OS_S64] then
                     cg64.a_load64_reg_loc(current_asmdata.CurrAsmList,location.register64,funcretnode.location)
                   else
@@ -824,10 +822,6 @@ implementation
                              end;
                            end;
                          end;
-                       LOC_VOID:
-                         ;
-                       else
-                         internalerror(2019050707);
                      end;
                      dec(sizeleft,tcgsize2size[tmpparaloc^.size]);
                      callerparaloc:=callerparaloc^.next;
@@ -851,7 +845,7 @@ implementation
            of far calls where the procvardef was defined does not matter,
            even though the procvardef constructor called by getcopyas looks at
            it) }
-         callprocdef:=cprocvardef.getreusableprocaddr(procdefinition,pc_address_only);
+         callprocdef:=cprocvardef.getreusableprocaddr(procdefinition);
          reg:=hlcg.getaddressregister(current_asmdata.CurrAsmList,callprocdef);
          { in case we have a method pointer on a big endian target in registers,
            the method address is stored in registerhi (it's the first field
@@ -929,8 +923,9 @@ implementation
         sym : tasmsymbol;
         vmtoffset : aint;
 {$endif vtentry}
+{$ifdef SUPPORT_SAFECALL}
         cgpara : tcgpara;
-        tmploc: tlocation;
+{$endif}
       begin
          if not assigned(procdefinition) or
             not(procdefinition.has_paraloc_info in [callerside,callbothsides]) then
@@ -1053,6 +1048,8 @@ implementation
                    begin
                      reorder_parameters;
                      pushparas;
+                     { free the resources allocated for the parameters }
+                     freeparas;
                    end;
 
                  if callref then
@@ -1088,6 +1085,8 @@ implementation
                     begin
                       reorder_parameters;
                       pushparas;
+                      { free the resources allocated for the parameters }
+                      freeparas;
                     end;
 
                   cg.alloccpuregisters(current_asmdata.CurrAsmList,R_INTREGISTER,regs_to_save_int);
@@ -1112,11 +1111,6 @@ implementation
                         name_to_call:=tprocdef(procdefinition).mangledname;
                       if cnf_inherited in callnodeflags then
                         retloc:=hlcg.a_call_name_inherited(current_asmdata.CurrAsmList,tprocdef(procdefinition),name_to_call,paralocs)
-                      { under certain conditions, a static call (i.e. without PIC) can be generated }
-                      else if ((procdefinition.owner=current_procinfo.procdef.owner) or
-                         (procdefinition.owner.symtabletype in [localsymtable,staticsymtable])
-                        ) and ((procdefinition.procoptions*[po_weakexternal,po_external])=[]) then
-                        retloc:=hlcg.a_call_name_static(current_asmdata.CurrAsmList,tprocdef(procdefinition),name_to_call,paralocs,typedef)
                       else
                         retloc:=hlcg.a_call_name(current_asmdata.CurrAsmList,tprocdef(procdefinition),name_to_call,paralocs,typedef,po_weakexternal in procdefinition.procoptions);
                       extra_post_call_code;
@@ -1152,6 +1146,8 @@ implementation
                 begin
                   reorder_parameters;
                   pushparas;
+                  { free the resources allocated for the parameters }
+                  freeparas;
                 end;
 
               if callref then
@@ -1178,10 +1174,6 @@ implementation
                 retloc:=hlcg.a_call_reg(current_asmdata.CurrAsmList,callpvdef,pvreg,paralocs);
               extra_post_call_code;
            end;
-
-         { free the resources allocated for the parameters }
-         if assigned(left) then
-           freeparas;
 
          { Need to remove the parameters from the stack? }
          if procdefinition.proccalloption in clearstack_pocalls then
@@ -1262,21 +1254,19 @@ implementation
            cg.dealloccpuregisters(current_asmdata.CurrAsmList,R_ADDRESSREGISTER,regs_to_save_address);
          cg.dealloccpuregisters(current_asmdata.CurrAsmList,R_INTREGISTER,regs_to_save_int);
 
-         if procdefinition.generate_safecall_wrapper then
+{$ifdef SUPPORT_SAFECALL}
+         if (procdefinition.proccalloption=pocall_safecall) and
+            (tf_safecall_exceptions in target_info.flags) then
            begin
              pd:=search_system_proc('fpc_safecallcheck');
              cgpara.init;
-             { fpc_safecallcheck returns its parameter value (= function result of function we just called) }
-             paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,1,cgpara);
-             location_reset(tmploc,LOC_REGISTER,def_cgsize(retloc.Def));
-             tmploc.register:=hlcg.getregisterfordef(current_asmdata.CurrAsmList,retloc.Def);
-             hlcg.gen_load_cgpara_loc(current_asmdata.CurrAsmList,retloc.Def,retloc,tmploc,true);
+             paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,cgpara);
+             cg.a_load_reg_cgpara(current_asmdata.CurrAsmList,OS_INT,NR_FUNCTION_RESULT_REG,cgpara);
              paramanager.freecgpara(current_asmdata.CurrAsmList,cgpara);
-             hlcg.a_load_loc_cgpara(current_asmdata.CurrAsmList,retloc.Def,tmploc,cgpara);
-             retloc.resetiftemp;
-             retloc:=hlcg.g_call_system_proc(current_asmdata.CurrAsmList,pd,[@cgpara],nil);
+             cg.g_call(current_asmdata.CurrAsmList,'FPC_SAFECALLCHECK');
              cgpara.done;
            end;
+{$endif}
 
          { handle function results }
          if (not is_void(resultdef)) then
@@ -1298,10 +1288,6 @@ implementation
 
          { release temps of paras }
          release_para_temps;
-
-         { check for fpu exceptions }
-         if cnf_check_fpu_exceptions in callnodeflags then
-           cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
 
          { perhaps i/o check ? }
          if (cs_check_io in current_settings.localswitches) and

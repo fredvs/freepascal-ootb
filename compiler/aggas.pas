@@ -1,4 +1,4 @@
-  {
+{
     Copyright (c) 1998-2006 by the Free Pascal team
 
     This unit implements the generic part of the GNU assembler
@@ -32,7 +32,7 @@ interface
 
     uses
       globtype,globals,
-      aasmbase,aasmtai,aasmdata,aasmcfi,
+      aasmbase,aasmtai,aasmdata,
       assemble;
 
     type
@@ -50,12 +50,11 @@ interface
         function sectionattrs_coff(atype:TAsmSectiontype):string;virtual;
         function sectionalignment_aix(atype:TAsmSectiontype;secalign: longint):string;
         procedure WriteSection(atype:TAsmSectiontype;const aname:string;aorder:TAsmSectionOrder;secalign:longint;
-          secflags:TSectionFlags=[];secprogbits:TSectionProgbits=SPB_None);virtual;
+          secflags:TSectionFlags=SF_None;secprogbits:TSectionProgbits=SPB_None);virtual;
         procedure WriteExtraHeader;virtual;
         procedure WriteExtraFooter;virtual;
         procedure WriteInstruction(hp: tai);
         procedure WriteWeakSymbolRef(s: tasmsymbol); virtual;
-        procedure WriteHiddenSymbol(sym: TAsmSymbol);
         procedure WriteAixStringConst(hp: tai_string);
         procedure WriteAixIntConst(hp: tai_const);
         procedure WriteUnalignedIntConst(hp: tai_const);
@@ -69,7 +68,6 @@ interface
         setcount: longint;
         procedure WriteDecodedSleb128(a: int64);
         procedure WriteDecodedUleb128(a: qword);
-        procedure WriteCFI(hp: tai_cfi_base);
         function NextSetLabel: string;
        protected
         InstrWriter: TCPUInstrWriter;
@@ -214,11 +212,11 @@ implementation
 { vtable for a class called Window:                                       }
 { .section .data.rel.ro._ZTV6Window,"awG",@progbits,_ZTV6Window,comdat    }
 { TODO: .data.ro not yet working}
-{$if defined(arm) or defined(riscv64) or defined(powerpc)}
+{$if defined(arm) or defined(powerpc)}
           '.rodata',
-{$else defined(arm) or defined(riscv64) or defined(powerpc)}
+{$else arm}
           '.data',
-{$endif defined(arm) or defined(riscv64) or defined(powerpc)}
+{$endif arm}
           '.rodata',
           '.bss',
           '.threadvar',
@@ -272,9 +270,7 @@ implementation
           '.obcj_nlcatlist',
           '.objc_protolist',
           '.stack',
-          '.heap',
-          '.gcc_except_table',
-          '.ARM.attributes'
+          '.heap'
         );
         secnames_pic : array[TAsmSectiontype] of string[length('__DATA, __datacoal_nt,coalesced')] = ('','',
           '.text',
@@ -333,9 +329,7 @@ implementation
           '.obcj_nlcatlist',
           '.objc_protolist',
           '.stack',
-          '.heap',
-          '.gcc_except_table',
-          '..ARM.attributes'
+          '.heap'
         );
       var
         sep     : string[3];
@@ -353,13 +347,9 @@ implementation
             exit;
           end;
 
-        if atype=sec_threadvar then
-          begin
-            if (target_info.system in (systems_windows+systems_wince)) then
-              secname:='.tls'
-            else if (target_info.system in systems_linux) then
-              secname:='.tbss';
-          end;
+        if (atype=sec_threadvar) and
+          (target_info.system in (systems_windows+systems_wince)) then
+          secname:='.tls';
 
         { go32v2 stub only loads .text and .data sections, and allocates space for .bss.
           Thus, data which normally goes into .rodata and .rodata_norel sections must
@@ -381,8 +371,6 @@ implementation
                 secname:='.data.rel.ro';
               sec_rodata_norel:
                 secname:='.rodata';
-              else
-                ;
             end;
           end;
 
@@ -470,16 +458,11 @@ implementation
       end;
 
 
-    procedure TGNUAssembler.WriteSection(atype:TAsmSectiontype;const aname:string;aorder:TAsmSectionOrder;secalign:longint;secflags:TSectionFlags=[];secprogbits:TSectionProgbits=SPB_None);
+    procedure TGNUAssembler.WriteSection(atype:TAsmSectiontype;const aname:string;aorder:TAsmSectionOrder;secalign:longint;secflags:TSectionFlags=SF_None;secprogbits:TSectionProgbits=SPB_None);
       var
         s : string;
-        secflag: TSectionFlag;
-        sectionprogbits,
-        sectionflags: boolean;
       begin
         writer.AsmLn;
-        sectionflags:=false;
-        sectionprogbits:=false;
         case target_info.system of
          system_i386_OS2,
          system_i386_EMX: ;
@@ -488,21 +471,7 @@ implementation
            begin
              { ... but vasm is GAS compatible on amiga/atari, and supports named sections }
              if create_smartlink_sections then
-               begin
-                 writer.AsmWrite('.section ');
-                 sectionflags:=true;
-                 sectionprogbits:=true;
-               end;
-           end;
-         system_i386_win32,
-         system_x86_64_win64,
-         system_i386_wince,
-         system_arm_wince:
-           begin
-             { according to the GNU AS guide AS for COFF does not support the
-               progbits }
-             writer.AsmWrite('.section ');
-             sectionflags:=true;
+               writer.AsmWrite('.section ');
            end;
          system_powerpc_darwin,
          system_i386_darwin,
@@ -519,53 +488,35 @@ implementation
                writer.AsmWrite('.section ');
            end
          else
-           begin
-             writer.AsmWrite('.section ');
-             { sectionname may rename those sections, so we do not write flags/progbits for them,
-               the assembler will ignore them/spite out a warning anyways }
-             if not(atype in [sec_data,sec_rodata,sec_rodata_norel]) then
-               begin
-                 sectionflags:=true;
-                 sectionprogbits:=true;
-               end;
-           end
+          writer.AsmWrite('.section ');
         end;
         s:=sectionname(atype,aname,aorder);
         writer.AsmWrite(s);
         { flags explicitly defined? }
-        if (sectionflags or sectionprogbits) and
-           ((secflags<>[]) or
-            (secprogbits<>SPB_None)) then
+        if (secflags<>SF_None) or (secprogbits<>SPB_None) then
           begin
-            if sectionflags then
-              begin
-                s:=',"';
-                for secflag in secflags do
-                  case secflag of
-                    SF_A:
-                      s:=s+'a';
-                    SF_W:
-                      s:=s+'w';
-                    SF_X:
-                      s:=s+'x';
-                  end;
-                writer.AsmWrite(s+'"');
-              end;
-            if sectionprogbits then
-              begin
-                case secprogbits of
-                  SPB_PROGBITS:
-                    writer.AsmWrite(',%progbits');
-                  SPB_NOBITS:
-                    writer.AsmWrite(',%nobits');
-                  SPB_NOTE:
-                    writer.AsmWrite(',%note');
-                  SPB_None:
-                    ;
-                  else
-                    InternalError(2019100801);
-                end;
-              end;
+            case secflags of
+              SF_A:
+                writer.AsmWrite(',"a"');
+              SF_W:
+                writer.AsmWrite(',"w"');
+              SF_X:
+                writer.AsmWrite(',"x"');
+              SF_None:
+                writer.AsmWrite(',""');
+              else
+                Internalerror(2018101502);
+            end;
+            case secprogbits of
+              SPB_PROGBITS:
+                writer.AsmWrite(',%progbits');
+              SPB_NOBITS:
+                writer.AsmWrite(',%nobits');
+              SPB_None:
+                ;
+              else
+                Internalerror(2018101503);
+            end;
           end
         else
           case atype of
@@ -630,7 +581,7 @@ implementation
         i,len : longint;
         buf   : array[0..63] of byte;
       begin
-        len:=EncodeUleb128(a,buf,0);
+        len:=EncodeUleb128(a,buf);
         for i:=0 to len-1 do
           begin
             if (i > 0) then
@@ -640,45 +591,12 @@ implementation
       end;
 
 
-    procedure TGNUAssembler.WriteCFI(hp: tai_cfi_base);
-      begin
-        writer.AsmWrite(cfi2str[hp.cfityp]);
-        case hp.cfityp of
-          cfi_startproc,
-          cfi_endproc:
-            ;
-          cfi_undefined,
-          cfi_restore,
-          cfi_def_cfa_register:
-            begin
-              writer.AsmWrite(' ');
-              writer.AsmWrite(gas_regname(tai_cfi_op_reg(hp).reg1));
-            end;
-          cfi_def_cfa_offset:
-            begin
-              writer.AsmWrite(' ');
-              writer.AsmWrite(tostr(tai_cfi_op_val(hp).val1));
-            end;
-          cfi_offset:
-            begin
-              writer.AsmWrite(' ');
-              writer.AsmWrite(gas_regname(tai_cfi_op_reg_val(hp).reg1));
-              writer.AsmWrite(',');
-              writer.AsmWrite(tostr(tai_cfi_op_reg_val(hp).val));
-            end;
-          else
-            internalerror(2019030203);
-        end;
-        writer.AsmLn;
-      end;
-
-
     procedure TGNUAssembler.WriteDecodedSleb128(a: int64);
       var
         i,len : longint;
         buf   : array[0..255] of byte;
       begin
-        len:=EncodeSleb128(a,buf,0);
+        len:=EncodeSleb128(a,buf);
         for i:=0 to len-1 do
           begin
             if (i > 0) then
@@ -702,10 +620,9 @@ implementation
         end;
 
 
-      procedure doalign(alignment: byte; use_op: boolean; fillop: byte; maxbytes: byte; out last_align: longint;lasthp:tai);
+      procedure doalign(alignment: byte; use_op: boolean; fillop: byte; out last_align: longint;lasthp:tai);
         var
           i: longint;
-          alignment64 : int64;
 {$ifdef m68k}
           instr : string;
 {$endif}
@@ -732,33 +649,14 @@ implementation
                   else
                     begin
 {$endif m68k}
-                      alignment64:=alignment;
-                      if (maxbytes<>alignment) and ispowerof2(alignment64,i) then
-                        begin
-                          if use_op then
-                            begin
-                              writer.AsmWrite(#9'.p2align '+tostr(i)+','+tostr(fillop)+','+tostr(maxbytes));
-                              writer.AsmLn;
-                              writer.AsmWrite(#9'.p2align '+tostr(i-1)+','+tostr(fillop));
-                            end
-                          else
-                            begin
-                              writer.AsmWrite(#9'.p2align '+tostr(i)+',,'+tostr(maxbytes));
-                              writer.AsmLn;
-                              writer.AsmWrite(#9'.p2align '+tostr(i-1));
-                            end
-                        end
-                      else
-                        begin
-                          writer.AsmWrite(#9'.balign '+tostr(alignment));
-                          if use_op then
-                            writer.AsmWrite(','+tostr(fillop))
+                  writer.AsmWrite(#9'.balign '+tostr(alignment));
+                  if use_op then
+                    writer.AsmWrite(','+tostr(fillop))
 {$ifdef x86}
-                          { force NOP as alignment op code }
-                          else if (LastSecType=sec_code) and (asminfo^.id<>as_solaris_as) then
-                            writer.AsmWrite(',0x90');
+                  { force NOP as alignment op code }
+                  else if (LastSecType=sec_code) and (asminfo^.id<>as_solaris_as) then
+                    writer.AsmWrite(',0x90');
 {$endif x86}
-                        end;
 {$ifdef m68k}
                     end;
 {$endif m68k}
@@ -848,7 +746,7 @@ implementation
 
            ait_align :
              begin
-               doalign(tai_align_abstract(hp).aligntype,tai_align_abstract(hp).use_op,tai_align_abstract(hp).fillop,tai_align_abstract(hp).maxbytes,last_align,lasthp);
+               doalign(tai_align_abstract(hp).aligntype,tai_align_abstract(hp).use_op,tai_align_abstract(hp).fillop,last_align,lasthp);
              end;
 
            ait_section :
@@ -879,11 +777,8 @@ implementation
                      processes). The alternate code creates some kind of common symbols
                      in the data segment.
                    }
-
                    if tai_datablock(hp).is_global then
                      begin
-                       if tai_datablock(hp).sym.bind=AB_PRIVATE_EXTERN then
-                         WriteHiddenSymbol(tai_datablock(hp).sym);
                        writer.AsmWrite('.globl ');
                        writer.AsmWriteln(tai_datablock(hp).sym.name);
                        writer.AsmWriteln('.data');
@@ -962,8 +857,6 @@ implementation
                      begin
                        if Tai_datablock(hp).is_global then
                          begin
-                           if (tai_datablock(hp).sym.bind=AB_PRIVATE_EXTERN) then
-                             WriteHiddenSymbol(tai_datablock(hp).sym);
                            writer.AsmWrite(#9'.globl ');
                            if replaceforbidden then
                              writer.AsmWriteln(ReplaceForbiddenAsmSymbolChars(Tai_datablock(hp).sym.name))
@@ -1030,44 +923,7 @@ implementation
                         WriteAixIntConst(tai_const(hp));
                       writer.AsmLn;
                     end;
-                 aitconst_gottpoff:
-                   begin
-                     writer.AsmWrite(#9'.word'#9+tai_const(hp).sym.name+'(gottpoff)+(.-'+tai_const(hp).endsym.name+tostr_with_plus(tai_const(hp).symofs)+')');
-                     writer.Asmln;
-                   end;
-                 aitconst_tlsgd:
-                   begin
-                     writer.AsmWrite(#9'.word'#9+tai_const(hp).sym.name+'(tlsgd)+(.-'+tai_const(hp).endsym.name+tostr_with_plus(tai_const(hp).symofs)+')');
-                     writer.Asmln;
-                   end;
-                 aitconst_tlsdesc:
-                   begin
-                     writer.AsmWrite(#9'.word'#9+tai_const(hp).sym.name+'(tlsdesc)+(.-'+tai_const(hp).endsym.name+tostr_with_plus(tai_const(hp).symofs)+')');
-                     writer.Asmln;
-                   end;
-                 aitconst_tpoff:
-                   begin
-                     if assigned(tai_const(hp).endsym) or (tai_const(hp).symofs<>0) then
-                       Internalerror(2019092805);
-                     writer.AsmWrite(#9'.word'#9+tai_const(hp).sym.name+'(tpoff)');
-                     writer.Asmln;
-                   end;
 {$endif cpu64bitaddr}
-                 aitconst_dtpoff:
-                   begin
-{$ifdef arm}
-                     writer.AsmWrite(#9'.word'#9+tai_const(hp).sym.name+'(tlsldo)');
-                     writer.Asmln;
-{$endif arm}
-{$ifdef x86_64}
-                     writer.AsmWrite(#9'.long'#9+tai_const(hp).sym.name+'@dtpoff');
-                     writer.Asmln;
-{$endif x86_64}
-{$ifdef i386}
-                     writer.AsmWrite(#9'.word'#9+tai_const(hp).sym.name+'@tdpoff');
-                     writer.Asmln;
-{$endif i386}
-                   end;
                  aitconst_got:
                    begin
                      if tai_const(hp).symofs<>0 then
@@ -1141,8 +997,6 @@ implementation
                              WriteDecodedUleb128(qword(tai_const(hp).value));
                            aitconst_sleb128bit:
                              WriteDecodedSleb128(int64(tai_const(hp).value));
-                           else
-                             ;
                          end
                        end
                      else
@@ -1296,6 +1150,14 @@ implementation
 
            ait_symbol :
              begin
+               if (tai_symbol(hp).sym.bind=AB_PRIVATE_EXTERN) then
+                 begin
+                   writer.AsmWrite(#9'.private_extern ');
+                   if replaceforbidden then
+                     writer.AsmWriteln(ReplaceForbiddenAsmSymbolChars(tai_symbol(hp).sym.name))
+                   else
+                     writer.AsmWriteln(tai_symbol(hp).sym.name);
+                 end;
                if (target_info.system=system_powerpc64_linux) and
                   (tai_symbol(hp).sym.typ=AT_FUNCTION) and
                   (cs_profile in current_settings.moduleswitches) then
@@ -1308,8 +1170,6 @@ implementation
                     writer.AsmWriteln(ReplaceForbiddenAsmSymbolChars(tai_symbol(hp).sym.name))
                   else
                     writer.AsmWriteln(tai_symbol(hp).sym.name);
-                  if (tai_symbol(hp).sym.bind=AB_PRIVATE_EXTERN) then
-                    WriteHiddenSymbol(tai_symbol(hp).sym);
                 end;
                if (target_info.system=system_powerpc64_linux) and
                   use_dotted_functions and
@@ -1390,26 +1250,14 @@ implementation
                if replaceforbidden then
                  begin
                    { avoid string truncation }
-                   writer.AsmWrite(ReplaceForbiddenAsmSymbolChars(tai_symbolpair(hp).sym^));
-                   writer.AsmWrite(s);
+                   writer.AsmWrite(ReplaceForbiddenAsmSymbolChars(tai_symbolpair(hp).sym^)+s);
                    writer.AsmWriteLn(ReplaceForbiddenAsmSymbolChars(tai_symbolpair(hp).value^));
-                   if tai_symbolpair(hp).kind=spk_set_global then
-                     begin
-                       writer.AsmWrite(#9'.globl ');
-                       writer.AsmWriteLn(ReplaceForbiddenAsmSymbolChars(tai_symbolpair(hp).sym^));
-                     end;
                  end
                else
                  begin
                    { avoid string truncation }
-                   writer.AsmWrite(tai_symbolpair(hp).sym^);
-                   writer.AsmWrite(s);
+                   writer.AsmWrite(tai_symbolpair(hp).sym^+s);
                    writer.AsmWriteLn(tai_symbolpair(hp).value^);
-                   if tai_symbolpair(hp).kind=spk_set_global then
-                     begin
-                       writer.AsmWrite(#9'.globl ');
-                       writer.AsmWriteLn(tai_symbolpair(hp).sym^);
-                     end;
                  end;
              end;
            ait_symbol_end :
@@ -1552,22 +1400,6 @@ implementation
                    std_regname(tai_varloc(hp).newlocation)));
                writer.AsmLn;
              end;
-           ait_cfi:
-             begin
-               WriteCFI(tai_cfi_base(hp));
-             end;
-           ait_eabi_attribute:
-             begin
-               case tai_eabi_attribute(hp).eattr_typ of
-                 eattrtype_dword:
-                   writer.AsmWrite(#9'.eabi_attribute '+tostr(tai_eabi_attribute(hp).tag)+','+tostr(tai_eabi_attribute(hp).value));
-                 eattrtype_ntbs:
-                   writer.AsmWrite(#9'.eabi_attribute '+tostr(tai_eabi_attribute(hp).tag)+',"'+tai_eabi_attribute(hp).valuestr^+'"');
-                 else
-                   Internalerror(2019100601);
-               end;
-               writer.AsmLn;
-             end;
            else
              internalerror(2006012201);
          end;
@@ -1595,29 +1427,7 @@ implementation
 
     procedure TGNUAssembler.WriteWeakSymbolRef(s: tasmsymbol);
       begin
-        writer.AsmWrite(#9'.weak ');
-        if asminfo^.dollarsign='$' then
-          writer.AsmWriteLn(s.name)
-        else
-          writer.AsmWriteLn(ReplaceForbiddenAsmSymbolChars(s.name))
-      end;
-
-
-    procedure TGNUAssembler.WriteHiddenSymbol(sym: TAsmSymbol);
-      begin
-        { on Windows/(PE)COFF, global symbols are hidden by default: global
-          symbols that are not explicitly exported from an executable/library,
-          become hidden }
-        if target_info.system in systems_windows then
-          exit;
-        if target_info.system in systems_darwin then
-          writer.AsmWrite(#9'.private_extern ')
-        else
-          writer.AsmWrite(#9'.hidden ');
-        if asminfo^.dollarsign='$' then
-          writer.AsmWriteLn(sym.name)
-        else
-          writer.AsmWriteLn(ReplaceForbiddenAsmSymbolChars(sym.name))
+        writer.AsmWriteLn(#9'.weak '+s.name);
       end;
 
 
@@ -1935,8 +1745,6 @@ implementation
                 result:='.section '+objc_section_name(atype);
                 exit
               end;
-            else
-              ;
           end;
         result := inherited sectionname(atype,aname,aorder);
       end;
@@ -2043,9 +1851,7 @@ implementation
          sec_none (* sec_objc_nlcatlist *),
          sec_none (* sec_objc_protlist *),
          sec_none (* sec_stack *),
-         sec_none (* sec_heap *),
-         sec_none (* gcc_except_table *),
-         sec_none (* sec_arm_attribute *)
+         sec_none (* sec_heap *)
         );
       begin
         Result := inherited SectionName (SecXTable [AType], AName, AOrder);

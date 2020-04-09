@@ -74,8 +74,6 @@ implementation
             result:=not tprocvardef(def).is_addressonly;
           setdef :
             result:=not is_smallset(def);
-          else
-            ;
         end;
       end;
 

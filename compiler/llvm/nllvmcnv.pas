@@ -64,11 +64,11 @@ interface
 implementation
 
 uses
-  globtype,globals,cutils,verbose,
+  globtype,globals,verbose,
   aasmbase,aasmdata,
-  llvmbase,llvminfo,llvmfeatures,aasmllvm,aasmllvmmetadata,llvmdef,
+  llvmbase,aasmllvm,
   procinfo,
-  ncal,ncon,
+  ncal,
   symconst,symdef,defutil,
   cgbase,cgutils,tgobj,hlcgobj,pass_2;
 
@@ -83,63 +83,15 @@ class function tllvmtypeconvnode.target_specific_need_equal_typeconv(fromdef, to
         still need a conversion }
       (
        ((fromdef.typ=procvardef) and
-        (todef.typ=procvardef)) or
-       { same for two different specialisations }
-       ((df_specialization in fromdef.defoptions) and
-        (df_specialization in todef.defoptions)) or
-       { external objc classes referring to the same type }
-       (is_objc_class_or_protocol(fromdef) and
-        is_objc_class_or_protocol(todef)) or
-       { typed from/to untyped filedef in ISO mode: have to keep because of
-         the get/put buffer }
-       ((fromdef.typ=filedef) and
-        (tfiledef(fromdef).filetyp=ft_typed) and
-        (todef.typ=filedef) and
-        (tfiledef(todef).filetyp=ft_typed) and
-        (not equal_defs(tfiledef(fromdef).typedfiledef, tfiledef(todef).typedfiledef) or
-         target_specific_need_equal_typeconv(tfiledef(fromdef).typedfiledef, tfiledef(todef).typedfiledef))
-       )
+        (todef.typ=procvardef))
       );
   end;
 
 
 function tllvmtypeconvnode.first_int_to_real: tnode;
-{$push}{$j+}
-  const
-    intrinfix: array[boolean] of string[7] =
-      ('uitofp','sitofp');
-{$pop}
-  var
-    exceptmode: ansistring;
   begin
-    if (llvmflag_constrained_fptoi_itofp in llvmversion_properties[current_settings.llvmversion]) and
-       { these are converted to 80 bits first in any case }
-       not(tfloatdef(resultdef).floattype in [s64currency,s64comp]) and
-       { no actuual int -> floating point conversion }
-       (torddef(left.resultdef).ordtype<>scurrency) and
-       ((left.resultdef.size>=resultdef.size) or
-        ((torddef(left.resultdef).ordtype=u64bit) and
-         (tfloatdef(resultdef).floattype=s80real))) and
-       (llvm_constrained_si64tofp_support or
-        (torddef(left.resultdef).ordtype<>s64bit) or
-        (tfloatdef(resultdef).floattype<>s64real)) then
-      begin
-        { in case rounding may have to be applied, use the intrinsic }
-        exceptmode:=llvm_constrainedexceptmodestring;
-        result:=ccallnode.createintern('llvm_experimental_constrained_'+intrinfix[is_signed(left.resultdef)]+llvmfloatintrinsicsuffix(tfloatdef(resultdef))+'_i'+tostr(left.resultdef.size*8),
-          ccallparanode.create(cstringconstnode.createpchar(ansistring2pchar(exceptmode),length(exceptmode),llvm_metadatatype),
-            ccallparanode.create(cstringconstnode.createpchar(ansistring2pchar('round.dynamic'),length('round.dynamic'),llvm_metadatatype),
-              ccallparanode.create(left,nil)
-            )
-          )
-        );
-        left:=nil;
-      end
-    else
-      begin
-        expectloc:=LOC_FPUREGISTER;
-        result:=nil;
-      end;
+    expectloc:=LOC_FPUREGISTER;
+    result:=nil;
   end;
 
 
@@ -174,8 +126,7 @@ function tllvmtypeconvnode.first_real_to_real: tnode;
       currency/comp to be compatible with the regular code generators ->
       call round() instead }
     if (tfloatdef(resultdef).floattype in [s64currency,s64comp]) and
-       not(tfloatdef(left.resultdef).floattype in [s64currency,s64comp]) and
-       not(nf_internal in flags) then
+       not(tfloatdef(left.resultdef).floattype in [s64currency,s64comp]) then
       begin
         result:=ccallnode.createinternfromunit('SYSTEM','ROUND',
           ccallparanode.create(left,nil));
@@ -229,7 +180,7 @@ procedure tllvmtypeconvnode.second_proc_to_procvar;
         if location.loc<>LOC_REFERENCE then
           internalerror(2015111902);
         hlcg.g_ptrtypecast_ref(current_asmdata.CurrAsmList,
-          cpointerdef.getreusable(cprocvardef.getreusableprocaddr(tprocdef(left.resultdef),pc_normal)),
+          cpointerdef.getreusable(tprocdef(left.resultdef).getcopyas(procvardef,pc_normal,'')),
           cpointerdef.getreusable(resultdef),
           location.reference);
       end;
@@ -324,8 +275,7 @@ procedure tllvmtypeconvnode.second_nothing;
                (left.resultdef.typ=filedef) and
                (tfiledef(left.resultdef).filetyp=ft_typed) and
                (resultdef.typ=filedef) and
-               (tfiledef(resultdef).filetyp in [ft_untyped,ft_typed]) and
-               (resultdef.size<left.resultdef.size)
+               (tfiledef(resultdef).filetyp=ft_untyped)
            ) and
            { anything else with different size that ends up here is an error }
            (left.resultdef.size<>resultdef.size) then
@@ -333,7 +283,7 @@ procedure tllvmtypeconvnode.second_nothing;
         hlcg.location_force_mem(current_asmdata.CurrAsmList,left.location,left.resultdef);
         hreg:=hlcg.getaddressregister(current_asmdata.CurrAsmList,cpointerdef.getreusable(resultdef));
         hlcg.a_loadaddr_ref_reg(current_asmdata.CurrAsmList,left.resultdef,cpointerdef.getreusable(resultdef),left.location.reference,hreg);
-        location_reset_ref(location,left.location.loc,def_cgsize(resultdef),left.location.reference.alignment,left.location.reference.volatility);
+        location_reset_ref(location,left.location.loc,left.location.size,left.location.reference.alignment,left.location.reference.volatility);
         reference_reset_base(location.reference,hreg,0,location.reference.temppos,location.reference.alignment,location.reference.volatility);
       end
     else

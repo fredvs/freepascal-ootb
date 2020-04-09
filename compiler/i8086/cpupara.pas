@@ -53,9 +53,9 @@ unit cpupara;
             other memory models, this mechanism has to be extended somehow to
             support 32-bit addresses on a 16-bit CPU.
           }
-          procedure getcgtempparaloc(list: TAsmList; pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);override;
+          procedure getintparaloc(list: TAsmList; pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);override;
           function create_paraloc_info(p : tabstractprocdef; side: tcallercallee):longint;override;
-          function create_varargs_paraloc_info(p : tabstractprocdef; side: tcallercallee; varargspara:tvarargsparalist):longint;override;
+          function create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;override;
           procedure createtempparaloc(list: TAsmList;calloption : tproccalloption;parasym : tparavarsym;can_use_final_stack_loc : boolean;var cgpara:TCGPara);override;
           function get_funcretloc(p : tabstractprocdef; side: tcallercallee; forcetempdef: tdef): TCGPara;override;
        private
@@ -70,7 +70,7 @@ unit cpupara;
        cutils,
        systems,verbose,
        symtable,symcpu,
-       globals,defutil;
+       defutil;
 
       const
         parasupregs : array[0..2] of tsuperregister = (RS_AX,RS_DX,RS_BX);
@@ -192,8 +192,6 @@ unit cpupara;
             result:=not(calloption in cdecl_pocalls) and not tprocvardef(def).is_addressonly;
           setdef :
             result:=not(calloption in cdecl_pocalls) and (not is_smallset(def));
-          else
-            ;
         end;
       end;
 
@@ -237,8 +235,8 @@ unit cpupara;
 
     function tcpuparamanager.get_saved_registers_int(calloption : tproccalloption):tcpuregisterarray;
       const
-        saveregs_cdecl: {$ifndef VER3_0}tcpuregisterarray{$else}array [0..2] of tsuperregister{$endif} = (RS_BP,RS_SI,RS_DI);
-        saveregs_pascal: {$ifndef VER3_0}tcpuregisterarray{$else}array [0..0] of tsuperregister{$endif} = (RS_BP);
+        saveregs_cdecl: array [0..2] of tsuperregister = (RS_BP,RS_SI,RS_DI);
+        saveregs_pascal: array [0..0] of tsuperregister = (RS_BP);
       begin
         case calloption of
           pocall_register,
@@ -256,7 +254,7 @@ unit cpupara;
       end;
 
 
-    procedure tcpuparamanager.getcgtempparaloc(list: TAsmList; pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);
+    procedure tcpuparamanager.getintparaloc(list: TAsmList; pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);
       var
         paraloc : pcgparalocation;
         psym: tparavarsym;
@@ -785,22 +783,15 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; side: tcallercallee; varargspara:tvarargsparalist):longint;
+    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;
       var
         parasize : longint;
       begin
         parasize:=0;
         { calculate the registers for the normal parameters }
-        create_stdcall_paraloc_info(p,side,p.paras,parasize);
+        create_stdcall_paraloc_info(p,callerside,p.paras,parasize);
         { append the varargs }
-        if assigned(varargspara) then
-          begin
-            if side=callerside then
-              create_stdcall_paraloc_info(p,side,varargspara,parasize)
-            else
-              internalerror(2019021925);
-          end;
-        create_funcretloc_info(p,side);
+        create_stdcall_paraloc_info(p,callerside,varargspara,parasize);
         result:=parasize;
       end;
 

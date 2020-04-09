@@ -20,7 +20,7 @@ Unit consoleio;
       TWriteCharFunc = function(ACh: char; AUserData: pointer): boolean;
       TReadCharFunc = function(var ACh: char; AUserData: pointer): boolean;
 
-    procedure OpenIO(var f: Text; AWrite: TWriteCharFunc; ARead: TReadCharFunc; AMode: word; AUserData: pointer);
+    procedure OpenIO(var f: Text; AWrite: TWriteCharFunc; ARead: TReadCharFunc; AMode:longint; AUserData: pointer);
 
   implementation
 
@@ -49,7 +49,7 @@ Unit consoleio;
       begin
       end;
 
-    function ReadData(Func: TReadCharFunc; UserData: pointer; Buffer: pchar; count: SizeInt): SizeInt;
+    function ReadData(Func: TReadCharFunc; UserData: pointer; Buffer: pchar; count: longint): longint;
       var
         c: char;
         got_linechar: boolean;
@@ -83,7 +83,7 @@ Unit consoleio;
       var
         userdata: PUserData;
         p: pchar;
-        i: SizeInt;
+        i: longint;
       begin
         if t.BufPos=0 then exit;
         userdata:=@t.UserData[1];
@@ -103,20 +103,11 @@ Unit consoleio;
         t.BufPos:=0;
       end;
 
-    procedure OpenIO(var f: Text; AWrite: TWriteCharFunc; ARead: TReadCharFunc; AMode: word; AUserData: pointer);
+    procedure OpenIO(var f: Text; AWrite: TWriteCharFunc; ARead: TReadCharFunc; AMode:longint; AUserData: pointer);
       var
         userdata: PUserData;
       begin
-        { Essentially just init everything, more or less what Assign(f,'');
-          does }
-        FillChar(f,SizeOf(TextRec),0);
-        { only set things that are not zero }
-        TextRec(f).Handle:=UnusedHandle;
-        TextRec(f).BufSize:=TextRecBufSize;
-        TextRec(f).Bufptr:=@TextRec(f).Buffer;
-        TextRec(f).OpenFunc:=nil;
-        TextRec(f).LineEnd := #13#10;
-
+        Assign(f,'');
         userdata:=@TextRec(f).UserData[1];
         TextRec(f).Mode:=AMode;
         case AMode of
@@ -157,7 +148,6 @@ var
 var
   pstdout : ^Text;
 
-{$ifndef CPUAVR}
 initialization
   { Setup stdin, stdout and stderr }
   SysInitStdIO;
@@ -173,8 +163,6 @@ finalization
      Writeln(pstdout^,'');
    End;
   SysFlushStdIO;
-{$endif CPUAVR}
-
 end.
 
 

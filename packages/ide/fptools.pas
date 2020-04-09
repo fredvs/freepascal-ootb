@@ -15,10 +15,6 @@
 {$I globdir.inc}
 unit FPTools;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,Drivers,Views,Dialogs,Validate,
@@ -826,7 +822,7 @@ begin
   if OK then
     begin
       ViewCount:=0;
-      F^.ForEachSection(TCallbackProcParam(@ProcessSection));
+      F^.ForEachSection(@ProcessSection);
     end;
   BuildPromptDialogInfo:=OK;
 end;
@@ -1426,7 +1422,7 @@ end;
 begin
   if not Assigned(ToolTempFiles) then Exit;
 {$ifndef DEBUG}
-  ToolTempFiles^.ForEach(TCallbackProcParam(@DeleteIt));
+  ToolTempFiles^.ForEach(@DeleteIt);
 {$endif ndef DEBUG}
   Dispose(ToolTempFiles, Done);
   ToolTempFiles:=nil;

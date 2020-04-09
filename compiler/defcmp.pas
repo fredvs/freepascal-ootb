@@ -187,7 +187,7 @@ implementation
            u8bit,u16bit,u32bit,u64bit,
            s8bit,s16bit,s32bit,s64bit,
            pasbool, bool8bit,bool16bit,bool32bit,bool64bit,
-           uchar,uwidechar,scurrency,customint }
+           uchar,uwidechar,scurrency }
 
       type
         tbasedef=(bvoid,bchar,bint,bbool);
@@ -198,7 +198,7 @@ implementation
            bint,bint,bint,bint,bint,
            bbool,bbool,bbool,bbool,bbool,
            bbool,bbool,bbool,bbool,
-           bchar,bchar,bint,bint);
+           bchar,bchar,bint);
 
         basedefconvertsimplicit : array[tbasedef,tbasedef] of tconverttype =
           { void, char, int, bool }
@@ -289,15 +289,7 @@ implementation
              if assigned(tstoreddef(def_from).genconstraintdata) or
                  assigned(tstoreddef(def_to).genconstraintdata) then
                begin
-                 { this is bascially a poor man's type checking, if there is a chance
-                   that the types are equal considering the constraints, this needs probably
-                   to be improved and maybe factored out or even result in a recursive compare_defs_ext }
-                 if (def_from.typ<>def_to.typ) and
-                   { formaldefs are compatible with everything }
-                   not(def_from.typ in [formaldef]) and
-                   not(def_to.typ in [formaldef]) and
-                   { constants could get another deftype (e.g. niln) }
-                   not(fromtreetype in nodetype_const) then
+                 if def_from.typ<>def_to.typ then
                    begin
                      { not compatible anyway }
                      doconv:=tc_not_possible;
@@ -424,8 +416,7 @@ implementation
                             end;
                           uvoid,
                           pasbool1,pasbool8,pasbool16,pasbool32,pasbool64,
-                          bool8bit,bool16bit,bool32bit,bool64bit,
-                          scurrency:
+                          bool8bit,bool16bit,bool32bit,bool64bit:
                             eq:=te_equal;
                           else
                             internalerror(200210061);
@@ -508,8 +499,6 @@ implementation
                          doconv:=tc_cstring_2_int;
                        end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -618,8 +607,6 @@ implementation
                                    eq:=te_convert_l6;
                                end;
                              end;
-                           else
-                             ;
                          end;
                        end;
                    end;
@@ -799,8 +786,6 @@ implementation
                            end;
                       end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -809,9 +794,9 @@ implementation
                case def_from.typ of
                  orddef :
                    begin { ordinal to real }
-                     { only for implicit and internal typecasts in tp }
+                     { only for implicit and internal typecasts in tp/delphi }
                      if (([cdo_explicit,cdo_internal] * cdoptions <> [cdo_explicit]) or
-                         (not(m_tp7 in current_settings.modeswitches))) and
+                         ([m_tp7,m_delphi] * current_settings.modeswitches = [])) and
                         (is_integer(def_from) or
                          (is_currency(def_from) and
                           (s64currencytype.typ = floatdef))) then
@@ -858,8 +843,6 @@ implementation
                            end;
                        end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -952,8 +935,6 @@ implementation
                            end;
                        end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -1043,8 +1024,8 @@ implementation
                                { dynamic array -> dynamic array }
                                if is_dynamic_array(def_from) then
                                  eq:=te_equal
-                               { regular array -> dynamic array }
-                               else if (m_array2dynarray in current_settings.modeswitches) and
+                               { fpc modes only: array -> dyn. array }
+                               else if (current_settings.modeswitches*[m_objfpc,m_fpc]<>[]) and
                                  not(is_special_array(def_from)) and
                                  is_zero_based_array(def_from) then
                                  begin
@@ -1229,8 +1210,6 @@ implementation
                               eq:=te_convert_l1;
                            end;
                       end;
-                    else
-                      ;
                   end;
                 end;
              end;
@@ -1274,8 +1253,6 @@ implementation
                              eq:=te_convert_l1;
                            end;
                        end;
-                     else
-                       ;
                    end;
                  end;
              end;
@@ -1562,8 +1539,6 @@ implementation
                          eq:=te_convert_l2;
                        end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -1604,8 +1579,6 @@ implementation
                         eq:=te_convert_l1;
                       end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -1662,8 +1635,6 @@ implementation
                          eq:=te_convert_l1;
                        end;
                    end;
-                 else
-                   ;
                end;
              end;
 
@@ -1915,8 +1886,6 @@ implementation
                 if not (def_from.typ in [abstractdef,errordef]) then
                   eq:=te_convert_l6;
              end;
-           else
-             ;
         end;
 
         { if we didn't find an appropriate type conversion yet
@@ -2004,12 +1973,6 @@ implementation
                   is_subequal:=(torddef(def2).ordtype=uchar);
                 uwidechar :
                   is_subequal:=(torddef(def2).ordtype=uwidechar);
-                customint:
-                  is_subequal:=(torddef(def2).low=torddef(def1).low) and (torddef(def2).high=torddef(def1).high);
-                u128bit, s128bit,
-                scurrency,
-                uvoid:
-                  ;
               end;
             end
            else

@@ -28,7 +28,7 @@ const
   EmptyEnv: array[0..2] of PAnsiChar = (nil, nil, nil);
   EmptyCmdLine: array[0..0] of PAnsiChar = ( '' );
 var
-  i: cardinal;
+  i: longint;
   p: PPAnsiChar;
 begin
   // Get the current stack pointer, adjust and save it
@@ -48,7 +48,7 @@ begin
           while i < 200 do
             begin
               Dec(p);
-              if ptruint(p^) = i then
+              if ptrint(p^) = i then
                 begin
                   // argc found
                   operatingsystem_parameter_argc:=i;
@@ -79,8 +79,6 @@ end;
 
 procedure LibMainAndroid; external name 'FPC_LIB_MAIN_ANDROID';
 
-procedure fpc_lib_exit_intern; external name 'FPC_LIB_EXIT';
-
 procedure atexit(p: pointer); cdecl; external;
 
 var
@@ -103,7 +101,7 @@ begin
   FpClose(_SaveStdOut);
   FpClose(_SaveStdErr);
   // Finalize the library
-  fpc_lib_exit_intern;
+  lib_exit;
   // Close stdout and stderr if stdio has been closed
   if ioclosed then
     begin

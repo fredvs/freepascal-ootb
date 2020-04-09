@@ -5086,7 +5086,7 @@
      // engineering.widget.com/software/spencer katt
      NameCanonical = 7,
      // local logon name
-     NameWindowsCeLocal = longint($80000001));              //+winbase
+     NameWindowsCeLocal = $80000001);              //+winbase
      PEXTENDED_NAME_FORMAT=^EXTENDED_NAME_FORMAT;  //+winbase
 
      NAME_BUFFER = record

@@ -78,8 +78,7 @@ begin
     scanKeys();
     
     keys := keysHeld();
-    if (keys and KEY_START) <> 0 then break;
-    
+
     if ((keys and KEY_UP)) <> 0 then rotateX := rotateX + 3;
     if ((keys and KEY_DOWN)) <> 0 then rotateX := rotateX - 3;
     if ((keys and KEY_LEFT)) <> 0 then rotateY := rotateY + 3;

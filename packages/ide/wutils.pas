@@ -12,10 +12,6 @@
  **********************************************************************}
 unit WUtils;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses
@@ -691,7 +687,7 @@ end;
 begin
   FreeAll;
   if Assigned(ALines) then
-    ALines^.ForEach(TCallbackProcParam(@AddIt));
+    ALines^.ForEach(@AddIt);
 end;
 
 procedure TUnsortedStringCollection.InsertStr(const S: string);

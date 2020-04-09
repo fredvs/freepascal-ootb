@@ -1213,18 +1213,7 @@ Begin
   P:=Pos(FormatSettings.DecimalSeparator,S);
   If (P<>0) Then
     S[P] := '.';
-  try
-    Val(trim(S),Value,E);
-  { on x87, a floating point exception may be pending in case of an invalid
-    input value -> trigger it now }
-{$if defined(cpui386) or (defined(cpux86_64) and not(defined(win64))) or defined(cpui8086)}
-    asm
-      fwait
-    end;
-{$endif}
-  except
-    E:=1;
-  end;
+  Val(trim(S),Value,E);
   Result:=(E=0);
 End;
 
@@ -1284,7 +1273,7 @@ Begin
     end;
   { on x87, a floating point exception may be pending in case of an invalid
     input value -> trigger it now }
-{$if defined(cpui386) or (defined(cpux86_64) and not(defined(win64))) or defined(cpui8086)}
+{$ifdef cpux86}
     asm
       fwait
     end;

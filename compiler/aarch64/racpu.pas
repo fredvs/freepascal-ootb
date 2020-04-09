@@ -73,7 +73,6 @@ unit racpu;
         { a 32 bit integer register could actually be 16 or 8 bit }
         if result=OS_32 then
           case oppostfix of
-            PF_NONE: ;
             PF_B:
               result:=OS_8;
             PF_SB:
@@ -82,8 +81,6 @@ unit racpu;
               result:=OS_16;
             PF_SH:
               result:=OS_S16;
-            else
-              Message(asmr_e_invalid_opcode_and_operand)
           end;
       end;
 

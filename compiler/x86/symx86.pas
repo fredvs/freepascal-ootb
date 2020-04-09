@@ -180,6 +180,8 @@ implementation
               result:=result+';far';
             x86pt_huge:
               result:=result+';huge';
+            else
+              internalerror(2013050301);
           end;
         end;
     end;

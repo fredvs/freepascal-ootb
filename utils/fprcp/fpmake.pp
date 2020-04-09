@@ -15,7 +15,7 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-fprcp');
-    P.ShortName:='fprc';
+    P.ShortName:='fprcp';
     { java and jvm-android do not support 
       getmem/freemem and new/dispose used in
       these sources }
@@ -39,7 +39,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     T:=P.Targets.AddProgram('fprcp.pp');
     T.Dependencies.AddUnit('comments');

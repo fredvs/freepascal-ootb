@@ -149,7 +149,7 @@ interface
 {$NOTE TODO Amiga: implement PathConv() in System unit, which works with AnsiString}
 function Unix2AmigaPath(path: ShortString): ShortString; external name 'PATHCONV';
 {$ELSE}
-function Unix2AmigaPath(path: String): String;
+function Unix2AmigaPath(path: String): String;{$IFDEF USEINLINE}inline;{$ENDIF}
 {$ENDIF}
 
 {$if FPC_FULLVERSION < 20701}
@@ -194,7 +194,7 @@ implementation
 {$IFNDEF HASAMIGA}
 { Stub function for Unix2Amiga Path conversion functionality, only available in
   Amiga/MorphOS RTL. I'm open for better solutions. (KB) }
-function Unix2AmigaPath(path: String): String;
+function Unix2AmigaPath(path: String): String;{$IFDEF USEINLINE}inline;{$ENDIF}
 begin
   Unix2AmigaPath:=path;
 end;

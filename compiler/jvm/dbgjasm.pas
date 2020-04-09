@@ -193,12 +193,8 @@ implementation
                     inc(nolineinfolevel);
                   mark_NoLineInfoEnd:
                     dec(nolineinfolevel);
-                  else
-                    ;
                 end;
               end;
-            else
-              ;
           end;
 
           { Java does not support multiple source files }

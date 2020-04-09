@@ -97,12 +97,6 @@ type
 
   TPpuDefVisibility = (dvPublic, dvPublished, dvProtected, dvPrivate, dvHidden);
 
-  TPpuAttr = record
-    ParaCount: LongInt;
-    TypeSym: TPpuRef;
-    TypeConstr: TPpuRef;
-  end;
-
   { TPpuDef }
 
   TPpuDef = class
@@ -127,7 +121,6 @@ type
     // Symbol/definition reference
     Ref: TPpuRef;
     Visibility: TPpuDefVisibility;
-    Attrs: array of TPpuAttr;
 
     constructor Create(AParent: TPpuContainerDef); virtual; reintroduce;
     destructor Destroy; override;
@@ -184,7 +177,6 @@ type
     UsedUnits: TPpuContainerDef;
     RefUnits: array of string;
     SourceFiles: TPpuContainerDef;
-    LongVersion: Cardinal;
 
     constructor Create(AParent: TPpuContainerDef); override;
     destructor Destroy; override;
@@ -480,7 +472,7 @@ const
     ('dynamic');
 
   ConstTypeNames: array[TPpuConstType] of string =
-    ('unknown', 'int', 'float', 'string', 'set', 'pointer');
+    ('', 'int', 'float', 'string', 'set', 'pointer');
 
   OrdTypeNames: array[TPpuOrdType] of string =
     ('void', 'uint', 'sint', 'pasbool', 'bool', 'char', 'currency');
@@ -702,7 +694,6 @@ begin
     WriteStr('ValType', ConstTypeNames[ConstType]);
     s:='Value';
     case ConstType of
-      ctUnknown: ;
       ctInt:
         WriteInt(s, VInt);
       ctFloat:
@@ -1510,8 +1501,6 @@ begin
 end;
 
 procedure TPpuDef.WriteDef(Output: TPpuOutput);
-var
-  i: SizeInt;
 begin
   with Output do begin
     if FId <> InvalidId then
@@ -1532,17 +1521,6 @@ begin
     end;
     if Visibility <> dvPublic then
       WriteStr('Visibility', DefVisibilityNames[Visibility]);
-    if Length(Attrs) > 0 then begin
-      WriteArrayStart('Attributes');
-      for i:=0 to High(Attrs) do begin
-        WriteObjectStart('');
-        Attrs[i].TypeSym.Write(Output, 'TypeSym');
-        Attrs[i].TypeConstr.Write(Output, 'TypeConstr');
-        WriteInt('ParaCount', Attrs[i].ParaCount, False);
-        WriteObjectEnd('');
-      end;
-      WriteArrayEnd('Attributes');
-    end;
   end;
 end;
 

@@ -62,7 +62,8 @@ const
    fpc_in_leave             = 51; {macpas}
    fpc_in_cycle             = 52; {macpas}
    fpc_in_slice             = 53;
-   fpc_in_unaligned_x       = 54;
+   fpc_in_move_x            = 54;
+   fpc_in_fillchar_x        = 55;
    fpc_in_get_frame         = 56;
    fpc_in_get_caller_addr   = 57;
    fpc_in_get_caller_frame  = 58;
@@ -104,7 +105,6 @@ const
    fpc_in_neg_assign_x      = 94;
    fpc_in_not_assign_x      = 95;
    fpc_in_faraddr_x         = 97;
-   fpc_in_volatile_x        = 98;
 
 { Internal constant functions }
    fpc_in_const_sqr        = 100;
@@ -117,7 +117,6 @@ const
    fpc_in_hi_qword         = 107;
    fpc_in_const_swap_qword = 108;
    fpc_in_prefetch_var     = 109;
-   fpc_in_const_eh_return_data_regno = 110;
 
 { FPU functions }
    fpc_in_trunc_real       = 120;
@@ -154,5 +153,3 @@ const
    { SSE }
 
    fpc_in_cpu_first        = 10000;
-   fpc_in_x86_mm_first     = 11000;
-   

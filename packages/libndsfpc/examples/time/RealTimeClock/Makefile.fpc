@@ -4,7 +4,7 @@
 
 [target]
 loaders=
-programs=realtimeclock
+programs=RealTimeClock
 
 [require]
 packages=libndsfpc

@@ -47,7 +47,6 @@ unit nx86add;
         procedure second_addfloatsse;
         procedure second_addfloatavx;
       public
-        function pass_1 : tnode;override;
         function use_fma : boolean;override;
         procedure second_addfloat;override;
 {$ifndef i8086}
@@ -77,9 +76,8 @@ unit nx86add;
       symconst,symdef,
       cgobj,hlcgobj,cgx86,cga,cgutils,
       tgobj,ncgutil,
-      ncon,nset,ninl,ncnv,
-      defutil,
-      htypechk;
+      ncon,nset,ninl,
+      defutil;
 
 { Range check must be disabled explicitly as the code serves
   on three different architecture sizes }
@@ -95,9 +93,7 @@ unit nx86add;
         hl4   : tasmlabel;
         r     : Tregister;
         href  : treference;
-        overflowcheck: boolean;
       begin
-        overflowcheck:=needoverflowcheck;
         { at this point, left.location.loc should be LOC_REGISTER }
         if right.location.loc=LOC_REGISTER then
          begin
@@ -156,7 +152,7 @@ unit nx86add;
                  if (op=A_ADD) and
                     (right.location.loc=LOC_CONSTANT) and
                     (right.location.value=1) and
-                    not overflowcheck and
+                    not(cs_check_overflow in current_settings.localswitches) and
                     UseIncDec then
                   begin
                     emit_reg(A_INC,TCGSize2Opsize[opsize],left.location.register);
@@ -165,7 +161,7 @@ unit nx86add;
                  if (op=A_SUB) and
                     (right.location.loc=LOC_CONSTANT) and
                     (right.location.value=1) and
-                    overflowcheck and
+                    not(cs_check_overflow in current_settings.localswitches) and
                     UseIncDec then
                   begin
                     emit_reg(A_DEC,TCGSize2Opsize[opsize],left.location.register);
@@ -174,7 +170,7 @@ unit nx86add;
                  if (op=A_IMUL) and
                     (right.location.loc=LOC_CONSTANT) and
                     (ispowerof2(int64(right.location.value),power)) and
-                    overflowcheck then
+                    not(cs_check_overflow in current_settings.localswitches) then
                   begin
                     emit_const_reg(A_SHL,TCGSize2Opsize[opsize],power,left.location.register);
                   end
@@ -182,7 +178,7 @@ unit nx86add;
                     (right.location.loc=LOC_CONSTANT) and
                     (right.location.value>1) and (ispowerof2(int64(right.location.value)-1,power)) and
                     (power in [1..3]) and
-                    not overflowcheck then
+                    not(cs_check_overflow in current_settings.localswitches) then
                   begin
                     reference_reset_base(href,left.location.register,0,ctempposinvalid,0,[]);
                     href.index:=left.location.register;
@@ -213,7 +209,7 @@ unit nx86add;
         { is in unsigned VAR!!                                   }
         if mboverflow then
          begin
-           if overflowcheck then
+           if cs_check_overflow in current_settings.localswitches  then
             begin
               current_asmdata.getjumplabel(hl4);
               if unsigned then
@@ -247,8 +243,8 @@ unit nx86add;
               { maybe we can reuse a constant register when the
                 operation is a comparison that doesn't change the
                 value of the register }
-              hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,opdef,(nodetype in [ltn,lten,gtn,gten,equaln,unequaln]));
-              location:=left.location;
+                hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,opdef,(nodetype in [ltn,lten,gtn,gten,equaln,unequaln]));
+                location:=left.location;
             end
            else
             begin
@@ -680,8 +676,6 @@ unit nx86add;
                         op:=A_PADDSW;
                       mmxu16bit:
                         op:=A_PADDUSW;
-                      else
-                       ;
                    end;
                 end
               else
@@ -693,8 +687,6 @@ unit nx86add;
                         op:=A_PADDW;
                       mmxs32bit,mmxu32bit:
                         op:=A_PADDD;
-                      else
-                       ;
                    end;
                 end;
             end;
@@ -705,8 +697,6 @@ unit nx86add;
                     op:=A_PMULLW;
                   mmxfixed16:
                     op:=A_PMULHW;
-                  else
-                   ;
                end;
             end;
           subn :
@@ -722,8 +712,6 @@ unit nx86add;
                         op:=A_PSUBSB;
                       mmxu16bit:
                         op:=A_PSUBUSW;
-                      else
-                       ;
                    end;
                 end
               else
@@ -735,8 +723,6 @@ unit nx86add;
                         op:=A_PSUBW;
                       mmxs32bit,mmxu32bit:
                         op:=A_PSUBD;
-                      else
-                       ;
                    end;
                 end;
             end;
@@ -1109,7 +1095,7 @@ unit nx86add;
               mms_movescalar);
           end
         { we can use only right as left operand if the operation is commutative }
-        else if (right.location.loc in [LOC_MMREGISTER,LOC_CMMREGISTER]) and (op in [OP_ADD,OP_MUL]) then
+        else if (right.location.loc=LOC_MMREGISTER) and (op in [OP_ADD,OP_MUL]) then
           begin
             location.register:=cg.getmmregister(current_asmdata.CurrAsmList,left.location.size);
             { force floating point reg. location to be written to memory,
@@ -1145,21 +1131,6 @@ unit nx86add;
               location.register,
               mms_movescalar);
           end;
-      end;
-
-
-    function tx86addnode.pass_1: tnode;
-      begin
-        { on x86, we do not support fpu registers, so in case of operations using the x87, it
-          is normally useful, not to put the operands into registers which would be mm register }
-        if ((left.resultdef.typ=floatdef) or (right.resultdef.typ=floatdef)) and
-          (not(use_vectorfpu(left.resultdef)) and not(use_vectorfpu(right.resultdef)) and
-           not(use_vectorfpu(resultdef))) then
-          begin
-            make_not_regable(left,[ra_addr_regable]);
-            make_not_regable(right,[ra_addr_regable]);
-          end;
-        Result:=inherited pass_1;
       end;
 
 
@@ -1292,7 +1263,7 @@ unit nx86add;
         ops_rdiv: array[boolean] of TAsmOp = (A_FDIVRP,A_FDIVR);
       var
         op : TAsmOp;
-        refnode, hp: tnode;
+        refnode : tnode;
         hasref : boolean;
       begin
         if use_vectorfpu(resultdef) then
@@ -1302,22 +1273,6 @@ unit nx86add;
             else
               second_addfloatsse;
             exit;
-          end;
-
-        { can the operation do the conversion? }
-        if (left.nodetype=typeconvn) and (is_double(ttypeconvnode(left).left.resultdef) or is_single(ttypeconvnode(left).left.resultdef)) then
-          begin
-            hp:=left;
-            left:=ttypeconvnode(left).left;
-            ttypeconvnode(hp).left:=nil;
-            hp.Free;
-          end;
-        if (right.nodetype=typeconvn) and (is_double(ttypeconvnode(right).left.resultdef) or is_single(ttypeconvnode(right).left.resultdef)) then
-          begin
-            hp:=right;
-            right:=ttypeconvnode(right).left;
-            ttypeconvnode(hp).left:=nil;
-            hp.Free;
           end;
 
         pass_left_right;
@@ -1501,15 +1456,16 @@ unit nx86add;
 
        checkoverflow:=
          checkoverflow and
-         needoverflowcheck;
+          (left.resultdef.typ<>pointerdef) and
+          (right.resultdef.typ<>pointerdef) and
+          (cs_check_overflow in current_settings.localswitches);
 
        opsize:=def_cgsize(left.resultdef);
 
        pass_left_right;
 
-       { do have to allocate a register? If yes, then three opcode instructions are better, however for sub three op code instructions
-         make no sense if right is a reference }
-       if ((left.location.loc<>LOC_REGISTER) and (right.location.loc<>LOC_REGISTER) and ((nodetype<>subn) or not(right.location.loc in [LOC_REFERENCE,LOC_CREFERENCE]))) or
+       { do have to allocate a register? If yes, then three opcode instructions are better }
+       if ((left.location.loc<>LOC_REGISTER) and (right.location.loc<>LOC_REGISTER)) or
          ((nodetype=addn) and (left.location.loc in [LOC_REGISTER,LOC_CREGISTER,LOC_CONSTANT]) and (right.location.loc in [LOC_REGISTER,LOC_CREGISTER,LOC_CONSTANT])) then
          begin
            { allocate registers }
@@ -1553,11 +1509,18 @@ unit nx86add;
          end
        else
          begin
-           { at least one location should be a register, if yes, try to re-use it, so we can try two operand opcodes }
+           { at least one location is a register, re-use it, so we can try two operand opcodes }
            if left.location.loc<>LOC_REGISTER then
               begin
                 if right.location.loc<>LOC_REGISTER then
-                  hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,left.resultdef,false)
+                  begin
+    {                tmpreg:=cg.getintregister(current_asmdata.CurrAsmList,opsize);
+                    cg.a_load_loc_reg(current_asmdata.CurrAsmList,opsize,left.location,tmpreg);
+                    location_reset(left.location,LOC_REGISTER,opsize);
+                    left.location.register:=tmpreg;
+    }
+                    Internalerror(2018031102);
+                  end
                 else
                   begin
                     location_swap(left.location,right.location);

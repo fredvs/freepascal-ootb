@@ -1,5 +1,3 @@
-{ %skiptarget=android }
-
 program test;
 type
  extremelylongtypenamethatsomeguywantstocallitinspiteofyourpredilections=longword;

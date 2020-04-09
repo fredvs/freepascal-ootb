@@ -14,10 +14,6 @@
  **********************************************************************}
 unit WHTMLScn;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,
@@ -535,7 +531,7 @@ procedure THTMLLinkScanDocumentCollection.MoveAliasesToSynonym;
       end;
   end;
 begin
-  ForEach(TCallbackProcParam(@MoveAliases));
+  ForEach(@MoveAliases);
 end;
 
 constructor THTMLLinkScanner.Init(const ABaseDir: string);
@@ -838,7 +834,7 @@ procedure THTMLLinkScanFileCollection.CheckNameIDLists;
     end;
 
 begin
-  ForEach(TCallbackProcParam(@DoCheckNameList));
+  ForEach(@DoCheckNameList);
 end;
 
 
@@ -989,7 +985,7 @@ function THTMLFileLinkScanner.FindID(const AName : string) : PNameID;
 var
   D : PHTMLLinkScanFile;
 begin
-  D:=DocumentFiles^.FirstThat(TCallbackFunBoolParam(@ContainsNamedID));
+  D:=DocumentFiles^.FirstThat(@ContainsNamedID);
   if assigned(D) then
     FindID:=D^.FindID(AName)
   else

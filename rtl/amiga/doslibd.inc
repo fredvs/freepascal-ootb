@@ -22,7 +22,6 @@
   *********************************************************************
   * }
 
-{$PACKRECORDS 2}
 
 const
   DOSNAME = 'dos.library';
@@ -58,7 +57,7 @@ const
 
 type
   PDateStamp = ^TDateStamp;
-  TDateStamp = record
+  TDateStamp = packed record
     ds_Days  : LongInt;
     ds_Minute: LongInt;
     ds_Tick  : LongInt;
@@ -70,7 +69,7 @@ const
 
 type
   PFileInfoBlock = ^TFileInfoBlock;
-  TFileInfoBlock = record
+  TFileInfoBlock = packed record
     fib_DiskKey     : LongInt;
     fib_DirEntryType: LongInt;
     fib_FileName    : Array[0..107] Of Char;
@@ -133,7 +132,7 @@ type
 
 type
   PInfoData = ^TInfoData;
-  TInfoData = record
+  TInfoData = packed record
     id_NumSoftErrors: LongInt;
     id_UnitNumber   : LongInt;
     id_DiskState    : LongInt;
@@ -269,7 +268,7 @@ const
 type
   { * Required to avoid conflict with default types * }
   _PDateTime = ^_TDateTime;
-  _TDateTime = record
+  _TDateTime = packed record
     dat_Stamp  : TDateStamp;
     dat_Format : Byte;
     dat_Flags  : Byte;
@@ -304,7 +303,7 @@ const
 
 type
   PProcess = ^TProcess;
-  TProcess = record
+  TProcess = packed record
     pr_Task          : TTask;
     pr_MsgPort       : TMsgPort;
     pr_Pad           : Word;
@@ -355,7 +354,7 @@ const
 
 type
   PFileHandle = ^TFileHandle;
-  TFileHandle = record
+  TFileHandle = packed record
     fh_Flags      : DWord;
     fh_Interactive: LongInt;
     fh_Type       : PMsgPort;
@@ -374,7 +373,7 @@ type
 
 type
   PDOSPacket = ^TDOSPacket;
-  TDOSPacket = record
+  TDOSPacket = packed record
     dp_Link: PMessage;
     dp_Port: PMsgPort;
     case Byte of
@@ -398,7 +397,7 @@ type
 
 type
   PStandardPacket = ^TStandardPacket;
-  TStandardPacket = record
+  TStandardPacket = packed record
     sp_Msg: TMessage;
     sp_Pkt: TDOSPacket;
   end;
@@ -484,14 +483,14 @@ const
 
 type
   PErrorString = ^TErrorString;
-  TErrorString = record
+  TErrorString = packed record
     estr_Nums: Pointer; { ^LongInt }
     estr_Byte: Pointer; { ^Byte    }
   end;
 
 type
   PRootNode = ^TRootNode;
-  TRootNode = record
+  TRootNode = packed record
     rn_TaskArray         : DWord;      { BPTR }
     rn_ConsoleSegment    : DWord;      { BPTR }
     rn_Time              : TDateStamp;
@@ -506,7 +505,7 @@ type
 
 type
   PDOSLibrary = ^TDOSLibrary;
-  TDOSLibrary = record
+  TDOSLibrary = packed record
     dl_Lib          : TLibrary;
     dl_Root         : PRootNode;
     dl_GU           : Pointer;
@@ -530,7 +529,7 @@ const
 
 type
   PCliProcList = ^TCliProcList;
-  TCliProcList = record
+  TCliProcList = packed record
     cpl_Node : TMinNode;
     cpl_First: LongInt;
     cpl_Array: Array[0..0] Of PMsgPort;
@@ -538,7 +537,7 @@ type
 
 type
   PDOSInfo = ^TDOSInfo;
-  TDOSInfo = record
+  TDOSInfo = packed record
     case Byte of
     0 : ( di_ResList: DWord; { BPTR }
         );
@@ -555,7 +554,7 @@ type
 
 type
   PSegment = ^TSegment;
-  TSegment = record
+  TSegment = packed record
     seg_Next : DWord;   { BPTR }
     seg_UC   : LongInt;
     seg_Seg  : DWord;   { BPTR }
@@ -573,7 +572,7 @@ const
 
 type
   PCommandLineInterface = ^TCommandLineInterface;
-  TCommandLineInterface = record
+  TCommandLineInterface = packed record
     cli_Result2       : LongInt;
     cli_SetName       : DWord;   { BSTR }
     cli_CommandDir    : DWord;   { BPTR }
@@ -594,7 +593,7 @@ type
 
 type
   PDeviceList = ^TDeviceList;
-  TDeviceList = record
+  TDeviceList = packed record
     dl_Next      : DWord;      { BPTR }
     dl_Type      : LongInt;
     dl_Task      : PMsgPort;
@@ -608,7 +607,7 @@ type
 
 type
   PDevInfo = ^TDevInfo;
-  TDevInfo = record
+  TDevInfo = packed record
     dvi_Next     : DWord; { BPTR }
     dvi_Type     : LongInt;
     dvi_Task     : Pointer;
@@ -624,14 +623,14 @@ type
 
 type
   PAssignList = ^TAssignList;
-  TAssignList = record
+  TAssignList = packed record
     al_Next: PAssignList;
     al_Lock: DWord;       { BPTR }
   end;
 
 type
   PDOSList = ^TDOSList;
-  TDOSList = record
+  TDOSList = packed record
     dol_Next: DWord;    { BPTR }
     dol_Type: LongInt;
     dol_Task: PMsgPort;
@@ -674,7 +673,7 @@ const
 
 type
   PDevProc = ^TDevProc;
-  TDevProc = record
+  TDevProc = packed record
     dvp_Port   : PMsgPort;
     dvp_Lock   : DWord;    { BPTR }
     dvp_Flags  : DWord;
@@ -716,7 +715,7 @@ const
 
 type
   PFileLock = ^TFileLock;
-  TFileLock = record
+  TFileLock = packed record
     fl_Link  : DWord;   { BPTR }
     fl_Key   : LongInt;
     fl_Access: LongInt;
@@ -759,7 +758,7 @@ const
 
 type
   PAChain = ^TAChain;
-  TAChain = record
+  TAChain = packed record
     an_Child : PAChain;
     an_Parent: PAChain;
     an_Lock  : DWord;   { BPTR }
@@ -771,7 +770,7 @@ type
 
 type
   PAnchorPath = ^TAnchorPath;
-  TAnchorPath = record
+  TAnchorPath = packed record
     case Byte of
     0 : ( ap_First: PAChain;
           ap_Last : PAChain;
@@ -965,7 +964,7 @@ const
 
 type
   PExAllData = ^TExAllData;
-  TExAllData = record
+  TExAllData = packed record
     ed_Next    : PExAllData;
     ed_Name    : PChar;
     ed_Type    : LongInt;
@@ -981,7 +980,7 @@ type
 
 type
   PExAllControl = ^TExAllControl;
-  TexAllControl = record
+  TexAllControl = packed record
     eac_Entries    : Cardinal;
     eac_LastKey    : Cardinal;
     eac_MatchString: PChar;
@@ -1005,7 +1004,7 @@ const
 
 type
   PRecordLock = ^TRecordLock;
-  TRecordLock = record
+  TRecordLock = packed record
     rec_FH    : LongInt;
     rec_Offset: Cardinal;
     rec_Length: Cardinal;
@@ -1123,7 +1122,7 @@ const
 
 type
   PLocalVar = ^TLocalVar;
-  TLocalVar = record
+  TLocalVar = packed record
     lv_Node : TNode;
     lv_Flags: Word;
     lv_Value: PChar;
@@ -1163,7 +1162,7 @@ const
 
 type
   PCSource = ^TCSource;
-  TCSource = record
+  TCSource = packed record
     CS_Buffer: PChar;
     CS_Length: LongInt;
     CS_CurChr: LongInt;
@@ -1171,7 +1170,7 @@ type
 
 type
   PRDArgs = ^TRDArgs;
-  TRDArgs = record
+  TRDArgs = packed record
     RDA_Source : TCSource;
     RDA_DAList : LongInt;
     RDA_Buffer : PChar;
@@ -1204,7 +1203,7 @@ const
 
 type
   PDosEnvec = ^TDosEnvec;
-  TDosEnvec = record
+  TDosEnvec = packed record
     de_TableSize     : Cardinal;
     de_SizeBlock     : Cardinal;
     de_SecOrg        : Cardinal;
@@ -1254,7 +1253,7 @@ const
 
 type
   PFileSysStartupMsg = ^TFileSysStartupMsg;
-  TFileSysStartupMsg = record
+  TFileSysStartupMsg = packed record
     fssm_Unit   : Cardinal;
     fssm_Device : LongInt;
     fssm_Environ: LongInt;
@@ -1263,7 +1262,7 @@ type
 
 type
   PDeviceNode = ^TDeviceNode;
-  TDeviceNode = record
+  TDeviceNode = packed record
     dn_Next     : LongInt;
     dn_Type     : Cardinal;
     dn_Task     : PMsgPort;
@@ -1291,7 +1290,7 @@ const
 
 type
   PNotifyRequest = ^TNotifyRequest;
-  TNotifyRequest = record
+  TNotifyRequest = packed record
     nr_Name    : PChar;
     nr_FullName: PChar;
     nr_UserData: Cardinal;
@@ -1314,7 +1313,7 @@ type
 
 type
   PNotifyMessage = ^TNotifyMessage;
-  TNotifyMessage = record
+  TNotifyMessage = packed record
     nm_ExecMessage: TMessage;
     nm_Class      : Cardinal;
     nm_Code       : Word;
@@ -1356,7 +1355,7 @@ const
 
 type
   PSegSem = ^TSegSem;
-  TSegSem = record
+  TSegSem = packed record
     seg_Semaphore: TSignalSemaphore;
     seg_Find     : Procedure; { Name = seg_Find(REG(a0, ULONG Address), REG(a1, ULONG *SegNum), REG(a2, ULONG *Offset)) }
     seg_List     : TMinList;
@@ -1364,16 +1363,18 @@ type
 
 type
   PSegArray = ^TSegArray;
-  TSegArray = record
+  TSegArray = packed record
     seg_Address: Cardinal;
     seg_Size   : Cardinal;
   end;
 
 type
   PSegNode = ^TSegNode;
-  TSegNode = record
+  TSegNode = packed record
     seg_Node : TMinNode;
     seg_Name : PChar;
     seg_Array: Array[0..0] Of TSegArray;
   end;
+
+
 

@@ -1,4 +1,4 @@
-        {
+{
     Copyright (c) 1999-2009 by Mazen Neifer and David Zhang
 
     Contains the assembler object for the MIPSEL
@@ -558,8 +558,6 @@ procedure fixup_jmps(list: TAsmList);
                 internalerror(2008052101);
               inc(instrpos);
             end;
-          else
-            ;
         end;
         p := tai(p.next);
       end;
@@ -659,14 +657,10 @@ procedure fixup_jmps(list: TAsmList);
                               end;
                           end;
                       end;
-                  else
-                    ;
                 end;
               end;
             ait_const:
               inc(instrpos);
-            else
-              ;
           end;
           p := tai(p.next);
         end;

@@ -81,8 +81,9 @@ end;
 
 procedure TLinkerAtari.SetDefaultInfo;
 begin
-  if target_info.system = system_m68k_Atari then
-    SetAtariInfo;
+  case (target_info.system) of
+    system_m68k_Atari:      SetAtariInfo;
+  end;
 end;
 
 

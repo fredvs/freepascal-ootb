@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Description:='Free Pascal Make Tool';
     P.Author := 'Peter Vreman';
     P.License := 'LGPL with modification, ';

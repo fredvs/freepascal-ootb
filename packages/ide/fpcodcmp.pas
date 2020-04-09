@@ -16,10 +16,6 @@
 
 unit FPCodCmp; { CodeComplete }
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,Drivers,Dialogs,
@@ -273,7 +269,7 @@ begin
       New(UnitsCodeCompleteWords, Init(10,10));
       level:=0;
       Overflow:=false;
-      BrowCol.Modules^.ForEach(TCallbackProcParam(@InsertInS));
+      BrowCol.Modules^.ForEach(@InsertInS);
       { if Overflow then
         WarningBox(msg_toomanysymbolscantdisplayall,nil); }
     end;

@@ -1,4 +1,3 @@
-{ %OPT=-CE }
 { %target=linux,haiku }
 
 { Source provided for Free Pascal Bug Report 3161 }

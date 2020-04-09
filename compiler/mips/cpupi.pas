@@ -43,7 +43,6 @@ interface
       register_used : tparasupregsused;
       computed_local_size : longint;
       save_gp_ref: treference;
-      setnoat : boolean;
       //intparareg,
       //parasize : longint;
       constructor create(aparent:tprocinfo);override;

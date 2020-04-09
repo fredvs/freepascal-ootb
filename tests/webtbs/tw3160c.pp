@@ -1,4 +1,3 @@
-{ %OPT=-CE }
 { %RESULT=207 }
 { Source provided for Free Pascal Bug Report 3160 }
 { Submitted by "Michalis Kamburelis" on  2004-06-12 }

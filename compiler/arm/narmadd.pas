@@ -161,7 +161,7 @@ interface
 
     function tarmaddnode.use_fma : boolean;
       begin
-       Result:=FPUARM_HAS_FMA in fpu_capabilities[current_settings.fputype];
+       Result:=current_settings.fputype in [fpu_vfpv4];
       end;
 
 
@@ -205,10 +205,10 @@ interface
                  location.register,left.location.register,right.location.register),
                  cgsize2fpuoppostfix[def_cgsize(resultdef)]));
             end;
-          fpu_soft:
-            { this case should be handled already by pass1 }
-            internalerror(200308252);
-          else if FPUARM_HAS_VFP_DOUBLE in fpu_capabilities[current_settings.fputype] then
+          fpu_vfpv2,
+          fpu_vfpv3,
+          fpu_vfpv4,
+          fpu_vfpv3_d16:
             begin
               { force mmreg as location, left right doesn't matter
                 as both will be in a fpureg }
@@ -238,9 +238,8 @@ interface
 
               current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg_reg(op,
                  location.register,left.location.register,right.location.register),pf));
-              cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
-            end
-          else if FPUARM_HAS_VFP_SINGLE_ONLY in fpu_capabilities[current_settings.fputype] then
+            end;
+          fpu_fpv4_s16:
             begin
               { force mmreg as location, left right doesn't matter
                 as both will be in a fpureg }
@@ -264,8 +263,10 @@ interface
               end;
 
               current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg_reg(op, location.register,left.location.register,right.location.register), PF_F32));
-              cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
-            end
+            end;
+          fpu_soft:
+            { this case should be handled already by pass1 }
+            internalerror(200308252);
           else
             internalerror(200308251);
         end;
@@ -304,7 +305,10 @@ interface
                    left.location.register,right.location.register),
                    cgsize2fpuoppostfix[def_cgsize(resultdef)]));
             end;
-          else if FPUARM_HAS_VFP_DOUBLE in fpu_capabilities[current_settings.fputype] then
+          fpu_vfpv2,
+          fpu_vfpv3,
+          fpu_vfpv4,
+          fpu_vfpv3_d16:
             begin
               hlcg.location_force_mmregscalar(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
               hlcg.location_force_mmregscalar(current_asmdata.CurrAsmList,right.location,right.resultdef,true);
@@ -321,12 +325,11 @@ interface
 
               current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg(op,
                 left.location.register,right.location.register), pf));
-              cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
               cg.a_reg_alloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
               current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(A_VMRS,NR_APSR_nzcv,NR_FPSCR));
               location.resflags:=GetFpuResFlags;
-            end
-          else if FPUARM_HAS_VFP_SINGLE_ONLY in fpu_capabilities[current_settings.fputype] then
+            end;
+          fpu_fpv4_s16:
             begin
               hlcg.location_force_mmregscalar(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
               hlcg.location_force_mmregscalar(current_asmdata.CurrAsmList,right.location,right.resultdef,true);
@@ -338,11 +341,10 @@ interface
 
               current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg(op,
                 left.location.register,right.location.register),PF_F32));
-              cg.maybe_check_for_fpu_exception(current_asmdata.CurrAsmList);
               cg.a_reg_alloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
               current_asmdata.CurrAsmList.Concat(taicpu.op_reg_reg(A_VMRS, NR_APSR_nzcv, NR_FPSCR));
-            end
-          else
+            end;
+          fpu_soft:
             { this case should be handled already by pass1 }
             internalerror(2009112404);
         end;
@@ -515,8 +517,6 @@ interface
                         cg.a_reg_dealloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
                         nodetype:=oldnodetype;
                      end;
-                   else
-                     ;
                 end;
                 cg.a_reg_alloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
                 current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(A_CMP,left.location.register64.reglo,right.location.register64.reglo));
@@ -586,7 +586,7 @@ interface
         result := nil;
         notnode := false;
 
-        if FPUARM_HAS_VFP_SINGLE_ONLY in fpu_capabilities[current_settings.fputype] then
+        if current_settings.fputype = fpu_fpv4_s16 then
           begin
             case tfloatdef(left.resultdef).floattype of
               s32real:
@@ -647,8 +647,6 @@ interface
                   if notnode then
                     result:=cnotnode.create(result);
                 end;
-              else
-                internalerror(2019050933);
             end;
           end
         else
@@ -722,7 +720,7 @@ interface
       begin
         result:=GenerateThumbCode or
           not(CPUARM_HAS_UMULL in cpu_capabilities[current_settings.cputype]) or
-          needoverflowcheck;
+          (cs_check_overflow in current_settings.localswitches);
       end;
 
 begin

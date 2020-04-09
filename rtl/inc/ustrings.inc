@@ -1835,7 +1835,6 @@ end;
                 //One character US-ASCII, convert it to unicode
                 if IBYTE = 10 then
                   begin
-(*
                     If (PreChar<>13) and FALSE then
                       begin
                         //Expand to crlf, conform UTF-8.
@@ -1856,7 +1855,6 @@ end;
                           end;
                       end
                     else
-*)
                       begin
                         Dest[OutputUnicode]:=WideChar(IBYTE);
                         inc(OutputUnicode);
@@ -1980,7 +1978,6 @@ end;
                 //One character US-ASCII, convert it to unicode
                 if IBYTE = 10 then
                   begin
-(*
                     if (PreChar<>13) and FALSE then
                       begin
                         //Expand to crlf, conform UTF-8.
@@ -1990,7 +1987,6 @@ end;
                         PreChar:=10;
                       end
                     else
-*)
                       begin
                         inc(OutputUnicode);
                         PreChar:=IBYTE;
@@ -2149,7 +2145,6 @@ function Utf8ToAnsi(const s : RawByteString) : RawByteString;{$ifdef SYSTEMINLIN
   end;
 
 
-{$ifdef FPC_HAS_FEATURE_DYNARRAYS}
 procedure UCS4Encode(p: PWideChar; len: sizeint; out res: UCS4String);
   var
     i, reslen: sizeint;
@@ -2247,7 +2242,7 @@ function UCS4StringToUnicodeString(const s : UCS4String) : UnicodeString;
   begin
     reslen:=0;
     for i:=0 to length(s)-2 do     { skip terminating #0 }
-      Inc(reslen,1+ord((s[i]>$ffff) and (cardinal(s[i])<=$10ffff)));
+      Inc(reslen,1+ord((s[i]>$ffff) and (s[i]<=$10ffff)));
     SetLength(result,reslen);
     UCS4Decode(s,pointer(result));
   end;
@@ -2260,12 +2255,11 @@ function UCS4StringToWideString(const s : UCS4String) : WideString;
   begin
     reslen:=0;
     for i:=0 to length(s)-2 do     { skip terminating #0 }
-      Inc(reslen,1+ord((s[i]>$ffff) and (cardinal(s[i])<=$10ffff)));
+      Inc(reslen,1+ord((s[i]>$ffff) and (s[i]<=$10ffff)));
     SetLength(result,reslen);
     UCS4Decode(s,pointer(result));
   end;
 {$endif FPC_HAS_UCS4STRING_TO_WIDESTR}
-{$endif FPC_HAS_FEATURE_DYNARRAYS}
 
 
 {$ifndef FPC_HAS_BUILTIN_WIDESTR_MANAGER}
@@ -2315,7 +2309,6 @@ function StringCodePage(const S: UnicodeString): TSystemCodePage; overload;
   end;
 
 
-{$push}
 {$warnings off}
 function StubUnicodeCase(const s : UnicodeString) : UnicodeString;
   begin
@@ -2336,7 +2329,7 @@ function StubCompareWideString(const s1, s2 : WideString; Options : TCompareOpti
   begin
     unimplementedunicodestring;
   end;
-{$pop}
+{$warnings on}
 
 procedure initunicodestringmanager;
   begin

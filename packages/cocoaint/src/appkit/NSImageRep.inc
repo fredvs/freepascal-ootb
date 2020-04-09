@@ -16,16 +16,16 @@ const
 type
   NSImageRep = objcclass external (NSObject, NSCopyingProtocol, NSCodingProtocol)
   private
-    _repFlags: bitpacked record
+    __repFlags: bitpacked record
       case byte of
-        0: (_anonBitField__repFlags0: cuint);
+        0: (_anonBitField___repFlags0: cuint);
         1: (
           hasAlpha: 0..1;
           isOpaque: 0..1;
-          cacheParamsComputed: 0..1 deprecated;
-          cacheAlphaComputed: 0..1 deprecated;
+          cacheParamsComputed: cuint;
+          cacheAlphaComputed: cuint;
           loadState: 0..((1 shl 2)-1);
-          keepCacheWindow: 0..1 deprecated;
+          keepCacheWindow: cuint;
           reserved: 0..1;
           bitsPerSample: 0..((1 shl 8)-1);
           gsaved: 0..((1 shl 16)-1);

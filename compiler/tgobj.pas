@@ -64,7 +64,6 @@ unit tgobj;
           procedure alloctemp(list: TAsmList; size: asizeint; alignment: shortint; temptype: ttemptype; def: tdef; fini: boolean; out ref: treference); virtual;
           procedure freetemp(list: TAsmList; pos: treftemppos; temptypes: ttemptypeset);virtual;
           procedure gettempinternal(list: TAsmList; size: asizeint; alignment: shortint; temptype: ttemptype; def: tdef; fini: boolean; out ref : treference);
-          procedure freetemphook(list: TAsmList; temp: ptemprecord); virtual;
        public
           { contains all temps }
           templist      : ptemprecord;
@@ -184,7 +183,7 @@ implementation
        tempfreelist:=nil;
        templist:=nil;
        { we could create a new child class for this but I don't if it is worth the effort (FK) }
-{$if defined(powerpc) or defined(powerpc64) or defined(avr) or defined(jvm) or defined(aarch64) or defined(xtensa)}
+{$if defined(powerpc) or defined(powerpc64) or defined(avr) or defined(jvm) or defined(aarch64)}
        direction:=1;
 {$else}
        direction:=-1;
@@ -503,7 +502,7 @@ implementation
 {$endif}
                   exit;
                 end;
-               freetemphook(list,hp);
+               list.concat(tai_tempalloc.dealloc(hp^.pos,hp^.size));
                { set this block to free }
                hp^.temptype:=Used2Free[hp^.temptype];
                { Update tempfreelist }
@@ -574,6 +573,7 @@ implementation
       end;
 
 
+
     procedure ttgobj.gettemp(list: TAsmList; size: asizeint; alignment: shortint; temptype: ttemptype; out ref : treference);
       begin
         gettempinternal(list,size,alignment,temptype,nil,false,ref);
@@ -586,12 +586,6 @@ implementation
       begin
         varalign:=used_align(alignment,current_settings.alignment.localalignmin,current_settings.alignment.localalignmax);
         alloctemp(list,size,varalign,temptype,def,fini,ref);
-      end;
-
-
-    procedure ttgobj.freetemphook(list: TAsmList; temp: ptemprecord);
-      begin
-        list.concat(tai_tempalloc.dealloc(temp^.pos,temp^.size));
       end;
 
 

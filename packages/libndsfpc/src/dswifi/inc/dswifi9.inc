@@ -1,5 +1,5 @@
 (*
-  $Id$
+  $Id: dswifi9.inc 28299 2014-08-02 15:23:51Z Legolas $
   ------------------------------------------------------------------------------
   DSWifi Project - Arm9 Library Header File (dswifi9.h)
   (C) 2005-2006 Stephen Stair - sgstair@akkit.org - http://www.akkit.org
@@ -51,8 +51,8 @@
 const
   WIFIINIT_OPTION_USELED          = $0002;
 
-  WIFIINIT_OPTION_USEHEAP_64      = $0000;
-  WIFIINIT_OPTION_USEHEAP_128     = $1000;
+  WIFIINIT_OPTION_USEHEAP_128     = $0000;
+  WIFIINIT_OPTION_USEHEAP_64      = $1000;
   WIFIINIT_OPTION_USEHEAP_256     = $2000;
   WIFIINIT_OPTION_USEHEAP_512     = $3000;
   WIFIINIT_OPTION_USECUSTOMALLOC  = $4000;

@@ -211,10 +211,7 @@ type
     ver_3_0_3,
     ver_3_0_4,
     ver_3_0_5,
-    ver_3_1_1,
-    ver_3_2_0,
-    ver_3_2_1,
-    ver_3_3_1);
+    ver_3_1_1);
 
 const
   ver_trunk = high (known_versions);

@@ -36,6 +36,6 @@ begin
 {$endif}
     halt(1);
   if GetSetProp(C, 'St')<>'ckNormal,ckVip' then
-    halt(2);
+    halt(1);
   writeln('ok');
 end.

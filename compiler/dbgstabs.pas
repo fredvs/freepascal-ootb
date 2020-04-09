@@ -158,8 +158,7 @@ implementation
       defutil, cgutils, parabase,
       cpuinfo,cpubase,cpupi,paramgr,
       aasmbase,procinfo,
-      finput,fmodule,ppu,
-      symutil;
+      finput,fmodule,ppu;
 
 
     const
@@ -429,7 +428,8 @@ implementation
         if (tsym(p).visibility=vis_hidden) then
           exit;
         { static variables from objects are like global objects }
-        if is_normal_fieldvarsym(Tsym(p)) then
+        if (Tsym(p).typ=fieldvarsym) and
+           not(sp_static in Tsym(p).symoptions) then
           begin
            case tsym(p).visibility of
              vis_private,
@@ -516,10 +516,6 @@ implementation
                         argnames:=argnames+'3out';
                       vs_constref :
                         argnames:=argnames+'8constref';
-                      vs_value :
-                        ;
-                      vs_final:
-                        internalerror(2019050911);
                     end;
                   end
                 else
@@ -557,7 +553,8 @@ implementation
 
     procedure TDebugInfoStabs.field_write_defs(p:TObject;arg:pointer);
       begin
-        if is_normal_fieldvarsym(Tsym(p)) then
+        if (Tsym(p).typ=fieldvarsym) and
+           not(sp_static in Tsym(p).symoptions) then
           appenddef(TAsmList(arg),tfieldvarsym(p).vardef);
       end;
 
@@ -1082,8 +1079,6 @@ implementation
                         def.dbg_state:=dbg_state_queued;
                         break;
                       end;
-                    else
-                      ;
                   end;
                 end;
               appenddef(list,vmtarraytype);
@@ -1111,8 +1106,6 @@ implementation
                       appenddef(list,TImplementedInterface(anc.ImplementedInterfaces[i]).IntfDef);
                 end;
             end;
-          else
-            ;
         end;
       end;
 
@@ -1641,7 +1634,7 @@ implementation
         ss:='';
         if not assigned(sym.typedef) then
           internalerror(200509262);
-        if use_tag_prefix(sym.typedef) then
+        if sym.typedef.typ in tagtypes then
           stabchar:=tagtypeprefix
         else
           stabchar:='t';
@@ -1686,7 +1679,7 @@ implementation
 
         { include symbol that will be referenced from the main to be sure to
           include this debuginfo .o file }
-        include(current_module.moduleflags,mf_has_stabs_debuginfo);
+        current_module.flags:=current_module.flags or uf_has_stabs_debuginfo;
         if not(target_info.system in systems_darwin) then
           begin
             new_section(current_asmdata.asmlists[al_stabs],sec_data,GetSymTableName(current_module.localsymtable),sizeof(pint));
@@ -1767,8 +1760,6 @@ implementation
                 currfuncname:=tai_function_name(hp).funcname;
               ait_force_line :
                 lastfileinfo.line:=-1;
-              else
-                ;
             end;
 
             if (currsectype=sec_code) and
@@ -1876,7 +1867,7 @@ implementation
         hp:=tmodule(loaded_units.first);
         while assigned(hp) do
           begin
-            If (mf_has_stabs_debuginfo in hp.moduleflags) and not assigned(hp.package) then
+            If ((hp.flags and uf_has_stabs_debuginfo)=uf_has_stabs_debuginfo) and not assigned(hp.package) then
               begin
                 list.concat(Tai_const.Createname(make_mangledname('DEBUGINFO',hp.localsymtable,''),0));
                 list.concat(Tai_const.Createname(make_mangledname('DEBUGSTART',hp.localsymtable,''),0));

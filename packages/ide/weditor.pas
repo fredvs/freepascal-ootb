@@ -15,10 +15,6 @@
 {$I globdir.inc}
 unit WEditor;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 {tes}
 uses
@@ -1425,7 +1421,7 @@ begin
 end;
 begin
   Count:=LineCount_;
-  if assigned(Childs) then Childs^.ForEach(TCallbackProcParam(@AddIt));
+  if assigned(Childs) then Childs^.ForEach(@AddIt);
   GetLineCount:=Count;
 end;
 
@@ -1596,7 +1592,7 @@ begin
   SearchEditor:=P^.Editor=AEditor;
 end;
 begin
-  SearchBinding:=Bindings^.FirstThat(TCallbackFunBoolParam(@SearchEditor));
+  SearchBinding:=Bindings^.FirstThat(@SearchEditor);
 end;
 
 function TCustomCodeEditorCore.CanDispose: boolean;
@@ -1648,7 +1644,7 @@ begin
   IsClip:=(P^.Editor=Clipboard);
 end;
 begin
-  IsClipBoard:=Bindings^.FirstThat(TCallbackFunBoolParam(@IsClip))<>nil;
+  IsClipBoard:=Bindings^.FirstThat(@IsClip)<>nil;
 end;
 
 function TCustomCodeEditorCore.GetTabSize: integer;
@@ -1720,7 +1716,7 @@ begin
   P^.Editor^.BindingsChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 procedure TCustomCodeEditorCore.DoLimitsChanged;
@@ -1729,7 +1725,7 @@ begin
   P^.Editor^.DoLimitsChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 procedure TCustomCodeEditorCore.DoContentsChanged;
@@ -1738,7 +1734,7 @@ begin
   P^.Editor^.ContentsChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 procedure TCustomCodeEditorCore.DoModifiedChanged;
@@ -1747,7 +1743,7 @@ begin
   P^.Editor^.ModifiedChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 procedure TCustomCodeEditorCore.DoTabSizeChanged;
@@ -1756,7 +1752,7 @@ begin
   P^.Editor^.TabSizeChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 procedure TCustomCodeEditorCore.UpdateUndoRedo(cm : word; action : byte);
@@ -1774,7 +1770,7 @@ begin
     end;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 
@@ -1784,7 +1780,7 @@ begin
   P^.Editor^.StoreUndoChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 procedure   TCustomCodeEditorCore.DoSyntaxStateChanged;
 procedure CallIt(P: PEditorBinding);
@@ -1792,7 +1788,7 @@ begin
   P^.Editor^.SyntaxStateChanged;
 end;
 begin
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
 end;
 
 function TCustomCodeEditorCore.GetLastVisibleLine : sw_integer;
@@ -1805,7 +1801,7 @@ begin
 end;
 begin
   y:=0;
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
   GetLastVisibleLine:=y;
 end;
 
@@ -2054,7 +2050,7 @@ begin
 end;
 begin
   MinLine:=-1;
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
   UpdateAttrs:=MinLine;
 end;
 
@@ -2068,7 +2064,7 @@ begin
 end;
 begin
   MinLine:=-1;
-  Bindings^.ForEach(TCallbackProcParam(@CallIt));
+  Bindings^.ForEach(@CallIt);
   UpdateAttrsRange:=MinLine;
 end;
 

@@ -40,7 +40,7 @@ interface
       TLinkerInfo=record
         ExeCmd,
         DllCmd,
-        ExtDbgCmd     : array[1..3] of ansistring;
+        ExtDbgCmd     : array[1..3] of string;
         ResName       : string[100];
         ScriptName    : string[100];
         ExtraOptions  : TCmdStr;
@@ -55,8 +55,7 @@ interface
          ObjectFiles,
          SharedLibFiles,
          StaticLibFiles,
-         FrameworkFiles,
-         OrderedSymbols: TCmdStrList;
+         FrameworkFiles  : TCmdStrList;
          Constructor Create;virtual;
          Destructor Destroy;override;
          procedure AddModuleFiles(hp:tmodule);
@@ -66,7 +65,6 @@ interface
          Procedure AddStaticCLibrary(const S : TCmdStr);
          Procedure AddSharedCLibrary(S : TCmdStr);
          Procedure AddFramework(S : TCmdStr);
-         Procedure AddOrderedSymbol(const s: TCmdStr);
          procedure AddImportSymbol(const libname,symname,symmangledname:TCmdStr;OrdNr: longint;isvar:boolean);virtual;
          Procedure InitSysInitUnitName;virtual;
          Function  MakeExecutable:boolean;virtual;
@@ -78,8 +76,6 @@ interface
        end;
 
       TExternalLinker = class(TLinker)
-      protected
-         Function WriteSymbolOrderFile: TCmdStr;
       public
          Info : TLinkerInfo;
          Constructor Create;override;
@@ -89,8 +85,6 @@ interface
          Function  DoExec(const command:TCmdStr; para:TCmdStr;showinfo,useshell:boolean):boolean;
          procedure SetDefaultInfo;virtual;
          Function  MakeStaticLibrary:boolean;override;
-
-         Function UniqueName(const str:TCmdStr): TCmdStr;
        end;
 
       TBooleanArray = array [1..1024] of boolean;
@@ -359,7 +353,6 @@ Implementation
         SharedLibFiles:=TCmdStrList.Create_no_double;
         StaticLibFiles:=TCmdStrList.Create_no_double;
         FrameworkFiles:=TCmdStrList.Create_no_double;
-        OrderedSymbols:=TCmdStrList.Create;
       end;
 
 
@@ -369,8 +362,6 @@ Implementation
         SharedLibFiles.Free;
         StaticLibFiles.Free;
         FrameworkFiles.Free;
-        OrderedSymbols.Free;
-        inherited;
       end;
 
 
@@ -383,81 +374,71 @@ Implementation
       begin
         with hp do
          begin
-           if mf_has_resourcefiles in moduleflags then
+           if (flags and uf_has_resourcefiles)<>0 then
              HasResources:=true;
-           if mf_has_exports in moduleflags then
+           if (flags and uf_has_exports)<>0 then
              HasExports:=true;
          { link unit files }
-           if (headerflags and uf_no_link)=0 then
+           if (flags and uf_no_link)=0 then
             begin
               { create mask which unit files need linking }
               mask:=link_always;
-              { lto linking ?}
-              if (cs_lto in current_settings.moduleswitches) and
-                 ((headerflags and uf_lto_linked)<>0) and
-                 (not(cs_lto_nosystem in init_settings.globalswitches) or
-                  (hp.modulename^<>'SYSTEM')) then
-                begin
-                  mask:=mask or link_lto;
-                end
-              else
-                begin
-                  { static linking ? }
-                  if (cs_link_static in current_settings.globalswitches) then
-                   begin
-                     if (headerflags and uf_static_linked)=0 then
-                      begin
-                        { if static not avail then try smart linking }
-                        if (headerflags and uf_smart_linked)<>0 then
-                         begin
-                           Message1(exec_t_unit_not_static_linkable_switch_to_smart,modulename^);
-                           mask:=mask or link_smart;
-                         end
-                        else
-                         Message1(exec_e_unit_not_smart_or_static_linkable,modulename^);
-                      end
-                     else
+              { static linking ? }
+              if (cs_link_static in current_settings.globalswitches) then
+               begin
+                 if (flags and uf_static_linked)=0 then
+                  begin
+                    { if smart not avail then try static linking }
+                    if (flags and uf_smart_linked)<>0 then
+                     begin
+                       Message1(exec_t_unit_not_static_linkable_switch_to_smart,modulename^);
+                       mask:=mask or link_smart;
+                     end
+                    else
+                     Message1(exec_e_unit_not_smart_or_static_linkable,modulename^);
+                  end
+                 else
+                   mask:=mask or link_static;
+               end;
+              { smart linking ? }
+
+              if (cs_link_smart in current_settings.globalswitches) then
+               begin
+                 if (flags and uf_smart_linked)=0 then
+                  begin
+                    { if smart not avail then try static linking }
+                    if (flags and uf_static_linked)<>0 then
+                     begin
+                       { if not create_smartlink_library, then smart linking happens using the
+                         regular object files
+                       }
+                       if create_smartlink_library then
+                         Message1(exec_t_unit_not_smart_linkable_switch_to_static,modulename^);
                        mask:=mask or link_static;
-                   end;
-                  { smart linking ? }
-                  if (cs_link_smart in current_settings.globalswitches) then
-                   begin
-                     if (headerflags and uf_smart_linked)=0 then
-                      begin
-                        { if smart not avail then try static linking }
-                        if (headerflags and uf_static_linked)<>0 then
-                         begin
-                           { if not create_smartlink_library, then smart linking happens using the
-                             regular object files
-                           }
-                           if create_smartlink_library then
-                             Message1(exec_t_unit_not_smart_linkable_switch_to_static,modulename^);
-                           mask:=mask or link_static;
-                         end
-                        else
-                         Message1(exec_e_unit_not_smart_or_static_linkable,modulename^);
-                      end
-                     else
-                      mask:=mask or link_smart;
-                   end;
-                  { shared linking }
-                  if (cs_link_shared in current_settings.globalswitches) then
-                   begin
-                     if (headerflags and uf_shared_linked)=0 then
-                      begin
-                        { if shared not avail then try static linking }
-                        if (headerflags and uf_static_linked)<>0 then
-                         begin
-                           Message1(exec_t_unit_not_shared_linkable_switch_to_static,modulename^);
-                           mask:=mask or link_static;
-                         end
-                        else
-                         Message1(exec_e_unit_not_shared_or_static_linkable,modulename^);
-                      end
-                     else
-                      mask:=mask or link_shared;
-                   end;
-                end;
+                     end
+                    else
+                     Message1(exec_e_unit_not_smart_or_static_linkable,modulename^);
+                  end
+                 else
+                  mask:=mask or link_smart;
+               end;
+              { shared linking }
+              if (cs_link_shared in current_settings.globalswitches) then
+               begin
+                 if (flags and uf_shared_linked)=0 then
+                  begin
+                    { if shared not avail then try static linking }
+                    if (flags and uf_static_linked)<>0 then
+                     begin
+                       Message1(exec_t_unit_not_shared_linkable_switch_to_static,modulename^);
+                       mask:=mask or link_static;
+                     end
+                    else
+                     Message1(exec_e_unit_not_shared_or_static_linkable,modulename^);
+                  end
+                 else
+                  mask:=mask or link_shared;
+               end;
               { unit files }
               while not linkunitofiles.empty do
                 AddObject(linkunitofiles.getusemask(mask),path,true);
@@ -487,8 +468,6 @@ Implementation
                      ImportSymbol.MangledName,ImportSymbol.OrdNr,ImportSymbol.IsVar);
                  end;
              end;
-           { ordered symbols }
-           OrderedSymbols.concatList(linkorderedsymbols);
          end;
       end;
 
@@ -500,7 +479,7 @@ Implementation
 
     Procedure TLinker.AddObject(const S,unitpath : TPathStr;isunit:boolean);
       begin
-        ObjectFiles.Concat(FindObjectFile(s,unitpath,isunit))
+        ObjectFiles.Concat(FindObjectFile(s,unitpath,isunit));
       end;
 
 
@@ -554,12 +533,6 @@ Implementation
           exit;
         { ready to be added }
         FrameworkFiles.Concat(S);
-      end;
-
-
-    procedure TLinker.AddOrderedSymbol(const s: TCmdStr);
-      begin
-        OrderedSymbols.Concat(s);
       end;
 
 
@@ -646,30 +619,6 @@ Implementation
                               TEXTERNALLINKER
 *****************************************************************************}
 
-    Function TExternalLinker.WriteSymbolOrderFile: TCmdStr;
-      var
-        item: TCmdStrListItem;
-        symfile: TScript;
-      begin
-        result:='';
-        { only for darwin for now; can also enable for other platforms when using
-          the LLVM linker }
-        if (OrderedSymbols.Empty) or
-           not(tf_supports_symbolorderfile in target_info.flags) then
-          exit;
-        symfile:=TScript.Create(outputexedir+'symbol_order.fpc');
-        item:=TCmdStrListItem(OrderedSymbols.First);
-        while assigned(item) do
-          begin
-            symfile.add(item.str);
-            item:=TCmdStrListItem(item.next);
-          end;
-        symfile.WriteToDisk;
-        result:=symfile.fn;
-        symfile.Free;
-      end;
-
-
     Constructor TExternalLinker.Create;
       begin
         inherited Create;
@@ -682,8 +631,8 @@ Implementation
           end
         else
           begin
-            Info.ResName:=UniqueName('link')+'.res';
-            Info.ScriptName:=UniqueName('script')+'.res';
+            Info.ResName:='link.res';
+            Info.ScriptName:='script.res';
           end;
         { set the linker specific defaults }
         SetDefaultInfo;
@@ -959,18 +908,6 @@ Implementation
             AsmRes.AddDeleteDirCommand(smartpath);
           end;
         MakeStaticLibrary:=success;
-      end;
-
-    function TExternalLinker.UniqueName(const str: TCmdStr): TCmdStr;
-      const
-        pid: SizeUInt = 0;
-      begin
-        if pid=0 then
-          pid:=GetProcessID;
-        if pid>0 then
-          result:=str+tostr(pid)
-        else
-          result:=str;
       end;
 
 

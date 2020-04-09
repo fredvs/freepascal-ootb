@@ -29,11 +29,7 @@ var
 begin
   hdl := loadlibrary(libname);
   if (hdl=nilhandle) then
-    begin
-      writeln(GetLoadErrorStr);
-      halt(1);
-    end;
+    halt(1);
   if not UnloadLibrary(hdl) then
-    halt(2);
-  writeln('ok');
+    halt(2);;
 end.

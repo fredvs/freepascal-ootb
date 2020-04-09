@@ -25,9 +25,6 @@ interface
 {$define FPC_HAS_FEATURE_FILEIO}
 {$define FPC_HAS_FEATURE_THREADING}
 
-{$define CPUARM_HAS_UMULL} 
-{$define CPUARM_HAS_CLZ}
-
 {$i systemh.inc}
 {$i ndsbiosh.inc}
 {$i ndsh.inc}

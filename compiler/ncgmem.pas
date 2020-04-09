@@ -306,7 +306,7 @@ implementation
               internalerror(2012010601);
             pd:=tprocdef(tprocsym(sym).ProcdefList[0]);
             paraloc1.init;
-            paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
+            paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
             hlcg.a_loadaddr_ref_cgpara(current_asmdata.CurrAsmList,left.resultdef,location.reference,paraloc1);
             paramanager.freecgpara(current_asmdata.CurrAsmList,paraloc1);
             paraloc1.done;
@@ -399,7 +399,7 @@ implementation
                        (sym.typ<>procsym) then
                       internalerror(2012010602);
                     pd:=tprocdef(tprocsym(sym).ProcdefList[0]);
-                    paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
+                    paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
                     hlcg.a_loadaddr_ref_cgpara(current_asmdata.CurrAsmList,left.resultdef,location.reference,paraloc1);
                     paramanager.freecgpara(current_asmdata.CurrAsmList,paraloc1);
                     hlcg.allocallcpuregisters(current_asmdata.CurrAsmList);
@@ -768,8 +768,8 @@ implementation
          if is_dynamic_array(left.resultdef) then
             begin
                pd:=search_system_proc('fpc_dynarray_rangecheck');
-               paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
-               paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,2,paraloc2);
+               paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
+               paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,2,paraloc2);
                if pd.is_pushleftright then
                  begin
                    hlcg.a_load_loc_cgpara(current_asmdata.CurrAsmList,left.resultdef,left.location,paraloc1);
@@ -808,8 +808,8 @@ implementation
             begin
               helpername:='fpc_'+tstringdef(left.resultdef).stringtypname+'_rangecheck';
               pd:=search_system_proc(helpername);
-              paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
-              paramanager.getcgtempparaloc(current_asmdata.CurrAsmList,pd,2,paraloc2);
+              paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
+              paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,2,paraloc2);
               if pd.is_pushleftright then
                 begin
                   hlcg.a_load_loc_cgpara(current_asmdata.CurrAsmList,left.resultdef,left.location,paraloc1);
@@ -855,11 +855,7 @@ implementation
          paraloc2 : tcgpara;
          subsetref : tsubsetreference;
          temp : longint;
-         hreg : tregister;
          indexdef : tdef;
-         {$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-         i : Integer;
-         {$endif}
       begin
          paraloc1.init;
          paraloc2.init;
@@ -940,33 +936,17 @@ implementation
            end
          else
            begin
-             { may happen in case of function results }
-             case left.location.loc of
-               LOC_CREGISTER,
-               LOC_REGISTER:
-                 begin
-                   if not(is_constnode(right)) or (tarraydef(left.resultdef).elementdef.size<>alusinttype.size) then
-                     begin
-                       hlcg.location_force_mem(current_asmdata.CurrAsmList,left.location,left.resultdef);
-                       location_copy(location,left.location);
-                     end
-                   else
-                     { we use location here only to get the right offset }
-                     location_reset_ref(location,LOC_REFERENCE,OS_NO,1,[]);
-                 end;
-               LOC_CSUBSETREG,
-               LOC_CMMREGISTER,
-               LOC_SUBSETREG,
-               LOC_MMREGISTER:
-                 begin
-                   hlcg.location_force_mem(current_asmdata.CurrAsmList,left.location,left.resultdef);
-                   location_copy(location,left.location);
-                 end;
-               LOC_INVALID:
-                 Internalerror(2019061101);
-               else
-                 location_copy(location,left.location);
-             end;
+              { may happen in case of function results }
+              case left.location.loc of
+                LOC_CSUBSETREG,
+                LOC_CREGISTER,
+                LOC_CMMREGISTER,
+                LOC_SUBSETREG,
+                LOC_REGISTER,
+                LOC_MMREGISTER:
+                  hlcg.location_force_mem(current_asmdata.CurrAsmList,left.location,left.resultdef);
+              end;
+             location_copy(location,left.location);
            end;
 
          { location must be memory }
@@ -998,8 +978,6 @@ implementation
                       rangecheck_array;
                     stringdef :
                       rangecheck_string;
-                    else
-                      ;
                   end;
                 end;
               if not(is_packed_array(left.resultdef)) or
@@ -1012,37 +990,6 @@ implementation
                   update_reference_offset(location.reference,extraoffset,bytemulsize);
                   { adjust alignment after this change }
                   location.reference.alignment:=newalignment(location.reference.alignment,extraoffset*bytemulsize);
-
-                  { actually an array in a register? }
-                  if (left.location.loc in [LOC_CREGISTER,LOC_REGISTER]) and
-                    is_normal_array(left.resultdef) then
-                    begin
-{$if defined(cpu64bitalu)}
-                      hreg:=left.location.register;
-{$else defined(cpu64bitalu)}
-                      if target_info.endian=endian_little then
-                        begin
-                          if location.reference.offset>3 then
-                            hreg:=left.location.register64.reghi
-                          else
-                            hreg:=left.location.register64.reglo;
-                        end
-                      else
-                        begin
-                          if location.reference.offset>3 then
-                            hreg:=left.location.register64.reglo
-                          else
-                            hreg:=left.location.register64.reghi;
-                        end;
-{$endif defined(cpu64bitalu)}
-{$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-                      { we support only the case that one element fills at least one register }
-                      for i:=1 to location.reference.offset mod 4 do
-                        hreg:=cg.GetNextReg(hreg);
-{$endif defined(cpu8bitalu) or defined(cpu16bitalu)}
-                      location_reset(location,left.location.loc,def_cgsize(tarraydef(left.resultdef).elementdef));
-                      location.register:=hreg;
-                    end;
                 end
               else
                 begin

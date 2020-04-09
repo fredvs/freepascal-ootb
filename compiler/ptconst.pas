@@ -123,26 +123,23 @@ implementation
               end;
           end;
 
-        if not parse_generic then
-          begin
-            if vo_is_public in sym.varoptions then
-              current_module.add_public_asmsym(sym.mangledname,AB_GLOBAL,AT_DATA);
+        if vo_is_public in sym.varoptions then
+          current_module.add_public_asmsym(sym.mangledname,AB_GLOBAL,AT_DATA);
 
-            if not(target_info.system in systems_typed_constants_node_init) then
-              begin
-                { only now get the final asmlist, because inserting the symbol
-                  information depends on potential section information set above }
-                tasmlisttypedconstbuilder(tcbuilder).get_final_asmlists(reslist,datalist);
-                 { add the parsed value }
-                list.concatlist(reslist);
-                { and pointed data, if any }
-                current_asmdata.asmlists[al_const].concatlist(datalist);
-                { the (empty) lists themselves are freed by tcbuilder }
-              end
-            else
-              begin
-                { nothing to do }
-              end;
+        if not(target_info.system in systems_typed_constants_node_init) then
+          begin
+            { only now get the final asmlist, because inserting the symbol
+              information depends on potential section information set above }
+            tasmlisttypedconstbuilder(tcbuilder).get_final_asmlists(reslist,datalist);
+             { add the parsed value }
+            list.concatlist(reslist);
+            { and pointed data, if any }
+            current_asmdata.asmlists[al_const].concatlist(datalist);
+            { the (empty) lists themselves are freed by tcbuilder }
+          end
+        else
+          begin
+            { nothing to do }
           end;
 
         tcbuilder.free;

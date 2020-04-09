@@ -453,17 +453,24 @@ uses
 
     function generate_specialization_phase1(out context:tspecializationcontext;genericdef:tdef;parsedtype:tdef;symname:string;parsedpos:tfileposinfo):tdef;
       var
+        pt2 : tnode;
+        errorrecovery,
         found,
+        first,
         err : boolean;
         i,
         gencount : longint;
+        def : tstoreddef;
         countstr,genname,ugenname : string;
+        srsym : tsym;
+        st : tsymtable;
         tmpstack : tfpobjectlist;
       begin
         context:=nil;
         result:=nil;
 
         { either symname must be given or genericdef needs to be valid }
+        errorrecovery:=false;
         if (symname='') and
             (not assigned(genericdef) or
               (
@@ -482,7 +489,90 @@ uses
               )
             ) then
           begin
-            internalerror(2019112401);
+            errorrecovery:=true;
+            result:=generrordef;
+          end;
+
+        { Only parse the parameters for recovery or
+          for recording in genericbuf }
+        if errorrecovery then
+          begin
+            first:=assigned(parsedtype);
+            if not first and not try_to_consume(_LT) then
+              consume(_LSHARPBRACKET);
+            gencount:=0;
+            { handle "<>" }
+            if not first and ((token=_RSHARPBRACKET) or (token=_GT)) then
+              Message(type_e_type_id_expected)
+            else
+              repeat
+                if not first then
+                  begin
+                    pt2:=factor(false,[ef_type_only]);
+                    pt2.free;
+                  end;
+                first:=false;
+                inc(gencount);
+              until not try_to_consume(_COMMA);
+            if not try_to_consume(_GT) then
+              consume(_RSHARPBRACKET);
+            { we need to return a def that can later pass some checks like
+              whether it's an interface or not }
+            if not errorrecovery and
+                (not assigned(result) or (result.typ=undefineddef)) then
+              begin
+                if (symname='') and tstoreddef(genericdef).is_generic then
+                  { this happens in non-Delphi modes }
+                  result:=genericdef
+                else
+                  begin
+                    { find the corresponding generic symbol so that any checks
+                      done on the returned def will be handled correctly }
+                    str(gencount,countstr);
+                    if symname='' then
+                      genname:=ttypesym(genericdef.typesym).realname
+                    else
+                      genname:=symname;
+                    genname:=genname+'$'+countstr;
+                    ugenname:=upper(genname);
+                    { first check whether the found name is the same as that of
+                      the current def or one of its (generic) surrounding defs;
+                      this is necessary as the symbol of the generic can not yet
+                      be used for lookup as it still contains a reference to an
+                      errordef) }
+                    def:=current_genericdef;
+                    repeat
+                      if def.typ in [objectdef,recorddef] then
+                        if tabstractrecorddef(def).objname^=ugenname then
+                          begin
+                            result:=def;
+                            break;
+                          end;
+                      def:=tstoreddef(def.owner.defowner);
+                    until not assigned(def) or not (df_generic in def.defoptions);
+                    { it's not part of the current object hierarchy, so search
+                      for the symbol }
+                    if not assigned(result) then
+                      begin
+                      srsym:=nil;
+                      if not searchsym(ugenname,srsym,st) or
+                          (srsym.typ<>typesym) then
+                        begin
+                          identifier_not_found(genname);
+                          result:=generrordef;
+                          exit;
+                        end;
+                      result:=ttypesym(srsym).typedef;
+                      { this happens in non-Delphi modes if we encounter a
+                        specialization of the generic class or record we're
+                        currently parsing }
+                      if (result.typ=errordef) and assigned(current_structdef) and
+                          (current_structdef.objname^=ugenname) then
+                        result:=current_structdef;
+                    end;
+                  end;
+              end;
+            exit;
           end;
 
         if not assigned(parsedtype) and not try_to_consume(_LT) then
@@ -639,8 +729,6 @@ uses
                   for i:=0 to st.deflist.count-1 do
                     unset_forwarddef(tdef(st.deflist[i]));
                 end;
-              else
-                ;
             end;
           end;
 
@@ -693,6 +781,7 @@ uses
         oldcurrent_filepos : tfileposinfo;
         recordbuf : tdynamicarray;
         hadtypetoken : boolean;
+        vmtbuilder : tvmtbuilder;
         i,
         replaydepth : longint;
         item : tobject;
@@ -1017,7 +1106,9 @@ uses
                             consume(_SEMICOLON);
                         end;
 
-                      build_vmt(tobjectdef(result));
+                      vmtbuilder:=TVMTBuilder.Create(tobjectdef(result));
+                      vmtbuilder.generate_vmt;
+                      vmtbuilder.free;
                     end;
                   { handle params, calling convention, etc }
                   procvardef:
@@ -1168,7 +1259,6 @@ uses
         doconsume : boolean;
         constraintdata : tgenericconstraintdata;
         old_block_type : tblock_type;
-        fileinfo : tfileposinfo;
       begin
         result:=tfphashobjectlist.create(false);
         firstidx:=0;
@@ -1184,14 +1274,13 @@ uses
               result.add(orgpattern,generictype);
             end;
           consume(_ID);
-          fileinfo:=current_tokenpos;
           if try_to_consume(_COLON) then
             begin
               if not allowconstraints then
-                Message(parser_e_generic_constraints_not_allowed_here);
+                { TODO }
+                Message(parser_e_illegal_expression{ parser_e_generic_constraints_not_allowed_here});
               { construct a name which can be used for a type specification }
               constraintdata:=tgenericconstraintdata.create;
-              constraintdata.fileinfo:=fileinfo;
               defname:='';
               str(current_module.deflist.count,defname);
               defname:='$gendef'+defname;
@@ -1226,7 +1315,7 @@ uses
                         Message(parser_e_illegal_expression)
                       else
                         begin
-                          srsymtable:=trecordsymtable.create(defname,0,1);
+                          srsymtable:=trecordsymtable.create(defname,0,1,1);
                           basedef:=crecorddef.create(defname,srsymtable);
                           include(constraintdata.flags,gcf_record);
                           allowconstructor:=false;
@@ -1265,8 +1354,6 @@ uses
                           odt_interfacejava,
                           odt_dispinterface:
                             constraintdata.interfaces.add(def);
-                          else
-                            ;
                         end;
                     end;
                 end;
@@ -1308,7 +1395,6 @@ uses
                     genconstraintdata:=tgenericconstraintdata.create;
                     genconstraintdata.flags:=constraintdata.flags;
                     genconstraintdata.interfaces.assign(constraintdata.interfaces);
-                    genconstraintdata.fileinfo:=constraintdata.fileinfo;
                     include(defoptions,df_genconstraint);
                   end;
 
@@ -1745,8 +1831,6 @@ uses
 
                   specialization_done(state);
                 end;
-              else
-                ;
             end;
           end;
 

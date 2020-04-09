@@ -109,16 +109,11 @@ Type
   private
     FAfterInitModule : TInitModuleEvent;
     FBaseURL: String;
-    FCORS: TCORSSupport;
     FWebModuleKind: TWebModuleKind;
-    procedure SetCORS(AValue: TCORSSupport);
   Protected
     Class Function DefaultModuleName : String; virtual;
     Class Function DefaultSkipStreaming : Boolean; virtual;
-    Class Function CreateCORSSUpport : TCORSSupport; virtual;
-    Property CORS : TCORSSupport Read FCORS Write SetCORS;
   public
-    Constructor CreateNew(aOwner : TComponent; CreateMode: Integer); overload; override;
     Class Procedure RegisterModule(Const AModuleName : String = ''); overload;
     Class Procedure RegisterModule(Const AModuleName : String; ASkipStreaming : Boolean); overload;
     Procedure HandleRequest(ARequest : TRequest; AResponse : TResponse); virtual; abstract;
@@ -128,7 +123,6 @@ Type
     Property AfterInitModule : TInitModuleEvent Read FAfterInitModule Write FAfterInitModule;
   end;
   TCustomHTTPModuleClass = Class of TCustomHTTPModule;
-
 
   { TSessionHTTPModule }
 
@@ -292,12 +286,6 @@ end;
 
 { TCustomHTTPModule }
 
-procedure TCustomHTTPModule.SetCORS(AValue: TCORSSupport);
-begin
-  if FCORS=AValue then Exit;
-  FCORS.Assign(AValue);
-end;
-
 Class Function TCustomHTTPModule.DefaultModuleName: String;
 begin
   Result:=ClassName;
@@ -306,17 +294,6 @@ end;
 Class Function TCustomHTTPModule.DefaultSkipStreaming: Boolean;
 begin
   Result:=False;
-end;
-
-class function TCustomHTTPModule.CreateCORSSUpport: TCORSSupport;
-begin
-  Result:=TCORSSupport.Create;
-end;
-
-constructor TCustomHTTPModule.CreateNew(aOwner: TComponent; CreateMode: Integer);
-begin
-  inherited CreateNew(aOwner, CreateMode);
-  FCORS:=CreateCORSSupport;
 end;
 
 Class Procedure TCustomHTTPModule.RegisterModule(Const AModuleName: String);

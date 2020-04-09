@@ -17,9 +17,9 @@ type
     _name: NSString;
     _valueExpression: NSExpression;
     _userInfo: NSDictionary;
-    _propertyMappingFlags: bitpacked record
+    __propertyMappingFlags: bitpacked record
       case byte of
-        0: (_anonBitField__propertyMappingFlags0: cuint);
+        0: (_anonBitField___propertyMappingFlags0: cuint);
         1: (
           _isInUse: 0..1;
           _reservedPropertyMapping: 0..((1 shl 31)-1);

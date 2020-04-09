@@ -49,10 +49,8 @@ unit rgcpu;
 
     uses
       verbose, cutils,
-      globals,
       cgobj,
-      procinfo,
-      cpuinfo;
+      procinfo;
 
 
     procedure trgcpu.add_constraints(reg:tregister);
@@ -97,7 +95,7 @@ unit rgcpu;
         helplist : TAsmList;
         hreg     : tregister;
       begin
-        if (abs(spilltemp.offset)>63) or (CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype]) then
+        if abs(spilltemp.offset)>63 then
           begin
             helplist:=TAsmList.create;
 
@@ -123,7 +121,7 @@ unit rgcpu;
         helplist : TAsmList;
         hreg     : tregister;
       begin
-        if (abs(spilltemp.offset)>63) or (CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype]) then
+        if abs(spilltemp.offset)>63 then
           begin
             helplist:=TAsmList.create;
 
@@ -157,13 +155,6 @@ unit rgcpu;
               A_LDI:
                 for r:=RS_R0 to RS_R15 do
                   add_edge(r,GetSupReg(taicpu(p).oper[0]^.reg));
-              A_STS:
-                for r:=RS_R0 to RS_R15 do
-                  add_edge(r,GetSupReg(taicpu(p).oper[1]^.reg));
-              A_ADIW:
-                for r:=RS_R0 to RS_R31 do
-                  if not (r in [RS_R24,RS_R26,RS_R28,RS_R30]) then
-                    add_edge(r,GetSupReg(taicpu(p).oper[0]^.reg));
               A_MULS:
                 begin
                   for r:=RS_R0 to RS_R15 do
@@ -171,14 +162,6 @@ unit rgcpu;
                   for r:=RS_R0 to RS_R15 do
                     add_edge(r,GetSupReg(taicpu(p).oper[1]^.reg));
                 end;
-              A_LDD:
-                for r:=RS_R0 to RS_R31 do
-                  if not (r in [RS_R28,RS_R30]) then
-                    add_edge(r,GetSupReg(taicpu(p).oper[1]^.ref^.base));
-              A_STD:
-                for r:=RS_R0 to RS_R31 do
-                  if not (r in [RS_R28,RS_R30]) then
-                    add_edge(r,GetSupReg(taicpu(p).oper[0]^.ref^.base));
             end;
           end;
       end;
@@ -189,11 +172,11 @@ unit rgcpu;
         b : byte;
       begin
         result:=false;
-        if not(spilltemp.offset in [0..63]) or (CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype]) then
+        if not(spilltemp.offset in [0..63]) then
           exit;
 
-        { Replace 'mov  dst,orgreg' with 'ldd  dst,spilltemp'
-          and     'mov  orgreg,src' with 'std  spilltemp,src' }
+        { Replace 'mov  dst,orgreg' with 'ld  dst,spilltemp'
+          and     'mov  orgreg,src' with 'st  dst,spilltemp' }
         with instr do
           begin
             if (opcode=A_MOV) and (ops=2) and (oper[1]^.typ=top_reg) and (oper[0]^.typ=top_reg) then
@@ -202,8 +185,10 @@ unit rgcpu;
                    (get_alias(getsupreg(oper[0]^.reg))=orgreg) and
                    (get_alias(getsupreg(oper[1]^.reg))<>orgreg) then
                   begin
-                    instr.loadref(0,spilltemp);
-                    opcode:=A_STD;
+                    { str expects the register in oper[0] }
+                    instr.loadreg(0,oper[1]^.reg);
+                    instr.loadref(1,spilltemp);
+                    opcode:=A_ST;
                     result:=true;
                   end
                 else if (getregtype(oper[1]^.reg)=regtype) and
@@ -211,7 +196,7 @@ unit rgcpu;
                    (get_alias(getsupreg(oper[0]^.reg))<>orgreg) then
                   begin
                     instr.loadref(1,spilltemp);
-                    opcode:=A_LDD;
+                    opcode:=A_LD;
                     result:=true;
                   end;
               end;

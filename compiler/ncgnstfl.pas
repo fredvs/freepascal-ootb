@@ -46,7 +46,6 @@ implementation
       begin
         result:=inherited;
         if (m_non_local_goto in current_settings.modeswitches) and
-           assigned(labelsym) and
            assigned(labelsym.jumpbuf) then
           begin
             { we will access this jumpbuf local variable from a nested context,

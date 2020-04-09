@@ -14,10 +14,6 @@
  **********************************************************************}
 unit WResourc;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects;
@@ -83,8 +79,8 @@ type
      TResource = object(TObject)
        constructor Init(const AName: string; AClass, AFlags: longint);
        function    GetName: string; virtual;
-       function    FirstThatEntry(Func: TCallbackFunBoolParam): PResourceEntry; virtual;
-       procedure   ForEachEntry(Func: TCallbackProcParam); virtual;
+       function    FirstThatEntry(Func: pointer): PResourceEntry; virtual;
+       procedure   ForEachEntry(Func: pointer); virtual;
        destructor  Done; virtual;
      private
        Name   : PString;
@@ -107,9 +103,9 @@ type
        constructor Load(var RS: TStream);
        constructor CreateFile(AFileName: string);
        constructor LoadFile(AFileName: string);
-       function    FirstThatResource(Func: TCallbackFunBoolParam): PResource; virtual;
-       procedure   ForEachResource(Func: TCallbackProcParam); virtual;
-       procedure   ForEachResourceEntry(Func: TCallbackProcParam); virtual;
+       function    FirstThatResource(Func: pointer): PResource; virtual;
+       procedure   ForEachResource(Func: pointer); virtual;
+       procedure   ForEachResourceEntry(Func: pointer); virtual;
        function    CreateResource(const Name: string; AClass, AFlags: longint): boolean; virtual;
        function    AddResourceEntry(const ResName: string; ALangID, AFlags: longint; var Data;
                    ADataSize: sw_integer): boolean; virtual;
@@ -224,7 +220,7 @@ begin
   GetName:=GetStr(Name);
 end;
 
-function TResource.FirstThatEntry(Func: TCallbackFunBoolParam): PResourceEntry;
+function TResource.FirstThatEntry(Func: pointer): PResourceEntry;
 var EP,P: PResourceEntry;
     I: sw_integer;
 begin
@@ -242,7 +238,7 @@ begin
   FirstThatEntry:=P;
 end;
 
-procedure TResource.ForEachEntry(Func: TCallbackProcParam);
+procedure TResource.ForEachEntry(Func: pointer);
 var RP: PResourceEntry;
     I: sw_integer;
 begin
@@ -368,7 +364,7 @@ begin
     end;
 end;
 
-function TResourceFile.FirstThatResource(Func: TCallbackFunBoolParam): PResource;
+function TResourceFile.FirstThatResource(Func: pointer): PResource;
 var RP,P: PResource;
     I: sw_integer;
 begin
@@ -386,7 +382,7 @@ begin
   FirstThatResource:=P;
 end;
 
-procedure TResourceFile.ForEachResource(Func: TCallbackProcParam);
+procedure TResourceFile.ForEachResource(Func: pointer);
 var RP: PResource;
     I: sw_integer;
 begin
@@ -397,7 +393,7 @@ begin
     end;
 end;
 
-procedure TResourceFile.ForEachResourceEntry(Func: TCallbackProcParam);
+procedure TResourceFile.ForEachResourceEntry(Func: pointer);
 var E: PResourceEntry;
     I: sw_integer;
 begin
@@ -663,10 +659,10 @@ begin
   S^.Write(RH,SizeOf(RH));
   N:=P^.GetName;
   S^.Write(N[1],length(N));
-  P^.ForEachEntry(TCallbackProcParam(@WriteResourceEntry));
+  P^.ForEachEntry(@WriteResourceEntry);
 end;
 begin
-  ForEachResource(TCallbackProcParam(@WriteResource));
+  ForEachResource(@WriteResource);
 end;
 
 procedure TResourceFile.UpdateBlockDatas;
@@ -699,10 +695,10 @@ end;
 begin
   Size:=0; NamesSize:=0;
   Inc(Size,SizeOf(Header)); { this is on start so we always include it }
-  ForEachResourceEntry(TCallbackProcParam(@AddResourceEntrySize));
+  ForEachResourceEntry(@AddResourceEntrySize);
   if IncludeHeaders then
     begin
-      ForEachResource(TCallbackProcParam(@AddResourceSize));
+      ForEachResource(@AddResourceSize);
       Inc(Size,SizeOf(RH)*Resources^.Count);
       Inc(Size,SizeOf(REH)*Entries^.Count);
       Inc(Size,NamesSize);

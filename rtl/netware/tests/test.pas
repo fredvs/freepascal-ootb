@@ -336,7 +336,7 @@ BEGIN
 END;
 
 {
-Function FileSetDate (Handle: longint; Age: Int64) : Longint;
+Function FileSetDate (Handle,Age : Longint) : Longint;
 Function FileSetAttr (Const Filename : String; Attr: longint) : Longint;
 }
 PROCEDURE SysUtilsTest;

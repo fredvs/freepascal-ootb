@@ -35,9 +35,9 @@ type
     _keyForLocalizedKeyDictionary: NSDictionary;
     _includedKeys: NSArray;
     _excludedKeys: NSArray;
-    _dictionaryControllerFlags: bitpacked record
+    __dictionaryControllerFlags: bitpacked record
       case byte of
-        0: (_anonBitField__dictionaryControllerFlags0: cuint);
+        0: (_anonBitField___dictionaryControllerFlags0: cuint);
         1: (
           _deepCopiesValues: 0..1;
           _suppressBuildingDictionary: 0..1;

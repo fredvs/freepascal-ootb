@@ -37,7 +37,6 @@ program pp;
   MIPSEL              generate a compiler for the MIPSEL (Littel Endian)
   POWERPC             generate a compiler for the PowerPC
   POWERPC64           generate a compiler for the PowerPC64 architecture
-  RISCV64             generate a compiler for the RiscV64 architecture
   SPARC               generate a compiler for SPARC
   SPARC64             generate a compiler for SPARC64
   X86_64              generate a compiler for the AMD x86-64 architecture
@@ -166,24 +165,6 @@ program pp;
   {$endif CPUDEFINED}
   {$define CPUDEFINED}
 {$endif AARCH64}
-{$ifdef RISCV32}
-  {$ifdef CPUDEFINED}
-    {$fatal ONLY one of the switches for the CPU type must be defined}
-  {$endif CPUDEFINED}
-  {$define CPUDEFINED}
-{$endif RISCV32}
-{$ifdef RISCV64}
-  {$ifdef CPUDEFINED}
-    {$fatal ONLY one of the switches for the CPU type must be defined}
-  {$endif CPUDEFINED}
-  {$define CPUDEFINED}
-{$endif RISCV64}
-{$ifdef XTENSA}
-  {$ifdef CPUDEFINED}
-    {$fatal ONLY one of the switches for the CPU type must be defined}
-  {$endif CPUDEFINED}
-  {$define CPUDEFINED}
-{$endif XTENSA}
 
 {$ifndef CPUDEFINED}
   {$fatal A CPU type switch must be defined}

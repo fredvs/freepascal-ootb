@@ -50,7 +50,6 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils');
-    P.ShortName := 'tils';
     P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
     P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
     if Defaults.CPU=jvm then
@@ -75,7 +74,7 @@ begin
     P.Dependencies.Add('rtl-extra');
     P.Dependencies.Add('rtl-objpas');
 
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     T:=P.Targets.AddProgram('ptop.pp');
     T.Dependencies.AddUnit('ptopu');
@@ -96,10 +95,6 @@ begin
     T.ResourceStrings:=true;
     P.Targets.AddUnit('usubst.pp').install:=false;
     P.Targets.AddUnit('ptopu.pp').install:=false;
-    { The source files fpmake_proc.inc and fpmake_add.inc
-      need to be added explicitly to be integrated in source zip }
-    P.Sources.AddSrc('fpmake_proc.inc');
-    P.Sources.AddSrc('fpmake_add.inc');
     end;
 
   {$include fpmake_add.inc}

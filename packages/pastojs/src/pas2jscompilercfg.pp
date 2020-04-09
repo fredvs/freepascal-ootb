@@ -24,7 +24,7 @@ interface
 
 uses
   {$IFDEF NodeJS}
-  node.fs,
+  NodeJSFS,
   {$ENDIF}
   Classes, SysUtils, Pas2jsFileUtils, Pas2JSFS, Pas2jsCompiler;
 

@@ -14,13 +14,12 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('winceunits');
-    P.ShortName := 'wice';
 
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
 
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.OSes := [win32, wince];
 
     P.Author := 'FreePascal development team';

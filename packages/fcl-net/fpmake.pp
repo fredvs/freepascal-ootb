@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-xml');
     P.Dependencies.Add('fcl-passrc');
@@ -73,7 +73,7 @@ begin
         end;
     T.ResourceStrings := True;
 
-    T:=P.Targets.AddUnit('cnetdb.pp',[linux,freebsd,solaris,android]);
+    T:=P.Targets.AddUnit('cnetdb.pp',[linux,freebsd,solaris]);
 
     P.ExamplePath.Add('examples');
     P.Targets.AddExampleProgram('examples/ip6test.pp');

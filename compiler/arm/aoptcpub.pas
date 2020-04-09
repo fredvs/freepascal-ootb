@@ -76,6 +76,10 @@ Const
 
   MaxCh = 3;
 
+{ the maximum number of operands an instruction has }
+
+  MaxOps = 4;
+
 {Oper index of operand that contains the source (reference) with a load }
 {instruction                                                            }
 
@@ -119,31 +123,14 @@ Implementation
       i : Longint;
     begin
       result:=false;
-      case taicpu(p1).opcode of
-        A_LDR:
-          begin
-            { special handling for LDRD }
-            if (taicpu(p1).oppostfix=PF_D) and (getsupreg(taicpu(p1).oper[0]^.reg)+1=getsupreg(Reg)) then
-              begin
-                result:=true;
-                exit;
-              end;
-          end;
-        else
-          ;
-      end;
       for i:=0 to taicpu(p1).ops-1 do
         case taicpu(p1).oper[i]^.typ of
           top_reg:
             if (taicpu(p1).oper[i]^.reg=Reg) and (taicpu(p1).spilling_get_operation_type(i) in [operand_write,operand_readwrite]) then
               exit(true);
           top_ref:
-            begin
-              if (taicpu(p1).spilling_get_operation_type_ref(i,Reg)<>operand_read) then
-                exit(true);
-            end
-          else
-            ;
+            if (taicpu(p1).spilling_get_operation_type_ref(i,Reg)<>operand_read) then
+              exit(true);
         end;
     end;
 

@@ -20,7 +20,6 @@
 }
 
 Const
-      syscall_nr_restart_syscall    = 0 ; // Linux Specific
       syscall_nr_exit               = 1 ; // Common
       syscall_nr_fork               = 2 ; // Common
       syscall_nr_read               = 3 ; // Common
@@ -45,21 +44,17 @@ Const
       syscall_nr_capset            = 22 ; // Linux Specific
       syscall_nr_setuid            = 23 ; // Implemented via setreuid in SunOS
       syscall_nr_getuid            = 24 ; // Common
-      syscall_nr_vmsplice          = 25 ; // ENOSYS under SunOS
+//       syscall_nr_time alias     = 25    ENOSYS under SunOS
       syscall_nr_ptrace            = 26 ; // Common
       syscall_nr_alarm             = 27 ; // Implemented via setitimer in SunOS
       syscall_nr_sigaltstack       = 28 ; // Common
       syscall_nr_pause             = 29 ; // Is sigblock(0)->sigpause() in SunOS
       syscall_nr_utime             = 30 ; // Implemented via utimes() under SunOS
-{$ifndef CPUSPARC64}
       syscall_nr_lchown32          = 31 ; // Linux sparc32 specific
       syscall_nr_fchown32          = 32 ; // Linux sparc32 specific
-{$endif ndef CPUSPARC64}
       syscall_nr_access            = 33 ; // Common
       syscall_nr_nice              = 34 ; // Implemented via get/setpriority() in SunOS
-{$ifndef CPUSPARC64}
       syscall_nr_chown32           = 35 ; // Linux sparc32 specific
-{$endif ndef CPUSPARC64}
       syscall_nr_sync              = 36 ; // Common
       syscall_nr_kill              = 37 ; // Common
       syscall_nr_stat              = 38 ; // Common
@@ -68,9 +63,7 @@ Const
       syscall_nr_dup               = 41 ; // Common
       syscall_nr_pipe              = 42 ; // Common
       syscall_nr_times             = 43 ; // Implemented via getrusage() in SunOS
-{$ifndef CPUSPARC64}
       syscall_nr_getuid32          = 44 ; // Linux sparc32 specific
-{$endif ndef CPUSPARC64}
       syscall_nr_umount2           = 45 ; // Linux Specific
       syscall_nr_setgid            = 46 ; // Implemented via setregid() in SunOS
       syscall_nr_getgid            = 47 ; // Common
@@ -79,14 +72,10 @@ Const
       syscall_nr_getegid           = 50 ; // SunOS calls getgid()
       syscall_nr_acct              = 51 ; // Common
 //       syscall_nr_memory_ordering= 52    Linux sparc64 specific
-{$ifndef CPUSPARC64}
       syscall_nr_getgid32          = 53 ; // Linux sparc32 specific
-{$endif ndef CPUSPARC64}
       syscall_nr_ioctl             = 54 ; // Common
       syscall_nr_reboot            = 55 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_mmap2             = 56 ; // Linux sparc32 Specific
-{$endif ndef CPUSPARC64}
       syscall_nr_symlink           = 57 ; // Common
       syscall_nr_readlink          = 58 ; // Common
       syscall_nr_execve            = 59 ; // Common
@@ -99,50 +88,32 @@ Const
       syscall_nr_vfork             = 66 ; // Common
       syscall_nr_pread64           = 67 ; // Linux Specific
       syscall_nr_pwrite64          = 68 ; // Linux Specific
-{$ifndef CPUSPARC64}
       syscall_nr_geteuid32         = 69 ; // Linux sparc32, sbrk under SunOS
       syscall_nr_getegid32         = 70 ; // Linux sparc32, sstk under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_mmap              = 71 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_setreuid32        = 72 ; // Linux sparc32, vadvise under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_munmap            = 73 ; // Common
       syscall_nr_mprotect          = 74 ; // Common
       syscall_nr_madvise           = 75 ; // Common
       syscall_nr_vhangup           = 76 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_truncate64        = 77 ; // Linux sparc32 Specific
-{$endif ndef CPUSPARC64}
       syscall_nr_mincore           = 78 ; // Common
       syscall_nr_getgroups         = 79 ; // Common
       syscall_nr_setgroups         = 80 ; // Common
       syscall_nr_getpgrp           = 81 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_setgroups32       = 82 ; // Linux sparc32, setpgrp under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_setitimer         = 83 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_ftruncate64       = 84 ; // Linux sparc32 Specific
-{$endif ndef CPUSPARC64}
       syscall_nr_swapon            = 85 ; // Common
       syscall_nr_getitimer         = 86 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_setuid32          = 87 ; // Linux sparc32, gethostname under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_sethostname       = 88 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_setgid32          = 89 ; // Linux sparc32, getdtablesize under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_dup2              = 90 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_setfsuid32        = 91 ; // Linux sparc32, getdopt under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_fcntl             = 92 ; // Common
       syscall_nr_select            = 93 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_setfsgid32        = 94 ; // Linux sparc32, setdopt under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_fsync             = 95 ; // Common
       syscall_nr_setpriority       = 96 ; // Common
       syscall_nr_socket            = 97 ; // Common
@@ -156,23 +127,14 @@ Const
       syscall_nr_rt_sigtimedwait  = 105 ; // Linux Specific
       syscall_nr_rt_sigqueueinfo  = 106 ; // Linux Specific
       syscall_nr_rt_sigsuspend    = 107 ; // Linux Specific
-{$ifndef CPUSPARC64}
       syscall_nr_setresuid32      = 108 ; // Linux Specific, sigvec under SunOS
       syscall_nr_getresuid32      = 109 ; // Linux Specific, sigblock under SunOS
       syscall_nr_setresgid32      = 110 ; // Linux Specific, sigsetmask under SunOS
       syscall_nr_getresgid32      = 111 ; // Linux Specific, sigpause under SunOS
       syscall_nr_setregid32       = 112 ; // Linux sparc32, sigstack under SunOS
-{$else}
-      syscall_nr_setresuid        = 108 ; // Linux Specific, sigvec under SunOS
-      syscall_nr_getresuid        = 109 ; // Linux Specific, sigblock under SunOS
-      syscall_nr_setresgid        = 110 ; // Linux Specific, sigsetmask under SunOS
-      syscall_nr_getresgid        = 111 ; // Linux Specific, sigpause under SunOS
-{$endif}
       syscall_nr_recvmsg          = 113 ; // Common
       syscall_nr_sendmsg          = 114 ; // Common
-{$ifndef CPUSPARC64}
       syscall_nr_getgroups32      = 115 ; // Linux sparc32, vtrace under SunOS
-{$endif ndef CPUSPARC64}
       syscall_nr_gettimeofday     = 116 ; // Common
       syscall_nr_getrusage        = 117 ; // Common
       syscall_nr_getsockopt       = 118 ; // Common
@@ -197,8 +159,9 @@ Const
       syscall_nr_rmdir            = 137 ; // Common
       syscall_nr_utimes           = 138 ; // SunOS Specific
       syscall_nr_stat64           = 139 ; // Linux sparc32 Specific
-      syscall_nr_sendfile64       = 140 ; // adjtime under SunOS
+//       syscall_nr_adjtime       = 140    SunOS Specific
       syscall_nr_getpeername      = 141 ; // Common
+//       syscall_nr_gethostid     = 142    SunOS Specific
       syscall_nr_futex            = 142 ; // gethostid under SunOS
       syscall_nr_gettid           = 143 ; // ENOSYS under SunOS
       syscall_nr_getrlimit        = 144 ; // Common
@@ -212,52 +175,48 @@ Const
       syscall_nr_inotify_add_watch= 152 ; // Linux specific
       syscall_nr_poll             = 153 ; // Common
       syscall_nr_getdents64       = 154 ; // Linux specific
-{$ifndef CPUSPARC64}
       syscall_nr_fcntl64          = 155 ; // Linux sparc32 Specific
-{$endif ndef CPUSPARC64}
       syscall_nr_inotify_rm_watch = 156 ; // Linux specific
       syscall_nr_statfs           = 157 ; // Common
       syscall_nr_fstatfs          = 158 ; // Common
       syscall_nr_umount           = 159 ; // Common
-      syscall_nr_sched_set_affinity = 160; // Linux specific, async_daemon under SunOS
-      syscall_nr_sched_get_affinity = 161; // Linux specific, getfh under SunOS
+//       syscall_nr_async_daemon  = 160    SunOS Specific
+//       syscall_nr_getfh         = 161    SunOS Specific
       syscall_nr_getdomainname    = 162 ; // SunOS Specific
       syscall_nr_setdomainname    = 163 ; // Common
-{$ifdef CPUSPARC64}
-      syscall_nr_utrap_install    = 164 ; // SYSV ABI/v9 required
-{$endif def CPUSPARC64}
+//       syscall_nr_ni_syscall    = 164    ENOSYS under SunOS
       syscall_nr_quotactl         = 165 ; // Common
-      syscall_nr_set_tid_address  = 166 ; // Linux specific, exportfs under SunOS
+//       syscall_nr_exportfs      = 166    SunOS Specific
       syscall_nr_mount            = 167 ; // Common
       syscall_nr_ustat            = 168 ; // Common
-      syscall_nr_setxattr         = 169 ; // SunOS: semsys
-      syscall_nr_lsetxattr        = 170 ; // SunOS: msgsys
-      syscall_nr_fsetxattr        = 171 ; // SunOS: shmsys
-      syscall_nr_getxattr         = 172 ; // SunOS: auditsys
-      syscall_nr_lgetxattr        = 173 ; // SunOS: rfssys
+//       syscall_nr_semsys        = 169    SunOS Specific
+//       syscall_nr_msgsys        = 170    SunOS Specific
+//       syscall_nr_shmsys        = 171    SunOS Specific
+//       syscall_nr_auditsys      = 172    SunOS Specific
+//       syscall_nr_rfssys        = 173    SunOS Specific
       syscall_nr_getdents         = 174 ; // Common
       syscall_nr_setsid           = 175 ; // Common
       syscall_nr_fchdir           = 176 ; // Common
-      syscall_nr_fgetxattr        = 177 ; // SunOS: fchroot
-      syscall_nr_listxattr        = 178 ; // SunOS: vpixsys
-      syscall_nr_llistxattr       = 179 ; // SunOS: aioread
-      syscall_nr_flistxattr       = 180 ; // SunOS: aiowrite
-      syscall_nr_removexattr      = 181 ; // SunOS: aiowait
-      syscall_nr_lremovexattr     = 182 ; // SunOS: aiocancel
+//       syscall_nr_fchroot       = 177    SunOS Specific
+//       syscall_nr_vpixsys       = 178    SunOS Specific
+//       syscall_nr_aioread       = 179    SunOS Specific
+//       syscall_nr_aiowrite      = 180    SunOS Specific
+//       syscall_nr_aiowait       = 181    SunOS Specific
+//       syscall_nr_aiocancel     = 182    SunOS Specific
       syscall_nr_sigpending       = 183 ; // Common
       syscall_nr_query_module     = 184 ; // Linux Specific
       syscall_nr_setpgid          = 185 ; // Common
-      syscall_nr_fremovexattr     = 186 ; // SunOS: pathconf
+//       syscall_nr_pathconf      = 186    SunOS Specific
       syscall_nr_tkill            = 187 ; // SunOS: fpathconf
       syscall_nr_exit_group       = 188 ; // SunOS sysconf
       syscall_nr_uname            = 189 ; // Linux Specific
       syscall_nr_init_module      = 190 ; // Linux Specific
       syscall_nr_personality      = 191 ; // Linux Specific
-      syscall_nr_remap_file_pages = 192 ; // Linux Specific
+//       syscall_nr_prof          = 192    Linux Specific
       syscall_nr_epoll_create     = 193 ; // Linux Specific - was break
       syscall_nr_epoll_ctl        = 194 ; // Linux Specific - was lock
       syscall_nr_epoll_wait       = 195 ; // Linux Specific - was mpx
-      syscall_nr_ioprio_set       = 196 ; // Linux Specific
+//       syscall_nr_ulimit        = 196    Linux Specific
       syscall_nr_getppid          = 197 ; // Linux Specific
       syscall_nr_sigaction        = 198 ; // Linux Specific
       syscall_nr_sgetmask         = 199 ; // Linux Specific
@@ -269,17 +228,17 @@ Const
       syscall_nr_readahead        = 205 ; // Linux Specific
       syscall_nr_socketcall       = 206 ; // Linux Specific
       syscall_nr_syslog           = 207 ; // Linux Specific
-      syscall_nr_lookup_dcookie   = 208 ; // Linux Specific
-      syscall_nr_fadvise64        = 209 ; // Linux Specific
-      syscall_nr_fadvise64_64     = 210 ; // Linux Specific
-      syscall_nr_tgkill           = 211 ; // Linux Specific
+//       syscall_nr_olduname      = 208    Linux Specific
+//       syscall_nr_iopl          = 209    Linux Specific - i386 specific, unused
+//       syscall_nr_idle          = 210    Linux Specific - was sys_idle, now unused
+//       syscall_nr_vm86          = 211    Linux Specific - i386 specific, unused
       syscall_nr_waitpid          = 212 ; // Linux Specific
       syscall_nr_swapoff          = 213 ; // Linux Specific
       syscall_nr_sysinfo          = 214 ; // Linux Specific
       syscall_nr_ipc              = 215 ; // Linux Specific
       syscall_nr_sigreturn        = 216 ; // Linux Specific
       syscall_nr_clone            = 217 ; // Linux Specific
-      syscall_nr_ioprio_get       = 218 ; // Linux Specific
+//       syscall_nr_modify_ldt    = 218    Linux Specific - i386 specific, unused
       syscall_nr_adjtimex         = 219 ; // Linux Specific
       syscall_nr_sigprocmask      = 220 ; // Linux Specific
       syscall_nr_create_module    = 221 ; // Linux Specific
@@ -292,13 +251,11 @@ Const
       syscall_nr_setfsuid         = 228 ; // Linux Specific
       syscall_nr_setfsgid         = 229 ; // Linux Specific
       syscall_nr__newselect       = 230 ; // Linux Specific
-{$ifndef CPUSPARC64}
       syscall_nr_time             = 231 ; // Linux Specific
-{$endif ndef CPUSPARC64}
-      syscall_nr_splice           = 232 ; // Linux Specific
+//       syscall_nr_oldstat       = 232    Linux Specific
       syscall_nr_stime            = 233 ; // Linux Specific
-      syscall_nr_statfs64         = 234 ; // Linux Specific
-      syscall_nr_fstatfs64        = 235 ; // Linux Specific
+//       syscall_nr_oldfstat      = 234    Linux Specific
+//       syscall_nr_phys          = 235    Linux Specific
       syscall_nr__llseek          = 236 ; // Linux Specific
       syscall_nr_mlock            = 237;
       syscall_nr_munlock          = 238;
@@ -330,9 +287,7 @@ Const
       syscall_nr_timer_getoverrun  = 264;
       syscall_nr_timer_delete      = 265;
       syscall_nr_timer_create      = 266;
-{$ifdef VSERVER}
-      syscall_nr_vserver           = 267; //  Reserved for VSERVER
-{$endif def VSERVER}
+      { syscall_nr_vserver           267 Reserved for VSERVER }
       syscall_nr_io_setup          = 268;
       syscall_nr_io_destroy        = 269;
       syscall_nr_io_submit         = 270;
@@ -377,7 +332,7 @@ Const
       syscall_nr_epoll_pwait       = 309;
       syscall_nr_utimensat         = 310;
       syscall_nr_signalfd          = 311;
-      syscall_nr_timerfd_create    = 312;
+      syscall_nr_timerfd           = 312;
       syscall_nr_eventfd           = 313;
       syscall_nr_fallocate         = 314;
       syscall_nr_timerfd_settime   = 315;
@@ -426,51 +381,3 @@ Const
       syscall_nr_preadv2           = 358;
       syscall_nr_pwritev2          = 359;
       syscall_nr_statx             = 360;
-      syscall_nr_io_pgetevents     = 361;
-      syscall_nr_pkey_mprotect                = 362;
-      syscall_nr_pkey_alloc                   = 363;
-      syscall_nr_pkey_free                    = 364;
-      syscall_nr_rseq                         = 365;
-      syscall_nr_semtimedop                   = 392;
-      syscall_nr_semget                       = 393;
-      syscall_nr_semctl                       = 394;
-      syscall_nr_shmget                       = 395;
-      syscall_nr_shmctl                       = 396;
-      syscall_nr_shmat                        = 397;
-      syscall_nr_shmdt                        = 398;
-      syscall_nr_msgget                       = 399;
-      syscall_nr_msgsnd                       = 400;
-      syscall_nr_msgrcv                       = 401;
-      syscall_nr_msgctl                       = 402;
-      syscall_nr_clock_gettime64              = 403;
-      syscall_nr_clock_settime64              = 404;
-      syscall_nr_clock_adjtime64              = 405;
-      syscall_nr_clock_getres_time64          = 406;
-      syscall_nr_clock_nanosleep_time64       = 407;
-      syscall_nr_timer_gettime64              = 408;
-      syscall_nr_timer_settime64              = 409;
-      syscall_nr_timerfd_gettime64            = 410;
-      syscall_nr_timerfd_settime64            = 411;
-      syscall_nr_utimensat_time64             = 412;
-      syscall_nr_pselect6_time64              = 413;
-      syscall_nr_ppoll_time64                 = 414;
-      syscall_nr_io_pgetevents_time64         = 416;
-      syscall_nr_recvmmsg_time64              = 417;
-      syscall_nr_mq_timedsend_time64          = 418;
-      syscall_nr_mq_timedreceive_time64       = 419;
-      syscall_nr_semtimedop_time64            = 420;
-      syscall_nr_rt_sigtimedwait_time64       = 421;
-      syscall_nr_futex_time64                 = 422;
-      syscall_nr_sched_rr_get_interval_time64 = 423;
-      syscall_nr_pidfd_send_signal            = 424;
-      syscall_nr_io_uring_setup               = 425;
-      syscall_nr_io_uring_enter               = 426;
-      syscall_nr_io_uring_register            = 427;
-      syscall_nr_open_tree                    = 428;
-      syscall_nr_move_mount                   = 429;
-      syscall_nr_fsopen                       = 430;
-      syscall_nr_fsconfig                     = 431;
-      syscall_nr_fsmount                      = 432;
-      syscall_nr_fspick                       = 433;
-      syscall_nr_pidfd_open                   = 434;
-

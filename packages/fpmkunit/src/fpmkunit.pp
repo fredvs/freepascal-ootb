@@ -111,7 +111,7 @@ Type
   // Please keep this order, see OSCPUSupported below
   TCpu=(cpuNone,
     i386,m68k,powerpc,sparc,x86_64,arm,powerpc64,avr,armeb,
-    mips,mipsel,mips64,mips64el,jvm,i8086,aarch64,cpuwasm,sparc64,riscv32,riscv64,xtensa
+    mips,mipsel,jvm,i8086,aarch64,sparc64
   );
   TCPUS = Set of TCPU;
 
@@ -122,7 +122,7 @@ Type
     palmos,macos,darwin,emx,watcom,morphos,netwlibc,
     win64,wince,gba,nds,embedded,symbian,haiku,iphonesim,
     aix,java,android,nativent,msdos,wii,aros,dragonfly,
-    win16,wasm,freertos
+    win16
   );
   TOSes = Set of TOS;
 
@@ -186,48 +186,46 @@ Const
 
   { This table is kept OS,Cpu because it is easier to maintain (PFV) }
   OSCPUSupported : array[TOS,TCpu] of boolean = (
-    { os          none   i386    m68k  ppc    sparc  x86_64 arm    ppc64  avr    armeb  mips   mipsel mips64 mips64el jvm    i8086 aarch64 wasm   sparc64 riscv32 riscv64  xtensa }
-    { none }    ( false, false, false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { linux }   ( false, true,  true,  true,  true,  true,  true,  true,  false, true , true , true , true , true ,   false, false, true , false, true ,  true ,  true,    true ),
-    { go32v2 }  ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { win32 }   ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { os2 }     ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { freebsd } ( false, true,  true,  false, false, true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { beos }    ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { netbsd }  ( false, true,  true,  true,  true,  true,  true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { amiga }   ( false, false, true,  true,  false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { atari }   ( false, false, true,  false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { solaris } ( false, true,  false, false, true,  true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { qnx }     ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { netware } ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { openbsd } ( false, true,  true,  false, false, true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { wdosx }   ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { palmos }  ( false, false, true,  false, false, false, true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { macos }   ( false, false, true,  true,  false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { darwin }  ( false, true,  false, true,  false, true,  true,  true,  false, false, false, false, false, false,   false, false, true , false, false,  false,  false,   false),
-    { emx }     ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { watcom }  ( false, true,  false, false, false ,false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { morphos } ( false, false, false, true,  false ,false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { netwlibc }( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { win64   } ( false, false, false, false, false, true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { wince    }( false, true,  false, false, false, false, true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { gba    }  ( false, false, false, false, false, false, true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { nds    }  ( false, false, false, false, false, false, true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { embedded }( false, true,  true,  true,  true,  true,  true,  true,  true,  true , false, true,  false, true,    false, true , false, false, false,  true,   true,    true ),
-    { symbian } ( false, true,  false, false, false, false, true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { haiku }   ( false, true,  false, false, false, true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { iphonesim}( false, true,  false, false, false, true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { aix    }  ( false, false, false, true,  false, false, false, true,  false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { java }    ( false, false, false, false, false, false, false, false, false, false, false, false, false, false,   true , false, false, false, false,  false,  false,   false),
-    { android } ( false, true,  false, false, false, true,  true,  false, false, false, false, true,  false, true,    true , false, true,  false, false,  false,  false,   false),
-    { nativent }( false, true,  false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { msdos }   ( false, false, false, false, false, false, false, false, false, false, false, false, false, false,   false, true , false, false, false,  false,  false,   false),
-    { wii }     ( false, false, false, true , false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { aros }    ( false, true,  false, false, false, true,  true,  false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { dragonfly}( false, false, false, false, false, true,  false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   false),
-    { win16 }   ( false, false, false, false, false, false, false, false, false, false, false, false, false, false,   false, true , false, false, false,  false,  false,   false),
-    { wasm }    ( false, false, false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, true,  false,  false,  false,   false),
-    { freertos }( false, false, false, false, false, false, false, false, false, false, false, false, false, false,   false, false, false, false, false,  false,  false,   true )
+    { os          none   i386    m68k  ppc    sparc  x86_64 arm    ppc64  avr    armeb  mips   mipsel jvm    i8086 aarch64 sparc64}
+    { none }    ( false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { linux }   ( false, true,  true,  true,  true,  true,  true,  true,  false, true , true , true , false, false, true , true ),
+    { go32v2 }  ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { win32 }   ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { os2 }     ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { freebsd } ( false, true,  true,  false, false, true,  false, false, false, false, false, false, false, false, false, false),
+    { beos }    ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { netbsd }  ( false, true,  true,  true,  true,  true,  true,  false, false, false, false, false, false, false, false, false),
+    { amiga }   ( false, false, true,  true,  false, false, false, false, false, false, false, false, false, false, false, false),
+    { atari }   ( false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { solaris } ( false, true,  false, false, true,  true,  false, false, false, false, false, false, false, false, false, false),
+    { qnx }     ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { netware } ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { openbsd } ( false, true,  true,  false, false, true,  false, false, false, false, false, false, false, false, false, false),
+    { wdosx }   ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { palmos }  ( false, false, true,  false, false, false, true,  false, false, false, false, false, false, false, false, false),
+    { macos }   ( false, false, true,  true,  false, false, false, false, false, false, false, false, false, false, false, false),
+    { darwin }  ( false, true,  false, true,  false, true,  true,  true,  false, false, false, false, false, false, true , false),
+    { emx }     ( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { watcom }  ( false, true,  false, false, false ,false, false, false, false, false, false, false, false, false, false, false),
+    { morphos } ( false, false, false, true,  false ,false, false, false, false, false, false, false, false, false, false, false),
+    { netwlibc }( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { win64   } ( false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false),
+    { wince    }( false, true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false),
+    { gba    }  ( false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false),
+    { nds    }  ( false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false),
+    { embedded }( false, true,  true,  true,  true,  true,  true,  true,  true,  true , false, true , false, true , false, false),
+    { symbian } ( false, true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false),
+    { haiku }   ( false, true,  false, false, false, true,  false, false, false, false, false, false, false, false, false, false),
+    { iphonesim}( false, true,  false, false, false, true,  false, false, false, false, false, false, false, false, false, false),
+    { aix    }  ( false, false, false, true,  false, false, false, true,  false, false, false, false, false, false, false, false),
+    { java }    ( false, false, false, false, false, false, false, false, false, false, false, false, true , false, false, false),
+    { android } ( false, true,  false, false, false, true,  true,  false, false, false, false, true,  true , false, true,  false),
+    { nativent }( false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false),
+    { msdos }   ( false, false, false, false, false, false, false, false, false, false, false, false, false, true , false, false),
+    { wii }     ( false, false, false, true , false, false, false, false, false, false, false, false, false, false, false, false),
+    { aros }    ( false, true,  false, false, false, true,  true,  false, false, false, false, false, false, false, false, false),
+    { dragonfly}( false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false),
+    { win16 }   ( false, false, false, false, false, false, false, false, false, false, false, false, false, true , false, false)
   );
 
   // Useful
@@ -237,7 +235,6 @@ Const
   PPExt   = '.pp';
   IncExt  = '.inc';
   ObjExt  = '.o';
-  LTOExt  = '.bc';
   RstExt  = '.rst';
   RsjExt  = '.rsj';
   LibExt  = '.a';
@@ -636,7 +633,6 @@ Type
     Function GetUnitFileName : String; virtual;
     function GetUnitLibFileName(AOS: TOS): String; virtual;
     Function GetObjectFileName : String; virtual;
-    Function GetLTOFileName : String; virtual;
     Function GetBinFileBase: String;
     function GetRSTFileName : String; Virtual;
     function GetRSJFileName : String; Virtual;
@@ -669,7 +665,6 @@ Type
     Property SourceFileName: String Read GetSourceFileName ;
     Property UnitFileName : String Read GetUnitFileName;
     Property ObjectFileName : String Read GetObjectFileName;
-    Property LTOFileName : String Read GetLTOFileName;
     Property RSTFileName : String Read GetRSTFileName;
     Property RSJFileName : String Read GetRSJFileName;
     Property FPCTarget : String Read FFPCTarget Write FFPCTarget;
@@ -824,7 +819,7 @@ Type
     FOptions: TStrings;
     FTransmitOptions: TStrings;
     FFileName: String;
-    FShortName: String; { Used to generate the short 8.3 zip file name, must be 4 characters at most }
+    FShortName: String;
     FAuthor: String;
     FLicense: String;
     FHomepageURL: String;
@@ -2812,8 +2807,6 @@ begin
       powerpc:  result := GetGccDirArch('cpupowerpc','-m32');
       powerpc64:result := GetGccDirArch('cpupowerpc64','-m64');
       aarch64:  result := GetGccDirArch('cpuaarch64','');
-      riscv32:  result := GetGccDirArch('cpuriscv32','-march=rv32imafdc');
-      riscv64:  result := GetGccDirArch('cpuriscv64','-march=rv64imafdc');
     end {case}
   else if OS = darwin then
     case CPU of
@@ -8693,12 +8686,6 @@ begin
 end;
 
 
-function TTarget.GetLTOFileName: String;
-begin
-  Result:=Name+LTOExt;
-end;
-
-
 function TTarget.GetRSTFileName: String;
 begin
   Result:=Name+RSText;
@@ -8796,7 +8783,6 @@ begin
   If not(ACPU in CPUs) or not(AOS in OSes) then
     exit;
   List.Add(APrefixU + ObjectFileName);
-  List.Add(APrefixU + LTOFileName);
   If (TargetType in [ttUnit,ttImplicitUnit,ttExampleUnit, ttCleanOnlyUnit]) then
     begin
       List.Add(APrefixU + UnitFileName);
@@ -8849,14 +8835,9 @@ var
   UnitsDir : string;
 begin
   UnitsDir := Installer.BuildEngine.AddPathPrefix(nil, APrefixU);
-  If Not (TargetType in [ttProgram,ttSharedLibrary,ttExampleProgram]) then
-    begin
-      // The compiler does not create an objectfile for all programs.
-      if FileExists(UnitsDir + ObjectFileName) then
-        List.Add(APrefixU + ObjectFileName);
-      if FileExists(UnitsDir + LTOFileName) then
-        List.Add(APrefixU + LTOFileName);
-    end;
+  If Not (TargetType in [ttProgram,ttSharedLibrary,ttExampleProgram]) and FileExists(UnitsDir + ObjectFileName) then
+    // The compiler does not create an objectfile for all programs.
+    List.Add(APrefixU + ObjectFileName);
   If (TargetType in [ttUnit,ttImplicitUnit,ttExampleUnit]) then
     begin
       List.Add(APrefixU + UnitFileName);
@@ -8881,12 +8862,12 @@ begin
     begin
       if FileExists(UnitsDir + RSJFileName) then
         begin
-          Installer.Log(VlDebug,Format(SDbgUNregisteredResource,[APrefixU + RSJFileName]));
+          Installer.Log(VlDebug,Format(SDbgUnregisteredResource,[APrefixU + RSJFileName]));
           List.Add(APrefixU + RSJFileName);
         end
       else if FileExists(UnitsDir + RSTFileName) then
         begin
-          Installer.Log(VlDebug,Format(SDbgUNregisteredResource,[APrefixU + RSTFileName]));
+          Installer.Log(VlDebug,Format(SDbgUnregisteredResource,[APrefixU + RSTFileName]));
           List.Add(APrefixU + RSTFileName);
         end;
      end;

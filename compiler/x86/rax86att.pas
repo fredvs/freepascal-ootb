@@ -117,8 +117,6 @@ Implementation
                 opcode:=A_MOV;
 {$endif x86_64}
             end;
-          else
-            ;
         end;
       end;
 
@@ -395,8 +393,6 @@ Implementation
               else
                 dec(oper.opr.ref.offset,l);
             end;
-          else
-            ;
         end;
       end;
 
@@ -451,8 +447,6 @@ Implementation
                    case oper.opr.typ of
                      OPR_REFERENCE: oper.opr.varsize := tsize;
                          OPR_LOCAL: oper.opr.localvarsize := tsize;
-                     else
-                       ;
                    end;
 
                  end;
@@ -565,8 +559,6 @@ Implementation
                      case oper.opr.typ of
                        OPR_REFERENCE: oper.opr.varsize := k;
                            OPR_LOCAL: oper.opr.localvarsize := k;
-                       else
-                         ;
                      end;
                    end;
                   MaybeGetPICModifier(oper);

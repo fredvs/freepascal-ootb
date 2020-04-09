@@ -1,34 +1,22 @@
+{ %norun }
+
 {$mode macpas}
 {$warnings off}
 program recursivefunctionparam;
 
 function first( function test( theint: integer): boolean): integer;
-begin
-  test(2);
-end;
+begin {not implemented} end;
 
 function find: integer;
-  var
-    l: longint;
 
   function test( theint: integer): boolean;
   begin
-    if (theint = 1) then
-      first( test)
-    else
-      begin
-        writeln('nested procvar call, l = ', l);
-        if l<>1234567890 then
-          halt(1);
-      end;
-    find:=0;
+    first( test)
   end;
 
 begin
-  l:=1234567890;
-  test(1)
+  {not implemented}
 end;
 
 begin
-  find;
 end.

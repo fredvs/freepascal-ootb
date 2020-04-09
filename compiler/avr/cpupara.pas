@@ -39,7 +39,7 @@ unit cpupara;
           function push_addr_param(varspez:tvarspez;def : tdef;calloption : tproccalloption) : boolean;override;
           function ret_in_param(def:tdef;pd:tabstractprocdef):boolean;override;
           function create_paraloc_info(p : tabstractprocdef; side: tcallercallee):longint;override;
-          function create_varargs_paraloc_info(p : tabstractprocdef; side: tcallercallee; varargspara:tvarargsparalist):longint;override;
+          function create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;override;
           function  get_funcretloc(p : tabstractprocdef; side: tcallercallee; forcetempdef: tdef): tcgpara;override;
          private
           procedure init_values(var curintreg, curfloatreg, curmmreg: tsuperregister; var cur_stack_offset: aword);
@@ -57,10 +57,7 @@ unit cpupara;
 
     function tcpuparamanager.get_volatile_registers_int(calloption : tproccalloption):tcpuregisterset;
       begin
-        if CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype] then
-          result:=VOLATILE_INTREGISTERS-[RS_R18,RS_R19]
-        else
-          result:=VOLATILE_INTREGISTERS;
+        result:=VOLATILE_INTREGISTERS;
       end;
 
 
@@ -170,7 +167,7 @@ unit cpupara;
             result:=not(def.size in [1,2,4]);
           }
           else
-            if (def.size > 8) or ((CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype]) and (def.size > 4)) then
+            if (def.size > 8) then
               result:=true
             else
               result:=inherited ret_in_param(def,pd);
@@ -207,8 +204,7 @@ unit cpupara;
         begin
           { In case of po_delphi_nested_cc, the parent frame pointer
             is always passed on the stack. }
-           if (((nextintreg>RS_R9) and not(CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype])) or
-               (nextintreg>RS_R21)) and
+           if (nextintreg>RS_R9) and
               (not(vo_is_parentfp in hp.varoptions) or
                not(po_delphi_nested_cc in p.procoptions)) then
              begin
@@ -224,10 +220,7 @@ unit cpupara;
                paraloc^.loc:=LOC_REFERENCE;
                paraloc^.reference.index:=NR_STACK_POINTER_REG;
                paraloc^.reference.offset:=stack_offset;
-{$push}
-{$R-}
                dec(stack_offset,2);
-{$pop}
             end;
         end;
 
@@ -307,8 +300,7 @@ unit cpupara;
                    by adding paralen mod 2, make the size even
                  }
                  nextintreg:=curintreg-(paralen+(paralen mod 2))+1;
-                 if ((nextintreg>=RS_R8) and not(CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype])) or
-                   (nextintreg>=RS_R20) then
+                 if nextintreg>=RS_R8 then
                    curintreg:=nextintreg-1
                  else
                    begin
@@ -343,8 +335,7 @@ unit cpupara;
                  case loc of
                     LOC_REGISTER:
                       begin
-                        if ((nextintreg>=RS_R8) and not(CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype])) or
-                          (nextintreg>=RS_R20) then
+                        if nextintreg>=RS_R8 then
                           begin
                             paraloc^.loc:=LOC_REGISTER;
                             paraloc^.size:=OS_8;
@@ -361,19 +352,19 @@ unit cpupara;
                       begin
                         if push_addr_param(hp.varspez,paradef,p.proccalloption) then
                           begin
-                           paraloc^.size:=OS_ADDR;
-                           paraloc^.def:=cpointerdef.getreusable_no_free(paradef);
-                           assignintreg;
-                         end
+                            paraloc^.size:=OS_ADDR;
+                            paraloc^.def:=cpointerdef.getreusable_no_free(paradef);
+                            assignintreg
+                          end
                         else
                           begin
-                            paraloc^.def:=hp.vardef;
-                            paraloc^.loc:=LOC_REFERENCE;
-                            paraloc^.reference.index:=NR_STACK_POINTER_REG;
-                            paraloc^.reference.offset:=stack_offset;
-                            inc(stack_offset,paralen);
-                         end;
-                        paralen:=0;
+                             paraloc^.def:=hp.vardef;
+                             paraloc^.loc:=LOC_REFERENCE;
+                             paraloc^.reference.index:=NR_STACK_POINTER_REG;
+                             paraloc^.reference.offset:=stack_offset;
+                             inc(stack_offset,hp.vardef.size);
+                          end;
+                        dec(paralen,hp.vardef.size);
                       end;
                     else
                       internalerror(2002071002);
@@ -535,25 +526,17 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; side: tcallercallee; varargspara:tvarargsparalist):longint;
+    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;
       var
         cur_stack_offset: aword;
         curintreg, curfloatreg, curmmreg: tsuperregister;
       begin
         init_values(curintreg,curfloatreg,curmmreg,cur_stack_offset);
 
-        result:=create_paraloc_info_intern(p,side,p.paras,curintreg,curfloatreg,curmmreg,cur_stack_offset);
+        result:=create_paraloc_info_intern(p,callerside,p.paras,curintreg,curfloatreg,curmmreg,cur_stack_offset);
         if (p.proccalloption in cstylearrayofconst) then
-          begin
-            { just continue loading the parameters in the registers }
-            if assigned(varargspara) then
-              begin
-                if side=callerside then
-                  result:=create_paraloc_info_intern(p,side,varargspara,curintreg,curfloatreg,curmmreg,cur_stack_offset)
-                else
-                  internalerror(2019021914);
-              end;
-          end
+          { just continue loading the parameters in the registers }
+          result:=create_paraloc_info_intern(p,callerside,varargspara,curintreg,curfloatreg,curmmreg,cur_stack_offset)
         else
           internalerror(200410231);
       end;

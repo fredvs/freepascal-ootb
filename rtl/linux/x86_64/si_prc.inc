@@ -35,8 +35,6 @@
 
 {$L abitag.o}
 
-procedure InitTLS; [external name 'FPC_INITTLS'];
-
 {******************************************************************************
                           Process start/halt
  ******************************************************************************}
@@ -73,7 +71,7 @@ procedure _FPC_proc_start; assembler; nostackframe; public name '_start';
     movq    %r10,%rdi
 
     xorq    %rbp, %rbp
-    call    SysEntry_InitTLS
+    call    SysEntry
 {$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     popq     %rsi                                  { Pop the argument count.  }
     movq     operatingsystem_parameter_argc@GOTPCREL(%rip),%rax
@@ -89,10 +87,6 @@ procedure _FPC_proc_start; assembler; nostackframe; public name '_start';
     { Save initial stackpointer }
     movq    initialstkptr@GOTPCREL(%rip),%rax
     movq    %rsp,(%rax)
-
-{$if FPC_FULLVERSION>30200}
-    call    InitTLS
-{$endif FPC_FULLVERSION>30200}
 
     xorq    %rbp, %rbp
     call    PASCALMAIN

@@ -388,16 +388,11 @@ implementation
     procedure encodesechdrflags(aoptions:TObjSectionOptions;out AshType:longint;out Ashflags:longint);
       begin
         { Section Type }
+        AshType:=SHT_PROGBITS;
         if oso_strings in aoptions then
           AshType:=SHT_STRTAB
         else if not(oso_data in aoptions) then
-          AshType:=SHT_NOBITS
-        else if oso_note in aoptions then
-          AshType:=SHT_NOTE
-        else if oso_arm_attributes in aoptions then
-          AshType:=SHT_ARM_ATTRIBUTES
-        else
-          AshType:=SHT_PROGBITS;
+          AshType:=SHT_NOBITS;
         { Section Flags }
         Ashflags:=0;
         if oso_load in aoptions then
@@ -406,8 +401,6 @@ implementation
           Ashflags:=Ashflags or SHF_EXECINSTR;
         if oso_write in aoptions then
           Ashflags:=Ashflags or SHF_WRITE;
-        if oso_threadvar in aoptions then
-          Ashflags:=Ashflags or SHF_TLS;
       end;
 
 
@@ -426,8 +419,6 @@ implementation
           include(aoptions,oso_write);
         if Ashflags and SHF_EXECINSTR<>0 then
           include(aoptions,oso_executable);
-        if Ashflags and SHF_TLS<>0 then
-          include(aoptions,oso_threadvar);
       end;
 
 
@@ -566,9 +557,7 @@ implementation
           '.obcj_nlcatlist',
           '.objc_protolist',
           '.stack',
-          '.heap',
-          '.gcc_except_table',
-          '.ARM.attributes'
+          '.heap'
         );
       var
         sep : string[3];
@@ -585,15 +574,6 @@ implementation
                 result:=secname+'.'+aname;
                 exit;
               end;
-
-            if atype=sec_threadvar then
-              begin
-                if (target_info.system in (systems_windows+systems_wince)) then
-                  secname:='.tls'
-                else if (target_info.system in systems_linux) then
-                  secname:='.tbss';
-              end;
-
             if create_smartlink_sections and (aname<>'') then
               begin
                 case aorder of
@@ -672,7 +652,7 @@ implementation
         if assigned(objreloc) then
           begin
             objreloc.size:=len;
-            if reltype in [RELOC_RELATIVE{$ifdef x86},RELOC_PLT32{$endif}{$ifdef x86_64},RELOC_TLSGD,RELOC_GOTPCREL{$endif}] then
+            if reltype in [RELOC_RELATIVE{$ifdef x86},RELOC_PLT32{$endif}{$ifdef x86_64},RELOC_GOTPCREL{$endif}] then
               dec(data,len);
             if ElfTarget.relocs_use_addend then
               begin
@@ -761,10 +741,7 @@ implementation
         if objsym.ThumbFunc then
           inc(elfsym.st_value);
 {$endif ARM}
-        { hidden symbols should have been converted to local symbols in
-          the linking pass in case we're writing an exe/library; don't
-          convert them to local here as well, as that would potentially
-          hide a bug there. }
+
         case objsym.bind of
           AB_LOCAL :
             begin
@@ -783,16 +760,11 @@ implementation
             elfsym.st_info:=STB_WEAK shl 4;
           AB_GLOBAL :
             elfsym.st_info:=STB_GLOBAL shl 4;
-          AB_PRIVATE_EXTERN :
-            begin
-              elfsym.st_info:=STB_GLOBAL shl 4;
-              SetElfSymbolVisibility(elfsym.st_other,STV_HIDDEN);
-            end
         else
           InternalError(2012111801);
         end;
-        { External symbols must be NOTYPE in relocatable files except if they are TLS symbols }
-        if (objsym.bind<>AB_EXTERNAL) or (kind<>esk_obj) or (objsym.typ=AT_TLS) then
+        { External symbols must be NOTYPE in relocatable files }
+        if (objsym.bind<>AB_EXTERNAL) or (kind<>esk_obj) then
           begin
             case objsym.typ of
               AT_FUNCTION :
@@ -804,9 +776,7 @@ implementation
                 elfsym.st_info:=elfsym.st_info or STT_TLS;
               AT_GNU_IFUNC:
                 elfsym.st_info:=elfsym.st_info or STT_GNU_IFUNC;
-              { other types are implicitly mapped to STT_NOTYPE }
-              else
-                ;
+            { other types are implicitly mapped to STT_NOTYPE }
             end;
           end;
         if objsym.bind<>AB_COMMON then
@@ -1214,8 +1184,6 @@ implementation
                 STB_GLOBAL:
                   if sym.st_shndx=SHN_UNDEF then
                     bind:=AB_EXTERNAL
-                  else if GetElfSymbolVisibility(sym.st_other)=STV_HIDDEN then
-                    bind:=AB_PRIVATE_EXTERN
                   else
                     bind:=AB_GLOBAL;
                 STB_WEAK:

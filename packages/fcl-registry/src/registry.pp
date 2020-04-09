@@ -57,7 +57,6 @@ type
     fRootKey: HKEY;
     fLazyWrite: Boolean;
     fCurrentPath: UnicodeString;
-    function FixPath(APath: UnicodeString): UnicodeString;
     function GetLastErrorMsg: string;
     function RegMultiSzDataToUnicodeStringArray(U: UnicodeString): TUnicodeStringArray;
     function ListToArray(List: TStrings; IsUtf8: Boolean): TUnicodeStringArray;
@@ -104,8 +103,8 @@ type
     function HasSubKeys: Boolean;
     function KeyExists(const Key: UnicodeString): Boolean;
     function KeyExists(const Key: String): Boolean;
-    function LoadKey(const Key, FileName: UnicodeString): Boolean;  unimplemented;
-    function LoadKey(const Key, FileName: String): Boolean;  unimplemented;
+    function LoadKey(const Key, FileName: UnicodeString): Boolean;
+    function LoadKey(const Key, FileName: String): Boolean;
     function OpenKey(const Key: UnicodeString; CanCreate: Boolean): Boolean;
     function OpenKey(const Key: String; CanCreate: Boolean): Boolean;
     function OpenKeyReadOnly(const Key: UnicodeString): Boolean;
@@ -136,10 +135,10 @@ type
     function ReadTime(const Name: String): TDateTime;
     function RegistryConnect(const UNCName: UnicodeString): Boolean;
     function RegistryConnect(const UNCName: String): Boolean;
-    function ReplaceKey(const Key, FileName, BackUpFileName: UnicodeString): Boolean; unimplemented;
-    function ReplaceKey(const Key, FileName, BackUpFileName: String): Boolean;  unimplemented;
-    function RestoreKey(const Key, FileName: UnicodeString): Boolean;  unimplemented;
-    function RestoreKey(const Key, FileName: String): Boolean;  unimplemented;
+    function ReplaceKey(const Key, FileName, BackUpFileName: UnicodeString): Boolean;
+    function ReplaceKey(const Key, FileName, BackUpFileName: String): Boolean;
+    function RestoreKey(const Key, FileName: UnicodeString): Boolean;
+    function RestoreKey(const Key, FileName: String): Boolean;
     function SaveKey(const Key, FileName: UnicodeString): Boolean;
     function SaveKey(const Key, FileName: String): Boolean;
     function UnLoadKey(const Key: UnicodeString): Boolean;
@@ -154,14 +153,14 @@ type
     procedure GetValueNames(Strings: TStrings);
     //ToDo
     function GetValueNames: TUnicodeStringArray;
-    procedure MoveKey(const OldName, NewName: UnicodeString; Delete: Boolean);  unimplemented;
-    procedure MoveKey(const OldName, NewName: String; Delete: Boolean);  unimplemented;
+    procedure MoveKey(const OldName, NewName: UnicodeString; Delete: Boolean);
+    procedure MoveKey(const OldName, NewName: String; Delete: Boolean);
     procedure RenameValue(const OldName, NewName: UnicodeString);
     procedure RenameValue(const OldName, NewName: String);
     procedure WriteCurrency(const Name: UnicodeString; Value: Currency);
     procedure WriteCurrency(const Name: String; Value: Currency);
-    procedure WriteBinaryData(const Name: UnicodeString; const Buffer; BufSize: Integer);
-    procedure WriteBinaryData(const Name: String; const Buffer; BufSize: Integer);
+    procedure WriteBinaryData(const Name: UnicodeString; var Buffer; BufSize: Integer);
+    procedure WriteBinaryData(const Name: String; var Buffer; BufSize: Integer);
     procedure WriteBool(const Name: UnicodeString; Value: Boolean);
     procedure WriteBool(const Name: String; Value: Boolean);
     procedure WriteDate(const Name: UnicodeString; Value: TDateTime);
@@ -251,7 +250,7 @@ type
     function ReadFloat(const Section, Name: string; Default: Double): Double; override;
     function ReadString(const Section, Name, Default: string): string; override;
     function ReadTime(const Section, Name: string; Default: TDateTime): TDateTime; override;
-    function ReadBinaryStream(const Section, Name: string; Value: TStream): Integer; override; unimplemented;
+    function ReadBinaryStream(const Section, Name: string; Value: TStream): Integer; override;
     procedure WriteDate(const Section, Name: string; Value: TDateTime); override;
     procedure WriteDateTime(const Section, Name: string; Value: TDateTime); override;
     procedure WriteFloat(const Section, Name: string; Value: Double); override;
@@ -546,7 +545,9 @@ end;
 function TRegistry.ReadDate(const Name: UnicodeString): TDateTime;
 
 begin
-  Result:=Trunc(ReadDateTime(Name));
+  Result:=Default(TDateTime);
+  ReadBinaryData(Name, Result, SizeOf(TDateTime));
+  Result:=Trunc(Result);
 end;
 
 function TRegistry.ReadDate(const Name: String): TDateTime;
@@ -629,19 +630,6 @@ end;
 procedure TRegistry.ReadStringList(const Name: String; AList: TStrings);
 begin
   ReadStringList(UnicodeString(Name), AList);
-end;
-
-function TRegistry.FixPath(APath: UnicodeString): UnicodeString;
-const
-  Delim={$ifdef XMLREG}'/'{$else}'\'{$endif};
-begin
-  //At this point we know the path is valid, since this is only called after OpenKey succeeded
-  //Just sanitize it
-  while (Pos(Delim+Delim,APath) > 0) do
-    APath := UnicodeStringReplace(APath, Delim+Delim,Delim,[rfReplaceAll]);
-  if (Length(APath) > 1) and (APath[Length(APath)] = Delim) then
-    System.Delete(APath, Length(APath), 1);
-  Result := APath;
 end;
 
 function TRegistry.RegMultiSzDataToUnicodeStringArray(U: UnicodeString): TUnicodeStringArray;
@@ -752,7 +740,9 @@ end;
 function TRegistry.ReadTime(const Name: UnicodeString): TDateTime;
 
 begin
-  Result:=Frac(ReadDateTime(Name));
+  Result:=Default(TDateTime);
+  ReadBinaryData(Name, Result, SizeOf(TDateTime));
+  Result:=Frac(Result);
 end;
 
 function TRegistry.ReadTime(const Name: String): TDateTime;
@@ -790,12 +780,12 @@ begin
   Result:=ValueExists(UnicodeString(Name));
 end;
 
-procedure TRegistry.WriteBinaryData(const Name: UnicodeString; const Buffer; BufSize: Integer);
+procedure TRegistry.WriteBinaryData(const Name: UnicodeString; var Buffer; BufSize: Integer);
 begin
   PutData(Name, @Buffer, BufSize, rdBinary);
 end;
 
-procedure TRegistry.WriteBinaryData(const Name: String; const Buffer;
+procedure TRegistry.WriteBinaryData(const Name: String; var Buffer;
   BufSize: Integer);
 begin
   WriteBinaryData(UnicodeString(Name), Buffer, BufSize);

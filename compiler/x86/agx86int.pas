@@ -66,7 +66,7 @@ implementation
     const
       line_length = 70;
       max_tokens : longint = 25;
-(*
+
       wasm_cpu_name : array[tcputype] of string = (
 {$if defined(x86_64)}
         'IA64',        // cpu_none,
@@ -100,7 +100,6 @@ implementation
         '686'       // cpu_PentiumM
 {$endif}
       );
-*)
       secnames : array[TAsmSectiontype] of string[4] = ('','',
         'CODE','DATA','DATA','DATA','BSS','TLS',
         '','','','','','',
@@ -111,8 +110,6 @@ implementation
         '',
         '',
         '','','','','','',
-        '',
-        '',
         '',
         '',
         '',
@@ -165,8 +162,6 @@ implementation
         '',
         '',
         '','','','','','',
-        '',
-        '',
         '',
         '',
         '',
@@ -392,7 +387,6 @@ implementation
                              writer.AsmWrite('word ptr ');
                      S_XMM: writer.AsmWrite('xmmword ptr ');
                      S_YMM: writer.AsmWrite('ymmword ptr ');
-                     S_ZMM: writer.AsmWrite('zmmword ptr ');
 {$ifdef x86_64}
                      S_BQ : if dest then
                              writer.AsmWrite('qword ptr ')
@@ -408,8 +402,6 @@ implementation
                              writer.AsmWrite('dword ptr ');
 
 {$endif x86_64}
-                     else
-                       ;
                      end;
                    end;
                   WriteReference(o.ref^);
@@ -476,12 +468,10 @@ implementation
     end;
 
     const
-      ait_const2str : array[aitconst_128bit..aitconst_64bit_unaligned] of string[20]=(
+      ait_const2str : array[aitconst_128bit..aitconst_secrel32_symbol] of string[20]=(
         #9''#9,#9'DQ'#9,#9'DD'#9,#9'DW'#9,#9'DB'#9,
         #9'FIXMESLEB',#9'FIXEMEULEB',
-        #9'DD RVA'#9,#9'DD SECREL32'#9,
-        #9'FIXME',#9'FIXME',#9'FIXME',#9'FIXME',
-        #9'DW'#9,#9'DD'#9,#9'DQ'#9
+        #9'DD RVA'#9,#9'DD SECREL32'#9
       );
 
     Function PadTabs(const p:string;addch:char):string;
@@ -613,9 +603,6 @@ implementation
                  aitconst_32bit,
                  aitconst_16bit,
                  aitconst_8bit,
-                 aitconst_16bit_unaligned,
-                 aitconst_32bit_unaligned,
-                 aitconst_64bit_unaligned,
                  aitconst_rva_symbol,
                  aitconst_secrel32_symbol :
                    begin
@@ -906,8 +893,6 @@ implementation
                          writer.AsmWrite(#9#9'retn');
                        A_RETFD:
                          writer.AsmWrite(#9#9'retf');
-                       else
-                         internalerror(2019050907);
                    end
                  end
 {$endif I386}

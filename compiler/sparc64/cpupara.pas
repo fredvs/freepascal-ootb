@@ -81,8 +81,6 @@ implementation
             result:=false;
           setdef :
             result:=not is_smallset(def);
-          else
-            ;
         end;
       end;
 
@@ -124,8 +122,6 @@ implementation
               result:=def.size>32;
               exit;
             end;
-          else
-            ;
         end;
         result:=inherited ret_in_param(def,pd);
       end;

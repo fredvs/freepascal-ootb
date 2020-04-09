@@ -186,8 +186,6 @@ begin
           cmp64_lt(left_reg, right_reg,unsigned);
         gten:
           cmp64_le(left_reg, right_reg,unsigned);
-        else
-          internalerror(2019051034);
       end
     else
       case NodeType of
@@ -199,8 +197,6 @@ begin
           cmp64_lt(right_reg, left_reg,unsigned);
         gten:
           cmp64_le(right_reg, left_reg,unsigned);
-        else
-          internalerror(2019051033);
       end;
   end;
 end;
@@ -426,7 +422,7 @@ end;
 
 function tmipsaddnode.use_generic_mul64bit: boolean;
 begin
-  result:=needoverflowcheck or
+  result:=(cs_check_overflow in current_settings.localswitches) or
     (not (CPUMIPS_HAS_ISA32R2 in cpu_capabilities[current_settings.cputype]));
 end;
 

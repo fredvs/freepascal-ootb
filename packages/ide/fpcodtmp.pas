@@ -15,8 +15,10 @@
 
 unit FPCodTmp; { Code Templates }
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
+{2.0 compatibility}
+{$ifdef VER2_0}
+  {$macro on}
+  {$define resourcestring := const}
 {$endif}
 
 interface
@@ -152,7 +154,7 @@ begin
 end;
 begin
   if Assigned(AList) and Assigned(Text) then
-    Text^.ForEach(TCallbackProcParam(@CopyIt));
+    Text^.ForEach(@CopyIt);
 end;
 
 procedure TCodeTemplate.SetShortCut(const AShortCut: string);

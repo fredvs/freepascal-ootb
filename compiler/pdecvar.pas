@@ -260,10 +260,7 @@ implementation
             var
               sym: tprocsym;
             begin
-              if not assigned(astruct) then
-                handle_calling_convention(pd,hcc_default_actions_intf)
-              else
-                handle_calling_convention(pd,hcc_default_actions_intf_struct);
+              handle_calling_convention(pd,hcc_default_actions_intf);
               sym:=cprocsym.create(prefix+lower(p.realname));
               symtablestack.top.insert(sym);
               pd.procsym:=sym;
@@ -542,10 +539,7 @@ implementation
                       begin
                         readprocdef.returndef:=p.propdef;
                         { Insert hidden parameters }
-                        if assigned(astruct) then
-                          handle_calling_convention(readprocdef,hcc_default_actions_intf_struct)
-                        else
-                          handle_calling_convention(readprocdef,hcc_default_actions_intf);
+                        handle_calling_convention(readprocdef,hcc_default_actions_intf);
                       end;
                     p.add_getter_or_setter_for_sym(palt_read,sym,def,readprocdef);
                   end;
@@ -568,10 +562,7 @@ implementation
                         hparavs:=cparavarsym.create('$value',10*paranr,vs_value,p.propdef,[]);
                         writeprocdef.parast.insert(hparavs);
                         { Insert hidden parameters }
-                        if not assigned(astruct) then
-                          handle_calling_convention(writeprocdef,hcc_default_actions_intf)
-                        else
-                          handle_calling_convention(writeprocdef,hcc_default_actions_intf_struct);
+                        handle_calling_convention(writeprocdef,hcc_default_actions_intf);
                       end;
                     p.add_getter_or_setter_for_sym(palt_write,sym,def,writeprocdef);
                   end;
@@ -659,10 +650,7 @@ implementation
                                    end;
 
                                  { Insert hidden parameters }
-                                 if not assigned(astruct) then
-                                   handle_calling_convention(storedprocdef,hcc_default_actions_intf)
-                                 else
-                                   handle_calling_convention(storedprocdef,hcc_default_actions_intf_struct);
+                                 handle_calling_convention(storedprocdef,hcc_default_actions_intf);
                                  p.propaccesslist[palt_stored].procdef:=Tprocsym(sym).Find_procdef_bypara(storedprocdef.paras,storedprocdef.returndef,[cpo_allowdefaults,cpo_ignorehidden]);
                                  if not assigned(p.propaccesslist[palt_stored].procdef) then
                                    message(parser_e_ill_property_storage_sym);
@@ -726,8 +714,6 @@ implementation
                       p.default:=0;
                     realconstn:
                       p.default:=longint(single(trealconstnode(pt).value_real));
-                    else if not codegenerror then
-                      internalerror(2019050525);
                   end;
                   pt.free;
                 end;
@@ -1605,13 +1591,14 @@ implementation
          sc : TFPObjectList;
          i  : longint;
          hs,sorg : string;
-         hdef,casetype : tdef;
+         hdef,casetype,tmpdef : tdef;
          { maxsize contains the max. size of a variant }
          { startvarrec contains the start of the variant part of a record }
          maxsize, startvarrecsize : longint;
          usedalign,
          maxalignment,startvarrecalign,
          maxpadalign, startpadalign: shortint;
+         stowner : tdef;
          pt : tnode;
          fieldvs   : tfieldvarsym;
          hstaticvs : tstaticvarsym;
@@ -1900,7 +1887,7 @@ implementation
                 Message(type_e_ordinal_expr_expected);
               consume(_OF);
 
-              UnionSymtable:=trecordsymtable.create('',current_settings.packrecords,current_settings.alignment.recordalignmin);
+              UnionSymtable:=trecordsymtable.create('',current_settings.packrecords,current_settings.alignment.recordalignmin,current_settings.alignment.maxCrecordalign);
               UnionDef:=crecorddef.create('',unionsymtable);
               uniondef.isunion:=true;
 

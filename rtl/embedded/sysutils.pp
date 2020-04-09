@@ -47,66 +47,66 @@ uses
 {****************************************************************************
                               File Functions
 ****************************************************************************}
-function FileOpen(const FileName: RawByteString; Mode: Integer): THandle;
+function FileOpen(const FileName: RawByteString; Mode: Integer): LongInt;
 begin
   result := -1;
 end;
 
 
-function FileGetDate(Handle: THandle) : TOSTimestamp;
+function FileGetDate(Handle: LongInt) : LongInt;
 begin
   result := -1;
 end;
 
 
-function FileSetDate(Handle: THandle; Age: TOSTimestamp) : Longint;
+function FileSetDate(Handle, Age: LongInt) : LongInt;
 begin
   result := -1;
 end;
 
 
-function FileCreate(const FileName: RawByteString) : THandle;
+function FileCreate(const FileName: RawByteString) : LongInt;
 begin
   result := -1;
 end;
 
 
-function FileCreate(const FileName: RawByteString; Rights: integer): THandle;
+function FileCreate(const FileName: RawByteString; Rights: integer): LongInt;
 begin
   result := -1;
 end;
 
 
-function FileCreate(const FileName: RawByteString; ShareMode: integer; rights : integer): THandle;
+function FileCreate(const FileName: RawByteString; ShareMode: integer; rights : integer): LongInt;
 begin
   result := -1;
 end;
 
 
-function FileRead(Handle: THandle; Out Buffer; Count: LongInt): LongInt;
+function FileRead(Handle: LongInt; Out Buffer; Count: LongInt): LongInt;
 begin
   result := -1;
 end;
 
 
-function FileWrite(Handle: THandle; const Buffer; Count: LongInt): LongInt;
+function FileWrite(Handle: LongInt; const Buffer; Count: LongInt): LongInt;
 begin
   result := -1;
 end;
 
 
-function FileSeek(Handle: THandle; FOffset, Origin: LongInt) : LongInt;
+function FileSeek(Handle, FOffset, Origin: LongInt) : LongInt;
 begin
   result := -1;
 end;
 
-function FileSeek(Handle: THandle; FOffset: Int64; Origin: Longint): Int64;
+function FileSeek(Handle: LongInt; FOffset: Int64; Origin: Longint): Int64;
 begin
   result := -1;
 end;
 
 
-procedure FileClose(Handle: THandle);
+procedure FileClose(Handle: LongInt);
 begin
 end;
 
@@ -129,7 +129,7 @@ begin
 end;
 
 
-Function FileAge (Const FileName : RawByteString): TOSTimestamp;
+Function FileAge (Const FileName : RawByteString): Longint;
 begin
   result := -1;
 end;

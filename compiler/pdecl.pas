@@ -41,26 +41,24 @@ interface
     procedure consts_dec(in_structure, allow_typed_const: boolean;out had_generic:boolean);
     procedure label_dec;
     procedure type_dec(out had_generic:boolean);
-    procedure types_dec(in_structure: boolean;out had_generic:boolean;var rtti_attrs_def: trtti_attribute_list);
+    procedure types_dec(in_structure: boolean;out had_generic:boolean);
     procedure var_dec(out had_generic:boolean);
     procedure threadvar_dec(out had_generic:boolean);
     procedure property_dec;
     procedure resourcestring_dec(out had_generic:boolean);
-    procedure parse_rttiattributes(var rtti_attrs_def:trtti_attribute_list);
 
 implementation
 
     uses
-       SysUtils,
        { common }
        cutils,
        { global }
        globals,tokens,verbose,widestr,constexp,
        systems,aasmdata,fmodule,compinnr,
        { symtable }
-       symconst,symbase,symtype,symcpu,symcreat,defutil,defcmp,symtable,
+       symconst,symbase,symtype,symcpu,symcreat,defutil,defcmp,
        { pass 1 }
-       ninl,ncon,nobj,ngenutil,nld,nmem,ncal,pass_1,
+       ninl,ncon,nobj,ngenutil,
        { parser }
        scanner,
        pbase,pexpr,ptype,ptconst,pdecsub,pdecvar,pdecobj,pgenutil,pparautl,
@@ -71,12 +69,6 @@ implementation
        cpuinfo
        ;
 
-    function is_system_custom_attribute_descendant(def:tdef):boolean;
-    begin
-      if not assigned(class_tcustomattribute) then
-        class_tcustomattribute:=tobjectdef(search_system_type('TCUSTOMATTRIBUTE').typedef);
-      Result:=def_is_related(def,class_tcustomattribute);
-    end;
 
     function readconstant(const orgname:string;const filepos:tfileposinfo; out nodetype: tnodetype):tconstsym;
       var
@@ -239,7 +231,6 @@ implementation
                        sym.deprecatedmsg:=deprecatedmsg;
                        sym.visibility:=symtablestack.top.currentvisibility;
                        symtablestack.top.insert(sym);
-                       sym.register_sym;
 {$ifdef jvm}
                        { for the JVM target, some constants need to be
                          initialized at run time (enums, sets) -> create fake
@@ -296,7 +287,6 @@ implementation
                        sym.visibility:=symtablestack.top.currentvisibility;
                        symtablestack.top.insert(sym);
                      end;
-                   sym.register_sym;
                    current_tokenpos:=storetokenpos;
                    { procvar can have proc directives, but not type references }
                    if (hdef.typ=procvardef) and
@@ -396,152 +386,6 @@ implementation
          consume(_SEMICOLON);
       end;
 
-    function find_create_constructor(objdef:tobjectdef):tsymentry;
-      begin
-         while assigned(objdef) do
-           begin
-             result:=objdef.symtable.Find('CREATE');
-             if assigned(result) then
-               exit;
-             objdef:=objdef.childof;
-           end;
-         // A class without a constructor called 'create'?!?
-         internalerror(2012111101);
-      end;
-
-    procedure parse_rttiattributes(var rtti_attrs_def:trtti_attribute_list);
-
-      function read_attr_paras:tnode;
-        var
-          old_block_type : tblock_type;
-        begin
-          if try_to_consume(_LKLAMMER) then
-            begin
-              { we only want constants here }
-              old_block_type:=block_type;
-              block_type:=bt_const;
-              result:=parse_paras(false,false,_RKLAMMER);
-              block_type:=old_block_type;
-              consume(_RKLAMMER);
-            end
-          else
-            result:=nil;
-        end;
-
-      var
-        p,paran,pcalln,ptmp : tnode;
-        i,pcount : sizeint;
-        paras : array of tnode;
-        od : tobjectdef;
-        constrsym : tsymentry;
-        typesym : ttypesym;
-        parasok : boolean;
-      begin
-        consume(_LECKKLAMMER);
-
-        repeat
-          { Parse attribute type }
-          p:=factor(false,[ef_type_only,ef_check_attr_suffix]);
-          if p.nodetype=typen then
-            begin
-              typesym:=ttypesym(ttypenode(p).typesym);
-              od:=tobjectdef(ttypenode(p).typedef);
-
-              { Check if the attribute class is related to TCustomAttribute }
-              if not is_system_custom_attribute_descendant(od) then
-                begin
-                  incompatibletypes(od,class_tcustomattribute);
-                  read_attr_paras.free;
-                  continue;
-                end;
-
-              paran:=read_attr_paras;
-
-              { Search the tprocdef of the constructor which has to be called. }
-              constrsym:=find_create_constructor(od);
-              if constrsym.typ<>procsym then
-                internalerror(2018102301);
-
-              pcalln:=ccallnode.create(paran,tprocsym(constrsym),od.symtable,cloadvmtaddrnode.create(p),[],nil);
-              p:=nil;
-              typecheckpass(pcalln);
-
-              if (pcalln.nodetype=calln) and assigned(tcallnode(pcalln).procdefinition) and not codegenerror then
-                begin
-                  { TODO: once extended RTTI for methods is supported, reject a
-                          constructor if it doesn't have extended RTTI enabled }
-
-                  { collect the parameters of the call node as there might be
-                    compile time type conversions (e.g. a Byte parameter being
-                    passed a value > 255) }
-                  paran:=tcallnode(pcalln).left;
-
-                  { only count visible parameters (thankfully open arrays are not
-                    supported, otherwise we'd need to handle those as well) }
-                  parasok:=true;
-                  paras:=nil;
-                  if assigned(paran) then
-                    begin
-                      ptmp:=paran;
-                      pcount:=0;
-                      while assigned(ptmp) do
-                        begin
-                          if not (vo_is_hidden_para in tcallparanode(ptmp).parasym.varoptions) then
-                            inc(pcount);
-                          ptmp:=tcallparanode(ptmp).right;
-                        end;
-                      setlength(paras,pcount);
-                      ptmp:=paran;
-                      pcount:=0;
-                      while assigned(ptmp) do
-                        begin
-                          if not (vo_is_hidden_para in tcallparanode(ptmp).parasym.varoptions) then
-                            begin
-                              if not is_constnode(tcallparanode(ptmp).left) then
-                                begin
-                                  parasok:=false;
-                                  messagepos(tcallparanode(ptmp).left.fileinfo,type_e_constant_expr_expected);
-                                end;
-                              paras[high(paras)-pcount]:=tcallparanode(ptmp).left.getcopy;
-                              inc(pcount);
-                            end;
-                          ptmp:=tcallparanode(ptmp).right;
-                        end;
-                    end;
-
-                  if parasok then
-                    begin
-                      { Add attribute to attribute list which will be added
-                        to the property which is defined next. }
-                      if not assigned(rtti_attrs_def) then
-                        rtti_attrs_def:=trtti_attribute_list.create;
-                      rtti_attrs_def.addattribute(typesym,tcallnode(pcalln).procdefinition,pcalln,paras);
-                    end
-                  else
-                    begin
-                      { cleanup }
-                      pcalln.free;
-                      for i:=0 to high(paras) do
-                        paras[i].free;
-                    end;
-                end
-              else
-                pcalln.free;
-            end
-          else
-            begin
-              Message(type_e_type_id_expected);
-              { try to recover by nevertheless reading the parameters (if any) }
-              read_attr_paras.free;
-            end;
-
-          p.free;
-        until not try_to_consume(_COMMA);
-
-        consume(_RECKKLAMMER);
-      end;
-
-
     { From http://clang.llvm.org/docs/LanguageExtensions.html#objective-c-features :
       To determine whether a method has an inferred related result type, the first word in the camel-case selector
       (e.g., “init” in “initWithObjects”) is considered, and the method will have a related result type if its return
@@ -587,7 +431,7 @@ implementation
           include(pd.procoptions,po_objc_related_result_type);
       end;
 
-    procedure types_dec(in_structure: boolean;out had_generic:boolean;var rtti_attrs_def: trtti_attribute_list);
+    procedure types_dec(in_structure: boolean;out had_generic:boolean);
 
       function determine_generic_def(name:tidstring):tstoreddef;
         var
@@ -658,10 +502,10 @@ implementation
          first,
          isgeneric,
          isunique,
-         istyperenaming,
-         wasforward: boolean;
+         istyperenaming : boolean;
          generictypelist : tfphashobjectlist;
          localgenerictokenbuf : tdynamicarray;
+         vmtbuilder : TVMTBuilder;
          p:tnode;
          gendef : tstoreddef;
          s : shortstring;
@@ -684,11 +528,6 @@ implementation
            istyperenaming:=false;
            generictypelist:=nil;
            localgenerictokenbuf:=nil;
-
-           { class attribute definitions? }
-           if m_prefixed_attributes in current_settings.modeswitches then
-             while token=_LECKKLAMMER do
-               parse_rttiattributes(rtti_attrs_def);
 
            { fpc generic declaration? }
            if first then
@@ -765,7 +604,6 @@ implementation
                    (sp_generic_dummy in sym.symoptions)
                  ) then
                begin
-                 wasforward:=false;
                  if ((token=_CLASS) or
                      (token=_INTERFACE) or
                      (token=_DISPINTERFACE) or
@@ -776,7 +614,6 @@ implementation
                     is_implicit_pointer_object_type(ttypesym(sym).typedef) and
                     (oo_is_forward in tobjectdef(ttypesym(sym).typedef).objectoptions) then
                   begin
-                    wasforward:=true;
                     case token of
                       _CLASS :
                         objecttype:=default_class_type;
@@ -788,6 +625,8 @@ implementation
                             objecttype:=odt_interfacecorba;
                           it_interfacejava:
                             objecttype:=odt_interfacejava;
+                          else
+                            internalerror(2010122611);
                         end;
                       _DISPINTERFACE :
                         objecttype:=odt_dispinterface;
@@ -805,9 +644,6 @@ implementation
                     gendef:=determine_generic_def(gentypename);
                     { we can ignore the result, the definition is modified }
                     object_dec(objecttype,genorgtypename,newtype,gendef,generictypelist,tobjectdef(ttypesym(sym).typedef),ht_none);
-                    if wasforward and
-                      (tobjectdef(ttypesym(sym).typedef).objecttype<>objecttype) then
-                      Message1(type_e_forward_interface_type_does_not_match,tobjectdef(ttypesym(sym).typedef).GetTypeName);
                     newtype:=ttypesym(sym);
                     hdef:=newtype.typedef;
                   end
@@ -1091,7 +927,11 @@ implementation
                     { Build VMT indexes, skip for type renaming and forward classes }
                     if (hdef.typesym=newtype) and
                        not(oo_is_forward in tobjectdef(hdef).objectoptions) then
-                      build_vmt(tobjectdef(hdef));
+                      begin
+                        vmtbuilder:=TVMTBuilder.Create(tobjectdef(hdef));
+                        vmtbuilder.generate_vmt;
+                        vmtbuilder.free;
+                      end;
 
                     { In case of an objcclass, verify that all methods have a message
                       name set. We only check this now, because message names can be set
@@ -1123,11 +963,6 @@ implementation
                     consume(_SEMICOLON);
                   end;
               end;
-
-              { if we have a real type definition or a unique type we may bind
-                attributes to this def }
-              if not istyperenaming or isunique then
-                trtti_attribute_list.bind(rtti_attrs_def,tstoreddef(hdef).rtti_attribute_list);
             end;
 
            if isgeneric and (not(hdef.typ in [objectdef,recorddef,arraydef,procvardef])
@@ -1155,10 +990,7 @@ implementation
            else
              had_generic:=false;
            first:=false;
-           if assigned(rtti_attrs_def) and (rtti_attrs_def.get_attribute_count>0) then
-             Message1(parser_e_unbound_attribute,trtti_attribute(rtti_attrs_def.rtti_attributes[0]).typesym.prettyname);
-
-         until ((token<>_ID) and (token<>_LECKKLAMMER)) or
+         until (token<>_ID) or
                (in_structure and
                 ((idtoken in [_PRIVATE,_PROTECTED,_PUBLIC,_PUBLISHED,_STRICT]) or
                  ((m_final_fields in current_settings.modeswitches) and
@@ -1174,13 +1006,9 @@ implementation
 
     { reads a type declaration to the symbol table }
     procedure type_dec(out had_generic:boolean);
-      var
-        rtti_attrs_def: trtti_attribute_list;
       begin
         consume(_TYPE);
-        rtti_attrs_def := nil;
-        types_dec(false,had_generic,rtti_attrs_def);
-        rtti_attrs_def.free;
+        types_dec(false,had_generic);
       end;
 
 

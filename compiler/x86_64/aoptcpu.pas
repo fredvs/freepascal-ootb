@@ -35,6 +35,7 @@ type
     function PeepHoleOptPass1Cpu(var p: tai): boolean; override;
     function PeepHoleOptPass2Cpu(var p: tai): boolean; override;
     function PostPeepHoleOptsCpu(var p : tai) : boolean; override;
+    procedure PostPeepHoleOpts; override;
   end;
 
 implementation
@@ -50,16 +51,10 @@ uses
           ait_instruction:
             begin
               case taicpu(p).opcode of
-                A_IMUL:
-                  result:=PrePeepholeOptIMUL(p);
                 A_SAR,A_SHR:
                   result:=PrePeepholeOptSxx(p);
-                else
-                  ;
               end;
             end;
-          else
-            ;
         end;
       end;
 
@@ -70,71 +65,60 @@ uses
         case p.typ of
           ait_instruction:
             begin
-              case taicpu(p).opcode of
-                A_AND:
-                  Result:=OptPass1AND(p);
-                A_MOV:
-                  Result:=OptPass1MOV(p);
-                A_MOVSX,
-                A_MOVSXD,
-                A_MOVZX:
-                  Result:=OptPass1Movx(p);
-                A_MOVAPD,
-                A_MOVAPS,
-                A_MOVUPD,
-                A_MOVUPS,
-                A_VMOVAPS,
-                A_VMOVAPD,
-                A_VMOVUPS,
-                A_VMOVUPD:
-                  result:=OptPass1_V_MOVAP(p);
-                A_VDIVSD,
-                A_VDIVSS,
-                A_VSUBSD,
-                A_VSUBSS,
-                A_VMULSD,
-                A_VMULSS,
-                A_VADDSD,
-                A_VADDSS,
-                A_VANDPD,
-                A_VANDPS,
-                A_VORPD,
-                A_VORPS,
-                A_VXORPD,
-                A_VXORPS:
-                  result:=OptPass1VOP(p);
-                A_MULSD,
-                A_MULSS,
-                A_ADDSD,
-                A_ADDSS:
-                  result:=OptPass1OP(p);
-                A_VMOVSD,
-                A_VMOVSS,
-                A_MOVSD,
-                A_MOVSS:
-                  result:=OptPass1MOVXX(p);
-                A_LEA:
-                  result:=OptPass1LEA(p);
-                A_SUB:
-                  result:=OptPass1Sub(p);
-                A_SHL,A_SAL:
-                  result:=OptPass1SHLSAL(p);
-                A_SETcc:
-                  result:=OptPass1SETcc(p);
-                A_FSTP,A_FISTP:
-                  result:=OptPass1FSTP(p);
-                A_FLD:
-                  result:=OptPass1FLD(p);
-                A_CMP:
-                  result:=OptPass1Cmp(p);
-                else
-                  ;
-              end;
+            case taicpu(p).opcode of
+              A_AND:
+                Result:=OptPass1AND(p);
+              A_MOV:
+                Result:=OptPass1MOV(p);
+              A_MOVSX,
+              A_MOVZX:
+                Result:=OptPass1Movx(p);
+              A_VMOVAPS,
+              A_VMOVAPD,
+              A_VMOVUPS,
+              A_VMOVUPD:
+                result:=OptPass1VMOVAP(p);
+              A_MOVAPD,
+              A_MOVAPS,
+              A_MOVUPD,
+              A_MOVUPS:
+                result:=OptPass1MOVAP(p);
+              A_VDIVSD,
+              A_VDIVSS,
+              A_VSUBSD,
+              A_VSUBSS,
+              A_VMULSD,
+              A_VMULSS,
+              A_VADDSD,
+              A_VADDSS,
+              A_VANDPD,
+              A_VANDPS,
+              A_VORPD,
+              A_VORPS,
+              A_VXORPD,
+              A_VXORPS:
+                result:=OptPass1VOP(p);
+              A_MULSD,
+              A_MULSS,
+              A_ADDSD,
+              A_ADDSS:
+                result:=OptPass1OP(p);
+              A_VMOVSD,
+              A_VMOVSS,
+              A_MOVSD,
+              A_MOVSS:
+                result:=OptPass1MOVXX(p);
+              A_LEA:
+                result:=OptPass1LEA(p);
+              A_SUB:
+                result:=OptPass1Sub(p);
+              A_SHL,A_SAL:
+                result:=OptPass1SHLSAL(p);
+              A_SETcc:
+                result:=OptPass1SETcc(p);
             end;
-          else
-            ;
+          end;
         end;
-
       end;
 
 
@@ -153,16 +137,8 @@ uses
                   Result:=OptPass2Jmp(p);
                 A_Jcc:
                   Result:=OptPass2Jcc(p);
-                A_Lea:
-                  Result:=OptPass2Lea(p);
-                A_SUB:
-                  Result:=OptPass2SUB(p);
-                else
-                  ;
               end;
             end;
-          else
-            ;
         end;
       end;
 
@@ -176,8 +152,6 @@ uses
               case taicpu(p).opcode of
                 A_MOV:
                   Result:=PostPeepholeOptMov(p);
-                A_MOVSX:
-                  Result:=PostPeepholeOptMOVSX(p);
                 A_MOVZX:
                   Result:=PostPeepholeOptMovzx(p);
                 A_CMP:
@@ -191,21 +165,17 @@ uses
                   Result:=PostPeepholeOptCall(p);
                 A_LEA:
                   Result:=PostPeepholeOptLea(p);
-                else
-                  ;
               end;
-
-              { Optimise any reference-type operands (if Result is True, the
-                instruction will be checked on the next iteration) }
-              if not Result then
-                OptimizeRefs(taicpu(p));
-
             end;
-          else
-            ;
         end;
       end;
 
+
+    procedure TCpuAsmOptimizer.PostPeepHoleOpts;
+      begin
+        inherited;
+        OptReferences;
+      end;
 
 begin
   casmoptimizer := TCpuAsmOptimizer;

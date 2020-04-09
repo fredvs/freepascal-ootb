@@ -4,7 +4,7 @@
 
 [package]
 name=fpc
-version=3.3.1
+version=3.2.0-beta
 
 [target]
 dirs=compiler rtl utils packages installer
@@ -20,8 +20,8 @@ fpcdir=.
 rule=help
 
 [prerules]
-REQUIREDVERSION=3.2.0
-REQUIREDVERSION2=3.0.4
+REQUIREDVERSION=3.0.4
+REQUIREDVERSION2=3.2.0
 
 
 # make versions < 3.77 (OS2 version) are buggy
@@ -84,15 +84,6 @@ PPSUF=avr
 endif
 ifeq ($(CPU_TARGET),aarch64)
 PPSUF=a64
-endif
-ifeq ($(CPU_TARGET),riscv32)
-PPSUF=rv32
-endif
-ifeq ($(CPU_TARGET),riscv64)
-PPSUF=rv64
-endif
-ifeq ($(CPU_TARGET),xtensa)
-PPSUF=xtensa
 endif
 
 # cross compilers uses full cpu_target, not just ppc-suffix
@@ -200,17 +191,8 @@ endif
 ifneq ($(OPT),)
 OPTNEW+=$(OPT)
 endif
-
-# some targets do not generate PIC by default so we have select explicitly 
-# the general threading model when compiling the final versions of rtl and packages
-ifneq ($(findstring $(OS_TARGET),linux),)
-ifneq ($(findstring $(CPU_TARGET),i386 arm),)
-override OPTNEW+=-CVglobal-dynamic
-endif
-endif
-
 CLEANOPTS=FPC=$(PPNEW)
-BUILDOPTS=FPC=$(PPNEW) FPCFPMAKE=$(FPCFPMAKENEW) RELEASE=1 'OPT=$(OPTNEW)' 'FPCMAKEOPT=$(OPT)'
+BUILDOPTS=FPC=$(PPNEW) FPCFPMAKE=$(FPCFPMAKENEW) RELEASE=1 'OPT=$(OPTNEW)'
 INSTALLOPTS=FPC=$(PPNEW) ZIPDESTDIR=$(BASEDIR) FPCMAKE=$(FPCMAKENEW)
 
 # CPU targets for which we only build the compiler/rtl
@@ -375,11 +357,7 @@ endif
 
 singlezipinstall: zipinstallall
 zipinstallall: $(BUILDSTAMP)
-ifeq ($(FULL_SOURCE),$(FULL_TARGET))
-	$(MAKE) fpc_zipinstall ZIPTARGET=install FULLZIPNAME=fpc-$(PACKAGE_VERSION).$(TARGETSUFFIX) $(INSTALLOPTS)
-else
-	$(MAKE) fpc_zipinstall ZIPTARGET=install FULLZIPNAME=fpc-$(PACKAGE_VERSION).$(TARGETSUFFIX).built.on.$(SOURCESUFFIX) $(INSTALLOPTS)
-endif
+        $(MAKE) fpc_zipinstall ZIPTARGET=install FULLZIPNAME=fpc-$(PACKAGE_VERSION).$(TARGETSUFFIX) $(INSTALLOPTS)
 
 
 ##########################################################################
@@ -398,4 +376,4 @@ crosszipinstall:
         $(MAKE) zipinstall CROSSINSTALL=1
 
 crosssinglezipinstall:
-	$(MAKE) fpc_zipinstall ZIPTARGET=crossinstall FULLZIPNAME=fpc-$(PACKAGE_VERSION).$(SOURCESUFFIX).cross.$(TARGETSUFFIX) $(INSTALLOPTS)
+        $(MAKE) fpc_zipinstall ZIPTARGET=crossinstall ZIPNAME=fpc $(INSTALLOPTS)

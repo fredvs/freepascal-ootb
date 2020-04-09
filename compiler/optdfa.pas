@@ -53,7 +53,7 @@ unit optdfa;
   implementation
 
     uses
-      globtype,constexp,
+      globtype,
       verbose,
       symconst,symdef,symsym,
       defutil,
@@ -136,8 +136,6 @@ unit optdfa;
               else
                 DFASetInclude(pdfainfo(arg)^.use^,n.optinfo^.index);
             end;
-          else
-            ;
         end;
         result:=fen_false;
       end;
@@ -225,7 +223,6 @@ unit optdfa;
           dfainfo : tdfainfo;
           l : TDFASet;
           save: TDFASet;
-          lv, hv: TConstExprInt;
           i : longint;
           counteruse_after_loop : boolean;
         begin
@@ -332,9 +329,7 @@ unit optdfa;
                   begin
                     { if yes, then we should warn }
                     { !!!!!! }
-                  end
-                else
-                  Include(tfornode(node).loopflags,lnf_dont_mind_loopvar_on_exit);
+                  end;
 
                 { first update the dummy node }
 
@@ -488,16 +483,7 @@ unit optdfa;
                 if assigned(tcasenode(node).elseblock) then
                   DFASetIncludeSet(l,tcasenode(node).elseblock.optinfo^.life)
                 else if assigned(node.successor) then
-                  begin
-                    if is_ordinal(tcasenode(node).left.resultdef) then
-                      begin
-                        getrange(tcasenode(node).left.resultdef,lv,hv);
-                        if tcasenode(node).labelcoverage<(hv-lv) then
-                          DFASetIncludeSet(l,node.successor.optinfo^.life);
-                      end
-                    else
-                      DFASetIncludeSet(l,node.successor.optinfo^.life);
-                  end;
+                  DFASetIncludeSet(l,node.successor.optinfo^.life);
 
                 { add use info from the "case" expression }
                 DFASetIncludeSet(l,tcasenode(node).optinfo^.use);
@@ -604,10 +590,6 @@ unit optdfa;
       if the tree has been changed without updating dfa }
     procedure TDFABuilder.resetdfainfo(node : tnode);
       begin
-        nodemap.Free;
-        nodemap:=nil;
-        resultnode.Free;
-        resultnode:=nil;
         foreachnodestatic(pm_postprocess,node,@ResetDFA,nil);
       end;
 
@@ -833,8 +815,6 @@ unit optdfa;
 {$endif dummy}
                 end;
             end;
-          else
-            ;
         end;
       end;
 

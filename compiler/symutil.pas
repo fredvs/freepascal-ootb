@@ -36,8 +36,6 @@ interface
 
     procedure maybe_guarantee_record_typesym(var def: tdef; st: tsymtable);
 
-    function is_normal_fieldvarsym(sym: tsym): boolean; inline;
-
 
 implementation
 
@@ -100,8 +98,6 @@ implementation
              equal_constsym:=(pnormalset(sym1.value.valueptr)^=pnormalset(sym2.value.valueptr)^);
            constnil :
              equal_constsym:=true;
-           else
-             ;
         end;
       end;
 
@@ -142,14 +138,6 @@ implementation
               print a hint about it being unused }
             include(ts.symoptions,sp_internal);
           end;
-      end;
-
-
-    function is_normal_fieldvarsym(sym: tsym): boolean; inline;
-      begin
-        result:=
-           (sym.typ=fieldvarsym) and
-           not(sp_static in sym.symoptions);
       end;
 
 

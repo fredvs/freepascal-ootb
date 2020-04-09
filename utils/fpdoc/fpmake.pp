@@ -17,7 +17,11 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-fpdoc');
-    P.ShortName:='fpdc';
+    P.ShortName:='fpdoc';
+    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    if Defaults.CPU=jvm then
+      P.OSes := P.OSes - [java,android];
+
     P.Author := '<various>';
     P.License := 'LGPL with modification';
     P.HomepageURL := 'www.freepascal.org';
@@ -37,7 +41,7 @@ begin
     P.Dependencies.Add('univint',[darwin,iphonesim]);
 
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     P.Options.Add('-S2h');
 

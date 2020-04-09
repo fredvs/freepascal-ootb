@@ -400,6 +400,8 @@ implementation
               inserttypeconv_explicit(result,cpointerdef.getreusable(resultdef));
               result:=cderefnode.create(result);
             end;
+          else
+            internalerror(2011060301);
         end;
       end;
 

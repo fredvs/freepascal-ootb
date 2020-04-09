@@ -229,12 +229,8 @@ implementation
                       inc(nolineinfolevel);
                     mark_NoLineInfoEnd:
                       dec(nolineinfolevel);
-                    else
-                      ;
                   end;
                 end;
-              else
-                ;
             end;
 
             { OMF LINNUM records do not support multiple source files }

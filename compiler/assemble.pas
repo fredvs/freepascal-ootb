@@ -156,12 +156,9 @@ interface
         function single2str(d : single) : string; virtual;
         function double2str(d : double) : string; virtual;
         function extended2str(e : extended) : string; virtual;
-        Function DoPipe:boolean; virtual;
+        Function DoPipe:boolean;
 
         function CreateNewAsmWriter: TExternalAssemblerOutputFile; virtual;
-
-        {# Return true if the external assembler should run again }
-        function RerunAssembler: boolean; virtual;
       public
 
         {# Returns the complete path and executable name of the assembler
@@ -742,13 +739,9 @@ Implementation
 
     Function TExternalAssembler.DoPipe:boolean;
       begin
-{$ifdef hasunix}
         DoPipe:=(cs_asm_pipe in current_settings.globalswitches) and
                 (([cs_asm_extern,cs_asm_leave,cs_link_on_target] * current_settings.globalswitches) = []) and
                 ((asminfo^.id in [as_gas,as_ggas,as_darwin,as_powerpc_xcoff,as_clang,as_solaris_as]));
-{$else hasunix}
-        DoPipe:=false;
-{$endif}
       end;
 
 
@@ -822,20 +815,16 @@ Implementation
       var
         asfound : boolean;
         UtilExe  : string;
-        asmbin : TCmdStr;
       begin
         asfound:=false;
-        asmbin:=asminfo^.asmbin;
-        if (af_llvm in asminfo^.flags) then
-          asmbin:=asmbin+llvmutilssuffix;
         if cs_link_on_target in current_settings.globalswitches then
          begin
            { If linking on target, don't add any path PM }
-           FindAssembler:=utilsprefix+ChangeFileExt(asmbin,target_info.exeext);
+           FindAssembler:=utilsprefix+ChangeFileExt(asminfo^.asmbin,target_info.exeext);
            exit;
          end
         else
-         UtilExe:=utilsprefix+ChangeFileExt(asmbin,source_info.exeext);
+         UtilExe:=utilsprefix+ChangeFileExt(asminfo^.asmbin,source_info.exeext);
         if lastas<>ord(asminfo^.id) then
          begin
            lastas:=ord(asminfo^.id);
@@ -889,7 +878,7 @@ Implementation
 
     Function TExternalAssembler.DoAssemble:boolean;
       begin
-        result:=true;
+        DoAssemble:=true;
         if DoPipe then
          exit;
         if not(cs_asm_extern in current_settings.globalswitches) then
@@ -903,13 +892,13 @@ Implementation
            Message1(exec_i_assembling,name);
          end;
 
-        repeat
-          result:=CallAssembler(FindAssembler,MakeCmdLine)
-        until not(result) or not RerunAssembler;
-        if result then
-          writer.RemoveAsm
+        if CallAssembler(FindAssembler,MakeCmdLine) then
+         writer.RemoveAsm
         else
-          GenerateError;
+         begin
+            DoAssemble:=false;
+            GenerateError;
+         end;
       end;
 
 
@@ -984,12 +973,6 @@ Implementation
            Replace(result,'$BIGOBJ','-mbig-obj');
 
          Replace(result,'$EXTRAOPT',asmextraopt);
-      end;
-
-
-    function TExternalAssembler.RerunAssembler: boolean;
-      begin
-        result:=false;
       end;
 
 
@@ -1562,7 +1545,6 @@ Implementation
         objsym,
         objsymend : TObjSymbol;
         cpu: tcputype;
-        eabi_section, TmpSection: TObjSection;
       begin
         while assigned(hp) do
          begin
@@ -1620,11 +1602,9 @@ Implementation
                                     (objsym.objsection<>ObjData.CurrObjSec) then
                                    InternalError(200404124);
                                end
-{$push} {$R-}{$Q-}
                              else
                                Tai_const(hp).value:=objsymend.address-objsym.address+Tai_const(hp).symofs;
                            end;
-{$pop}
                        end;
                    end;
                  ObjData.alloc(tai_const(hp).size);
@@ -1667,20 +1647,13 @@ Implementation
                      { ai_directive(hp).name can be only 16 or 32, this is checked by the reader }
                      ObjData.ThumbFunc:=tai_directive(hp).name='16';
 {$endif ARM}
-{$ifdef RISCV}
-                   asd_option:
-                     internalerror(2019031701);
-{$endif RISCV}
                    else
                      internalerror(2010011101);
                  end;
                end;
              ait_section:
                begin
-                 if Tai_section(hp).sectype=sec_user then
-                   ObjData.CreateSection(Tai_section(hp).sectype,Tai_section(hp).secflags,Tai_section(hp).secprogbits,Tai_section(hp).name^,Tai_section(hp).secorder)
-                 else
-                   ObjData.CreateSection(Tai_section(hp).sectype,Tai_section(hp).name^,Tai_section(hp).secorder);
+                 ObjData.CreateSection(Tai_section(hp).sectype,Tai_section(hp).name^,Tai_section(hp).secorder);
                  Tai_section(hp).sec:=ObjData.CurrObjSec;
                end;
              ait_symbol :
@@ -1704,30 +1677,6 @@ Implementation
              ait_cutobject :
                if SmartAsm then
                 break;
-             ait_eabi_attribute :
-               begin
-                 eabi_section:=ObjData.findsection('.ARM.attributes');
-                 if not(assigned(eabi_section)) then
-                   begin
-                     TmpSection:=ObjData.CurrObjSec;
-                     ObjData.CreateSection(sec_arm_attribute,[],SPB_ARM_ATTRIBUTES,'',secorder_default);
-                     eabi_section:=ObjData.CurrObjSec;
-                     ObjData.setsection(TmpSection);
-                   end;
-                 if eabi_section.Size=0 then
-                   eabi_section.alloc(16);
-                 eabi_section.alloc(LengthUleb128(tai_eabi_attribute(hp).tag));
-                 case tai_eabi_attribute(hp).eattr_typ of
-                   eattrtype_dword:
-                     eabi_section.alloc(LengthUleb128(tai_eabi_attribute(hp).value));
-                   eattrtype_ntbs:
-                     eabi_section.alloc(Length(tai_eabi_attribute(hp).valuestr^)+1);
-                   else
-                     Internalerror(2019100701);
-                 end;
-               end;
-             else
-               ;
            end;
            hp:=Tai(hp.next);
          end;
@@ -1740,7 +1689,6 @@ Implementation
         objsym,
         objsymend : TObjSymbol;
         cpu: tcputype;
-        eabi_section: TObjSection;
       begin
         while assigned(hp) do
          begin
@@ -1752,13 +1700,6 @@ Implementation
                      { here we must determine the fillsize which is used in pass2 }
                      Tai_align_abstract(hp).fillsize:=align(ObjData.CurrObjSec.Size,Tai_align_abstract(hp).aligntype)-
                        ObjData.CurrObjSec.Size;
-
-                     { maximum number of bytes for alignment exeeded? }
-                     if (Tai_align_abstract(hp).aligntype<>Tai_align_abstract(hp).maxbytes) and
-                       (Tai_align_abstract(hp).fillsize>Tai_align_abstract(hp).maxbytes) then
-                       Tai_align_abstract(hp).fillsize:=align(ObjData.CurrObjSec.Size,Byte(Tai_align_abstract(hp).aligntype div 2))-
-                         ObjData.CurrObjSec.Size;
-
                      ObjData.alloc(Tai_align_abstract(hp).fillsize);
                    end;
                end;
@@ -1795,25 +1736,15 @@ Implementation
                    begin
                      objsym:=Objdata.SymbolRef(tai_const(hp).sym);
                      objsymend:=Objdata.SymbolRef(tai_const(hp).endsym);
-                     if Tai_const(hp).consttype in [aitconst_gottpoff,aitconst_tlsgd,aitconst_tlsdesc] then
-                       begin
-                         if objsymend.objsection<>ObjData.CurrObjSec then
-                           Internalerror(2019092801);
-                         Tai_const(hp).value:=objsymend.address-ObjData.CurrObjSec.Size+Tai_const(hp).symofs;
-                       end
-                     else if objsymend.objsection<>objsym.objsection then
+                     if objsymend.objsection<>objsym.objsection then
                        begin
                          if (Tai_const(hp).consttype in [aitconst_uleb128bit,aitconst_sleb128bit]) or
                             (objsym.objsection<>ObjData.CurrObjSec) then
                            internalerror(200905042);
                        end
-{$push} {$R-}{$Q-}
                      else
                        Tai_const(hp).value:=objsymend.address-objsym.address+Tai_const(hp).symofs;
                    end;
-{$pop}
-                 if (Tai_const(hp).consttype in [aitconst_uleb128bit,aitconst_sleb128bit]) then
-                   Tai_const(hp).fixsize;
                  ObjData.alloc(tai_const(hp).size);
                end;
              ait_section:
@@ -1862,9 +1793,6 @@ Implementation
                    asd_code:
                      { ignore for now, but should be added}
                      ;
-                   asd_option:
-                     { ignore for now, but should be added}
-                     ;
 {$ifdef OMFOBJSUPPORT}
                    asd_omf_linnum_line:
                      { ignore for now, but should be added}
@@ -1884,25 +1812,6 @@ Implementation
                      internalerror(2010011102);
                  end;
                end;
-             ait_eabi_attribute :
-               begin
-                 eabi_section:=ObjData.findsection('.ARM.attributes');
-                 if not(assigned(eabi_section)) then
-                   Internalerror(2019100702);
-                 if eabi_section.Size=0 then
-                   eabi_section.alloc(16);
-                 eabi_section.alloc(LengthUleb128(tai_eabi_attribute(hp).tag));
-                 case tai_eabi_attribute(hp).eattr_typ of
-                   eattrtype_dword:
-                     eabi_section.alloc(LengthUleb128(tai_eabi_attribute(hp).value));
-                   eattrtype_ntbs:
-                     eabi_section.alloc(Length(tai_eabi_attribute(hp).valuestr^)+1);
-                   else
-                     Internalerror(2019100703);
-                 end;
-               end;
-             else
-               ;
            end;
            hp:=Tai(hp.next);
          end;
@@ -1933,10 +1842,6 @@ Implementation
         ccomp : comp;
         tmp    : word;
         cpu: tcputype;
-        ddword : dword;
-        eabi_section: TObjSection;
-        s: String;
-        TmpDataPos: TObjSectionOfs;
       begin
         fillchar(zerobuf,sizeof(zerobuf),0);
         fillchar(objsym,sizeof(objsym),0);
@@ -2043,29 +1948,8 @@ Implementation
                      objsym:=Objdata.SymbolRef(tai_const(hp).sym);
                      objsymend:=Objdata.SymbolRef(tai_const(hp).endsym);
                      relative_reloc:=(objsym.objsection<>objsymend.objsection);
-                     if Tai_const(hp).consttype in [aitconst_gottpoff] then
-                       begin
-                         if objsymend.objsection<>ObjData.CurrObjSec then
-                           Internalerror(2019092802);
-                         Tai_const(hp).value:=objsymend.address-ObjData.CurrObjSec.Size+Tai_const(hp).symofs;
-                       end
-                     else if Tai_const(hp).consttype in [aitconst_tlsgd,aitconst_tlsdesc] then
-                       begin
-                         if objsymend.objsection<>ObjData.CurrObjSec then
-                           Internalerror(2019092802);
-                         Tai_const(hp).value:=ObjData.CurrObjSec.Size-objsymend.address+Tai_const(hp).symofs;
-                       end
-                     else if objsymend.objsection<>objsym.objsection then
-                       begin
-                         if (Tai_const(hp).consttype in [aitconst_uleb128bit,aitconst_sleb128bit]) or
-                            (objsym.objsection<>ObjData.CurrObjSec) then
-                           internalerror(2019010301);
-                       end
-                     else
-{$push} {$R-}{$Q-}
-                       Tai_const(hp).value:=objsymend.address-objsym.address+Tai_const(hp).symofs;
+                     Tai_const(hp).value:=objsymend.address-objsym.address+Tai_const(hp).symofs;
                    end;
-{$pop}
                  case tai_const(hp).consttype of
                    aitconst_64bit,
                    aitconst_32bit,
@@ -2118,35 +2002,17 @@ Implementation
 {$ifdef arm}
                    aitconst_got:
                      ObjData.writereloc(Tai_const(hp).symofs,sizeof(longint),Objdata.SymbolRef(tai_const(hp).sym),RELOC_GOT32);
-{                   aitconst_gottpoff:
-                     ObjData.writereloc(Tai_const(hp).symofs,sizeof(longint),Objdata.SymbolRef(tai_const(hp).sym),RELOC_TPOFF); }
-                   aitconst_tpoff:
-                     ObjData.writereloc(Tai_const(hp).symofs,sizeof(longint),Objdata.SymbolRef(tai_const(hp).sym),RELOC_TPOFF);
-                   aitconst_tlsgd:
-                     ObjData.writereloc(Tai_const(hp).symofs,sizeof(longint),Objdata.SymbolRef(tai_const(hp).sym),RELOC_TLSGD);
-                   aitconst_tlsdesc:
-                     begin
-                       { must be a relative symbol, thus value being valid }
-                       if not(assigned(tai_const(hp).sym)) or not(assigned(tai_const(hp).endsym)) then
-                         Internalerror(2019092904);
-                       ObjData.writereloc(Tai_const(hp).value,sizeof(longint),Objdata.SymbolRef(tai_const(hp).sym),RELOC_TLSDESC);
-                     end;
 {$endif arm}
-                   aitconst_dtpoff:
-                     { so far, the size of dtpoff is fixed to 4 bytes }
-                     ObjData.writereloc(Tai_const(hp).symofs,4,Objdata.SymbolRef(tai_const(hp).sym),RELOC_DTPOFF);
                    aitconst_gotoff_symbol:
                      ObjData.writereloc(Tai_const(hp).symofs,sizeof(longint),Objdata.SymbolRef(tai_const(hp).sym),RELOC_GOTOFF);
                    aitconst_uleb128bit,
                    aitconst_sleb128bit :
                      begin
-                       if Tai_const(hp).fixed_size=0 then
-                         Internalerror(2019030302);
                        if tai_const(hp).consttype=aitconst_uleb128bit then
-                         leblen:=EncodeUleb128(qword(Tai_const(hp).value),lebbuf,Tai_const(hp).fixed_size)
+                         leblen:=EncodeUleb128(qword(Tai_const(hp).value),lebbuf)
                        else
-                         leblen:=EncodeSleb128(Tai_const(hp).value,lebbuf,Tai_const(hp).fixed_size);
-                       if leblen<>tai_const(hp).fixed_size then
+                         leblen:=EncodeSleb128(Tai_const(hp).value,lebbuf);
+                       if leblen<>tai_const(hp).size then
                          internalerror(200709271);
                        ObjData.writebytes(lebbuf,leblen);
                      end;
@@ -2212,8 +2078,6 @@ Implementation
                          ));
                      end;
 {$endif OMFOBJSUPPORT}
-                   else
-                     ;
                  end
                end;
              ait_symbolpair:
@@ -2234,54 +2098,6 @@ Implementation
              ait_seh_directive :
                tai_seh_directive(hp).generate_code(objdata);
 {$endif DISABLE_WIN64_SEH}
-             ait_eabi_attribute :
-               begin
-                 eabi_section:=ObjData.findsection('.ARM.attributes');
-                 if not(assigned(eabi_section)) then
-                   Internalerror(2019100704);
-                 if eabi_section.Size=0 then
-                   begin
-                     s:='A';
-                     eabi_section.write(s[1],1);
-                     ddword:=eabi_section.Size-1;
-                     eabi_section.write(ddword,4);
-                     s:='aeabi'#0;
-                     eabi_section.write(s[1],6);
-                     s:=#1;
-                     eabi_section.write(s[1],1);
-                     ddword:=eabi_section.Size-1-4-6-1;
-                     eabi_section.write(ddword,4);
-                   end;
-                 leblen:=EncodeUleb128(tai_eabi_attribute(hp).tag,lebbuf,0);
-                 eabi_section.write(lebbuf,leblen);
-
-                 case tai_eabi_attribute(hp).eattr_typ of
-                   eattrtype_dword:
-                     begin
-                       leblen:=EncodeUleb128(tai_eabi_attribute(hp).value,lebbuf,0);
-                       eabi_section.write(lebbuf,leblen);
-                     end;
-                   eattrtype_ntbs:
-                     begin
-                       s:=tai_eabi_attribute(hp).valuestr^+#0;
-                       eabi_section.write(s[1],Length(s));
-                     end
-                   else
-                     Internalerror(2019100705);
-                 end;
-                 { update size of attributes section, write directly to the dyn. arrays as
-                   we do not increase the size of section }
-                 TmpDataPos:=eabi_section.Data.Pos;
-                 eabi_section.Data.seek(1);
-                 ddword:=eabi_section.Size-1;
-                 eabi_section.Data.write(ddword,4);
-                 eabi_section.Data.seek(12);
-                 ddword:=eabi_section.Size-1-4-6;
-                 eabi_section.Data.write(ddword,4);
-                 eabi_section.Data.Seek(TmpDataPos);
-               end;
-             else
-               ;
            end;
            hp:=Tai(hp.next);
          end;

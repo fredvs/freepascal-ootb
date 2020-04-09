@@ -55,7 +55,7 @@ interface
           m_pointer_2_procedure,m_autoderef,m_tp_procvar,m_initfinal,m_default_ansistring,
           m_out,m_default_para,m_duplicate_names,m_hintdirective,
           m_property,m_default_inline,m_except,m_advanced_records,
-          m_array_operators,m_prefixed_attributes];
+          m_array_operators];
        delphiunicodemodeswitches = delphimodeswitches + [m_systemcodepage,m_default_unicodestring];
        fpcmodeswitches =
          [m_fpc,m_string_pchar,m_nested_comment,m_repeat_forward,
@@ -164,8 +164,6 @@ interface
 
          disabledircache : boolean;
 
-         tlsmodel : ttlsmodel;
-
 {$if defined(i8086)}
          x86memorymodel  : tx86memorymodel;
 {$endif defined(i8086)}
@@ -273,10 +271,6 @@ interface
        utilsdirectory : TPathStr;
        { targetname specific prefix used by these utils (options -XP<path>) }
        utilsprefix    : TCmdStr;
-
-       { Suffix for LLVM utilities, e.g. '-7' for clang-7 }
-       llvmutilssuffix     : TCmdStr;
-
        cshared        : boolean;        { pass --shared to ld to link C libs shared}
        Dontlinkstdlibpath: Boolean;     { Don't add std paths to linkpath}
        rlinkpath      : TCmdStr;        { rpath-link linkdir override}
@@ -403,9 +397,6 @@ interface
        defaultmainaliasname = 'main';
        mainaliasname : string = defaultmainaliasname;
 
-       custom_attribute_suffix = 'ATTRIBUTE';
-
-      LTOExt: TCmdStr = '';
 
     const
       default_settings : TSettings = (
@@ -413,9 +404,6 @@ interface
           procalign : 0;
           loopalign : 0;
           jumpalign : 0;
-          jumpalignskipmax    : 0;
-          coalescealign   : 0;
-          coalescealignskipmax: 0;
           constalignmin : 0;
           constalignmax : 0;
           varalignmin : 0;
@@ -541,24 +529,6 @@ interface
         asmcputype : cpu_none;
         fputype : fpu_x87;
   {$endif i8086}
-  {$ifdef riscv32}
-        cputype : cpu_rv32ima;
-        optimizecputype : cpu_rv32ima;
-        asmcputype : cpu_none;
-        fputype : fpu_fd;
-  {$endif riscv32}
-  {$ifdef riscv64}
-        cputype : cpu_rv64imac;
-        optimizecputype : cpu_rv64imac;
-        asmcputype : cpu_none;
-        fputype : fpu_fd;
-  {$endif riscv64}
-  {$ifdef xtensa}
-        cputype : cpu_none;
-        optimizecputype : cpu_none;
-        asmcputype : cpu_none;
-        fputype : fpu_none;
-  {$endif xtensa}
 {$endif not GENERIC_CPU}
         asmmode : asmmode_standard;
 {$ifndef jvm}
@@ -571,8 +541,6 @@ interface
         minfpconstprec : s32real;
 
         disabledircache : false;
-
-        tlsmodel : tlsm_none;
 {$if defined(i8086)}
         x86memorymodel : mm_small;
 {$endif defined(i8086)}
@@ -580,7 +548,7 @@ interface
         instructionset : is_arm;
 {$endif defined(ARM)}
 {$if defined(LLVM) and not defined(GENERIC_CPU)}
-        llvmversion    : llvmver_7_0;
+        llvmversion    : llvmver_3_9_0;
 {$endif defined(LLVM) and not defined(GENERIC_CPU)}
         controllertype : ct_none;
         pmessage : nil;
@@ -623,13 +591,12 @@ interface
 
     {# Routine to get the required alignment for size of data, which will
        be placed in bss segment, according to the current alignment requirements }
-    function size_2_align(len : asizeuint) : longint;
     function var_align(want_align: longint): shortint;
-    function var_align_size(siz: asizeuint): shortint;
+    function var_align_size(siz: longint): shortint;
     {# Routine to get the required alignment for size of data, which will
        be placed in data/const segment, according to the current alignment requirements }
     function const_align(want_align: longint): shortint;
-    function const_align_size(siz: asizeuint): shortint;
+    function const_align_size(siz: longint): shortint;
 {$ifdef ARM}
     function is_double_hilo_swapped: boolean;{$ifdef USEINLINE}inline;{$endif}
 {$endif ARM}
@@ -1381,30 +1348,13 @@ implementation
       end;
 
 
-    function size_2_align(len : asizeuint) : longint;
-      begin
-         if len>16 then
-           size_2_align:=32
-         else if len>8 then
-           size_2_align:=16
-         else if len>4 then
-           size_2_align:=8
-         else if len>2 then
-           size_2_align:=4
-         else if len>1 then
-           size_2_align:=2
-         else
-           size_2_align:=1;
-      end;
-
-
     function var_align(want_align: longint): shortint;
       begin
         var_align := used_align(want_align,current_settings.alignment.varalignmin,current_settings.alignment.varalignmax);
       end;
 
 
-    function var_align_size(siz: asizeuint): shortint;
+    function var_align_size(siz: longint): shortint;
       begin
         siz := size_2_align(siz);
         var_align_size := var_align(siz);
@@ -1417,7 +1367,7 @@ implementation
       end;
 
 
-    function const_align_size(siz: asizeuint): shortint;
+    function const_align_size(siz: longint): shortint;
       begin
         siz := size_2_align(siz);
         const_align_size := const_align(siz);
@@ -1612,7 +1562,6 @@ implementation
         { Utils directory }
         utilsdirectory:='';
         utilsprefix:='';
-        llvmutilssuffix:='';
         cshared:=false;
         rlinkpath:='';
         sysrootpath:='';

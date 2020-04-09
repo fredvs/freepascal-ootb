@@ -35,11 +35,7 @@ program fpc;
     {$ifdef NETWARE}
       exeext='.nlm';
     {$else}
-      {$ifdef ATARI}
-        exeext='.ttp';
-      {$else}
-        exeext='.exe';
-      {$endif ATARI}
+      exeext='.exe';
     {$endif NETWARE}
   {$endif HASAMIGA}
 {$endif UNIX}
@@ -172,18 +168,6 @@ program fpc;
      processorname:='mips';
   {$endif mips}
 {$endif not mipsel}
-{$ifdef riscv32}
-     ppcbin:='ppcrv32';
-     processorname:='riscv32';
-{$endif riscv32}
-{$ifdef riscv64}
-     ppcbin:='ppcrv64';
-     processorname:='riscv64';
-{$endif riscv64}
-{$ifdef xtensa}
-     ppcbin:='ppcxtensa';
-     processorname:='xtensa';
-{$endif xtensa}
      versionstr:='';                      { Default is just the name }
      if ParamCount = 0 then
        begin
@@ -257,18 +241,12 @@ program fpc;
                              cpusuffix:='ppc'
                            else if processorstr='powerpc64' then
                              cpusuffix:='ppc64'
-                           else if processorstr='riscv32' then
-                             cpusuffix:='rv32'
-                           else if processorstr='riscv64' then
-                             cpusuffix:='rv64'
                            else if processorstr='sparc' then
                              cpusuffix:='sparc'
                            else if processorstr='sparc64' then
                              cpusuffix:='sparc64'
                            else if processorstr='x86_64' then
                              cpusuffix:='x64'
-                           else if processorstr='xtensa' then
-                             cpusuffix:='xtensa'
                            else
                              error('Illegal processor type "'+processorstr+'"');
 

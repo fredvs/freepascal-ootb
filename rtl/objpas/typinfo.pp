@@ -227,7 +227,6 @@ unit TypInfo;
       end;
 
 {$PACKRECORDS 1}
-
       TTypeInfo = record
          Kind : TTypeKind;
          Name : ShortString;
@@ -248,41 +247,6 @@ unit TypInfo;
 {$endif}
 
 {$PACKRECORDS C}
-
-{$if not defined(VER3_0) and not defined(VER3_2)}
-{$define PROVIDE_ATTR_TABLE}
-{$endif}
-
-      TAttributeProc = function : TCustomAttribute;
-
-      TAttributeEntry =
-      {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}
-      packed
-      {$endif}
-      record
-        AttrType: PPTypeInfo;
-        AttrCtor: CodePointer;
-        AttrProc: TAttributeProc;
-        ArgLen: Word;
-        ArgData: Pointer;
-      end;
-
-{$ifdef CPU16}
-      TAttributeEntryList = array[0..(High(SizeUInt) div SizeOf(TAttributeEntry))-1] of TAttributeEntry;
-{$else CPU16}
-      TAttributeEntryList = array[0..$ffff] of TAttributeEntry;
-{$endif CPU16}
-
-      TAttributeTable =
-      {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}
-      packed
-      {$endif}
-      record
-        AttributeCount: word;
-        AttributesList: TAttributeEntryList;
-      end;
-      PAttributeTable = ^TAttributeTable;
-
       // members of TTypeData
       TArrayTypeData =
 {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}
@@ -471,24 +435,14 @@ unit TypInfo;
       packed
       {$endif FPC_REQUIRES_PROPER_ALIGNMENT}
       record
-        {$ifdef PROVIDE_ATTR_TABLE}
-        AttributeTable : PAttributeTable;
-        {$endif}
-        case TTypeKind of
-          tkRecord: (
-            Terminator: Pointer;
-            Size: Integer;
+        Terminator: Pointer;
+        Size: Integer;
 {$ifndef VER3_0}
-            InitOffsetOp: PRecOpOffsetTable;
-            ManagementOp: Pointer;
+        InitOffsetOp: PRecOpOffsetTable;
+        ManagementOp: Pointer;
 {$endif}
-            ManagedFieldCount: Integer;
-          { ManagedFields: array[0..ManagedFieldCount - 1] of TInitManagedField ; }
-          );
-          { include for proper alignment }
-          tkInt64: (
-            dummy : Int64
-          );
+        ManagedFieldCount: Integer;
+        { ManagedFields: array[0..ManagedFieldCount - 1] of TInitManagedField ; }
       end;
 
       PInterfaceData = ^TInterfaceData;
@@ -502,31 +456,16 @@ unit TypInfo;
         function GetPropertyTable: PPropData; inline;
         function GetMethodTable: PIntfMethodTable; inline;
       public
+        Parent: PPTypeInfo;
+        Flags: TIntfFlagsBase;
+        GUID: TGUID;
         property UnitName: ShortString read GetUnitName;
         property PropertyTable: PPropData read GetPropertyTable;
         property MethodTable: PIntfMethodTable read GetMethodTable;
-      public
-      {$ifdef PROVIDE_ATTR_TABLE}
-        AttributeTable : PAttributeTable;
-      {$endif}
-      case TTypeKind of
-        tkInterface: (
-          Parent: PPTypeInfo;
-          Flags: TIntfFlagsBase;
-          GUID: TGUID;
-          UnitNameField: ShortString;
-          { PropertyTable: TPropData }
-          { MethodTable: TIntfMethodTable }
-        );
-        { include for proper alignment }
-        tkInt64: (
-          dummy : Int64
-        );
-{$ifndef FPUNONE}
-        tkFloat:
-          (FloatType : TFloatType
-        );
-{$endif}
+      private
+        UnitNameField: ShortString;
+        { PropertyTable: TPropData }
+        { MethodTable: TIntfMethodTable }
       end;
 
       PInterfaceRawData = ^TInterfaceRawData;
@@ -541,32 +480,17 @@ unit TypInfo;
         function GetPropertyTable: PPropData; inline;
         function GetMethodTable: PIntfMethodTable; inline;
       public
+        Parent: PPTypeInfo;
+        Flags : TIntfFlagsBase;
+        IID: TGUID;
         property UnitName: ShortString read GetUnitName;
         property IIDStr: ShortString read GetIIDStr;
         property PropertyTable: PPropData read GetPropertyTable;
         property MethodTable: PIntfMethodTable read GetMethodTable;
-      public
-      {$ifdef PROVIDE_ATTR_TABLE}
-        AttributeTable : PAttributeTable;
-      {$endif}
-        case TTypeKind of
-          tkInterface: (
-            Parent: PPTypeInfo;
-            Flags : TIntfFlagsBase;
-            IID: TGUID;
-            UnitNameField: ShortString;
-            { IIDStr: ShortString; }
-            { PropertyTable: TPropData }
-          );
-          { include for proper alignment }
-          tkInt64: (
-            dummy : Int64
-          );
-{$ifndef FPUNONE}
-          tkFloat:
-            (FloatType : TFloatType
-          );
-{$endif}
+      private
+        UnitNameField: ShortString;
+        { IIDStr: ShortString; }
+        { PropertyTable: TPropData }
       end;
 
       PClassData = ^TClassData;
@@ -579,29 +503,14 @@ unit TypInfo;
         function GetUnitName: ShortString; inline;
         function GetPropertyTable: PPropData; inline;
       public
+        ClassType : TClass;
+        Parent : PPTypeInfo;
+        PropCount : SmallInt;
         property UnitName: ShortString read GetUnitName;
         property PropertyTable: PPropData read GetPropertyTable;
-      public
-        {$ifdef PROVIDE_ATTR_TABLE}
-        AttributeTable : PAttributeTable;
-        {$endif}
-        case TTypeKind of
-          tkClass: (
-            ClassType : TClass;
-            Parent : PPTypeInfo;
-            PropCount : SmallInt;
-            UnitNameField : ShortString;
-            { PropertyTable: TPropData }
-          );
-          { include for proper alignment }
-          tkInt64: (
-            dummy: Int64;
-          );
-{$ifndef FPUNONE}
-          tkFloat: (
-            FloatType : TFloatType
-          );
-{$endif}
+      private
+        UnitNameField : ShortString;
+        { PropertyTable: TPropData }
       end;
 
       PTypeData = ^TTypeData;
@@ -653,9 +562,6 @@ unit TypInfo;
         { tkPointer }
         property RefType: PTypeInfo read GetRefType;
       public
-         {$ifdef PROVIDE_ATTR_TABLE}
-         AttributeTable : PAttributeTable;
-         {$endif}
          case TTypeKind of
             tkUnKnown,tkLString,tkWString,tkVariant,tkUString:
               ();
@@ -702,7 +608,7 @@ unit TypInfo;
               (ClassType : TClass;
                ParentInfoRef : TypeInfoPtr;
                PropCount : SmallInt;
-               UnitName : ShortString;
+               UnitName : ShortString
                // here the properties follow as array of TPropInfo
               );
             tkRecord:
@@ -726,10 +632,7 @@ unit TypInfo;
             tkMethod:
               (MethodKind : TMethodKind;
                ParamCount : Byte;
-               case Boolean of
-                 False: (ParamList : array[0..1023] of Char);
-                 { dummy for proper alignment }
-                 True: (ParamListDummy : Word);
+               ParamList : array[0..1023] of Char
              {in reality ParamList is a array[1..ParamCount] of:
                   record
                     Flags : TParamFlags;
@@ -823,9 +726,6 @@ unit TypInfo;
         //     6 : true, constant index property
         PropProcs : Byte;
 
-        {$ifdef PROVIDE_ATTR_TABLE}
-        AttributeTable : PAttributeTable;
-        {$endif}
         Name : ShortString;
         property PropType: PTypeInfo read GetPropType;
         property Tail: Pointer read GetTail;
@@ -975,13 +875,6 @@ function GetDynArrayProp(Instance: TObject; PropInfo: PPropInfo): Pointer;
 procedure SetDynArrayProp(Instance: TObject; const PropName: string; const Value: Pointer);
 procedure SetDynArrayProp(Instance: TObject; PropInfo: PPropInfo; const Value: Pointer);
 
-// Extended RTTI
-function GetAttributeTable(TypeInfo: PTypeInfo): PAttributeTable;
-
-function GetPropAttribute(PropInfo: PPropInfo; AttributeNr: Word): TCustomAttribute; inline;
-
-function GetAttribute(AttributeTable: PAttributeTable; AttributeNr: Word): TCustomAttribute;
-
 // Auxiliary routines, which may be useful
 Function GetEnumName(TypeInfo : PTypeInfo;Value : Integer) : string;
 Function GetEnumValue(TypeInfo : PTypeInfo;const Name : string) : Integer;
@@ -1035,15 +928,15 @@ type
 
 function aligntoptr(p : pointer) : pointer;inline;
    begin
-{$ifdef CPUM68K}
+{$ifdef m68k}
      result:=AlignTypeData(p);
-{$else CPUM68K}
+{$else m68k}
 {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
      result:=align(p,sizeof(p));
 {$else FPC_REQUIRES_PROPER_ALIGNMENT}
      result:=p;
 {$endif FPC_REQUIRES_PROPER_ALIGNMENT}
-{$endif CPUM68K}
+{$endif m68k}
    end;
 
 
@@ -1059,45 +952,6 @@ begin
 {$endif}
 end;
 
-function GetAttributeTable(TypeInfo: PTypeInfo): PAttributeTable;
-{$ifdef PROVIDE_ATTR_TABLE}
-var
-  TD: PTypeData;
-begin
-  TD := GetTypeData(TypeInfo);
-  Result:=TD^.AttributeTable;
-{$else}
-begin
-  Result:=Nil;
-{$endif}
-end;
-
-function GetPropData(TypeInfo : PTypeInfo; TypeData: PTypeData) : PPropData; inline;
-var
-  p: PtrUInt;
-begin
-  p := PtrUInt(@TypeData^.UnitName) + SizeOf(TypeData^.UnitName[0]) + Length(TypeData^.UnitName);
-  Result := PPropData(aligntoptr(Pointer(p)));
-end;
-
-function GetAttribute(AttributeTable: PAttributeTable; AttributeNr: Word): TCustomAttribute;
-begin
-  if (AttributeTable=nil) or (AttributeNr>=AttributeTable^.AttributeCount) then
-    result := nil
-  else
-    begin
-      result := AttributeTable^.AttributesList[AttributeNr].AttrProc();
-    end;
-end;
-
-function GetPropAttribute(PropInfo: PPropInfo; AttributeNr: Word): TCustomAttribute;
-begin
-{$ifdef PROVIDE_ATTR_TABLE}
-  Result := GetAttribute(PropInfo^.AttributeTable, AttributeNr);
-{$else}
-  Result := Nil;
-{$endif}
-end;
 
 Function GetEnumName(TypeInfo : PTypeInfo;Value : Integer) : string;
 
@@ -1437,7 +1291,7 @@ var
   hp : PTypeData;
   i : longint;
   p : shortstring;
-  pd : PPropData;
+  pd : ^TPropData;
 begin
   P:=PropName;  // avoid Ansi<->short conversion in a loop
   while Assigned(TypeInfo) do
@@ -1445,7 +1299,7 @@ begin
       // skip the name
       hp:=GetTypeData(Typeinfo);
       // the class info rtti the property rtti follows immediatly
-      pd := GetPropData(TypeInfo,hp);
+      pd:=aligntoptr(pointer(pointer(@hp^.UnitName)+Length(hp^.UnitName)+1));
       Result:=PPropInfo(@pd^.PropList);
       for i:=1 to pd^.PropCount do
         begin
@@ -1604,7 +1458,7 @@ begin
   repeat
     TD:=GetTypeData(TypeInfo);
     // published properties count for this object
-    TP:=PPropInfo(GetPropData(TypeInfo, TD));
+    TP:=aligntoptr(PPropInfo(aligntoptr((Pointer(@TD^.UnitName)+Length(TD^.UnitName)+1))));
     Count:=PWord(TP)^;
     // Now point TP to first propinfo record.
     Inc(Pointer(TP),SizeOF(Word));
@@ -3380,7 +3234,7 @@ var
   p: PByte;
 begin
   p := PByte(@UnitNameField[0]) + SizeOf(UnitNameField[0]) + Length(UnitNameField);
-  Result := AlignToPtr(p);
+  Result := AlignTypeData(p);
 end;
 
 { TTypeData }

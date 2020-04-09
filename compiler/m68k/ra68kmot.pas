@@ -178,16 +178,12 @@ const
         actopcode:=tasmop(PtrUInt(iasmops.Find(hs)));
         { Also filter the helper opcodes, they can't be valid
           while reading an assembly source }
-        case actopcode of
-          A_NONE, A_LABEL, A_DBXX, A_SXX, A_BXX, A_FBXX:
-            begin
-            end;
-          else
-            begin
-              actasmtoken:=AS_OPCODE;
-              result:=TRUE;
-              exit;
-            end;
+        if not (actopcode in
+           [A_NONE, A_LABEL, A_DBXX, A_SXX, A_BXX, A_FBXX]) then
+          begin
+            actasmtoken:=AS_OPCODE;
+            result:=TRUE;
+            exit;
           end;
       end;
 
@@ -284,8 +280,10 @@ const
 
       if c = ':' then
       begin
-           if token = AS_NONE then
-             token := AS_LABEL;
+           case token of
+             AS_NONE: token := AS_LABEL;
+             AS_LLABEL: ; { do nothing }
+           end; { end case }
            { let us point to the next character }
            c := current_scanner.asmgetchar;
            actasmtoken := token;
@@ -1516,8 +1514,6 @@ const
                                 if oper.opr.typ=OPR_SYMBOL then
                                   oper.initref;
                               end;
-                            else
-                              ;
                           end;
                         end
                        else

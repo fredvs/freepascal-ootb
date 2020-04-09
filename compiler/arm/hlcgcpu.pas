@@ -46,6 +46,8 @@ interface
       procedure a_jmp_external_name(list: TAsmList; const externalname: TSymStr); override;
     end;
 
+  procedure create_hlcodegen;
+
 implementation
 
   uses
@@ -177,7 +179,7 @@ implementation
       if make_global then
         list.concat(Tai_symbol.Createname_global(labelname,AT_FUNCTION,0,procdef))
       else
-        list.concat(Tai_symbol.Createname_hidden(labelname,AT_FUNCTION,0,procdef));
+        list.concat(Tai_symbol.Createname(labelname,AT_FUNCTION,0,procdef));
 
       { the wrapper might need aktlocaldata for the additional data to
         load the constant }
@@ -255,7 +257,7 @@ implementation
 
 
 
-  procedure create_hlcodegen_cpu;
+  procedure create_hlcodegen;
     begin
       if GenerateThumbCode then
         hlcg:=tthumbhlcgcpu.create
@@ -266,5 +268,4 @@ implementation
 
 begin
   chlcgobj:=tbasehlcgarm;
-  create_hlcodegen:=@create_hlcodegen_cpu;
 end.

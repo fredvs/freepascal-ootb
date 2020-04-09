@@ -15,7 +15,7 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-h2pas');
-    P.ShortName:='h2pa';
+    P.ShortName:='h2pas';
     { java and jvm-android do not support 
       fpc_get_output used in these sources }
     if Defaults.CPU=jvm then
@@ -36,7 +36,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     P.Options.Add('-Sg');
 
@@ -56,8 +56,6 @@ begin
     T.Dependencies.AddUnit('h2poptions');
 
     T:=P.Targets.AddProgram('h2paspp.pas');
-
-    T:=P.Targets.AddProgram('h2paschk.pas');
 
     P.Targets.AddUnit('h2poptions.pas').install:=false;
     P.Targets.AddUnit('h2plexlib.pas').install:=false;

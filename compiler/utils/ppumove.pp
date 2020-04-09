@@ -47,7 +47,7 @@ const
   Title     = 'PPU-Mover';
   Copyright = 'Copyright (c) 1998-2007 by the Free Pascal Development Team';
 
-  ShortOpts = 'o:e:d:i:P:qhsvb';
+  ShortOpts = 'o:e:d:i:qhsvb';
   BufSize = 4096;
   PPUExt = 'ppu';
   ObjExt = 'o';
@@ -66,7 +66,6 @@ const
   link_static  = $2;
   link_smart   = $4;
   link_shared  = $8;
-  link_lto     = $10;
 
 Type
   PLinkOEnt = ^TLinkOEnt;
@@ -83,8 +82,7 @@ Var
   InputPath,
   DestPath,
   PPLExt,
-  LibExt,
-  BinutilsPrefix      : string;
+  LibExt      : string;
   DoStrip,
   Batch,
   Quiet,
@@ -249,12 +247,9 @@ Var
   f      : file;
   ext,
   s      : string;
-  ppuversion,
-  ppulongversion: dword;
-  gotltofiles: boolean;
+  ppuversion : dword;
 begin
   DoPPU:=false;
-  gotltofiles:=false;
   If Not Quiet then
    Write ('Processing ',PPUFn,'...');
   inppu:=tppufile.create(PPUFn);
@@ -333,18 +328,6 @@ begin
      end;
     if b<>untilb then
      begin
-       if b=ibextraheader then
-         begin
-           ppulongversion:=cardinal(inppu.getlongint);
-           if ppulongversion<>CurrentPPULongVersion then
-             begin
-               inppu.free;
-               outppu.free;
-               Error('Error: Wrong PPU Long Version '+tostr(ppulongversion)+' in '+PPUFn,false);
-               Exit;
-             end;
-           outppu.putlongint(longint(ppulongversion));
-         end;
        repeat
          inppu.getdatabuf(buffer^,bufsize,l);
          outppu.putdata(buffer^,l);
@@ -358,23 +341,19 @@ begin
     iblinkunitofiles :
       begin
         { add all o files, and save the entry when not creating a static
-          library to keep staticlinking possible (also keep possibility
-          to link lto) }
+          library to keep staticlinking possible }
         while not inppu.endofentry do
          begin
            s:=inppu.getstring;
            m:=inppu.getlongint;
-           if (not MakeStatic) or
-              ((m and link_lto)<>0) then
+           if not MakeStatic then
             begin
-              gotltofiles:=gotltofiles or ((m and link_lto)<>0);
               outppu.putstring(s);
               outppu.putlongint(m);
             end;
            AddToLinkFiles(s);
          end;
-        if not MakeStatic or
-           gotltofiles then
+        if not MakeStatic then
          outppu.writeentry(b);
       end;
 {    iblinkunitstaticlibs :
@@ -394,19 +373,13 @@ begin
   if MakeStatic then
    begin
      outppu.putstring(OutputfileForPPU);
-     if not gotltofiles then
-       outppu.putlongint(link_static)
-     else
-       outppu.putlongint(link_static or link_lto);
+     outppu.putlongint(link_static);
      outppu.writeentry(iblinkunitstaticlibs)
    end
   else
    begin
      outppu.putstring(OutputfileForPPU);
-     if not gotltofiles then
-       outppu.putlongint(link_shared)
-     else
-       outppu.putlongint(link_shared or link_lto);
+     outppu.putlongint(link_shared);
      outppu.writeentry(iblinkunitsharedlibs);
    end;
 { read all entries until the end and write them also to the new ppu }
@@ -532,9 +505,9 @@ begin
    Err:=Shell(arbin+' rs '+outputfile+' '+names)<>0
   else
    begin
-     Err:=Shell(BinutilsPrefix+ldbin+' -shared -E -o '+OutputFile+' '+names+' '+libs)<>0;
+     Err:=Shell(ldbin+' -shared -E -o '+OutputFile+' '+names+' '+libs)<>0;
      if (not Err) and dostrip then
-      Shell(BinutilsPrefix+stripbin+' --strip-unneeded '+OutputFile);
+      Shell(stripbin+' --strip-unneeded '+OutputFile);
    end;
   If Err then
    Error('Fatal: Library building stage failed.',true);
@@ -556,7 +529,7 @@ Procedure usage;
   Print usage and exit.
 }
 begin
-  Writeln(paramstr(0),': [-qhvbsS] [-e ext] [-o name] [-d path] [-P binutils prefix] file [file ...]');
+  Writeln(paramstr(0),': [-qhvbsS] [-e ext] [-o name] [-d path] file [file ...]');
   Halt(0);
 end;
 
@@ -581,7 +554,6 @@ begin
   ArBin:='ar';
   LdBin:='ld';
   StripBin:='strip';
-  BinutilsPrefix:='';
   repeat
     c:=Getopt (ShortOpts);
     Case C of
@@ -600,7 +572,6 @@ begin
       's' : DoStrip:=true;
       '?' : Usage;
       'h' : Usage;
-      'P' : BinutilsPrefix:=OptArg;
     end;
   until false;
 { Test filenames on the commandline }

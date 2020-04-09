@@ -75,7 +75,7 @@ type
         procedure CreateDebugSections; override;
         function sectionname(atype:TAsmSectiontype; const aname:string; aorder:TAsmSectionOrder):string;override;
         function sectiontype2align(atype:TAsmSectiontype):longint;override;
-        class function sectiontype2options(atype:TAsmSectiontype):TObjSectionOptions;override;
+        function sectiontype2options(atype:TAsmSectiontype):TObjSectionOptions;override;
         procedure writereloc(data:aint; len:aword; p:TObjSymbol; reltype:TObjRelocationType);override;
       public
       end;
@@ -344,7 +344,7 @@ uses
     end;
 
 
-  class function TmachoObjData.sectiontype2options(atype: TAsmSectiontype): TObjSectionOptions;
+  function TmachoObjData.sectiontype2options(atype: TAsmSectiontype): TObjSectionOptions;
     begin
       case atype of
         sec_objc_meth_var_names,
@@ -828,8 +828,6 @@ uses
                   symList.Insert(iUndef, s);
                   inc(iUndef);
                 end;
-              loc_Notused:
-                ;
             end;
             inc(symStrLen, length(s.Name)+1 );
           end;

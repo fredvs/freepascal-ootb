@@ -614,7 +614,8 @@ implementation
             tcb.start_internal_data_builder(current_asmdata.AsmLists[al_const],sec_rodata,_class.vmt_mangledname,datatcb,classtable);
             datatcb.begin_anonymous_record('$fpc_intern_classtable_'+tostr(classtablelist.Count-1),
               packrecords,1,
-              targetinfos[target_info.system]^.alignment.recordalignmin);
+              targetinfos[target_info.system]^.alignment.recordalignmin,
+              targetinfos[target_info.system]^.alignment.maxCrecordalign);
             datatcb.emit_tai(Tai_const.Create_16bit(classtablelist.count),u16inttype);
             for i:=0 to classtablelist.Count-1 do
               begin
@@ -648,7 +649,8 @@ implementation
               plus there would be very little chance that it could actually be
               reused }
             datatcb.begin_anonymous_record('',packrecords,1,
-              targetinfos[target_info.system]^.alignment.recordalignmin);
+              targetinfos[target_info.system]^.alignment.recordalignmin,
+              targetinfos[target_info.system]^.alignment.maxCrecordalign);
             datatcb.emit_tai(Tai_const.Create_16bit(fieldcount),u16inttype);
             datatcb.emit_tai(Tai_const.Create_sym(classtable),cpointerdef.getreusable(classtabledef));
             for i:=0 to _class.symtable.SymList.Count-1 do
@@ -670,7 +672,8 @@ implementation
                       end;
                     }
                     datatcb.begin_anonymous_record('$fpc_intern_fieldinfo_'+tostr(length(tfieldvarsym(sym).realname)),packrecords,1,
-                      targetinfos[target_info.system]^.alignment.recordalignmin);
+                      targetinfos[target_info.system]^.alignment.recordalignmin,
+                      targetinfos[target_info.system]^.alignment.maxCrecordalign);
                     datatcb.emit_tai(Tai_const.Create_sizeint(tfieldvarsym(sym).fieldoffset),sizeuinttype);
                     classindex:=classtablelist.IndexOf(tfieldvarsym(sym).vardef);
                     if classindex=-1 then
@@ -725,7 +728,8 @@ implementation
       begin
         tcb.start_internal_data_builder(current_asmdata.AsmLists[al_const],sec_rodata,'',datatcb,fintfvtablelabels[intfindex]);
         datatcb.begin_anonymous_record('',0,1,
-          targetinfos[target_info.system]^.alignment.recordalignmin);
+          targetinfos[target_info.system]^.alignment.recordalignmin,
+          targetinfos[target_info.system]^.alignment.maxCrecordalign);
         if assigned(AImplIntf.procdefs) then
           begin
             for i:=0 to AImplIntf.procdefs.count-1 do
@@ -733,7 +737,7 @@ implementation
                 pd:=tprocdef(AImplIntf.procdefs[i]);
                 hs:=CreateWrapperName(_Class,AImplIntf,i,pd);
                 { create reference }
-                datatcb.emit_tai(Tai_const.Createname(hs,AT_FUNCTION,0),cprocvardef.getreusableprocaddr(pd,pc_address_only));
+                datatcb.emit_tai(Tai_const.Createname(hs,AT_FUNCTION,0),cprocvardef.getreusableprocaddr(pd));
               end;
            end
         else
@@ -788,6 +792,8 @@ implementation
               pd:=tprocdef(tpropertysym(AImplIntf.ImplementsGetter).propaccesslist[palt_read].procdef);
               tcb.emit_tai(Tai_const.Create_sizeint(tobjectdef(pd.struct).vmtmethodoffset(pd.extnumber)),sizeuinttype);
             end;
+          else
+            internalerror(200802162);
         end;
 
         { IIDStr }
@@ -843,7 +849,8 @@ implementation
 
         tcb.start_internal_data_builder(current_asmdata.AsmLists[al_const],sec_rodata,_class.vmt_mangledname,datatcb,lab);
         datatcb.begin_anonymous_record('',default_settings.packrecords,1,
-          targetinfos[target_info.system]^.alignment.recordalignmin);
+          targetinfos[target_info.system]^.alignment.recordalignmin,
+          targetinfos[target_info.system]^.alignment.maxCrecordalign);
         datatcb.emit_tai(Tai_const.Create_sizeint(_class.ImplementedInterfaces.count),sizeuinttype);
         interfaceentrydef:=search_system_type('TINTERFACEENTRY').typedef;
         interfaceentrytypedef:=search_system_type('TINTERFACEENTRYTYPE').typedef;
@@ -966,6 +973,8 @@ implementation
          hs : string;
 {$endif vtentry}
       begin
+        if not assigned(_class.VMTEntries) then
+          exit;
         for i:=0 to _class.VMTEntries.Count-1 do
          begin
            vmtentry:=pvmtentry(_class.vmtentries[i]);
@@ -992,7 +1001,7 @@ implementation
                if current_module.moduleid<>vmtpd.owner.moduleid then
                  current_module.addimportedsym(vmtpd.procsym);
              end;
-           tcb.emit_tai(Tai_const.Createname(procname,AT_FUNCTION,0),cprocvardef.getreusableprocaddr(vmtpd,pc_address_only));
+           tcb.emit_tai(Tai_const.Createname(procname,AT_FUNCTION,0),cprocvardef.getreusableprocaddr(vmtpd));
 {$ifdef vtentry}
            hs:='VTENTRY'+'_'+_class.vmt_mangledname+'$$'+tostr(_class.vmtmethodoffset(i) div sizeof(pint));
            current_asmdata.asmlists[al_globals].concat(tai_symbol.CreateName(hs,AT_DATA,0,voidpointerdef));
@@ -1247,7 +1256,7 @@ implementation
                     wrapperpd:=create_procdef_alias(pd,tmps,tmps,
                       current_module.localsymtable,_class,
                       tsk_interface_wrapper,wrapperinfo);
-                    include(wrapperpd.implprocoptions,pio_thunk);
+                    include(wrapperpd.procoptions,po_noreturn);
 {$else cpuhighleveltarget}
                     oldfileposinfo:=current_filepos;
                     if pd.owner.iscurrentunit then
@@ -1323,8 +1332,6 @@ implementation
                   if assigned(tprocdef(def).parast) then
                     do_write_vmts(tprocdef(def).parast,false);
                 end;
-              else
-                ;
             end;
           end;
       end;

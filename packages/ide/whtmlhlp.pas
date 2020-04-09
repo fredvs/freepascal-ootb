@@ -12,10 +12,6 @@
  **********************************************************************}
 unit WHTMLHlp;
 
-{$ifdef cpullvm}
-{$modeswitch nestedprocvars}
-{$endif}
-
 interface
 
 uses Objects,WHTML,WAnsi,WHelp,WChmHWrap;
@@ -1403,7 +1399,7 @@ begin
   if (HelpCtx<>0) and (FileID<>ID) then P:=nil else
   if (FileID=ID) and (LinkNo>TopicLinks^.Count) then P:=nil else
     begin
-      P:=Topics^.FirstThat(TCallbackFunBoolParam(@MatchCtx));
+      P:=Topics^.FirstThat(@MatchCtx);
       if P=nil then
         begin
           if LinkNo=0 then
@@ -1677,7 +1673,7 @@ begin
   if (HelpCtx<>0) and (FileID<>ID) then P:=nil else
   if (FileID=ID) and (LinkNo>TopicLinks^.Count) then P:=nil else
     begin
-      P:=Topics^.FirstThat(TCallbackFunBoolParam(@MatchCtx));
+      P:=Topics^.FirstThat(@MatchCtx);
       if P=nil then
         begin
           if LinkNo=0 then

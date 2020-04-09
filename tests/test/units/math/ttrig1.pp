@@ -7,7 +7,7 @@ uses
   SysUtils,Math;
 
 const
-{$if defined(cpuarm) or defined (cpumips) or defined(cpuaarch64)}
+{$if defined(cpuarm) or defined (cpumips)}
   arctan_res = 1E-13;
 {$else}
   arctan_res = 1E-14;

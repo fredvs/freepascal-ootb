@@ -171,6 +171,7 @@ end;
 Constructor TLinkerBeos.Create;
 var
   s : string;
+  i : integer;
 begin
   Inherited Create;
   s:=GetEnvironmentVariable('BELIBRARIES');

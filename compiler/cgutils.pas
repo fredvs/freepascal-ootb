@@ -74,10 +74,7 @@ unit cgutils;
          base,
          index       : tregister;
          refaddr     : trefaddr;
-         scalefactor : byte;     
-{$if defined(riscv32) or defined(riscv64)}
-         symboldata  : tlinkedlistitem;
-{$endif riscv32/64}
+         scalefactor : byte;
 {$ifdef arm}
          symboldata  : tlinkedlistitem;
          signindex   : shortint;
@@ -135,15 +132,15 @@ unit cgutils;
 {$endif cpuflags}
             LOC_CONSTANT : (
               case longint of
-{$if defined(cpu64bitalu) or defined(cpuhighleveltarget)}
+{$ifdef cpu64bitalu}
                 1 : (value : Int64);
-{$else cpu64bitalu or cpuhighleveltarget}
+{$else cpu64bitalu}
     {$ifdef FPC_BIG_ENDIAN}
                 1 : (_valuedummy,value : longint);
     {$else FPC_BIG_ENDIAN}
                 1 : (value : longint);
     {$endif FPC_BIG_ENDIAN}
-{$endif cpu64bitalu or cpuhighleveltarget}
+{$endif cpu64bitalu}
                 2 : (value64 : Int64);
               );
             LOC_CREFERENCE,
@@ -164,10 +161,10 @@ unit cgutils;
 {$ifdef cpu64bitalu}
                 { overlay a 128 Bit register type }
                 2 : (register128 : tregister128);
-{$else if not defined(cpuhighleveltarget}
+{$else cpu64bitalu}
                 { overlay a 64 Bit register type }
                 2 : (register64 : tregister64);
-{$endif cpu64bitalu and not cpuhighleveltarget}
+{$endif cpu64bitalu}
 {$ifdef cpu8bitalu}
                 3 : (registers : array[0..3] of tregister);
 {$endif cpu8bitalu}

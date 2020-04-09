@@ -36,10 +36,6 @@ unit aoptcpu;
       TAsmOpSet = set of TAsmOp;
 
       TCpuAsmOptimizer = class(TAsmOptimizer)
-        { Converts a conditional jump into an unconditional jump.  Only call this
-          procedure on an instruction that you already know is a conditional jump }
-        procedure MakeUnconditional(p: taicpu); override;
-
         function RegModifiedByInstruction(Reg: TRegister; p1: tai): boolean; override;
         function GetNextInstructionUsingReg(Current: tai;
           var Next: tai; reg: TRegister): Boolean;
@@ -151,28 +147,6 @@ unit aoptcpu;
 {$endif DEBUG_AOPTCPU}
 
 
-  { Converts a conditional jump into an unconditional jump.  Only call this
-    procedure on an instruction that you already know is a conditional jump }
-  procedure TCpuAsmOptimizer.MakeUnconditional(p: taicpu);
-    var
-      idx, topidx: Byte;
-    begin
-      inherited MakeUnconditional(p);
-
-      topidx := p.ops-1;
-      if topidx = 0 then
-        Exit;
-
-      { Move destination address into first register, then delete the rest }
-      p.loadoper(0, p.oper[topidx]^);
-      for idx := topidx downto 1 do
-        p.freeop(idx);
-      p.ops := 1;
-      p.opercnt := 1;
-
-    end;
-
-
  function TCpuAsmOptimizer.InstructionLoadsFromReg(const reg: TRegister; const hp: tai): boolean;
     var
       p: taicpu;
@@ -193,8 +167,6 @@ unit aoptcpu;
               result:=
                 (p.oper[I]^.ref^.base=reg) or
                 (p.oper[I]^.ref^.index=reg);
-            else
-              ;
           end;
           if result then exit; {Bailout if we found something}
           Inc(I);
@@ -218,8 +190,6 @@ unit aoptcpu;
         A_BA,A_BC,
         A_SB,A_SH,A_SW,A_SWL,A_SWR,A_SWC1,A_SDC1:
           exit;
-        else
-        ;
       end;
 
       result:=(p.ops>0) and (p.oper[0]^.typ=top_reg) and
@@ -366,7 +336,6 @@ unit aoptcpu;
         Assigned(FindRegDealloc(taicpu(p).oper[0]^.reg,tai(next.next)));
       if result then
         begin
-          AllocRegBetween(taicpu(p).oper[1]^.reg,p,next,UsedRegs);
           next.oper[1]^.ref^.base:=taicpu(p).oper[1]^.reg;
           DebugMsg('Peephole: Move removed 4',p);
           asml.remove(p);
@@ -747,12 +716,8 @@ unit aoptcpu;
               A_ABS_d, A_NEG_d, A_SQRT_d,
               A_CVT_d_w, A_CVT_d_l, A_CVT_d_s:
                 result:=TryRemoveMov(p,A_MOV_d);
-              else
-                ;
             end;
           end;
-        else
-          ;
       end;
     end;
 
@@ -902,12 +867,8 @@ unit aoptcpu;
                             end;
                         end;
                     end;
-                  else
-                    ;
                 end;
               end;
-            else
-              ;
           end;
           UpdateUsedRegs(p);
           p:=tai(p.next);

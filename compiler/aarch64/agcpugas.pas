@@ -50,7 +50,7 @@ unit agcpugas;
 
     const
       gas_shiftmode2str : array[tshiftmode] of string[4] = (
-        '','lsl','lsr','asr','ror',
+        '','lsl','lsr','asr',
         'uxtb','uxth','uxtw','uxtx',
         'sxtb','sxth','sxtw','sxtx');
 
@@ -120,9 +120,7 @@ unit agcpugas;
                   else
                     result:=linux_addrpage2str[ref.refaddr]+ref.symbol.name
                 end;
-              addr_pic,
-              { for locals replaced by temp symbols on LLVM }
-              addr_no:
+              addr_pic:
                 result:=ref.symbol.name;
               else
                 internalerror(2015022302);
@@ -184,8 +182,6 @@ unit agcpugas;
                 result:=result+']';
               AM_PREINDEXED:
                 result:=result+']!';
-              else
-                ;
             end;
           end;
       end;
@@ -240,11 +236,6 @@ unit agcpugas;
               end
             else
               getopstr:=getreferencestring(asminfo,o.ref^);
-          top_realconst:
-            begin
-              str(o.val_real,Result);
-              Result:='#'+Result;
-            end
           else
             internalerror(2014121507);
         end;

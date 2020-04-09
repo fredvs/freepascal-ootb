@@ -181,7 +181,7 @@ const
 implementation
 
   uses
-    symconst, symutil, defutil, defcmp;
+    symconst, defutil, defcmp;
 
 { tcpurecorddef }
 
@@ -195,7 +195,8 @@ implementation
       result:=false;
       for i:=0 to symtable.SymList.Count-1 do
         begin
-          if is_normal_fieldvarsym(tsym(symtable.symlist[i])) then
+          if (tsym(symtable.symlist[i]).typ=fieldvarsym) and
+             not(sp_static in tsym(symtable.symlist[i]).symoptions) then
             begin
               checkdef:=tfieldvarsym(symtable.symlist[i]).vardef;
               repeat

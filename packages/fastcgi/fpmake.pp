@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('fastcgi');
-    P.ShortName := 'fcgi';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     P.Author := 'FreePascal development team';
     P.License := 'LGPL with modification, ';

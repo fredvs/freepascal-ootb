@@ -40,7 +40,7 @@ begin
 end;
 
 
-Function FileAge (Const FileName : UnicodeString): Int64;
+Function FileAge (Const FileName : UnicodeString): Longint;
 begin
   Result:=FileAge(ToSingleByteFileSystemEncodedFileName(FileName));
 end;
@@ -92,7 +92,7 @@ end;
 
 
 {$ifdef OS_FILESETDATEBYNAME}
-Function FileSetDate (Const FileName : UnicodeString;Age : Int64) : Longint;
+Function FileSetDate (Const FileName : UnicodeString;Age : Longint) : Longint;
 begin
   Result:=FileSetDate(ToSingleByteFileSystemEncodedFileName(FileName),Age);
 end;
@@ -257,7 +257,7 @@ begin
 end;
 
 
-Function FileAge (Const FileName : RawByteString): Int64;
+Function FileAge (Const FileName : RawByteString): Longint;
 begin
   Result:=FileAge(UnicodeString(FileName));
 end;
@@ -306,7 +306,7 @@ end;
 {$endif}
 
 {$ifdef OS_FILESETDATEBYNAME}
-Function FileSetDate (Const FileName : RawByteString;Age : Int64) : Longint;
+Function FileSetDate (Const FileName : RawByteString;Age : Longint) : Longint;
 begin
   Result:=FileSetDate(UnicodeString(FileName),Age);
 end;
@@ -484,7 +484,7 @@ end;
 
 type
   TAbstractSearchRec = Record
-    Time : Int64;
+    Time : Longint;
     Size : Int64;
     Attr : Longint;
     { this will be assigned by the generic code; it is actually either a
@@ -602,51 +602,31 @@ begin
   InternalFindClose(f.FindHandle{$ifdef SEARCHREC_USEFINDDATA},f.FindData{$endif});
 end;
 
-{$if defined(windows) and not defined(win16)}
-function FindDataTimeToDateTime(constref aFileTime: FILETIME; out aResult: TDateTime): Boolean;
-var
-  st, lt: TSystemTime;
-begin
-  Result := FileTimeToSystemTime(aFileTime, st);
-  if Result then begin
-{$ifndef wince}
-    if SystemTimeToTzSpecificLocalTime(Nil, st, lt) then
-      aResult := SystemTimeToDateTime(lt)
-    else
-{$endif}
-      aResult := SystemTimeToDateTime(st);
-  end;
-end;
-{$endif}
-
 { TUnicodeSearchRec }
 
 function TUnicodeSearchRec.GetTimeStamp: TDateTime;
 begin
-{$if declared(FindDataTimeToDateTime)}
-  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
-{$else}
   Result := FileDateToDateTime(Time);
-{$endif}
 end;
 
 { TRawbyteSearchRec }
 
 function TRawbyteSearchRec.GetTimeStamp: TDateTime;
 begin
-{$if declared(FindDataTimeToDateTime)}
-  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
-{$else}
   Result := FileDateToDateTime(Time);
-{$endif}
 end;
 
 { TUnicodeSymLinkRec }
 
 function TUnicodeSymLinkRec.GetTimeStamp: TDateTime;
+{$if defined(win32) or defined(win64) or defined(wince)}
+var
+  st: TSystemTime;
+{$endif}
 begin
-{$if declared(FindDataTimeToDateTime)}
-  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
+{$if defined(win32) or defined(win64) or defined(wince)}
+  FileTimeToSystemTime(FindData.ftLastWriteTime, st);
+  Result := SystemTimeToDateTime(st);
 {$else}
   Result := 0;
 {$endif}
@@ -655,9 +635,14 @@ end;
 { TRawbyteSymLinkRec }
 
 function TRawbyteSymLinkRec.GetTimeStamp: TDateTime;
+{$if defined(win32) or defined(win64) or defined(wince)}
+var
+  st: TSystemTime;
+{$endif}
 begin
-{$if declared(FindDataTimeToDateTime)}
-  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
+{$if defined(win32) or defined(win64) or defined(wince)}
+  FileTimeToSystemTime(FindData.ftLastWriteTime, st);
+  Result := SystemTimeToDateTime(st);
 {$else}
   Result := 0;
 {$endif}

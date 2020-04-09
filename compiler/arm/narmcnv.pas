@@ -32,9 +32,27 @@ interface
        tarmtypeconvnode = class(tcgtypeconvnode)
          protected
            function first_int_to_real: tnode;override;
-           function first_real_to_real: tnode;override;
+           function first_real_to_real: tnode; override;
+         { procedure second_int_to_int;override; }
+         { procedure second_string_to_string;override; }
+         { procedure second_cstring_to_pchar;override; }
+         { procedure second_string_to_chararray;override; }
+         { procedure second_array_to_pointer;override; }
+         // function first_int_to_real: tnode; override;
+         { procedure second_pointer_to_array;override; }
+         { procedure second_chararray_to_string;override; }
+         { procedure second_char_to_string;override; }
            procedure second_int_to_real;override;
+         // procedure second_real_to_real;override;
+         { procedure second_cord_to_pointer;override; }
+         { procedure second_proc_to_procvar;override; }
+         { procedure second_bool_to_int;override; }
            procedure second_int_to_bool;override;
+         { procedure second_load_smallset;override;  }
+         { procedure second_ansistring_to_pchar;override; }
+         { procedure second_pchar_to_string;override; }
+         { procedure second_class_to_intf;override; }
+         { procedure second_char_to_char;override; }
        end;
 
 implementation
@@ -60,7 +78,7 @@ implementation
 {$ifdef cpufpemu}
           (current_settings.fputype=fpu_soft) or
 {$endif cpufpemu}
-          (FPUARM_HAS_VFP_SINGLE_ONLY in fpu_capabilities[current_settings.fputype]) then
+          (current_settings.fputype=fpu_fpv4_s16) then
           result:=inherited first_int_to_real
         else
           begin
@@ -99,7 +117,11 @@ implementation
               fpu_fpa10,
               fpu_fpa11:
                 expectloc:=LOC_FPUREGISTER;
-              fpu_vfp_first..fpu_vfp_last:
+              fpu_vfpv2,
+              fpu_vfpv3,
+              fpu_vfpv4,
+              fpu_vfpv3_d16,
+              fpu_fpv4_s16:
                 expectloc:=LOC_MMREGISTER;
               else
                 internalerror(2009112702);
@@ -109,7 +131,7 @@ implementation
 
     function tarmtypeconvnode.first_real_to_real: tnode;
       begin
-        if FPUARM_HAS_VFP_SINGLE_ONLY in fpu_capabilities[current_settings.fputype] then
+        if (current_settings.fputype=fpu_fpv4_s16) then
           begin
             case tfloatdef(left.resultdef).floattype of
               s32real:
@@ -222,7 +244,10 @@ implementation
                   end;
               end;
             end;
-          else if FPUARM_HAS_VFP_DOUBLE in fpu_capabilities[current_settings.fputype] then
+          fpu_vfpv2,
+          fpu_vfpv3,
+          fpu_vfpv4,
+          fpu_vfpv3_d16:
             begin
               location_reset(location,LOC_MMREGISTER,def_cgsize(resultdef));
               signed:=left.location.size=OS_S32;
@@ -236,8 +261,8 @@ implementation
               current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg(A_VCVT,
                 location.register,left.location.register),
                 signedprec2vfppf[signed,location.size]));
-            end
-          else if FPUARM_HAS_VFP_SINGLE_ONLY in fpu_capabilities[current_settings.fputype] then
+            end;
+          fpu_fpv4_s16:
             begin
               location_reset(location,LOC_MMREGISTER,def_cgsize(resultdef));
               signed:=left.location.size=OS_S32;
@@ -252,10 +277,7 @@ implementation
                 current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg(A_VCVT,location.register,left.location.register), PF_F32S32))
               else
                 current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg(A_VCVT,location.register,left.location.register), PF_F32U32));
-            end
-          else
-            { should be handled in pass 1 }
-            internalerror(2019050934);
+            end;
         end;
       end;
 

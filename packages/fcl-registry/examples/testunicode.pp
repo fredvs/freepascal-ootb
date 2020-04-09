@@ -1,16 +1,11 @@
 program testunicode;
 
-{ Unicode test program using UTF8String }
-
 {$mode objfpc}{$H+}
 {$codepage utf8}
 {$IFNDEF UNIX}
 {$APPTYPE CONSOLE}
 {$ENDIF}
 uses
-{$ifdef unix}
-  cwstring,
-{$endif}
   sysutils, classes, registry;
 
 Var

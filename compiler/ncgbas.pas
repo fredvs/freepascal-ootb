@@ -68,10 +68,6 @@ interface
           procedure pass_generate_code;override;
        end;
 
-       tcgfinalizetempsnode = class(tfinalizetempsnode)
-          procedure pass_generate_code; override;
-       end;
-
   implementation
 
     uses
@@ -84,9 +80,6 @@ interface
       procinfo,
       cpuinfo,
       tgobj
-{$ifdef x86}
-      ,cgx86
-{$endif x86}
       ;
 
 {*****************************************************************************
@@ -218,10 +211,7 @@ interface
                     begin
                       op.typ:=top_reg;
                       op.reg:=sym.localloc.register;
-{$ifdef x86}
-                      if reg2opsize(op.reg)<>TCGSize2Opsize[sym.localloc.size] then
-                        op.reg:=newreg(getregtype(op.reg),getsupreg(op.reg),cgsize2subreg(getregtype(op.reg),sym.localloc.size));
-{$endif x86}
+
 {$ifdef avr}
                       case sofs of
                         1: op.reg:=cg.GetNextReg(op.reg);
@@ -345,8 +335,6 @@ interface
                                      taicpu(hp2).segprefix:=ref^.segment;
 {$endif x86}
                                  end;
-                               else
-                                 ;
                              end;
                            end;
                         end;
@@ -356,8 +344,6 @@ interface
                         taicpu(hp2).CheckIfValid;
 {$endif x86}
                      end;
-                  else
-                    ;
                 end;
                 current_asmdata.CurrAsmList.concat(hp2);
                 hp:=tai(hp.next);
@@ -391,8 +377,6 @@ interface
                                  top_ref :
                                    if (ref^.segment<>NR_NO) and (ref^.segment<>get_default_segment_of_ref(ref^)) then
                                      taicpu(hp).segprefix:=ref^.segment;
-                                 else
-                                   ;
                                end;
                              end;
 {$endif x86}
@@ -403,14 +387,15 @@ interface
                       taicpu(hp).CheckIfValid;
 {$endif x86}
                      end;
-                  else
-                    ;
                 end;
                 hp:=tai(hp.next);
               end;
              { insert the list }
              current_asmdata.CurrAsmList.concatlist(p_asm);
            end;
+
+         { Update section count }
+         current_asmdata.currasmlist.section_count:=current_asmdata.currasmlist.section_count+p_asm.section_count;
 
          { Release register used in the assembler block }
          if (not has_registerlist) then
@@ -543,8 +528,6 @@ interface
                   { in case reference contains CREGISTERS, that doesn't matter:
                     we want to write to the location indicated by the current
                     value of those registers, and we can save those values }
-                  else
-                    ;
                 end;
                 hlcg.g_reference_loc(current_asmdata.CurrAsmList,tempinfo^.typedef,tempinfo^.tempinitcode.location,tempinfo^.location);
               end;
@@ -562,8 +545,6 @@ interface
           LOC_FPUREGISTER,
           LOC_MMREGISTER :
             excludetempflag(ti_valid);
-          else
-            ;
         end;
       end;
 
@@ -643,14 +624,14 @@ interface
                 begin
                   { make sure the register allocator doesn't reuse the }
                   { register e.g. in the middle of a loop              }
-{$if defined(cpu32bitalu) and not defined(cpuhighleveltarget)}
+{$if defined(cpu32bitalu)}
                   if tempinfo^.location.size in [OS_64,OS_S64] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reghi);
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reglo);
                     end
                   else
-{$elseif defined(cpu16bitalu) and not defined(cpuhighleveltarget)}
+{$elseif defined(cpu16bitalu)}
                   if tempinfo^.location.size in [OS_64,OS_S64] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reghi);
@@ -665,7 +646,7 @@ interface
                       cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register));
                     end
                   else
-{$elseif defined(cpu8bitalu) and not defined(cpuhighleveltarget)}
+{$elseif defined(cpu8bitalu)}
                   if tempinfo^.location.size in [OS_64,OS_S64] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reghi);
@@ -736,17 +717,6 @@ interface
       end;
 
 
-{*****************************************************************************
-                         TCGFINALIZETEMPSNODE
-*****************************************************************************}
-
-    procedure tcgfinalizetempsnode.pass_generate_code;
-      begin
-        hlcg.gen_finalize_code(current_asmdata.CurrAsmList);
-        location.loc:=LOC_VOID;
-      end;
-
-
 begin
    cnothingnode:=tcgnothingnode;
    casmnode:=tcgasmnode;
@@ -755,5 +725,4 @@ begin
    ctempcreatenode:=tcgtempcreatenode;
    ctemprefnode:=tcgtemprefnode;
    ctempdeletenode:=tcgtempdeletenode;
-   cfinalizetempsnode:=tcgfinalizetempsnode;
 end.

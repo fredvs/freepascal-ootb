@@ -38,14 +38,6 @@ uses
 {$include timerd.inc}
 {$include doslibd.inc}
 {$include doslibf.inc}
-
-{$ifdef cpum68k}
-{$if defined(amiga_v1_0_only) or defined(amiga_v1_2_only)}
-{$include legacyexech.inc}
-{$include legacydosh.inc}
-{$endif}
-{$endif}
-
 {$ENDIF}
 
 const

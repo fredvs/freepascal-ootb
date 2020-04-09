@@ -12,7 +12,6 @@ begin
   if b<>123 then
     halt(1);
   close(f);
-  erase(f);
   writeln('ok');
 end.
 

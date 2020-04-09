@@ -142,6 +142,7 @@ implementation
   procedure taarch64typeconvnode.second_int_to_bool;
     var
       resflags: tresflags;
+      hlabel: tasmlabel;
     begin
       if (nf_explicit in flags) and
          not(left.expectloc in [LOC_FLAGS,LOC_JUMP]) then

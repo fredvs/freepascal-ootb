@@ -60,7 +60,6 @@ unit cgcpu;
 
     uses
        globtype,globals,verbose,systems,cutils,cclasses,
-       cpuinfo,
        symtable,paramgr,cpupi,
        rgcpu,ncgutil;
 
@@ -87,13 +86,8 @@ unit cgcpu;
           rg[R_INTREGISTER]:=trgcpu.create(R_INTREGISTER,R_SUBWHOLE,[RS_RAX,RS_RDX,RS_RCX,RS_RSI,RS_RDI,RS_R8,
             RS_R9,RS_R10,RS_R11,RS_RBX,RS_R12,RS_R13,RS_R14,RS_R15],first_int_imreg,[]);
 
-        if FPUX86_HAS_32MMREGS in fpu_capabilities[current_settings.fputype] then
-          rg[R_MMREGISTER]:=trgcpu.create(R_MMREGISTER,R_SUBWHOLE,[RS_XMM0,RS_XMM1,RS_XMM2,RS_XMM3,RS_XMM4,RS_XMM5,RS_XMM6,RS_XMM7,
-            RS_XMM8,RS_XMM9,RS_XMM10,RS_XMM11,RS_XMM12,RS_XMM13,RS_XMM14,RS_XMM15,RS_XMM16,RS_XMM17,RS_XMM18,RS_XMM19,RS_XMM20,
-            RS_XMM21,RS_XMM22,RS_XMM23,RS_XMM24,RS_XMM25,RS_XMM26,RS_XMM27,RS_XMM28,RS_XMM29,RS_XMM30,RS_XMM31],first_mm_imreg,[])
-        else
-          rg[R_MMREGISTER]:=trgcpu.create(R_MMREGISTER,R_SUBWHOLE,[RS_XMM0,RS_XMM1,RS_XMM2,RS_XMM3,RS_XMM4,RS_XMM5,RS_XMM6,RS_XMM7,
-            RS_XMM8,RS_XMM9,RS_XMM10,RS_XMM11,RS_XMM12,RS_XMM13,RS_XMM14,RS_XMM15],first_mm_imreg,[]);
+        rg[R_MMREGISTER]:=trgcpu.create(R_MMREGISTER,R_SUBWHOLE,[RS_XMM0,RS_XMM1,RS_XMM2,RS_XMM3,RS_XMM4,RS_XMM5,RS_XMM6,RS_XMM7,
+          RS_XMM8,RS_XMM9,RS_XMM10,RS_XMM11,RS_XMM12,RS_XMM13,RS_XMM14,RS_XMM15],first_mm_imreg,[]);
         rgfpu:=Trgx86fpu.create;
       end;
 
@@ -151,7 +145,6 @@ unit cgcpu;
       var
         hitem: tlinkedlistitem;
         seh_proc: tai_seh_directive;
-        regsize: longint;
         r: integer;
         href: treference;
         templist: TAsmList;
@@ -176,28 +169,17 @@ unit cgcpu;
         var
           r: longint;
           usedregs: tcpuregisterset;
-          hreg: TRegister;
         begin
           usedregs:=rg[R_INTREGISTER].used_in_proc-paramanager.get_volatile_registers_int(current_procinfo.procdef.proccalloption);
           for r := low(regs_to_save_int) to high(regs_to_save_int) do
             if regs_to_save_int[r] in usedregs then
               begin
-                inc(regsize,sizeof(aint));
-                inc(stackmisalignment,sizeof(aint));
+                inc(stackmisalignment,sizeof(pint));
                 push_one_reg(newreg(R_INTREGISTER,regs_to_save_int[r],R_SUBWHOLE));
-                hreg:=newreg(R_INTREGISTER,regs_to_save_int[r],R_SUBWHOLE);
-                if current_procinfo.framepointer<>NR_STACK_POINTER_REG then
-                  current_asmdata.asmcfi.cfa_offset(list,hreg,-(regsize+sizeof(pint)*2+localsize))
-                else
-                  begin
-                    current_asmdata.asmcfi.cfa_offset(list,hreg,-(regsize+sizeof(pint)+localsize));
-                    current_asmdata.asmcfi.cfa_def_cfa_offset(list,regsize+sizeof(pint)+localsize);
-                  end;
               end;
         end;
 
       begin
-        regsize:=0;
         regs_to_save_int:=paramanager.get_saved_registers_int(current_procinfo.procdef.proccalloption);
         regs_to_save_mm:=paramanager.get_saved_registers_mm(current_procinfo.procdef.proccalloption);
         hitem:=list.last;
@@ -266,7 +248,7 @@ unit cgcpu;
                   localsize := align(localsize+stackmisalignment,target_info.stackalign)-stackmisalignment;
                 g_stackpointer_alloc(list,localsize);
                 if current_procinfo.framepointer=NR_STACK_POINTER_REG then
-                  current_asmdata.asmcfi.cfa_def_cfa_offset(list,regsize+localsize+sizeof(pint));
+                  current_asmdata.asmcfi.cfa_def_cfa_offset(list,localsize+sizeof(pint));
                 current_procinfo.final_localsize:=localsize;
                 if (target_info.system=system_x86_64_win64) then
                   begin
@@ -295,8 +277,6 @@ unit cgcpu;
           list.insertafter(seh_proc,hitem)
         else
           list.insert(seh_proc);
-        { the directive creates another section }
-        inc(list.section_count);
         templist:=TAsmList.Create;
 
         { We need to record postive offsets from RSP; if registers are saved
@@ -370,14 +350,7 @@ unit cgcpu;
         if (current_procinfo.flags*[pi_has_unwind_info,pi_do_call,pi_has_saved_regs])=[pi_has_unwind_info,pi_do_call] then
           list.concat(Taicpu.op_none(A_NOP));
         { remove stackframe }
-        if not(nostackframe) and
-          { we do not need an exit stack frame when we never return
-
-            * the final ret is left so the peephole optimizer can easily do call/ret -> jmp or call conversions
-            * the entry stack frame must be normally generated because the subroutine could be still left by
-              an exception and then the unwinding code might need to restore the registers stored by the entry code
-          }
-          not(po_noreturn in current_procinfo.procdef.procoptions) then
+        if not nostackframe then
           begin
             if use_push then
               begin
@@ -401,7 +374,6 @@ unit cgcpu;
 
                 if (current_procinfo.procdef.proctypeoption=potype_exceptfilter) then
                   list.concat(Taicpu.op_reg(A_POP,tcgsize2opsize[OS_ADDR],NR_FRAME_POINTER_REG));
-                current_asmdata.asmcfi.cfa_def_cfa_offset(list,sizeof(pint));
               end
             else if (target_info.system=system_x86_64_win64) then
               begin
@@ -455,8 +427,8 @@ unit cgcpu;
         pd:=search_system_proc('_fpc_local_unwind');
         para1.init;
         para2.init;
-        paramanager.getcgtempparaloc(list,pd,1,para1);
-        paramanager.getcgtempparaloc(list,pd,2,para2);
+        paramanager.getintparaloc(list,pd,1,para1);
+        paramanager.getintparaloc(list,pd,2,para2);
         reference_reset_symbol(href,l,0,1,[]);
         { TODO: using RSP is correct only while the stack is fixed!!
           (true now, but will change if/when allocating from stack is implemented) }

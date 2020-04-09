@@ -196,7 +196,7 @@ unit optcse;
              not(tloadnode(actualtargetnode(@n)^).symtableentry.typ in [paravarsym,localvarsym,staticvarsym]) or
              { apply cse on non-regable variables }
              ((tloadnode(actualtargetnode(@n)^).symtableentry.typ in [paravarsym,localvarsym,staticvarsym]) and
-               not(tabstractvarsym(tloadnode(actualtargetnode(@n)^).symtableentry).is_regvar(true)) and
+               not(tabstractvarsym(tloadnode(actualtargetnode(@n)^).symtableentry).is_regvar(false)) and
                not(vo_volatile in tabstractvarsym(tloadnode(actualtargetnode(@n)^).symtableentry).varoptions)) or
              (node_complexity(n)>1)
             ) and
@@ -298,14 +298,14 @@ unit optcse;
             if not(csedomain) then
               begin
                 { try to transform the tree to get better cse domains, consider:
-                       +   (1)
+                       +    (1)
                       / \
-                (2)  +   C
+                     +   C
                     / \
                    A   B
 
                   if A is not cse'able but B and C are, then the compiler cannot do cse so the tree is transformed into
-                       +
+                 (2)   +
                       / \
                      A   +
                         / \

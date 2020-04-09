@@ -43,6 +43,7 @@ interface
       symbase,ppu,symtype;
 
     type
+
        { tppumodule }
 
        tppumodule = class(tmodule)
@@ -96,10 +97,8 @@ interface
           procedure writederefdata;
           procedure writeImportSymbols;
           procedure writeResources;
-          procedure writeOrderedSymbols;
           procedure writeunitimportsyms;
           procedure writeasmsyms(kind:tunitasmlisttype;list:tfphashobjectlist);
-          procedure writeextraheader;
           procedure readsourcefiles;
           procedure readloadunit;
           procedure readlinkcontainer(var p:tlinkcontainer);
@@ -107,11 +106,9 @@ interface
           procedure readderefdata;
           procedure readImportSymbols;
           procedure readResources;
-          procedure readOrderedSymbols;
           procedure readwpofile;
           procedure readunitimportsyms;
           procedure readasmsyms;
-          procedure readextraheader;
 {$IFDEF MACRO_DIFF_HINT}
           procedure writeusedmacro(p:TNamedIndexItem;arg:pointer);
           procedure writeusedmacros;
@@ -247,115 +244,98 @@ var
 
 
     function tppumodule.openppu(ppufiletime:longint):boolean;
-
-      function checkheader: boolean;
-        begin
-          result:=false;
-          { check for a valid PPU file }
-            if not ppufile.CheckPPUId then
-             begin
-               Message(unit_u_ppu_invalid_header);
-               exit;
-             end;
-          { check for allowed PPU versions }
-            if not (ppufile.getversion = CurrentPPUVersion) then
-             begin
-               Message1(unit_u_ppu_invalid_version,tostr(ppufile.getversion),@queuecomment);
-               exit;
-             end;
-          { check the target processor }
-            if tsystemcpu(ppufile.header.common.cpu)<>target_cpu then
-             begin
-               Message(unit_u_ppu_invalid_processor,@queuecomment);
-               exit;
-             end;
-          { check target }
-            if tsystem(ppufile.header.common.target)<>target_info.system then
-             begin
-               Message(unit_u_ppu_invalid_target,@queuecomment);
-               exit;
-             end;
-{$ifdef cpufpemu}
-          { check if floating point emulation is on?
-            fpu emulation isn't unit levelwise because it affects calling convention }
-          if ((ppufile.header.common.flags and uf_fpu_emulation)<>0) <>
-             (cs_fp_emulation in current_settings.moduleswitches) then
-            begin
-              Message(unit_u_ppu_invalid_fpumode,@queuecomment);
-              exit;
-            end;
-{$endif cpufpemu}
-           result:=true;
-        end;
-
-      function checkextraheader: boolean;
-        begin
-          result:=false;
-          if ppufile.readentry<>ibextraheader then
-            begin
-              Message(unit_u_ppu_invalid_header);
-              exit;
-            end;
-          readextraheader;
-          if (longversion<>CurrentPPULongVersion) or
-             not ppufile.EndOfEntry then
-            begin
-              Message(unit_u_ppu_invalid_header);
-              exit;
-            end;
-{$ifdef i8086}
-          { check i8086 memory model flags }
-          if (mf_i8086_far_code in moduleflags) <>
-             (current_settings.x86memorymodel in [mm_medium,mm_large,mm_huge]) then
-            begin
-              Message(unit_u_ppu_invalid_memory_model,@queuecomment);
-              exit;
-            end;
-          if (mf_i8086_far_data in moduleflags) <>
-             (current_settings.x86memorymodel in [mm_compact,mm_large]) then
-            begin
-              Message(unit_u_ppu_invalid_memory_model,@queuecomment);
-              exit;
-            end;
-          if (mf_i8086_huge_data in moduleflags) <>
-             (current_settings.x86memorymodel=mm_huge) then
-            begin
-              Message(unit_u_ppu_invalid_memory_model,@queuecomment);
-              exit;
-            end;
-          if (mf_i8086_cs_equals_ds in moduleflags) <>
-             (current_settings.x86memorymodel=mm_tiny) then
-            begin
-              Message(unit_u_ppu_invalid_memory_model,@queuecomment);
-              exit;
-            end;
-          if (mf_i8086_ss_equals_ds in moduleflags) <>
-             (current_settings.x86memorymodel in [mm_tiny,mm_small,mm_medium]) then
-            begin
-              Message(unit_u_ppu_invalid_memory_model,@queuecomment);
-              exit;
-            end;
-{$endif i8086}
-          if {$ifdef llvm}not{$endif}(mf_llvm in moduleflags) then
-            begin
-              Message(unit_u_ppu_llvm_mismatch,@queuecomment);
-              exit;
-            end;
-          result:=true;
-        end;
-
       begin
         openppu:=false;
-        if not checkheader or
-           not checkextraheader then
-          begin
-            ppufile.free;
-            ppufile:=nil;
-            exit;
-          end;
+      { check for a valid PPU file }
+        if not ppufile.CheckPPUId then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_header);
+           exit;
+         end;
+      { check for allowed PPU versions }
+        if not (ppufile.getversion = CurrentPPUVersion) then
+         begin
+           Message1(unit_u_ppu_invalid_version,tostr(ppufile.getversion),@queuecomment);
+           ppufile.free;
+           ppufile:=nil;
+           exit;
+         end;
+      { check the target processor }
+        if tsystemcpu(ppufile.header.common.cpu)<>target_cpu then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_processor,@queuecomment);
+           exit;
+         end;
+      { check target }
+        if tsystem(ppufile.header.common.target)<>target_info.system then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_target,@queuecomment);
+           exit;
+         end;
+{$ifdef i8086}
+      { check i8086 memory model flags }
+        if ((ppufile.header.common.flags and uf_i8086_far_code)<>0) xor
+            (current_settings.x86memorymodel in [mm_medium,mm_large,mm_huge]) then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_memory_model,@queuecomment);
+           exit;
+         end;
+        if ((ppufile.header.common.flags and uf_i8086_far_data)<>0) xor
+            (current_settings.x86memorymodel in [mm_compact,mm_large]) then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_memory_model,@queuecomment);
+           exit;
+         end;
+        if ((ppufile.header.common.flags and uf_i8086_huge_data)<>0) xor
+            (current_settings.x86memorymodel=mm_huge) then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_memory_model,@queuecomment);
+           exit;
+         end;
+        if ((ppufile.header.common.flags and uf_i8086_cs_equals_ds)<>0) xor
+            (current_settings.x86memorymodel=mm_tiny) then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_memory_model,@queuecomment);
+           exit;
+         end;
+        if ((ppufile.header.common.flags and uf_i8086_ss_equals_ds)<>0) xor
+            (current_settings.x86memorymodel in [mm_tiny,mm_small,mm_medium]) then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_memory_model,@queuecomment);
+           exit;
+         end;
+{$endif i8086}
+{$ifdef cpufpemu}
+       { check if floating point emulation is on?
+         fpu emulation isn't unit levelwise because it affects calling convention }
+       if ((ppufile.header.common.flags and uf_fpu_emulation)<>0) xor
+            (cs_fp_emulation in current_settings.moduleswitches) then
+         begin
+           ppufile.free;
+           ppufile:=nil;
+           Message(unit_u_ppu_invalid_fpumode,@queuecomment);
+           exit;
+         end;
+{$endif cpufpemu}
 
       { Load values to be access easier }
-        headerflags:=ppufile.header.common.flags;
+        flags:=ppufile.header.common.flags;
         crc:=ppufile.header.checksum;
         interface_crc:=ppufile.header.interface_checksum;
         indirect_crc:=ppufile.header.indirect_checksum;
@@ -365,7 +345,7 @@ var
           Message1(unit_u_ppu_time,filetimestring(ppufiletime))
         else
           Message1(unit_u_ppu_time,'unknown');
-        Message1(unit_u_ppu_flags,tostr(headerflags));
+        Message1(unit_u_ppu_flags,tostr(flags));
         Message1(unit_u_ppu_crc,hexstr(ppufile.header.checksum,8));
         Message1(unit_u_ppu_crc,hexstr(ppufile.header.interface_checksum,8)+' (intfc)');
         Message1(unit_u_ppu_crc,hexstr(ppufile.header.indirect_checksum,8)+' (indc)');
@@ -954,20 +934,6 @@ var
       end;
 
 
-    procedure tppumodule.writeOrderedSymbols;
-      var
-        res : TCmdStrListItem;
-      begin
-        res:=TCmdStrListItem(linkorderedsymbols.First);
-        while res<>nil do
-          begin
-            ppufile.putstring(res.FPStr);
-            res:=TCmdStrListItem(res.Next);
-          end;
-        ppufile.writeentry(iborderedsymbols);
-      end;
-
-
     procedure tppumodule.writeunitimportsyms;
       var
         i : longint;
@@ -994,44 +960,6 @@ var
             ppufile.putbyte(ord(sym.typ));
           end;
         ppufile.writeentry(ibasmsymbols);
-      end;
-
-    procedure tppumodule.writeextraheader;
-      var
-        old_docrc: boolean;
-      begin
-        { create unit flags }
-        if do_release then
-          include(moduleflags,mf_release);
-        if assigned(localsymtable) then
-          include(moduleflags,mf_local_symtable);
-        if cs_checkpointer_called in current_settings.moduleswitches then
-          include(moduleflags,mf_checkpointer_called);
-{$ifdef i8086}
-        if current_settings.x86memorymodel in [mm_medium,mm_large,mm_huge] then
-          include(moduleflags,mf_i8086_far_code);
-        if current_settings.x86memorymodel in [mm_compact,mm_large] then
-          include(moduleflags,mf_i8086_far_data);
-        if current_settings.x86memorymodel=mm_huge then
-          include(moduleflags,mf_i8086_huge_data);
-        if current_settings.x86memorymodel=mm_tiny then
-          include(moduleflags,mf_i8086_cs_equals_ds);
-        if current_settings.x86memorymodel in [mm_tiny,mm_small,mm_medium] then
-          include(moduleflags,mf_i8086_ss_equals_ds);
-{$endif i8086}
-{$ifdef llvm}
-        include(moduleflags,mf_llvm);
-{$endif}
-{$ifdef symansistr}
-        include(moduleflags,mf_symansistr);
-{$endif}
-
-        old_docrc:=ppufile.do_crc;
-        ppufile.do_crc:=false;
-        ppufile.putlongint(longint(CurrentPPULongVersion));
-        ppufile.putset(tppuset4(moduleflags));
-        ppufile.writeentry(ibextraheader);
-        ppufile.do_crc:=old_docrc;
       end;
 
 
@@ -1099,7 +1027,7 @@ var
         source_time   : longint;
         hp            : tinputfile;
       begin
-        sources_avail:=not(mf_release in moduleflags);
+        sources_avail:=(flags and uf_release) = 0;
         is_main:=true;
         main_dir:='';
         while not ppufile.endofentry do
@@ -1110,7 +1038,7 @@ var
            temp_dir:='';
            if sources_avail then
              begin
-               if (headerflags and uf_in_library)<>0 then
+               if (flags and uf_in_library)<>0 then
                 begin
                   sources_avail:=false;
                   temp:=' library';
@@ -1312,13 +1240,6 @@ var
       end;
 
 
-    procedure tppumodule.readOrderedSymbols;
-      begin
-        while not ppufile.endofentry do
-          linkorderedsymbols.Concat(ppufile.getstring);
-      end;
-
-
     procedure tppumodule.readwpofile;
       var
         orgwpofilename: string;
@@ -1366,6 +1287,8 @@ var
             list:=publicasmsyms;
           ualt_extern:
             list:=externasmsyms;
+          else
+            internalerror(2016060301);
         end;
         c:=ppufile.getlongint;
         for i:=0 to c-1 do
@@ -1375,13 +1298,6 @@ var
             typ:=TAsmsymtype(ppufile.getbyte);
             TAsmSymbol.Create(list,name,bind,typ);
           end;
-      end;
-
-
-    procedure tppumodule.readextraheader;
-      begin
-        longversion:=cardinal(ppufile.getlongint);
-        ppufile.getset(tppuset4(moduleflags));
       end;
 
 
@@ -1409,17 +1325,13 @@ var
                  modulename:=stringdup(upper(newmodulename));
                  realmodulename:=stringdup(newmodulename);
                end;
-             ibextraheader:
-               begin
-                 readextraheader;
-               end;
              ibfeatures :
                begin
-                 ppufile.getset(tppuset4(features));
+                 ppufile.getsmallset(features);
                end;
              ibmoduleoptions:
                begin
-                 ppufile.getset(tppuset1(moduleoptions));
+                 ppufile.getsmallset(moduleoptions);
                  if mo_has_deprecated_msg in moduleoptions then
                    begin
                      stringdispose(deprecatedmsg);
@@ -1463,8 +1375,6 @@ var
                readderefdata;
              ibresources:
                readResources;
-             iborderedsymbols:
-               readOrderedSymbols;
              ibwpofile:
                readwpofile;
              ibendinterface :
@@ -1507,12 +1417,30 @@ var
          Message1(unit_u_ppu_write,realmodulename^);
 
          { create unit flags }
+         if do_release then
+          flags:=flags or uf_release;
+         if assigned(localsymtable) then
+           flags:=flags or uf_local_symtable;
+         if (cs_checkpointer_called in current_settings.moduleswitches) then
+           flags:=flags or uf_checkpointer_called;
+{$ifdef i8086}
+         if current_settings.x86memorymodel in [mm_medium,mm_large,mm_huge] then
+           flags:=flags or uf_i8086_far_code;
+         if current_settings.x86memorymodel in [mm_compact,mm_large] then
+           flags:=flags or uf_i8086_far_data;
+         if current_settings.x86memorymodel=mm_huge then
+           flags:=flags or uf_i8086_huge_data;
+         if current_settings.x86memorymodel=mm_tiny then
+           flags:=flags or uf_i8086_cs_equals_ds;
+         if current_settings.x86memorymodel in [mm_tiny,mm_small,mm_medium] then
+           flags:=flags or uf_i8086_ss_equals_ds;
+{$endif i8086}
 {$ifdef cpufpemu}
          if (cs_fp_emulation in current_settings.moduleswitches) then
-           headerflags:=headerflags or uf_fpu_emulation;
+           flags:=flags or uf_fpu_emulation;
 {$endif cpufpemu}
 {$ifdef Test_Double_checksum_write}
-         Assign(CRCFile,ppufilename+'.IMP');
+         Assign(CRCFile,s+'.IMP');
          Rewrite(CRCFile);
 {$endif def Test_Double_checksum_write}
 
@@ -1520,9 +1448,6 @@ var
          ppufile:=tcompilerppufile.create(ppufilename);
          if not ppufile.createfile then
           Message(unit_f_ppu_cannot_write);
-
-         { extra header (sub version, module flags) }
-         writeextraheader;
 
          { first the (JVM) namespace }
          if assigned(namespace) then
@@ -1534,7 +1459,7 @@ var
          ppufile.putstring(realmodulename^);
          ppufile.writeentry(ibmodulename);
 
-         ppufile.putset(tppuset1(moduleoptions));
+         ppufile.putsmallset(moduleoptions);
          if mo_has_deprecated_msg in moduleoptions then
            ppufile.putstring(deprecatedmsg^);
          ppufile.writeentry(ibmoduleoptions);
@@ -1548,7 +1473,7 @@ var
 
          if cs_compilesystem in current_settings.moduleswitches then
            begin
-             ppufile.putset(tppuset4(features));
+             ppufile.putsmallset(features);
              ppufile.writeentry(ibfeatures);
            end;
 
@@ -1585,7 +1510,6 @@ var
          writelinkcontainer(linkotherframeworks,iblinkotherframeworks,true);
          writeImportSymbols;
          writeResources;
-         writeOrderedSymbols;
          ppufile.do_crc:=true;
 
          { generate implementation deref data, the interface deref data is
@@ -1609,7 +1533,7 @@ var
               tstoredsymtable(globalmacrosymtable).buildderefimpl;
             end;
 
-         if mf_local_symtable in moduleflags then
+         if (flags and uf_local_symtable)<>0 then
            tstoredsymtable(localsymtable).buildderef_registered;
          buildderefunitimportsyms;
          writederefmap;
@@ -1652,7 +1576,7 @@ var
 
          { write static symtable
            needed for local debugging of unit functions }
-         if mf_local_symtable in moduleflags then
+         if (flags and uf_local_symtable)<>0 then
            tstoredsymtable(localsymtable).ppuwrite(ppufile);
 
          { write whole program optimisation-related information }
@@ -1670,7 +1594,7 @@ var
          ppufile.header.common.compiler:=wordversion;
          ppufile.header.common.cpu:=word(target_cpu);
          ppufile.header.common.target:=word(target_info.system);
-         ppufile.header.common.flags:=headerflags;
+         ppufile.header.common.flags:=flags;
          ppufile.header.deflistsize:=current_module.deflist.count;
          ppufile.header.symlistsize:=current_module.symlist.count;
          ppufile.writeheader;
@@ -1693,7 +1617,7 @@ var
     procedure tppumodule.getppucrc;
       begin
 {$ifdef Test_Double_checksum_write}
-         Assign(CRCFile,ppufilename+'.INT');
+         Assign(CRCFile,s+'.INT')
          Rewrite(CRCFile);
 {$endif def Test_Double_checksum_write}
 
@@ -1713,10 +1637,7 @@ var
          ppufile.putstring(realmodulename^);
          ppufile.writeentry(ibmodulename);
 
-         { extra header (sub version, module flags) }
-         writeextraheader;
-
-         ppufile.putset(tppuset1(moduleoptions));
+         ppufile.putsmallset(moduleoptions);
          if mo_has_deprecated_msg in moduleoptions then
            ppufile.putstring(deprecatedmsg^);
          ppufile.writeentry(ibmoduleoptions);
@@ -1779,7 +1700,7 @@ var
          ppufile.header.common.compiler:=wordversion;
          ppufile.header.common.cpu:=word(target_cpu);
          ppufile.header.common.target:=word(target_info.system);
-         ppufile.header.common.flags:=headerflags;
+         ppufile.header.common.flags:=flags;
          ppufile.writeheader;
 
          ppufile.closefile;
@@ -1814,7 +1735,7 @@ var
               if (pu.u.interface_crc<>pu.interface_checksum) or
                  (pu.u.indirect_crc<>pu.indirect_checksum) or
                  (
-                  (not(mf_release in moduleflags)) and
+                  ((ppufile.header.common.flags and uf_release)=0) and
                   (pu.u.crc<>pu.checksum)
                  ) then
                begin
@@ -1890,7 +1811,7 @@ var
          end;
 
         { load implementation symtable }
-        if mf_local_symtable in moduleflags then
+        if (flags and uf_local_symtable)<>0 then
           begin
             localsymtable:=tstaticsymtable.create(modulename^,moduleid);
             tstaticsymtable(localsymtable).ppuload(ppufile);
@@ -2047,9 +1968,7 @@ var
              begin
                { When we don't have any data stored yet there
                  is nothing to resolve }
-               if interface_compiled and
-                 { it makes no sense to re-resolve the unit if it is already finally compiled }
-                 not(state=ms_compiled) then
+               if interface_compiled then
                  begin
                    Message1(unit_u_reresolving_unit,modulename^);
                    tstoredsymtable(globalsymtable).deref(false);

@@ -37,7 +37,7 @@ unit i_haiku;
             shortname    : 'Haiku';
             flags        : [tf_under_development,tf_needs_symbol_size,tf_files_case_sensitive,
                             tf_pic_default,tf_pic_uses_got,tf_library_needs_pic,
-                            tf_smartlink_sections,tf_has_winlike_resources,tf_supports_hidden_symbols];
+                            tf_smartlink_sections,tf_has_winlike_resources];
             cpu          : cpu_i386;
             unit_env     : 'HAIKUUNITS';
             extradefines : 'BEOS;UNIX;HASUNIX';
@@ -78,9 +78,6 @@ unit i_haiku;
                 procalign       : 4;
                 loopalign       : 4;
                 jumpalign       : 0;
-                jumpalignskipmax    : 0;
-                coalescealign   : 0;
-                coalescealignskipmax: 0;
                 constalignmin   : 0;
                 constalignmax   : 4;
                 varalignmin     : 0;
@@ -117,7 +114,7 @@ unit i_haiku;
             shortname    : 'Haiku';
             flags        : [tf_under_development,tf_needs_symbol_size,tf_files_case_sensitive,
                             tf_pic_default,tf_library_needs_pic,tf_smartlink_sections,
-                            tf_has_winlike_resources,tf_supports_hidden_symbols];
+                            tf_has_winlike_resources];
             cpu          : cpu_x86_64;
             unit_env     : 'HAIKUUNITS';
             extradefines : 'BEOS;UNIX;HASUNIX';
@@ -150,7 +147,7 @@ unit i_haiku;
             linkextern   : ld_haiku;
             ar           : ar_gnu_ar;
             res          : res_elf;
-            dbg          : dbg_dwarf2;
+            dbg          : dbg_stabs;
             script       : script_unix;
             endian       : endian_little;
             { FIXME: stuff below is copied from Linux/x64 now, could be incorrect for Haiku (KB) }
@@ -159,9 +156,6 @@ unit i_haiku;
                 procalign       : 16;
                 loopalign       : 8;
                 jumpalign       : 16;
-                jumpalignskipmax    : 10;
-                coalescealign   : 0;
-                coalescealignskipmax: 0;
                 constalignmin   : 0;
                 constalignmax   : 16;
                 varalignmin     : 0;

@@ -77,14 +77,6 @@ uses
 {$include doslibf.inc}
 {$include utilf.inc}
 
-{$ifdef cpum68k}
-{$if defined(amiga_v1_0_only) or defined(amiga_v1_2_only)}
-{$include legacyexech.inc}
-{$include legacydosh.inc}
-{$include legacyutilh.inc}
-{$endif}
-{$endif}
-
 { * Followings are implemented in the system unit! * }
 function PathConv(path: shortstring): shortstring; external name 'PATHCONV';
 function PathConv(path: RawByteString): RawByteString; external name 'PATHCONVRBS';
@@ -190,7 +182,7 @@ begin
 end;
 
 
-function FileGetDate(Handle: THandle) : Int64;
+function FileGetDate(Handle: THandle) : LongInt;
 var
   tmpFIB : PFileInfoBlock;
   tmpDateTime: TDateTime;
@@ -213,7 +205,7 @@ begin
 end;
 
 
-function FileSetDate(Handle: THandle; Age: Int64) : LongInt;
+function FileSetDate(Handle: THandle; Age: LongInt) : LongInt;
 var
   tmpDateStamp: TDateStamp;
   tmpName: array[0..255] of char;
@@ -231,7 +223,7 @@ begin
 end;
 
 
-function FileSetDate(const FileName: RawByteString; Age: Int64) : LongInt;
+function FileSetDate(const FileName: RawByteString; Age: LongInt) : LongInt;
 var
   tmpDateStamp: TDateStamp;
   SystemFileName: RawByteString;
@@ -376,7 +368,7 @@ end;
 (****** end of non portable routines ******)
 
 
-function FileAge (const FileName : RawByteString): Int64;
+function FileAge (const FileName : RawByteString): Longint;
 var
   tmpLock: BPTR;
   tmpFIB : PFileInfoBlock;

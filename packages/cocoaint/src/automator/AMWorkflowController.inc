@@ -17,9 +17,9 @@ type
     _runnerInterface: id;
     _eventMonitor: id;
     _delegate: id;
-    _flags: bitpacked record
+    __AMWorkflowControllerFlags: bitpacked record
       case byte of
-        0: (_anonBitField__flags0: cuint);
+        0: (_anonBitField___AMWorkflowControllerFlags0: cuint);
         1: (
           shouldRunLocally: 0..1;
           isRunningLocally: 0..1;
@@ -27,9 +27,9 @@ type
           reserved: 0..((1 shl 29)-1);
         );
       end;
-    _delegateRespondTo: bitpacked record
+    __AMWorkflowControllerDelegateRespondTo: bitpacked record
       case byte of
-        0: (_anonBitField__delegateRespondTo0: cuint);
+        0: (_anonBitField___AMWorkflowControllerDelegateRespondTo0: cuint);
         1: (
           workflowControllerDidAddWorkflow: 0..1;
           workflowControllerDidRemoveWorkflow: 0..1;

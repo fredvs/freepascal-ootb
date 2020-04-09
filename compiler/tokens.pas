@@ -237,7 +237,6 @@ type
     _MULTIPLY,
     _MWPASCAL,
     _NEGATIVE,
-    _NOINLINE,
     _NORETURN,
     _NOTEQUAL,
     _OPERATOR,
@@ -344,10 +343,10 @@ const
 
   { Warning these stay be ordered !! }
   operator_levels:array[Toperator_precedence] of set of NOTOKEN..last_operator=
-      ([_LT,_LTE,_GT,_GTE,_EQ,_NE,_OP_IN,_OP_IS],
+      ([_LT,_LTE,_GT,_GTE,_EQ,_NE,_OP_IN],
        [_PLUS,_MINUS,_OP_OR,_PIPE,_OP_XOR],
        [_CARET,_SYMDIF,_STARSTAR,_STAR,_SLASH,
-        _OP_AS,_OP_AND,_AMPERSAND,_OP_DIV,_OP_MOD,_OP_SHL,_OP_SHR],
+        _OP_AS,_OP_IS,_OP_AND,_AMPERSAND,_OP_DIV,_OP_MOD,_OP_SHL,_OP_SHR],
        [_STARSTAR] );
 
 type
@@ -579,7 +578,6 @@ const
       (str:'MULTIPLY'      ;special:false;keyword:[m_none];op:NOTOKEN), { delphi operator name }
       (str:'MWPASCAL'      ;special:false;keyword:[m_none];op:NOTOKEN),
       (str:'NEGATIVE'      ;special:false;keyword:[m_none];op:NOTOKEN), { delphi operator name }
-      (str:'NOINLINE'      ;special:false;keyword:[m_none];op:NOTOKEN),
       (str:'NORETURN'      ;special:false;keyword:[m_none];op:NOTOKEN),
       (str:'NOTEQUAL'      ;special:false;keyword:[m_none];op:NOTOKEN), { delphi operator name }
       (str:'OPERATOR'      ;special:false;keyword:[m_fpc];op:NOTOKEN),

@@ -978,19 +978,12 @@
 
       class function TObject.UnitName : {$ifdef FPC_HAS_FEATURE_ANSISTRINGS}ansistring{$else FPC_HAS_FEATURE_ANSISTRINGS}shortstring{$endif FPC_HAS_FEATURE_ANSISTRINGS};
         type
+          // from the typinfo unit
           TClassTypeInfo = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif}record
-            Attributes: Pointer;
-            case TTypeKind of
-              tkClass: (
-                ClassType: TClass;
-                ParentInfo: Pointer;
-                PropCount: SmallInt;
-                UnitName: ShortString;
-              );
-              { include for proper alignment }
-              tkInt64: (
-                Dummy: Int64;
-              );
+            ClassType: TClass;
+            ParentInfo: Pointer;
+            PropCount: SmallInt;
+            UnitName: ShortString;
           end;
           PClassTypeInfo = ^TClassTypeInfo;
         var
@@ -1067,13 +1060,13 @@
            end;
       end;
 
-   destructor TInterfacedObject.Destroy;
+   destructor TInterfacedObject.destroy;
 
    begin
      // We must explicitly reset. Bug ID 32353
      FRefCount:=0;
      FDestroyCount:=0;
-     inherited Destroy;
+     inherited destroy;
    end;
 
     procedure TInterfacedObject.AfterConstruction;
@@ -1149,17 +1142,6 @@
       else
         result:=longint(E_NOINTERFACE);
     end;
-
-{****************************************************************************
-                               TCustomAttribute
-****************************************************************************}
-
-
-    constructor TCustomAttribute.Create;
-    begin
-      inherited;
-    end;
-
 
 {****************************************************************************
                              Exception Support

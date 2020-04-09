@@ -257,10 +257,10 @@ uses
 
     function AllocMachoWriter(cputarget: cpu_type_t; ARawWriter: TRawWriter; AllowFreeWriter: Boolean): TMachoWriter;
 
-    function sizeMachHeader(cputarget: cpu_type_t): integer;
-    function sizeSegment(cputarget: cpu_type_t): integer;
-    function sizeSection(cputarget: cpu_type_t): integer;
-    function sizeNList(cputarget: cpu_type_t): integer;
+    function sizeMachHeader(cputarget: cpu_type_t): integer; inline;
+    function sizeSegment(cputarget: cpu_type_t): integer; inline;
+    function sizeSection(cputarget: cpu_type_t): integer; inline;
+    function sizeNList(cputarget: cpu_type_t): integer; inline;
 
     function AlignAddr(cputarget: cpu_type_t; addr: qword): qword;
 
@@ -525,7 +525,7 @@ const
     end;
 
 
-  function sizeNList(cputarget: cpu_type_t): integer;
+  function sizeNList(cputarget: cpu_type_t): integer; inline;
     begin
       Result:=is64NlistSize[ cputarget and CPU_ARCH_ABI64 > 0];
     end;

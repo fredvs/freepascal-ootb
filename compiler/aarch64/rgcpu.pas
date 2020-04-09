@@ -140,8 +140,6 @@ implementation
                { ok in immediate form }
                if taicpu(p).oper[taicpu(p).ops-1]^.typ=top_const then
                  exit;
-             else
-               ;
            end;
            { add interferences for other registers }
            for i:=0 to taicpu(p).ops-1 do
@@ -165,8 +163,6 @@ implementation
                              add_edge(getsupreg(taicpu(p).oper[j]^.reg),getsupreg(taicpu(p).oper[i]^.ref^.base));
                        end;
                    end;
-                 else
-                   ;
                end;
              end;
          end;

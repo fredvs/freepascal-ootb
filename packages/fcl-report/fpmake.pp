@@ -13,11 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('fcl-report');
-    P.ShortName:='fpre';
+    P.ShortName:='fpreport';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-image');
     P.Dependencies.Add('fcl-xml');
@@ -33,8 +33,7 @@ begin
     P.NeedLibC:= false;
     P.OSes:=[linux, win32, win64, darwin, freebsd];
     P.SourcePath.Add('src');
-    P.IncludePath.Add('src');
-{$IFDEF VER2_6}
+{$IFDEF VER2_6}    
     T:=P.Targets.AddUnit('fprepexprpars.pp');
     T.ResourceStrings := True;
 {$ENDIF}
@@ -49,7 +48,6 @@ begin
       begin
       AddUnit('fpreportstreamer');
       AddUnit('fpreporthtmlparser');
-      AddInclude('fpreportcheckbox.inc');
       end;
 
     T:=P.Targets.AddUnit('fpreportdata.pp');

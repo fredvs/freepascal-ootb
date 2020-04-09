@@ -199,7 +199,7 @@ begin
        ) then
       begin
         P:=AddPackage('ide');
-        P.Version:='3.3.1';
+        P.Version:='3.2.0-beta';
 {$ifdef ALLPACKAGES}
         P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
@@ -244,18 +244,10 @@ begin
         
         if CompilerTarget in [powerpc, powerpc64] then
           P.Options.Add('-Fu'+CompilerDir+'/ppcgen');
-
-        if CompilerTarget in [arm, aarch64] then
-          P.Options.Add('-Fu'+CompilerDir+'/armgen');
-
         if CompilerTarget in [sparc, sparc64] then
           begin
               P.Options.Add('-Fu'+CompilerDir+'/sparcgen');
               P.Options.add('-Fi'+CompilerDir+'/sparcgen');
-          end;
-        if CompilerTarget in [riscv32, riscv64] then
-          begin
-              P.Options.Add('-Fu'+CompilerDir+'/riscv');
           end;
         
         if CompilerTarget = mipsel then

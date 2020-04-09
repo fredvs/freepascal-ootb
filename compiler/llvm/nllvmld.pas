@@ -66,8 +66,6 @@ function tllvmloadnode.pass_1: tnode;
           if assigned(left) then
             expectloc:=LOC_REFERENCE;
         end;
-      else
-        ;
     end;
   end;
 
@@ -92,7 +90,7 @@ procedure tllvmloadnode.pass_generate_code;
             (resultdef.typ in [symconst.procdef,procvardef]) and
              not tabstractprocdef(resultdef).is_addressonly then
             begin
-              pvdef:=cprocvardef.getreusableprocaddr(procdef,pc_normal);
+              pvdef:=tprocvardef(procdef.getcopyas(procvardef,pc_normal,''));
               { on little endian, location.register contains proc and
                 location.registerhi contains self; on big endian, it's the
                 other way around }
@@ -117,7 +115,7 @@ procedure tllvmloadnode.pass_generate_code;
                 selfdef:=cpointerdef.getreusable(left.resultdef);
               mpref:=href;
               hlcg.g_ptrtypecast_ref(current_asmdata.CurrAsmList,cpointerdef.getreusable(pvdef),cpointerdef.getreusable(methodpointertype),mpref);
-              hlcg.g_load_reg_field_by_name(current_asmdata.CurrAsmList,cprocvardef.getreusableprocaddr(procdef,pc_address_only),trecorddef(methodpointertype),procreg,'proc',mpref);
+              hlcg.g_load_reg_field_by_name(current_asmdata.CurrAsmList,cprocvardef.getreusableprocaddr(procdef),trecorddef(methodpointertype),procreg,'proc',mpref);
               hlcg.g_load_reg_field_by_name(current_asmdata.CurrAsmList,selfdef,trecorddef(methodpointertype),selfreg,'self',mpref);
               location_reset_ref(location,LOC_REFERENCE,location.size,href.alignment,href.volatility);
               location.reference:=href;
@@ -126,7 +124,7 @@ procedure tllvmloadnode.pass_generate_code;
       labelsym:
         begin
           selfreg:=hlcg.getaddressregister(current_asmdata.CurrAsmList,voidcodepointertype);
-          ai:=taillvm.blockaddress(voidcodepointertype,
+          ai:=taillvm.blockaddress(
               current_asmdata.RefAsmSymbol(current_procinfo.procdef.mangledname,AT_FUNCTION),
               location.reference.symbol
             );
@@ -135,8 +133,6 @@ procedure tllvmloadnode.pass_generate_code;
           );
           reference_reset_base(location.reference,selfreg,0,ctempposinvalid,location.reference.alignment,location.reference.volatility);
         end;
-      else
-        ;
     end;
   end;
 

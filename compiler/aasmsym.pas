@@ -53,8 +53,6 @@ implementation
         case o.typ of
           top_local :
             o.localoper^.localsymderef.build(tlocalvarsym(o.localoper^.localsym));
-          else
-            ;
         end;
       end;
 
@@ -67,8 +65,6 @@ implementation
             end;
           top_local :
             o.localoper^.localsym:=tlocalvarsym(o.localoper^.localsymderef.resolve);
-          else
-            ;
         end;
       end;
 

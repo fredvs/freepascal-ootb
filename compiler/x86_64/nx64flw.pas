@@ -52,7 +52,7 @@ interface
 implementation
 
   uses
-    globtype,globals,verbose,systems,fmodule,
+    globtype,globals,verbose,systems,
     nbas,ncal,nutils,
     symconst,symsym,symdef,
     cgbase,cgobj,cgutils,tgobj,
@@ -137,8 +137,6 @@ function reset_regvars(var n: tnode; arg: pointer): foreachnoderesult;
         make_not_regable(n,[]);
       calln:
         include(tprocinfo(arg).flags,pi_do_call);
-      else
-        ;
     end;
     result:=fen_true;
   end;
@@ -148,8 +146,6 @@ function copy_parasize(var n: tnode; arg: pointer): foreachnoderesult;
     case n.nodetype of
       calln:
         tcgprocinfo(arg).allocate_push_parasize(tcallnode(n).pushed_parasize);
-      else
-        ;
     end;
     result:=fen_true;
   end;
@@ -206,6 +202,8 @@ function tx64tryfinallynode.simplify(forinline: boolean): tnode;
         if implicitframe then
           begin
             current_procinfo.finalize_procinfo:=finalizepi;
+            { don't leave dangling pointer }
+            tcgprocinfo(current_procinfo).final_asmnode:=nil;
           end;
       end;
   end;
@@ -227,7 +225,6 @@ procedure tx64tryfinallynode.pass_generate_code;
     endtrylabel,
     finallylabel,
     endfinallylabel,
-    templabel,
     oldexitlabel: tasmlabel;
     oldflowcontrol: tflowcontrol;
     catch_frame: boolean;
@@ -249,7 +246,6 @@ procedure tx64tryfinallynode.pass_generate_code;
     oldflowcontrol:=flowcontrol;
     flowcontrol:=[fc_inflowcontrol];
 
-    templabel:=nil;
     current_asmdata.getjumplabel(trylabel);
     current_asmdata.getjumplabel(endtrylabel);
     current_asmdata.getjumplabel(finallylabel);
@@ -290,19 +286,20 @@ procedure tx64tryfinallynode.pass_generate_code;
           exit;
       end;
 
-    { finallylabel is only used in implicit frames as an exit point from nested try..finally
-      statements, if any. To prevent finalizer from being executed twice, it must come before
-      endtrylabel (bug #34772) }
+    { If the immediately preceding instruction is CALL,
+      its return address must not end up outside the scope, so pad with NOP. }
+    if catch_frame then
+      cg.a_jmp_always(current_asmdata.CurrAsmList,finallylabel)
+    else
+      emit_nop;
+
+    cg.a_label(current_asmdata.CurrAsmList,endtrylabel);
+
+    { Handle the except block first, so endtrylabel serves both
+      as end of scope and as unwind target. This way it is possible to
+      encode everything into a single scope record. }
     if catch_frame then
       begin
-        current_asmdata.getjumplabel(templabel);
-        cg.a_label(current_asmdata.CurrAsmList, finallylabel);
-        { jump over exception handler }
-        cg.a_jmp_always(current_asmdata.CurrAsmList,templabel);
-        { Handle the except block first, so endtrylabel serves both
-          as end of scope and as unwind target. This way it is possible to
-          encode everything into a single scope record. }
-        cg.a_label(current_asmdata.CurrAsmList,endtrylabel);
         if (current_procinfo.procdef.proccalloption=pocall_safecall) then
           begin
             handle_safecall_exception;
@@ -310,18 +307,10 @@ procedure tx64tryfinallynode.pass_generate_code;
           end
         else
           InternalError(2014031601);
-        cg.a_label(current_asmdata.CurrAsmList,templabel);
-      end
-    else
-      begin
-        { same as emit_nop but using finallylabel instead of dummy }
-        cg.a_label(current_asmdata.CurrAsmList,finallylabel);
-        finallylabel.increfs;
-        current_asmdata.CurrAsmList.concat(Taicpu.op_none(A_NOP,S_NO));
-        cg.a_label(current_asmdata.CurrAsmList,endtrylabel);
       end;
 
     flowcontrol:=[fc_inflowcontrol];
+    cg.a_label(current_asmdata.CurrAsmList,finallylabel);
     { generate finally code as a separate procedure }
     if not implicitframe then
       tcgprocinfo(current_procinfo).generate_exceptfilter(finalizepi);
@@ -366,7 +355,6 @@ procedure tx64tryexceptnode.pass_generate_code;
     hnode : tnode;
     hlist : tasmlist;
     onnodecount : tai_const;
-    sym : tasmsymbol;
   label
     errorexit;
   begin
@@ -449,10 +437,8 @@ procedure tx64tryexceptnode.pass_generate_code;
             if hnode.nodetype<>onn then
               InternalError(2011103101);
             current_asmdata.getjumplabel(onlabel);
-            sym:=current_asmdata.RefAsmSymbol(tonnode(hnode).excepttype.vmt_mangledname,AT_DATA,true);
-            hlist.concat(tai_const.create_rva_sym(sym));
+            hlist.concat(tai_const.create_rva_sym(current_asmdata.RefAsmSymbol(tonnode(hnode).excepttype.vmt_mangledname,AT_DATA)));
             hlist.concat(tai_const.create_rva_sym(onlabel));
-            current_module.add_extern_asmsym(sym);
             cg.a_label(current_asmdata.CurrAsmList,onlabel);
             secondpass(hnode);
             inc(onnodecount.value);

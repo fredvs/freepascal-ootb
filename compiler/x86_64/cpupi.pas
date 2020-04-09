@@ -29,12 +29,10 @@ interface
 
     uses
        globtype,
-       psub,
-       procinfo,psabiehpi,
-       aasmbase,aasmdata;
+       psub,procinfo,aasmbase,aasmdata;
 
     type
-       tcpuprocinfo = class(tpsabiehprocinfo)
+       tcpuprocinfo = class(tcgprocinfo)
        private
          scopes: TAsmList;
          scopecount: longint;
@@ -156,7 +154,6 @@ implementation
         hdir.data.flags:=unwindflags;
         list.concat(hdir);
         list.concat(cai_seh_directive.create(ash_handlerdata));
-        inc(list.section_count);
         list.concat(tai_const.create_32bit(scopecount));
         list.concatlist(scopes);
         { return to text, required for GAS compatibility }

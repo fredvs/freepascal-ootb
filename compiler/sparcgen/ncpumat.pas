@@ -156,7 +156,6 @@ implementation
 
                  if (nodetype = modn) then
                    begin
-                     overflowlabel:=nil;
                      if not no_overflow then
                        begin
                          current_asmdata.getjumplabel(overflowlabel);

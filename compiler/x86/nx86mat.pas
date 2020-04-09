@@ -140,8 +140,6 @@ interface
                op:=A_PSUBSW;
              mmxu16bit:
                op:=A_PSUBUSW;
-             else
-               ;
           end
         else
           case mmx_type(resultdef) of
@@ -151,8 +149,6 @@ interface
                op:=A_PSUBW;
              mmxs32bit,mmxu32bit:
                op:=A_PSUBD;
-             else
-               ;
           end;
         if op = A_NONE then
           internalerror(201408202);
@@ -369,8 +365,6 @@ interface
             location.register:=tcgx86(cg).getmmxregister(current_asmdata.CurrAsmList);
             emit_ref_reg(A_MOVQ,S_NO,left.location.reference,location.register);
           end;
-        else
-          internalerror(2019050906);
       end;
       { load mask }
       hreg:=tcgx86(cg).getmmxregister(current_asmdata.CurrAsmList);
@@ -698,7 +692,9 @@ DefaultDiv:
     procedure tx86shlshrnode.second_mmx;
       var
         op         : TAsmOp;
+        cmpop      : boolean;
         mmxbase    : tmmxtype;
+        hreg,
         hregister  : tregister;
       begin
         secondpass(left);
@@ -708,6 +704,7 @@ DefaultDiv:
         if codegenerror then
           exit;
 
+        cmpop:=false;
         op:=A_NOP;
 
         mmxbase:=mmx_type(left.resultdef);

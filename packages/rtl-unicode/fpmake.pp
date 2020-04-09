@@ -34,7 +34,7 @@ begin
     P:=AddPackage('rtl-unicode');
     P.ShortName:='rtlu';
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
@@ -79,10 +79,6 @@ begin
         AddInclude('collation_ru_le.inc');
       end;
     T:=P.Targets.AddImplicitUnit('collation_de.pas',CollationOSes);
-    with T.Dependencies do
-      begin
-        AddInclude('collation_de_le.inc');
-      end;
     T:=P.Targets.AddImplicitUnit('collation_ja.pas',CollationOSes);
     with T.Dependencies do
       begin

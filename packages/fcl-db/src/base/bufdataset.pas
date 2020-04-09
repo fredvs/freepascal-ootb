@@ -998,13 +998,10 @@ procedure TCustomBufDataset.SetPacketRecords(aValue : integer);
 begin
   if (aValue = -1) or (aValue > 0) then
     begin
-    if (IndexFieldNames<>'') and (aValue<>-1) then
-      DatabaseError(SInvPacketRecordsValueFieldNames)
-    else
-    if UniDirectional and (aValue=-1) then
-      DatabaseError(SInvPacketRecordsValueUniDirectional)
-    else
+    if (IndexFieldNames='') then
       FPacketRecords := aValue
+    else if AValue<>-1 then
+      DatabaseError(SInvPacketRecordsValueFieldNames);
     end
   else
     DatabaseError(SInvPacketRecordsValue);
@@ -2002,8 +1999,7 @@ begin
     begin
     SetUniDirectional(AValue);
     ClearIndexes;
-    if IsUniDirectional then
-      FPacketRecords := 1; // UniDirectional dataset does not allow FPacketRecords<0
+    FPacketRecords := 1; // temporary
     end;
 end;
 

@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libmicrohttpd');
-    P.ShortName := 'lmic';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Author := 'Library: GNU foundation, header: Silvio Clecio';
     P.License := 'Library: LGPL or later, header: LGPL with modification';
     P.HomepageURL := 'https://www.gnu.org/software/libmicrohttpd/';

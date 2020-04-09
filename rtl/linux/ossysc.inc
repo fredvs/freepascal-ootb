@@ -100,11 +100,7 @@ function Fprename(old : pchar; newpath: pchar): cint; [public, alias : 'FPC_SYSC
 
 begin
 {$if defined(generic_linux_syscalls)}
-  {$if defined(userenameat)}
-    Fprename:=do_syscall(syscall_nr_renameat,AT_FDCWD,TSysParam(old),AT_FDCWD,TSysParam(newpath));
-  {$else}
-    Fprename:=do_syscall(syscall_nr_renameat2,AT_FDCWD,TSysParam(old),AT_FDCWD,TSysParam(newpath),0);
-  {$endif}
+  Fprename:=do_syscall(syscall_nr_renameat,AT_FDCWD,TSysParam(old),AT_FDCWD,TSysParam(newpath));
 {$else}
   Fprename:=do_syscall(syscall_nr_rename,TSysParam(old),TSysParam(newpath));
 {$endif}
@@ -114,7 +110,7 @@ function Fpstat(path: pchar; var buf: stat):cint; [public, alias : 'FPC_SYSC_STA
 
 begin
 { standard stat call is 32 bit on sparc64, so explicitly force a stat64 call }
-{$if (defined(cpu64) or defined(riscv32)) and not(defined(cpusparc64))}
+{$if defined(cpu64) and not(defined(cpusparc64))}
   {$if defined(generic_linux_syscalls)}
     Fpstat:=do_syscall(syscall_nr_fstatat,AT_FDCWD,TSysParam(path),TSysParam(@buf),0);
   {$else}
@@ -343,15 +339,8 @@ function Fpsigaction(sig: cint; new_action, old_action: psigactionrec): cint; [p
 begin
 {$if defined(cpusparc) or defined(cpusparc64)}
   { Sparc has an extra stub parameter }
-{$ifdef cpusparc}
-  { it seems that rt_sigreturn only works correctly for 32-bit if SA_SIGINFO is set }
-  if new_action <> nil then
-    new_action^.sa_flags:=new_action^.sa_flags or SA_SIGINFO;
-{$endif}
-  { the -8 stems from the fact that the adress is supposed to be a value from a sub-routine
-    call stored into register %i7 to which +8 is added upon return }
   Fpsigaction:=do_syscall(syscall_nr_rt_sigaction,TSysParam(sig),TSysParam(new_action),TSysParam(old_action),TSysParam(ptruint(@Fprt_sigreturn_stub)-8),TSysParam(8));
-{$else not (defined(cpusparc) or defined(cpusparc64))}
+{$else cpusparc}
 {$ifdef NEED_USER_TRAMPOLINE}
   if new_action <> nil then
   begin
@@ -428,12 +417,12 @@ function Fpfork : pid_t;  [public, alias : 'FPC_SYSC_FORK'];
   A negative value indicates that an error has occurred, the error is returned in
   LinuxError.
 }
-{$if defined(generic_linux_syscalls) or defined(cpuxtensa)}
+{$if defined(generic_linux_syscalls)}
 var
   pid : Int64;
 {$endif}
 Begin
-{$if defined(generic_linux_syscalls) or defined(cpuxtensa)}
+{$if defined(generic_linux_syscalls)}
  Fpfork:=Do_syscall(syscall_nr_clone,clone_flags_fork,0,0,0,TSysParam(@pid));
 {$else}
  Fpfork:=Do_syscall(SysCall_nr_fork);
@@ -583,11 +572,11 @@ end;
 begin
   {$if sizeof(TSysParam)>=sizeof(off_t)}
   Fpmmap:= pointer(do_syscall(syscall_nr_mmap2,TSysParam(adr),TSysParam(len),
-    TSysParam(prot),TSysParam(flags),TSysParam(fd),TSysParam(off div 4096)));
+    TSysParam(prot),TSysParam(flags),TSysParam(fd),TSysParam(off)));
   {$else off_t is larger than TsysParam }
   {$message warning need mmap64 syscall, hi(off) not used}
   Fpmmap:= pointer(do_syscall(syscall_nr_mmap2,TSysParam(adr),TSysParam(len),
-    TSysParam(prot),TSysParam(flags),TSysParam(fd),TSysParam(lo(off div 4096))));
+    TSysParam(prot),TSysParam(flags),TSysParam(fd),TSysParam(lo(off))));
  {$endif}
 end;
 {$else MMAP2}
@@ -610,11 +599,6 @@ begin
   Fpmunmap:=do_syscall(syscall_nr_munmap,TSysParam(Adr),TSysParam(Len));
 end;
 
-{$define FPC_SYSTEM_HAS_MREMAP}
-Function Fpmremap(adr:pointer;old_len,new_len:size_t;flags:cint;new_adr:pointer):pointer; [public, alias :'FPC_SYSC_MREMAP'];
-begin
-  Fpmremap:=pointer(do_syscall(syscall_nr_mremap,TSysParam(Adr),TSysParam(old_len),TSysParam(new_len),TSysParam(flags),TSysParam(new_adr)));
-end;
 
 Function Fpmprotect(adr:pointer;len:size_t;prot:cint):cint; [public, alias : 'FPC_SYSC_MPROTECT'];
 begin

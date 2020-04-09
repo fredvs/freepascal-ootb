@@ -76,8 +76,8 @@ unit optconstprop;
       var
         st2, oldnode: tnode;
         old: pnode;
-        changed, tree_modified2, tree_modified3: boolean;
-        written, tree_modified4, tree_modified5: Boolean;
+        changed, tree_modified2,tree_modified3: boolean;
+        written : Boolean;
       begin
         result:=true;
 
@@ -87,8 +87,6 @@ unit optconstprop;
         tree_modified:=false;
         tree_modified2:=false;
         tree_modified3:=false;
-        tree_modified4:=false;
-        tree_modified5:=false;
 
         { while it might be usefull, to use foreach to iterate all nodes, it is safer to
           iterate manually here so we have full controll how all nodes are processed }
@@ -96,8 +94,7 @@ unit optconstprop;
         { We cannot analyze beyond those nodes, so we terminate to be on the safe side }
         if (n.nodetype in [addrn,derefn,asmn,casen,whilerepeatn,labeln,continuen,breakn,
                            tryexceptn,raisen,tryfinallyn,onn,loadparentfpn,loadvmtaddrn,guidconstn,rttin,addoptn,asn,goton,
-                           objcselectorn,objcprotocoln,
-                           arrayconstructorn,arrayconstructorrangen]) then
+                           objcselectorn,objcprotocoln]) then
           exit(false)
         else if n.nodetype=assignn then
           begin
@@ -222,23 +219,7 @@ unit optconstprop;
             result:=false;
           end
         else if n.nodetype=calln then
-          begin
-            { only propagate simply variables which are regable, this means that their address is not
-              taken }
-            if (tassignmentnode(arg).left.nodetype=loadn) and
-              (tabstractvarsym(tloadnode(tassignmentnode(arg).left).symtableentry).varregable in [vr_fpureg,vr_mmreg,vr_intreg]) then
-              begin
-                result:=replaceBasicAssign(tnode(tcallnode(n).callinitblock), arg, tree_modified);
-                result:=result and replaceBasicAssign(tcallnode(n).left, arg, tree_modified2);
-                result:=result and replaceBasicAssign(tcallnode(n).vmt_entry, arg, tree_modified3);
-                result:=result and replaceBasicAssign(tcallnode(n).right, arg, tree_modified4);
-                result:=result and replaceBasicAssign(tnode(tcallnode(n).callcleanupblock), arg, tree_modified5);
-                tree_modified:=tree_modified or tree_modified2 or tree_modified3 or tree_modified4 or tree_modified5;
-              end
-            else
-              result:=false;
-            exit;
-          end
+          exit(false)
         else if n.InheritsFrom(tbinarynode) then
           begin
             result:=replaceBasicAssign(tbinarynode(n).left, arg, tree_modified);

@@ -494,7 +494,6 @@ type
     Property OnContent;
     Property OnNewSession;
     Property OnSessionExpired;
-    property CORS;
   end;
 
 Var
@@ -1731,21 +1730,18 @@ begin
     {$ifdef wmdebug}SendDebug('Handlerequest, providername : '+Providername);{$endif}
     AProvider:=GetProvider(ProviderName,AContainer);
     try
-      If not CORS.HandleRequest(aRequest,aResponse,[hcDetect,hcSend]) then
-        begin
-        A:=GetAdaptor;
-        A.Request:=ARequest;
-        A.Reset; // Force. for wmKind=pooled, fastcgi, request can be the same.
-        Wa:=A.GetAction;
-        Case WA of
-          wdaUnknown : Raise EFPHTTPError.CreateFmt(SErrUnknownProviderAction,[ProviderName]);
-          wdaRead    : ReadWebData(AProvider);
-          wdaUpdate  : UpdateWebData(AProvider);
-          wdaInsert  : InsertWebdata(AProvider);
-          wdaDelete  : DeleteWebData(AProvider);
-        end;
-        UpdateSession(AResponse);
-        end;
+      A:=GetAdaptor;
+      A.Request:=ARequest;
+      A.Reset; // Force. for wmKind=pooled, fastcgi, request can be the same.
+      Wa:=A.GetAction;
+      Case WA of
+        wdaUnknown : Raise EFPHTTPError.CreateFmt(SErrUnknownProviderAction,[ProviderName]);
+        wdaRead    : ReadWebData(AProvider);
+        wdaUpdate  : UpdateWebData(AProvider);
+        wdaInsert  : InsertWebdata(AProvider);
+        wdaDelete  : DeleteWebData(AProvider);
+      end;
+      UpdateSession(AResponse);
     finally
       If (AContainer=Nil) then
         begin

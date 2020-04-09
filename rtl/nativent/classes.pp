@@ -28,7 +28,6 @@ uses
   sysutils,
   types,
   typinfo,
-  sortbase,
 {$ifdef FPC_TESTGENERICS}
   fgl,
 {$endif}

@@ -742,7 +742,7 @@ begin
     PSourceWindow(P)^.Editor^.ReloadFile;
 end;
 begin
-  Desktop^.ForEach(TCallbackProcParam(@EditorWindowModifiedOnDisk));
+  Desktop^.ForEach(@EditorWindowModifiedOnDisk);
 end;
 
 function IsThereAnyHelpWindow: boolean;
@@ -2726,7 +2726,7 @@ function   TDisassemblyEditor.GetCurrentLine(address : CORE_ADDR) : PDisasLine;
   Var
     PL : PDisasLine;
 begin
-  PL:=DisasLines^.FirstThat(TCallbackFunBoolParam(@IsCorrectLine));
+  PL:=DisasLines^.FirstThat(@IsCorrectLine);
   if Assigned(PL) then
     begin
       if assigned(CurL) then
@@ -3766,7 +3766,7 @@ begin
   if P<>nil then Delete(P);
 end;
 begin
-  ForEach(TCallbackProcParam(@DeleteViews));
+  ForEach(@DeleteViews);
   inherited Done;
   P:=TabDefs;
   while P<>nil do

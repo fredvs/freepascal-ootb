@@ -45,7 +45,7 @@ type
   TOprType=(OPR_NONE,OPR_CONSTANT,OPR_SYMBOL,OPR_LOCAL,
             OPR_REFERENCE,OPR_REGISTER,OPR_COND,OPR_REGSET,
             OPR_SHIFTEROP,OPR_MODEFLAGS,OPR_SPECIALREG,
-            OPR_REGPAIR,OPR_FENCEFLAGS);
+            OPR_REGPAIR);
 
   TOprRec = record
     case typ:TOprType of
@@ -81,9 +81,6 @@ type
 {$ifdef aarch64}
       OPR_SHIFTEROP : (shifterop : tshifterop);
       OPR_COND      : (cc : tasmcond);
-{$endif aarch64}
-{$if defined(riscv32) or defined(riscv64)}
-      OPR_FENCEFLAGS: (fenceflags : TFenceFlags);
 {$endif aarch64}
   end;
 
@@ -217,7 +214,7 @@ uses
   defutil,systems,verbose,globals,
   symtable,paramgr,
   aasmcpu,
-  procinfo,ngenutil;
+  procinfo;
 
 {*************************************************************************
                               TExprParse
@@ -797,8 +794,6 @@ Function TOperand.SetupVar(const s:string;GetOffset : boolean): Boolean;
           case opr.typ of
             OPR_REFERENCE: opr.varsize := l;
                 OPR_LOCAL: opr.localvarsize := l;
-            else
-              ;
           end;
 
 
@@ -815,11 +810,7 @@ Function TOperand.SetupVar(const s:string;GetOffset : boolean): Boolean;
         case opr.typ of
           OPR_REFERENCE: opr.varsize := sym.getsize;
               OPR_LOCAL: opr.localvarsize := sym.getsize;
-          else
-            ;
         end;
-      else
-        ;
     end;
   end;
 
@@ -1003,8 +994,6 @@ Begin
               if paramanager.push_addr_param(tabstractvarsym(sym).varspez,tabstractvarsym(sym).vardef,current_procinfo.procdef.proccalloption) then
                 SetSize(sizeof(pint),false);
             end;
-          else
-            ;
         end;
         if not size_set_from_absolute then
           setvarsize(tabstractvarsym(sym));
@@ -1306,10 +1295,6 @@ end;
              OPR_COND:
                ai.loadconditioncode(i-1,cc);
 {$endif arm or aarch64}
-{$if defined(riscv32) or defined(riscv64)}
-             OPR_FENCEFLAGS:
-               ai.loadfenceflags(i-1,fenceflags);
-{$endif riscv32 or riscv64}
               { ignore wrong operand }
               OPR_NONE:
                 ;
@@ -1330,62 +1315,6 @@ end;
 {****************************************************************************
                       Symbol table helper routines
 ****************************************************************************}
-
-procedure AddAbsoluteSymRefs(sym: tabsolutevarsym); forward;
-
-procedure MaybeAddSymRef(sym: tsym);
-begin
-  case sym.typ of
-     absolutevarsym:
-       AddAbsoluteSymRefs(tabsolutevarsym(sym));
-     staticvarsym:
-       if not(vo_is_external in tstaticvarsym(sym).varoptions) then
-         cnodeutils.RegisterUsedAsmSym(current_asmdata.RefAsmSymbol(sym.mangledname,AT_DATA),tstaticvarsym(sym).vardef,true);
-     procsym:
-       begin
-         { if it's a pure assembler routine, the definition of the symbol will also
-           be in assembler and it can't be removed by the compiler (and if we mark
-           it as used anyway, clang will get into trouble) }
-         if not(po_assembler in tprocdef(tprocsym(sym).ProcdefList[0]).procoptions) and
-            not(po_external in tprocdef(tprocsym(sym).ProcdefList[0]).procoptions) then
-           cnodeutils.RegisterUsedAsmSym(current_asmdata.RefAsmSymbol(tprocdef(tprocsym(sym).ProcdefList[0]).mangledname,AT_FUNCTION),tprocdef(tprocsym(sym).ProcdefList[0]),true);
-       end;
-     else
-       ;
-   end;
-end;
-
-procedure AddAbsoluteSymRefs(sym: tabsolutevarsym);
-var
-  symlist: ppropaccesslistitem;
-begin
-  case sym.abstyp of
-    toaddr:
-      ;
-    toasm:
-      begin
-        cnodeutils.RegisterUsedAsmSym(current_asmdata.RefAsmSymbol(sym.mangledname,AT_DATA),sym.vardef,true);
-      end;
-    tovar:
-      begin
-        symlist:=tabsolutevarsym(sym).ref.firstsym;
-        repeat
-          case symlist^.sltype of
-            sl_load:
-              MaybeAddSymRef(symlist^.sym);
-            sl_subscript,
-            sl_absolutetype,
-            sl_typeconv,
-            sl_vec:
-              ;
-            else
-              internalerror(2009031401);
-          end;
-          symlist:=symlist^.next;
-        until not assigned(symlist);
-      end;
-  end;
-end;
 
 procedure AsmSearchSym(const s:string;out srsym:tsym;out srsymtable:TSymtable);
 var
@@ -1447,9 +1376,6 @@ begin
       srsym:=tprocdef(srsymtable.defowner).procsym;
       srsymtable:=srsym.Owner;
     end;
-  { llvm can't catch symbol references from inline assembler blocks }
-  if assigned(srsym) then
-    MaybeAddSymRef(srsym);
 end;
 
 
@@ -1498,8 +1424,6 @@ Begin
                exit;
              end;
          end;
-       else
-         ;
      end;
    end;
 end;
@@ -1552,8 +1476,6 @@ Begin
            SearchIConstant:=TRUE;
            exit;
          end;
-       else
-         ;
      end;
    end;
 end;
@@ -1617,8 +1539,6 @@ Begin
            st:=Tabstractvarsym(sym).vardef.GetSymtable(gs_record);
          typesym :
            st:=Ttypesym(sym).typedef.GetSymtable(gs_record);
-         else
-           ;
        end
      else
        s:='';
@@ -1672,8 +1592,6 @@ Begin
                  st:=trecorddef(vardef).symtable;
                objectdef :
                  st:=tobjectdef(vardef).symtable;
-               else
-                 ;
              end;
            end;
        procsym:
@@ -1703,8 +1621,6 @@ Begin
            GetRecordOffsetSize:=(s='');
            exit;
          end;
-       else
-         ;
      end;
    end;
    { Support Field.Type as typecasting }
@@ -1742,7 +1658,7 @@ Begin
           begin
             Tlabelsym(sym).nonlocal:=true;
             if emit then
-              include(current_procinfo.flags,pi_has_interproclabel);
+              exclude(current_procinfo.procdef.procoptions,po_inline);
           end;
         if not(assigned(tlabelsym(sym).asmblocklabel)) then
           if Tlabelsym(sym).nonlocal then
@@ -1754,15 +1670,12 @@ Begin
           begin
             if tlabelsym(sym).defined then
               Message(sym_e_label_already_defined);
-            tlabelsym(sym).defined:=true;
-            hl.defined_in_asmstatement:=true
+            tlabelsym(sym).defined:=true
           end
         else
           tlabelsym(sym).used:=true;
         SearchLabel:=true;
       end;
-    else
-      ;
   end;
 end;
 

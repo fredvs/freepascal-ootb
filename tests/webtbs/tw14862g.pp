@@ -1,5 +1,4 @@
 { %cpu=x86_64 }
-{ %skiptarget=android }
 { %opt=-Cg- }
 
 

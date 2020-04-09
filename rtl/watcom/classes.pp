@@ -25,7 +25,6 @@ interface
 uses
   rtlconsts,
   types,
-  sortbase,
 {$ifdef FPC_TESTGENERICS}
   fgl,
 {$endif}

@@ -461,7 +461,7 @@ Unit racpugas;
 
       const
         shiftmode2str: array[SM_LSL..SM_SXTX] of string[4] =
-          ('LSL','LSR','ASR','ROR',
+          ('LSL','LSR','ASR',
            'UXTB','UXTH','UXTW','UXTX',
            'SXTB','SXTH','SXTW','SXTX');
       var
@@ -523,8 +523,6 @@ Unit racpugas;
                     end;
                 end;
             end;
-          else
-            ;
         end;
         result:=C_None;;
       end;
@@ -939,6 +937,7 @@ Unit racpugas;
         j  : longint;
         hs : string;
         maxlen : longint;
+        icond : tasmcond;
       Begin
         { making s a value parameter would break other assembler readers }
         hs:=s;

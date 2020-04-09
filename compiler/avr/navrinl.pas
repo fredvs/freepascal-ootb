@@ -26,12 +26,10 @@ unit navrinl;
   interface
 
     uses
-      node,ninl,ncginl, aasmbase;
+      node,ninl,ncginl;
 
     type
       tavrinlinenode = class(tcginlinenode)
-        procedure second_abs_long; override;
-
         function pass_typecheck_cpu:tnode;override;
         function first_cpu : tnode;override;
         procedure pass_generate_code_cpu;override;
@@ -44,32 +42,8 @@ unit navrinl;
       aasmdata,
       aasmcpu,
       symdef,
-      defutil,
-      hlcgobj,
-      pass_2,
-      cgbase, cgobj, cgutils,
+      cgbase,
       cpubase;
-
-    procedure tavrinlinenode.second_abs_long;
-      var
-        hl: TAsmLabel;
-        size: TCgSize;
-      begin
-        secondpass(left);
-        hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,left.resultdef,false);
-
-        location:=left.location;
-        location.register:=hlcg.getintregister(current_asmdata.CurrAsmList,left.resultdef);
-
-        size:=def_cgsize(left.resultdef);
-
-        current_asmdata.getjumplabel(hl);
-        cg.a_cmp_const_reg_label(current_asmdata.CurrAsmList,size,OC_GTE,0,left.location.register,hl);
-        cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_NEG,size,left.location.register,location.register);
-
-        cg.a_label(current_asmdata.CurrAsmList,hl);
-      end;
-
 
     function tavrinlinenode.pass_typecheck_cpu : tnode;
       begin
@@ -82,16 +56,6 @@ unit navrinl;
           in_avr_cli:
             begin
               CheckParameters(0);
-              resultdef:=voidtype;
-            end;
-          in_avr_save:
-            begin
-              CheckParameters(0);
-              resultdef:=u8inttype;
-            end;
-          in_avr_restore:
-            begin
-              CheckParameters(1);
               resultdef:=voidtype;
             end;
           else
@@ -108,16 +72,10 @@ unit navrinl;
           in_avr_sleep,
           in_avr_sei,
           in_avr_wdr,
-          in_avr_cli,
-          in_avr_restore:
+          in_avr_cli:
             begin
               expectloc:=LOC_VOID;
               resultdef:=voidtype;
-            end;
-          in_avr_save:
-            begin
-              expectloc:=LOC_REGISTER;
-              resultdef:=u8inttype;
             end;
           else
             Result:=inherited first_cpu;
@@ -138,20 +96,6 @@ unit navrinl;
             current_asmdata.CurrAsmList.concat(taicpu.op_none(A_WDR));
           in_avr_cli:
             current_asmdata.CurrAsmList.concat(taicpu.op_none(A_CLI));
-          in_avr_save:
-            begin
-              location_reset(location,LOC_CREGISTER,OS_8);
-              location.register:=cg.getintregister(current_asmdata.CurrAsmList,OS_8);
-
-              current_asmdata.CurrAsmList.concat(taicpu.op_reg_const(A_IN, location.register, NIO_SREG));
-              current_asmdata.CurrAsmList.concat(taicpu.op_none(A_CLI));
-            end;
-          in_avr_restore:
-            begin
-              secondpass(left);
-              hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,left.resultdef,false);
-              current_asmdata.CurrAsmList.concat(taicpu.op_const_reg(A_OUT, NIO_SREG, left.location.register));
-            end;
           else
             inherited pass_generate_code_cpu;
         end;

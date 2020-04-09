@@ -82,30 +82,11 @@
 {$ifdef cpuaarch64}
   {$define generic_linux_syscalls}
   {$undef usestime}
-  {$define userenameat}
 {$endif cpuaarch64}
 
 {$ifdef cpusparc64}
   {$define FPC_USEGETTIMEOFDAY}
 {$endif cpusparc64}
-
-{$ifdef cpuriscv32}
-  {$define generic_linux_syscalls}
-  {$undef usestime}
-{$endif cpuriscv32}
-
-{$ifdef cpuriscv64}
-  {$define generic_linux_syscalls}
-  {$undef usestime}
-{$endif cpuriscv64}
-
-{$ifdef cpuxtensa}
-  {$define FPC_USEGETTIMEOFDAY}
-  {$define MMAP2}
-  {$define WAIT4}
-  {$undef usestime}
-{$endif cpuxtensa}
-
 
 {$ifdef android}
   {$define generic_linux_syscalls}

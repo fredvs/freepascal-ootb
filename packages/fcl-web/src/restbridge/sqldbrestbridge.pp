@@ -1714,10 +1714,7 @@ begin
         Conn.OnLog:=@IO.DoSQLLog;
         end;
       if (rdoHandleCORS in DispatchOptions) then
-        begin
         IO.Response.SetCustomHeader('Access-Control-Allow-Origin',ResolvedCORSAllowedOrigins(IO.Request));
-        IO.Response.SetCustomHeader('Access-Control-Allow-Credentials',BoolToStr(CORSAllowCredentials,'true','false'));
-        end;
       if not AuthenticateRequest(IO,True) then
         exit;
       if Not CheckResourceAccess(IO) then
@@ -2011,7 +2008,7 @@ begin
       IO.RestOutput.InitStreaming;
       IO.RestInput.InitStreaming;
       IO.OnSQLLog:=@Self.DoSQLLog;
-      if SameText('OPTIONS',aRequest.Method) or AuthenticateRequest(IO,False) then
+      if AuthenticateRequest(IO,False) then
         DoHandleRequest(IO)
     except
       On E : Exception do

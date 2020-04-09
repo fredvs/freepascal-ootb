@@ -17,61 +17,45 @@
 
 {$asmmode gas}
 
-const
-{$i cpuinnr.inc}
-
-{ Reads SREG and then disables interrupts, returns contents of SREG }
-function avr_save: byte;[INTERNPROC: in_avr_save];
-{ Restores SREG }
-procedure avr_restore(old_sreg: byte); [INTERNPROC: in_avr_restore];
-
-
 procedure fpc_cpuinit;{$ifdef SYSTEMINLINE}inline;{$endif}
   begin
   end;
 
 
-{$if not(defined(CPUAVR_16_REGS)) and defined(CPUAVR_HAS_MOVW)}
 {$define FPC_SYSTEM_HAS_MOVE}
-procedure Move(const source;var dest;count:SizeInt);[public, alias: 'FPC_MOVE']; assembler; nostackframe;
-asm
-  push r28
-  push r29
-
-  movw r26, r24         // Src=X
-  movw r28, r22         // Dest=Y
-  movw r30, r20         // Count=Z
-  cp r1, r30
-  cpc r1, r31
-  brge .Lexit           // if 0 >= Count
-  cp  r28, r26
-  cpc r29, r27
-  breq .Lexit           // if dest = source
-  brlo .LForwardMove    // if dest < source
-
-  // Add count to both pointers
-  add r26, r30
-  adc r27, r31
-  add r28, r30
-  adc r29, r31
-.LBackwardMove:
-  ld r18, -X
-  st -Y, r18
-  sbiw r30, 1
-  brne .LBackwardMove
-  rjmp .Lexit
-
-.LForwardMove:
-  ld r18, X+
-  st Y+, r18
-  sbiw r30, 1
-  brne .LForwardMove
-.Lexit:
-
-  pop r29
-  pop r28
+procedure Move(const source;var dest;count:SizeInt);[public, alias: 'FPC_MOVE'];
+var
+  pdest,psrc,pend : pbyte;
+begin
+  if (@dest=@source) or (count<=0) then
+    exit;
+  if (@dest<@source) or (@source+count<@dest) then
+    begin
+      { Forward Move }
+      psrc:=@source;
+      pdest:=@dest;
+      pend:=psrc+count;
+      while psrc<pend do
+        begin
+          pdest^:=psrc^;
+          inc(pdest);
+          inc(psrc);
+        end;
+    end
+  else
+    begin
+      { Backward Move }
+      psrc:=@source+count;
+      pdest:=@dest+count;
+      while psrc>@source do
+        begin
+          dec(pdest);
+          dec(psrc);
+          pdest^:=psrc^;
+        end;
+    end;
 end;
-{$endif not(defined(CPUAVR_16_REGS)) and defined(CPUAVR_HAS_MOVW)}
+
 
 {$define FPC_SYSTEM_HAS_FILLCHAR}
 Procedure FillChar(var x;count:SizeInt;value:byte);
@@ -100,22 +84,20 @@ function get_frame:pointer;assembler;nostackframe;
 
 
 {$define FPC_SYSTEM_HAS_GET_CALLER_ADDR}
-function get_caller_addr(framebp:pointer;addr:pointer=nil):pointer;assembler;nostackframe;
+function get_caller_addr(framebp:pointer;addr:pointer=nil):pointer;assembler;
   asm
   end;
 
 
 {$define FPC_SYSTEM_HAS_GET_CALLER_FRAME}
-function get_caller_frame(framebp:pointer;addr:pointer=nil):pointer;assembler;nostackframe;
+function get_caller_frame(framebp:pointer;addr:pointer=nil):pointer;assembler;
   asm
   end;
 
 
 {$define FPC_SYSTEM_HAS_SPTR}
-Function Sptr : pointer;assembler;nostackframe;
+Function Sptr : pointer;assembler;
   asm
-    in r24, 0x3d
-    in r25, 0x3e
   end;
 
 
@@ -124,13 +106,20 @@ function InterLockedDecrement (var Target: longint) : longint;
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
-    Result:=Target-1;
-    Target:=Result;
+    dec(Target);
+    Result:=Target;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -139,13 +128,20 @@ function InterLockedIncrement (var Target: longint) : longint;
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
-    Result:=Target+1;
-    Target:=Result;
+    inc(Target);
+    Result:=Target;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -154,13 +150,20 @@ function InterLockedExchange (var Target: longint;Source : longint) : longint;
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
     Result:=Target;
     Target:=Source;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -169,14 +172,21 @@ function InterlockedCompareExchange(var Target: longint; NewValue: longint; Comp
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
     Result:=Target;
-    if Result=Comperand then
+    if Target=Comperand then
       Target:=NewValue;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -185,13 +195,20 @@ function InterLockedExchangeAdd (var Target: longint;Source : longint) : longint
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
     Result:=Target;
-    Target:=Result+Source;
+    inc(Target,Source);
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -200,13 +217,20 @@ function InterLockedDecrement (var Target: smallint) : smallint;
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
-    Result:=Target-1;
-    Target:=Result;
+    dec(Target);
+    Result:=Target;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -215,13 +239,20 @@ function InterLockedIncrement (var Target: smallint) : smallint;
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
-    Result:=Target+1;
-    Target:=Result;
+    inc(Target);
+    Result:=Target;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -230,13 +261,20 @@ function InterLockedExchange (var Target: smallint;Source : smallint) : smallint
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
     Result:=Target;
     Target:=Source;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -245,14 +283,21 @@ function InterlockedCompareExchange(var Target: smallint; NewValue: smallint; Co
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
     Result:=Target;
-    if Result=Comperand then
+    if Target=Comperand then
       Target:=NewValue;
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
 
@@ -261,14 +306,19 @@ function InterLockedExchangeAdd (var Target: smallint;Source : smallint) : small
     temp_sreg : byte;
   begin
     { block interrupts }
-    temp_sreg:=avr_save();
+    asm
+      in r0,0x3f
+      std temp_sreg,r0
+      cli
+    end;
 
     Result:=Target;
-    Target:=Result+Source;
+    inc(Target,Source);
 
     { release interrupts }
-    avr_restore(temp_sreg);
+    asm
+      ldd r0,temp_sreg
+      out 0x3f,r0
+    end;
   end;
 
-{include hand-optimized assembler code}
-{$i math.inc}

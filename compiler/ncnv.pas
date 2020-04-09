@@ -64,9 +64,6 @@ interface
           procedure derefimpl;override;
           function dogetcopy : tnode;override;
           procedure printnodeinfo(var t : text);override;
-{$ifdef DEBUG_NODE_XML}
-          procedure XMLPrintNodeInfo(var T: Text); override;
-{$endif DEBUG_NODE_XML}
           function pass_1 : tnode;override;
           function pass_typecheck:tnode;override;
           function simplify(forinline : boolean):tnode; override;
@@ -318,7 +315,7 @@ implementation
 
    uses
       globtype,systems,constexp,compinnr,
-      cutils,verbose,globals,widestr,ppu,
+      cutils,verbose,globals,widestr,
       symconst,symdef,symsym,symcpu,symtable,
       ncon,ncal,nset,nadd,nmem,nmat,nbas,nutils,ninl,
       cgbase,procinfo,
@@ -843,12 +840,10 @@ implementation
               if iscvarargs then
                 p:=ctypeconvnode.create(p,voidpointertype);
             objectdef :
-              if is_objc_class_or_protocol(p.resultdef) then
-                p:=ctypeconvnode.create(p,voidpointertype)
-              else if iscvarargs or
+              if (iscvarargs and
+                  not is_objc_class_or_protocol(p.resultdef)) or
                  is_object(p.resultdef) then
-                CGMessagePos1(p.fileinfo,type_e_wrong_type_in_array_constructor,p.resultdef.typename)
-              else
+                CGMessagePos1(p.fileinfo,type_e_wrong_type_in_array_constructor,p.resultdef.typename);
             else
               CGMessagePos1(p.fileinfo,type_e_wrong_type_in_array_constructor,p.resultdef.typename);
           end;
@@ -955,8 +950,6 @@ implementation
                cgmessage1(type_h_convert_sub_operands_to_prevent_overflow,def.typename);
              muln:
                cgmessage1(type_h_convert_mul_operands_to_prevent_overflow,def.typename);
-             else
-               ;
            end;
       end;
 
@@ -992,7 +985,7 @@ implementation
         inherited ppuload(t,ppufile);
         ppufile.getderef(totypedefderef);
         convtype:=tconverttype(ppufile.getbyte);
-        ppufile.getset(tppuset1(convnodeflags));
+        ppufile.getsmallset(convnodeflags);
       end;
 
 
@@ -1001,7 +994,7 @@ implementation
         inherited ppuwrite(ppufile);
         ppufile.putderef(totypedefderef);
         ppufile.putbyte(byte(convtype));
-        ppufile.putset(tppuset1(convnodeflags));
+        ppufile.putsmallset(convnodeflags);
       end;
 
 
@@ -1052,31 +1045,6 @@ implementation
         write(t,']');
       end;
 
-{$ifdef DEBUG_NODE_XML}
-    procedure TTypeConvNode.XMLPrintNodeInfo(var T: Text);
-      var
-        First: Boolean;
-        i: TTypeConvNodeFlag;
-      begin
-        inherited XMLPrintNodeInfo(T);
-        Write(T,' convtype="', convtype);
-        First := True;
-        for i := Low(TTypeConvNodeFlag) to High(TTypeConvNodeFlag) do
-          if i in ConvNodeFlags then
-            begin
-              if First then
-                begin
-                  Write(T, '" convnodeflags="', i);
-                  First := False;
-                end
-              else
-                Write(T, ',', i);
-           end;
-
-        { If no flags were printed, this is the closing " for convtype }
-        Write(T, '"');
-      end;
-{$endif DEBUG_NODE_XML}
 
     function ttypeconvnode.typecheck_cord_to_pointer : tnode;
 
@@ -1529,7 +1497,7 @@ implementation
             begin
               result:=cmoddivnode.create(divn,getcopy,cordconstnode.create(10000,resultdef,false));
               include(result.flags,nf_is_currency);
-              include(tmoddivnode(result).left.flags,nf_internal);
+              include(taddnode(result).left.flags,nf_internal);
             end;
          end;
       end;
@@ -1582,25 +1550,16 @@ implementation
         if not is_currency(resultdef) then
           internalerror(200304221);
         result:=nil;
-        if not(nf_internal in flags) then
-          begin
-            left:=caddnode.create(muln,left,crealconstnode.create(10000.0,left.resultdef));
-            include(left.flags,nf_is_currency);
-            { Convert constants directly, else call Round() }
-            if left.nodetype=realconstn then
-              result:=cordconstnode.create(round(trealconstnode(left).value_real),resultdef,false)
-            else
-              begin
-                result:=cinlinenode.create(in_round_real,false,left);
-                { Internal type cast to currency }
-                result:=ctypeconvnode.create_internal(result,s64currencytype);
-                left:=nil;
-              end
-          end
+        left:=caddnode.create(muln,left,crealconstnode.create(10000.0,left.resultdef));
+        include(left.flags,nf_is_currency);
+        { Convert constants directly, else call Round() }
+        if left.nodetype=realconstn then
+          result:=cordconstnode.create(round(trealconstnode(left).value_real),resultdef,false)
         else
           begin
-            include(left.flags,nf_is_currency);
-            result:=left;
+            result:=cinlinenode.create(in_round_real,false,left);
+            { Internal type cast to currency }
+            result:=ctypeconvnode.create_internal(result,s64currencytype);
             left:=nil;
           end;
       end;
@@ -1609,25 +1568,20 @@ implementation
     function ttypeconvnode.typecheck_real_to_real : tnode;
       begin
          result:=nil;
-         if not(nf_internal in flags) then
+         if is_currency(left.resultdef) and not(is_currency(resultdef)) then
            begin
-             if is_currency(left.resultdef) and not(is_currency(resultdef)) then
-               begin
-                 left:=caddnode.create(slashn,left,crealconstnode.create(10000.0,left.resultdef));
-                 include(left.flags,nf_is_currency);
-                 typecheckpass(left);
-               end
-             else
-               if is_currency(resultdef) and not(is_currency(left.resultdef)) then
-                 begin
-                   left:=caddnode.create(muln,left,crealconstnode.create(10000.0,left.resultdef));
-                   include(left.flags,nf_is_currency);
-                   include(flags,nf_is_currency);
-                   typecheckpass(left);
-                 end;
+             left:=caddnode.create(slashn,left,crealconstnode.create(10000.0,left.resultdef));
+             include(left.flags,nf_is_currency);
+             typecheckpass(left);
            end
          else
-           include(flags,nf_is_currency);
+           if is_currency(resultdef) and not(is_currency(left.resultdef)) then
+             begin
+               left:=caddnode.create(muln,left,crealconstnode.create(10000.0,left.resultdef));
+               include(left.flags,nf_is_currency);
+               include(flags,nf_is_currency);
+               typecheckpass(left);
+             end;
       end;
 
 
@@ -2339,7 +2293,7 @@ implementation
              copytype:=pc_address_only
            else
              copytype:=pc_normal;
-           resultdef:=cprocvardef.getreusableprocaddr(pd,copytype);
+           resultdef:=pd.getcopyas(procvardef,copytype,'');
          end;
       end;
 
@@ -2468,7 +2422,6 @@ implementation
               include(cdoptions,cdo_explicit);
             if nf_internal in flags then
               include(cdoptions,cdo_internal);
-            aprocdef:=nil;
             eq:=compare_defs_ext(left.resultdef,resultdef,left.nodetype,convtype,aprocdef,cdoptions);
             case eq of
               te_exact,
@@ -2531,7 +2484,7 @@ implementation
               te_convert_operator :
                 begin
                   include(current_procinfo.flags,pi_do_call);
-                  addsymref(aprocdef.procsym,aprocdef);
+                  addsymref(aprocdef.procsym);
                   hp:=ccallnode.create(ccallparanode.create(left,nil),Tprocsym(aprocdef.procsym),nil,nil,[],nil);
                   { tell explicitly which def we must use !! (PM) }
                   tcallnode(hp).procdefinition:=aprocdef;
@@ -2751,6 +2704,9 @@ implementation
                   else
                    IncompatibleTypes(left.resultdef,resultdef);
                 end;
+
+              else
+                internalerror(200211231);
             end;
           end;
         { Give hint or warning for unportable code, exceptions are
@@ -2843,6 +2799,7 @@ implementation
 
       function docheckremoveinttypeconvs(n: tnode): boolean;
         begin
+          result:=false;
           if wasoriginallysmallerint(n) then
             exit(true);
           case n.nodetype of
@@ -2868,8 +2825,6 @@ implementation
                    (((n.nodetype=andn) and wasoriginallysmallerint(tbinarynode(n).left)) or
                     ((n.nodetype=andn) and wasoriginallysmallerint(tbinarynode(n).right))));
               end;
-            else
-              result:=false;
           end;
         end;
 
@@ -3174,14 +3129,11 @@ implementation
                    exit;
                 end;
             end;
-          else
-            ;
         end;
 {$ifndef CPUNO32BITOPS}
         { must be done before code below, because we need the
           typeconversions for ordconstn's as well }
         case convtype of
-          tc_int_2_bool,
           tc_int_2_int:
             begin
               if (localswitches * [cs_check_range,cs_check_overflow] = []) and
@@ -3218,8 +3170,6 @@ implementation
                     end;
                 end;
             end;
-          else
-            ;
         end;
 {$endif not CPUNO32BITOPS}
       end;
@@ -3262,6 +3212,9 @@ implementation
       begin
          result:=nil;
          expectloc:=LOC_REGISTER;
+         { Use of FPC_EMPTYCHAR label requires setting pi_needs_got flag }
+         if (cs_create_pic in current_settings.moduleswitches) then
+           include(current_procinfo.flags,pi_needs_got);
       end;
 
 
@@ -3317,7 +3270,6 @@ implementation
 
       begin
          first_array_to_pointer:=nil;
-         make_not_regable(left,[ra_addr_regable]);
          expectloc:=LOC_REGISTER;
       end;
 
@@ -3529,11 +3481,7 @@ implementation
             (left.resultdef.size=resultdef.size) and
             (left.expectloc in [LOC_REFERENCE,LOC_CREFERENCE,LOC_CREGISTER]) then
            begin
-{$ifdef xtensa}
-             expectloc:=LOC_REGISTER;
-{$else xtensa}
              expectloc:=left.expectloc;
-{$endif xtensa}
              exit;
            end;
          { when converting 64bit int to C-ctyle boolean, first convert to an int32 and then }
@@ -3691,6 +3639,9 @@ implementation
       begin
          first_ansistring_to_pchar:=nil;
          expectloc:=LOC_REGISTER;
+         { Use of FPC_EMPTYCHAR label requires setting pi_needs_got flag }
+         if (cs_create_pic in current_settings.moduleswitches) then
+           include(current_procinfo.flags,pi_needs_got);
       end;
 
 
@@ -3754,6 +3705,8 @@ implementation
                        end
                      else
                        internalerror(200802231);
+                   else
+                     internalerror(200802165);
                  end;
                  break;
                end;
@@ -4319,8 +4272,6 @@ implementation
                 resultdef:=pasbool1type;
               asn:
                 resultdef:=tclassrefdef(right.resultdef).pointeddef;
-              else
-                ;
             end;
           end
         else if is_interface(right.resultdef) or
@@ -4332,8 +4283,6 @@ implementation
                resultdef:=pasbool1type;
              asn:
                resultdef:=right.resultdef;
-             else
-               ;
            end;
 
             { left is a class or interface }

@@ -41,9 +41,9 @@ interface
        end;
 
       tarmcasenode = class(tcgcasenode)
-         procedure optimizevalues(var max_linear_list:int64;var max_dist:qword);override;
+         procedure optimizevalues(var max_linear_list:aint;var max_dist:aword);override;
          function  has_jumptable : boolean;override;
-         procedure genjumptable(hp : pcaselabel;min_,max_ : int64);override;
+         procedure genjumptable(hp : pcaselabel;min_,max_ : aint);override;
          procedure genlinearlist(hp : pcaselabel);override;
          procedure genjmptreeentry(p : pcaselabel;parentvalue : TConstExprInt);override;
       end;
@@ -136,7 +136,7 @@ implementation
                             TARMCASENODE
 *****************************************************************************}
 
-    procedure tarmcasenode.optimizevalues(var max_linear_list:int64;var max_dist:qword);
+    procedure tarmcasenode.optimizevalues(var max_linear_list:aint;var max_dist:aword);
       begin
         inc(max_linear_list,2)
       end;
@@ -148,7 +148,7 @@ implementation
       end;
 
 
-    procedure tarmcasenode.genjumptable(hp : pcaselabel;min_,max_ : int64);
+    procedure tarmcasenode.genjumptable(hp : pcaselabel;min_,max_ : aint);
       var
         last : TConstExprInt;
         tmpreg,
@@ -161,30 +161,22 @@ implementation
 
         procedure genitem(list:TAsmList;t : pcaselabel);
           var
-            i : int64;
+            i : aint;
           begin
             if assigned(t^.less) then
               genitem(list,t^.less);
             { fill possible hole }
-            i:=last+1;
-            while i<=t^._low-1 do
-              begin
-                if cs_create_pic in current_settings.moduleswitches then
-                  list.concat(Tai_const.Create_rel_sym_offset(aitconst_ptr,piclabel,elselabel,picoffset))
-                else
-                  list.concat(Tai_const.Create_sym(elselabel));
-                i:=i+1;
-              end;
-            i:=t^._low;
-            while i<=t^._high do
-              begin
-                if cs_create_pic in current_settings.moduleswitches then
-                  list.concat(Tai_const.Create_rel_sym_offset(aitconst_ptr,piclabel,blocklabel(t^.blockid),picoffset))
-                else
-                  list.concat(Tai_const.Create_sym(blocklabel(t^.blockid)));
-                i:=i+1;
-              end;
-            last:=t^._high;
+            for i:=last.svalue+1 to t^._low.svalue-1 do
+              if cs_create_pic in current_settings.moduleswitches then
+                list.concat(Tai_const.Create_rel_sym_offset(aitconst_ptr,piclabel,elselabel,picoffset))
+              else
+                list.concat(Tai_const.Create_sym(elselabel));
+            for i:=t^._low.svalue to t^._high.svalue do
+              if cs_create_pic in current_settings.moduleswitches then
+                list.concat(Tai_const.Create_rel_sym_offset(aitconst_ptr,piclabel,blocklabel(t^.blockid),picoffset))
+              else
+                list.concat(Tai_const.Create_sym(blocklabel(t^.blockid)));
+            last:=t^._high.svalue;
             if assigned(t^.greater) then
               genitem(list,t^.greater);
           end;

@@ -38,6 +38,8 @@ interface
       procedure g_intf_wrapper(list: TAsmList; procdef: tprocdef; const labelname: string; ioffset: longint);override;
     end;
 
+  procedure create_hlcodegen;
+
 implementation
 
   uses
@@ -50,7 +52,7 @@ implementation
     end;
 
 
-  procedure create_hlcodegen_cpu;
+  procedure create_hlcodegen;
     begin
       hlcg:=thlcgcpu.create;
       create_codegen;
@@ -58,5 +60,4 @@ implementation
 
 begin
   chlcgobj:=thlcgcpu;
-  create_hlcodegen:=@create_hlcodegen_cpu;
 end.

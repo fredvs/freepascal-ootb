@@ -34,7 +34,7 @@ interface
     procedure insert_funcret_local(pd:tprocdef);
     procedure insert_hidden_para(p:TObject;arg:pointer);
     procedure check_c_para(pd:Tabstractprocdef);
-    procedure insert_struct_hidden_paras(astruct: tabstractrecorddef);
+    procedure insert_record_hidden_paras(astruct: trecorddef);
 
     type
       // flags of the *handle_calling_convention routines
@@ -47,7 +47,6 @@ interface
 
     const
       hcc_default_actions_intf=[hcc_declaration,hcc_check,hcc_insert_hidden_paras];
-      hcc_default_actions_intf_struct=hcc_default_actions_intf-[hcc_insert_hidden_paras];
       hcc_default_actions_impl=[hcc_check,hcc_insert_hidden_paras];
       hcc_default_actions_parse=[hcc_check,hcc_insert_hidden_paras];
       PD_VIRTUAL_MUTEXCLPO = [po_interrupt,po_exports,po_overridingmethod,po_inline,po_staticmethod];
@@ -105,9 +104,6 @@ implementation
              paranr:=paranr_result_leftright
            else
 {$endif}
-           if is_managed_type(pd.returndef) then
-             paranr:=paranr_result_managed
-           else
              paranr:=paranr_result;
            { Generate result variable accessing function result }
            vs:=cparavarsym.create('$result',paranr,vs_var,pd.returndef,[vo_is_funcret,vo_is_hidden_para]);
@@ -303,14 +299,14 @@ implementation
         sl       : tpropaccesslist;
         hs       : string;
       begin
-        storepos:=current_tokenpos;
-        current_tokenpos:=pd.fileinfo;
-
         { The result from constructors and destructors can't be accessed directly }
         if not(pd.proctypeoption in [potype_constructor,potype_destructor]) and
            not is_void(pd.returndef) and
            (not(po_assembler in pd.procoptions) or paramanager.asm_result_var(pd.returndef,pd)) then
          begin
+           storepos:=current_tokenpos;
+           current_tokenpos:=pd.fileinfo;
+
            { We need to insert a varsym for the result in the localst
              when it is returning in a register }
            { we also need to do this for a generic procdef as we didn't allow
@@ -351,26 +347,8 @@ implementation
               tlocalsymtable(pd.localst).insert(aliasvs);
             end;
 
+           current_tokenpos:=storepos;
          end;
-
-        if pd.generate_safecall_wrapper then
-          begin
-            { vo_is_funcret is necessary so the local only gets freed after we loaded its
-              value into the return register }
-            vs:=clocalvarsym.create('$safecallresult',vs_value,search_system_type('HRESULT').typedef,[vo_is_funcret]);
-            { do not put this variable in a register. The register which will be bound
-              to this symbol will not be allocated automatically. Which means it will
-              be re-used wich breaks the code. Besides this it is questionable if it is
-              an optimization if one of the registers is kept allocated during the complete
-              function, without ever using it.
-              (It would be better to re-write the safecall-support in such a way that this
-              variable it not needed at all, but that the HRESULT is set when the method
-              is finalized) }
-            vs.varregable:=vr_none;
-            pd.localst.insert(vs);
-          end;
-
-        current_tokenpos:=storepos;
       end;
 
 
@@ -470,7 +448,7 @@ implementation
       end;
 
 
-    procedure insert_struct_hidden_paras(astruct: tabstractrecorddef);
+    procedure insert_record_hidden_paras(astruct: trecorddef);
       var
         pd: tdef;
         i: longint;
@@ -546,8 +524,6 @@ implementation
                   { Temporary stub, must be rewritten to support OS/2 far16 }
                   Message1(parser_w_proc_directive_ignored,'FAR16');
                 end;
-              else
-                ;
             end;
 
             { Inlining is enabled and supported? }
@@ -594,13 +570,6 @@ implementation
 
         if hcc_insert_hidden_paras in flags then
           begin
-            { If the paraloc info has been calculated already, it will be missing for
-              the new parameters we add below. This should never be necessary before
-              we add them, as users of this information would not process these extra
-              parameters in that case }
-            if pd.has_paraloc_info<>callnoside then
-              internalerror(2019031610);
-
             { insert hidden high parameters }
             pd.parast.SymList.ForEachCall(@insert_hidden_para,pd);
 
@@ -647,11 +616,6 @@ implementation
                   messagepos1(fwtype.fileinfo,sym_e_generic_type_param_decl,fwtype.realname);
                   result:=false;
                 end;
-              if (fwpd.interfacedef or assigned(fwpd.struct)) and (df_genconstraint in currtype.typedef.defoptions) then
-                begin
-                  messagepos(tstoreddef(currtype.typedef).genconstraintdata.fileinfo,parser_e_generic_constraints_not_allowed_here);
-                  result:=false;
-                end;
             end;
         end;
 
@@ -672,17 +636,15 @@ implementation
             - proc declared in interface of unit (or in class/record/object)
               and defined in implementation; here the fwpd might contain
               constraints while currpd must only contain undefineddefs
-            - forward declaration in implementation: here constraints must be
-              repeated }
+            - forward declaration in implementation }
           foundretdef:=false;
           for i:=0 to fwpd.genericparas.count-1 do
             begin
               fwtype:=ttypesym(fwpd.genericparas[i]);
               currtype:=ttypesym(currpd.genericparas[i]);
-              { if the type in the currpd isn't a pure undefineddef (thus there
-                are constraints and the fwpd was declared in the interface, then
-                we can stop right there }
-              if fwpd.interfacedef and ((currtype.typedef.typ<>undefineddef) or (df_genconstraint in currtype.typedef.defoptions)) then
+              { if the type in the currpd isn't a pure undefineddef, then we can
+                stop right there }
+              if (currtype.typedef.typ<>undefineddef) or (df_genconstraint in currtype.typedef.defoptions) then
                 exit;
               if not foundretdef then
                 begin
@@ -728,14 +690,6 @@ implementation
         item : tlinkedlistitem;
       begin
         forwardfound:=false;
-
-        if assigned(currpd.struct) and
-           (currpd.struct.symtable.moduleid<>current_module.moduleid) and
-           not currpd.is_specialization then
-          begin
-            result:=false;
-            exit;
-          end;
 
         { check overloaded functions if the same function already exists }
         for i:=0 to tprocsym(currpd.procsym).ProcdefList.Count-1 do
@@ -900,10 +854,7 @@ implementation
                         the interface version must also have it (otherwise we can
                         get annoying crashes due to interface crc changes) }
                       (not(po_overload in fwpd.procoptions) and
-                       (po_overload in currpd.procoptions)) or
-                      { same with noreturn }
-                      (not(po_noreturn in fwpd.procoptions) and
-                       (po_noreturn in currpd.procoptions)) then
+                       (po_overload in currpd.procoptions)) then
                      begin
                        MessagePos1(currpd.fileinfo,parser_e_header_dont_match_forward,
                                    fwpd.fullprocname(false));
@@ -1124,7 +1075,7 @@ implementation
           accessed from within nested routines (start with extra dollar to prevent
           the JVM from thinking this is a nested class in the unit) }
         nestedvarsst:=trecordsymtable.create('$'+current_module.realmodulename^+'$$_fpc_nestedvars$'+pd.unique_id_str,
-          current_settings.alignment.localalignmax,current_settings.alignment.localalignmin);
+          current_settings.alignment.localalignmax,current_settings.alignment.localalignmin,current_settings.alignment.maxCrecordalign);
         nestedvarsdef:=crecorddef.create(nestedvarsst.name^,nestedvarsst);
   {$ifdef jvm}
         maybe_guarantee_record_typesym(nestedvarsdef,nestedvarsdef.owner);
@@ -1132,7 +1083,7 @@ implementation
           representable in source form and we don't need them anyway }
         symtablestack.push(trecorddef(nestedvarsdef).symtable);
         maybe_add_public_default_java_constructor(trecorddef(nestedvarsdef));
-        insert_struct_hidden_paras(trecorddef(nestedvarsdef));
+        insert_record_hidden_paras(trecorddef(nestedvarsdef));
         symtablestack.pop(trecorddef(nestedvarsdef).symtable);
   {$endif}
         symtablestack.free;

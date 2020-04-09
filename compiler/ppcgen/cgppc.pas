@@ -316,8 +316,6 @@ unit cgppc;
                        not(pi_do_call in current_procinfo.flags) then
                       list.concat(taicpu.op_reg_reg(A_MTSPR,NR_LR,NR_R0));
                   end;
-                else
-                  ;
               end;
           end;
       end;
@@ -563,6 +561,7 @@ unit cgppc;
         );
     var
       ref2: TReference;
+      tmpreg: tregister;
       op: TAsmOp;
     begin
       if not (fromsize in [OS_8..OS_INT,OS_S8..OS_SINT]) then
@@ -711,7 +710,7 @@ unit cgppc;
         begin
           pd:=search_system_proc('mcount');
           paraloc1.init;
-          paramanager.getcgtempparaloc(list,pd,1,paraloc1);
+          paramanager.getintparaloc(list,pd,1,paraloc1);
           a_load_reg_cgpara(list,OS_ADDR,NR_R0,paraloc1);
           paramanager.freecgpara(list,paraloc1);
           paraloc1.done;
@@ -746,8 +745,6 @@ unit cgppc;
             list.concat(taicpu.op_const_const_const(A_CROR,testbit,testbit,testbit+2));
             f2.flag:=F_LT;
           end;
-        else
-          ;
       end;
       c := flags_to_cond(f2);
       a_jmp(list,A_BC,c.cond,c.cr-RS_CR0,l);
@@ -811,6 +808,9 @@ unit cgppc;
       AutoDirectTOCLimit = (high(smallint) div sizeof(pint)) - 500;
     var
       tmpref: treference;
+      { can have more than 16384 (32 bit) or 8192 (64 bit) toc entries and, as
+        as consequence, toc subsections -> 5 extra characters for the number}
+      tocsecname: string[length('tocsubtable')+5];
       nlsymname: string;
       newsymname: ansistring;
       sym: TAsmSymbol;

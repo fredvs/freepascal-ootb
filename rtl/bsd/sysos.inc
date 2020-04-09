@@ -85,9 +85,6 @@ end;
   {$Linklib c}
   {$i oscdeclh.inc}
   {$i oscdecl.inc}
-  {$ifdef darwin}
-    {$i sysmach.inc}
-  {$endif}
 {$else}
   {$I syscallh.inc}
   {$I syscall.inc}

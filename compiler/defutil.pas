@@ -159,9 +159,6 @@ interface
     }
     function is_special_array(p : tdef) : boolean;
 
-    {# Returns true, if p points to a normal array, bitpacked arrays are included }
-    function is_normal_array(p : tdef) : boolean;
-
     {# Returns true if p is a bitpacked array }
     function is_packed_array(p: tdef) : boolean;
 
@@ -341,9 +338,6 @@ interface
     { # returns true if the procdef has no parameters and no specified return type }
     function is_bareprocdef(pd : tprocdef): boolean;
 
-    { returns true if the procdef is a C-style variadic function }
-    function is_c_variadic(pd: tabstractprocdef): boolean; {$ifdef USEINLINE}inline;{$endif}
-
     { # returns the smallest base integer type whose range encompasses that of
         both ld and rd; if keep_sign_if_equal, then if ld and rd have the same
         signdness, the result will also get that signdness }
@@ -372,8 +366,7 @@ interface
 implementation
 
     uses
-       verbose,cutils,
-       cpuinfo;
+       verbose,cutils;
 
     { returns true, if def uses FPU }
     function is_fpu(def : tdef) : boolean;
@@ -499,7 +492,7 @@ implementation
                                   u8bit,u16bit,u32bit,u64bit,
                                   s8bit,s16bit,s32bit,s64bit,
                                   pasbool1,pasbool8,pasbool16,pasbool32,pasbool64,
-                                  bool8bit,bool16bit,bool32bit,bool64bit,customint];
+                                  bool8bit,bool16bit,bool32bit,bool64bit];
              end;
            enumdef :
              is_ordinal:=true;
@@ -611,8 +604,7 @@ implementation
       begin
         result:=(def.typ=orddef) and
                     (torddef(def).ordtype in [u8bit,u16bit,u32bit,u64bit,
-                                          s8bit,s16bit,s32bit,s64bit,
-                                          customint]);
+                                          s8bit,s16bit,s32bit,s64bit]);
       end;
 
 
@@ -808,14 +800,6 @@ implementation
                   ((tarraydef(p).arrayoptions * [ado_IsVariant,ado_IsArrayOfConst,ado_IsConstructor,ado_IsDynamicArray])<>[]) or
                   is_open_array(p)
                  );
-      end;
-
-    { true, if p points to a normal array, bitpacked arrays are included }
-    function is_normal_array(p : tdef) : boolean;
-      begin
-         result:=(p.typ=arraydef) and
-                 ((tarraydef(p).arrayoptions * [ado_IsVariant,ado_IsArrayOfConst,ado_IsConstructor,ado_IsDynamicArray])=[]) and
-                 not(is_open_array(p));
       end;
 
     { true if p is an ansi string def }
@@ -1018,11 +1002,8 @@ implementation
       begin
         result:=(def1.typ=orddef) and (def2.typ=orddef) and
           (torddef(def1).ordtype in [u8bit,u16bit,u32bit,u64bit,
-                                     s8bit,s16bit,s32bit,s64bit,customint]) and
-          (torddef(def1).ordtype=torddef(def2).ordtype) and
-          ((torddef(def1).ordtype<>customint) or
-           ((torddef(def1).low=torddef(def2).low) and
-            (torddef(def1).high=torddef(def2).high)));
+                                     s8bit,s16bit,s32bit,s64bit]) and
+          (torddef(def1).ordtype=torddef(def2).ordtype);
       end;
 
 
@@ -1250,8 +1231,6 @@ implementation
                 case tfloatdef(tarraydef(p).elementdef).floattype of
                   s32real:
                     mmx_type:=mmxsingle;
-                  else
-                    ;
                 end
               else
                 case torddef(tarraydef(p).elementdef).ordtype of
@@ -1267,8 +1246,6 @@ implementation
                      mmx_type:=mmxu32bit;
                    s32bit:
                      mmx_type:=mmxs32bit;
-                   else
-                     ;
                 end;
            end;
       end;
@@ -1338,9 +1315,8 @@ implementation
       begin
         result:=(p.typ=arraydef) and
                 not(is_special_array(p)) and
-                (tarraydef(p).elementdef.typ in [floatdef,orddef]) {and
                 (tarraydef(p).elementdef.typ=floatdef) and
-                (tfloatdef(tarraydef(p).elementdef).floattype in [s32real,s64real])};
+                (tfloatdef(tarraydef(p).elementdef).floattype in [s32real,s64real]);
       end;
 
 
@@ -1350,60 +1326,21 @@ implementation
 {$ifdef x86}
         result:= is_vector(p) and
                  (
+                  (tarraydef(p).elementdef.typ=floatdef) and
                   (
-                   (tarraydef(p).elementdef.typ=floatdef) and
-                   (
-                    (tarraydef(p).lowrange=0) and
-                    (tarraydef(p).highrange=3) and
-                    (tfloatdef(tarraydef(p).elementdef).floattype=s32real)
-                   )
-                  ) or
+                   (tarraydef(p).lowrange=0) and
+                   (tarraydef(p).highrange=3) and
+                   (tfloatdef(tarraydef(p).elementdef).floattype=s32real)
+                  )
+                 ) or
 
+                 (
+                  (tarraydef(p).elementdef.typ=floatdef) and
                   (
-                   (tarraydef(p).elementdef.typ=floatdef) and
-                   (
-                    (tarraydef(p).lowrange=0) and
-                    (tarraydef(p).highrange=1) and
-                    (tfloatdef(tarraydef(p).elementdef).floattype=s64real)
-                   )
-                  ) {or
-
-                  // MMX registers
-                  (
-                   (tarraydef(p).elementdef.typ=floatdef) and
-                   (
-                    (tarraydef(p).lowrange=0) and
-                    (tarraydef(p).highrange=1) and
-                    (tfloatdef(tarraydef(p).elementdef).floattype=s32real)
-                   )
-                  ) or
-
-                  (
-                   (tarraydef(p).elementdef.typ=orddef) and
-                   (
-                    (tarraydef(p).lowrange=0) and
-                    (tarraydef(p).highrange=1) and
-                    (torddef(tarraydef(p).elementdef).ordtype in [s32bit,u32bit])
-                   )
-                  )  or
-
-                  (
-                   (tarraydef(p).elementdef.typ=orddef) and
-                   (
-                    (tarraydef(p).lowrange=0) and
-                    (tarraydef(p).highrange=3) and
-                    (torddef(tarraydef(p).elementdef).ordtype in [s16bit,u16bit])
-                   )
-                  ) or
-
-                  (
-                   (tarraydef(p).elementdef.typ=orddef) and
-                   (
-                    (tarraydef(p).lowrange=0) and
-                    (tarraydef(p).highrange=7) and
-                    (torddef(tarraydef(p).elementdef).ordtype in [s8bit,u8bit])
-                   )
-                  ) }
+                   (tarraydef(p).lowrange=0) and
+                   (tarraydef(p).highrange=1) and
+                   (tfloatdef(tarraydef(p).elementdef).floattype=s64real)
+                  )
                  );
 {$else x86}
         result:=false;
@@ -1519,12 +1456,7 @@ implementation
           objectdef :
             result:=int_cgsize(def.size);
           floatdef:
-            if (cs_fp_emulation in current_settings.moduleswitches)
-{$ifdef xtensa}
-              or not(tfloatdef(def).floattype=s32real)
-              or not(FPUXTENSA_SINGLE in fpu_capabilities[current_settings.fputype])
-{$endif xtensa}
-              then
+            if cs_fp_emulation in current_settings.moduleswitches then
               result:=int_cgsize(def.size)
             else
               result:=tfloat2tcgsize[tfloatdef(def).floattype];
@@ -1534,11 +1466,11 @@ implementation
             begin
               if is_dynamic_array(def) or not is_special_array(def) then
                 begin
-                  if is_vector(def) and ((TArrayDef(def).elementdef.typ = floatdef) and not (cs_fp_emulation in current_settings.moduleswitches)) then
+                  if (cs_support_vectors in current_settings.globalswitches) and is_vector(def) and ((TArrayDef(def).elementdef.typ = floatdef) and not (cs_fp_emulation in current_settings.moduleswitches)) then
                     begin
                       { Determine if, based on the floating-point type and the size
                         of the array, if it can be made into a vector }
-                      case tfloatdef(tarraydef(def).elementdef).floattype of
+                      case TFloatDef(def).floattype of
                         s32real:
                           result := float_array_cgsize(def.size);
                         s64real:
@@ -1615,19 +1547,19 @@ implementation
                     case TFloatDef(tarraydef(def).elementdef).floattype of
                       s32real:
                         case def.size of
-                          4:  result:=OS_M32;
-                          16: result:=OS_M128;
-                          32: result:=OS_M256;
-                          64: result:=OS_M512;
+                          4:  result:=OS_MF32;
+                          16: result:=OS_MF128;
+                          32: result:=OS_MF256;
+                          64: result:=OS_MF512;
                           else
                             internalerror(2017121400);
                         end;
                       s64real:
                         case def.size of
-                          8:  result:=OS_M64;
-                          16: result:=OS_M128;
-                          32: result:=OS_M256;
-                          64: result:=OS_M512;
+                          8:  result:=OS_MD64;
+                          16: result:=OS_MD128;
+                          32: result:=OS_MD256;
+                          64: result:=OS_MD512;
                           else
                             internalerror(2017121401);
                         end;
@@ -1648,6 +1580,7 @@ implementation
       As of today, both signed and unsigned types from 8 to 64 bits are supported. }
     function is_automatable(p : tdef) : boolean;
       begin
+        result:=false;
         case p.typ of
           orddef:
             result:=torddef(p).ordtype in [u8bit,s8bit,u16bit,s16bit,u32bit,s32bit,
@@ -1660,8 +1593,6 @@ implementation
             result:=true;
           objectdef:
             result:=tobjectdef(p).objecttype in [odt_interfacecom,odt_dispinterface,odt_interfacecorba];
-          else
-            result:=false;
         end;
       end;
 
@@ -1686,12 +1617,6 @@ implementation
                  (pd.proctypeoption = potype_constructor));
       end;
 
-    function is_c_variadic(pd: tabstractprocdef): boolean;
-      begin
-        result:=
-          (po_varargs in pd.procoptions) or
-          (po_variadic in pd.procoptions);
-      end;
 
     function get_common_intdef(ld, rd: torddef; keep_sign_if_equal: boolean): torddef;
       var
@@ -1741,8 +1666,6 @@ implementation
               result:=torddef(s64inttype);
             s64bit:
               result:=torddef(u64inttype);
-            else
-              ;
           end;
       end;
 
@@ -1836,6 +1759,8 @@ implementation
                 result:=tkWString;
               st_unicodestring:
                 result:=tkUString;
+              else
+                result:=tkUnknown;
             end;
           enumdef:
             result:=tkEnumeration;

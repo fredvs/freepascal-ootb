@@ -624,8 +624,6 @@ implementation
                       internalerror(2011010906);
                   end;
                 end;
-              else
-                ;
             end;
             { superclass }
             if assigned(superclass) then
@@ -1016,8 +1014,6 @@ implementation
                    if not(df_generic in tprocdef(tprocsym(sym).procdeflist[j]).defoptions) then
                      WriteSymtableVarSyms(tprocdef(tprocsym(sym).procdeflist[j]).localst);
                end;
-             else
-               ;
            end;
          end;
       end;
@@ -1048,8 +1044,6 @@ implementation
                         WriteSymtableProcdefs(tprocdef(def).localst);
                     end;
                 end;
-              else
-                ;
             end;
           end;
       end;
@@ -1075,8 +1069,6 @@ implementation
                   nestedstructs.add(def);
               recorddef:
                 nestedstructs.add(def);
-              else
-                ;
             end;
           end;
         for i:=0 to nestedstructs.count-1 do

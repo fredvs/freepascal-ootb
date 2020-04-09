@@ -43,7 +43,7 @@ begin
     P:=AddPackage('rtl-extra');
     P.ShortName:='rtle';
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
@@ -152,7 +152,6 @@ begin
      begin
        addinclude('clocale.inc',clocaleincOSes);
      end;
-    T:=P.Targets.AddUnit('sortalgs.pp');
   end
 end;
 

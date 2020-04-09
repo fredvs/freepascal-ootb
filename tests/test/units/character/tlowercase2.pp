@@ -12,7 +12,7 @@ program tlowercase2;
   
 uses     
   SysUtils,
-  unicodedata,character;
+  character;
     
 {$ifndef FPC}
   type UnicodeChar = WideChar;   
@@ -65,8 +65,6 @@ begin
   
   Inc(e);     
   for i := Low(Word) to High(Word) do begin
-    { Skip all surrogate values }
-    if (i>=HIGH_SURROGATE_BEGIN) and (i<=LOW_SURROGATE_END) then continue;
     uc := strPrefix + UnicodeChar(i) + strPrefix;
     if (TCharacter.GetUnicodeCategory(uc,locCharPos) = TUnicodeCategory.ucLowercaseLetter) then begin
       if not TCharacter.IsLower(uc,locCharPos) then
@@ -76,8 +74,6 @@ begin
   
   Inc(e);
   for i := Low(Word) to High(Word) do begin
-    { Skip all surrogate values }
-    if (i>=HIGH_SURROGATE_BEGIN) and (i<=LOW_SURROGATE_END) then continue;
     uc := strPrefix + UnicodeChar(i) + strPrefix;
     if (TCharacter.GetUnicodeCategory(uc,locCharPos) <> TUnicodeCategory.ucLowercaseLetter) then begin
       if TCharacter.IsLower(uc,locCharPos) then

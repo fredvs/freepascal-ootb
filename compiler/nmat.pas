@@ -47,14 +47,14 @@ interface
           function pass_1 : tnode;override;
           function pass_typecheck:tnode;override;
           function simplify(forinline : boolean) : tnode;override;
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
+{$ifndef cpu64bitalu}
           { override the following if you want to implement }
           { parts explicitely in the code generator (CEC)
             Should return nil, if everything will be handled
             in the code generator
           }
           function first_shlshr64bitint: tnode; virtual;
-{$endif not cpu64bitalu and not cpuhighleveltarget}
+{$endif not cpu64bitalu}
        end;
        tshlshrnodeclass = class of tshlshrnode;
 
@@ -124,8 +124,6 @@ implementation
                     result := cordconstnode.create(0,left.resultdef,true);
                   divn:
                     result := left.getcopy;
-                  else
-                    internalerror(2019050518);
                 end;
                 exit;
               end;
@@ -175,8 +173,6 @@ implementation
                   result:=create_simplified_ord_const(lv mod rv,resultdef,forinline,false);
               divn:
                 result:=create_simplified_ord_const(lv div rv,resultdef,forinline,cs_check_overflow in localswitches);
-              else
-                internalerror(2019050519);
             end;
          end;
       end;
@@ -187,15 +183,15 @@ implementation
         { not with an ifdef around the call to this routine, because e.g. the
           Java VM has a signed 64 bit division opcode, but not an unsigned
           one }
-{$if defined(cpu64bitalu) or defined(cpuhighleveltarget)}
+{$ifdef cpu64bitalu}
         result:=false;
-{$else cpu64bitalu or cpuhighleveltarget}
+{$else cpu64bitalu}
         result:=
           (left.resultdef.typ=orddef) and
           (right.resultdef.typ=orddef) and
           { include currency as well }
           (is_64bit(left.resultdef) or is_64bit(right.resultdef));
-{$endif cpu64bitalu or cpuhighleveltarget}
+{$endif cpu64bitaly}
       end;
 
 
@@ -507,14 +503,14 @@ implementation
         { divide/mod a number by a constant which is a power of 2? }
         if (right.nodetype = ordconstn) and
           isabspowerof2(tordconstnode(right).value,power) and
-{$if defined(cpu64bitalu) or defined(cpuhighleveltarget)}
+{$ifdef cpu64bitalu}
           { for 64 bit, we leave the optimization to the cg }
             (not is_signed(resultdef)) then
-{$else cpu64bitalu or cpuhighleveltarget}
+{$else cpu64bitalu}
            (((nodetype=divn) and is_oversizedord(resultdef)) or
             (nodetype=modn) or
             not is_signed(resultdef)) then
-{$endif cpu64bitalu or cpuhighleveltarget}
+{$endif cpu64bitalu}
           begin
             if nodetype=divn then
               begin
@@ -839,7 +835,7 @@ implementation
       end;
 
 
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
+{$ifndef cpu64bitalu}
     function tshlshrnode.first_shlshr64bitint: tnode;
       var
         procname: string[31];
@@ -865,7 +861,7 @@ implementation
         right := nil;
         firstpass(result);
       end;
-{$endif not cpu64bitalu and not cpuhighleveltarget}
+{$endif not cpu64bitalu}
 
 
     function tshlshrnode.pass_1 : tnode;
@@ -876,12 +872,12 @@ implementation
          if codegenerror then
            exit;
 
+{$ifndef cpu64bitalu}
          expectloc:=LOC_REGISTER;
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
          { 64 bit ints have their own shift handling }
          if is_64bit(left.resultdef) then
            result := first_shlshr64bitint;
-{$endif not cpu64bitalu and not cpuhighleveltarget}
+{$endif not cpu64bitalu}
       end;
 
 
@@ -1317,12 +1313,12 @@ implementation
            begin
              if (expectloc in [LOC_REFERENCE,LOC_CREFERENCE,LOC_CREGISTER]) then
                expectloc:=LOC_REGISTER;
-             { xtensa has boolean registers which are treateed as flags but they
-               are not used for boolean expressions }
-{$if defined(cpuflags) and not(defined(xtensa))}
+            { before loading it into flags we need to load it into
+              a register thus 1 register is need PM }
+{$ifdef cpuflags}
              if left.expectloc<>LOC_JUMP then
                expectloc:=LOC_FLAGS;
-{$endif defined(cpuflags) and not(defined(xtensa)}
+{$endif def cpuflags}
            end
          else
 {$ifdef SUPPORT_MMX}
@@ -1331,14 +1327,14 @@ implementation
              expectloc:=LOC_MMXREGISTER
          else
 {$endif SUPPORT_MMX}
-{$if not defined(cpu64bitalu) and not defined(cpuhighleveltarget)}
+{$ifndef cpu64bitalu}
            if is_64bit(left.resultdef) then
              begin
                 if (expectloc in [LOC_REFERENCE,LOC_CREFERENCE,LOC_CREGISTER]) then
                   expectloc:=LOC_REGISTER;
              end
          else
-{$endif not cpu64bitalu and not cpuhighleveltarget}
+{$endif not cpu64bitalu}
            if is_integer(left.resultdef) then
              expectloc:=LOC_REGISTER;
       end;

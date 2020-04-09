@@ -124,7 +124,7 @@ unit scandir;
       end;
 
 
-    procedure do_moduleflagswitch(flag:tmoduleflag;optional:boolean);
+    procedure do_moduleflagswitch(flag:cardinal;optional:boolean);
       var
         state : char;
       begin
@@ -133,9 +133,9 @@ unit scandir;
         else
           state:=current_scanner.readstate;
         if state='-' then
-          exclude(current_module.moduleflags,flag)
+          current_module.flags:=current_module.flags and not flag
         else
-          include(current_module.moduleflags,flag);
+          current_module.flags:=current_module.flags or flag;
       end;
 
 
@@ -436,18 +436,6 @@ unit scandir;
       end;
 
 
-    procedure dir_checkcasecoverage;
-      begin
-        do_localswitch(cs_check_all_case_coverage);
-      end;
-
-
-    procedure dir_checkfpuexceptions;
-      begin
-        do_localswitch(cs_check_fpu_exceptions);
-      end;
-
-
     procedure dir_objectchecks;
       begin
         do_localswitch(cs_check_object);
@@ -478,13 +466,13 @@ unit scandir;
 
     procedure dir_denypackageunit;
       begin
-        do_moduleflagswitch(mf_package_deny,true);
+        do_moduleflagswitch(uf_package_deny,true);
       end;
 
     procedure dir_description;
       begin
         if not (target_info.system in systems_all_windows+[system_i386_os2,system_i386_emx,
-                 system_i386_netware,system_i386_wdosx,system_i386_netwlibc,system_i8086_win16]) then
+                 system_i386_netware,system_i386_wdosx,system_i386_netwlibc]) then
           Message(scan_w_description_not_support);
         { change description global var in all cases }
         { it not used but in win32, os2 and netware }
@@ -855,12 +843,7 @@ unit scandir;
         maxheapsize_limit: longint;
       begin
 {$if defined(i8086)}
-        if target_info.system=system_i8086_win16 then
-          begin
-            heapsize_limit:=65520;
-            maxheapsize_limit:=65520;
-          end
-        else if current_settings.x86memorymodel in x86_far_data_models then
+        if current_settings.x86memorymodel in x86_far_data_models then
           begin
             heapsize_limit:=655360;
             maxheapsize_limit:=655360;
@@ -1289,12 +1272,12 @@ unit scandir;
           s:=ChangeFileExt(s,target_info.resext);
         if target_info.res<>res_none then
           begin
-            include(current_module.moduleflags,mf_has_resourcefiles);
-            if (res_single_file in target_res.resflags) and
-                                   not (Current_module.ResourceFiles.Empty) then
-              Message(scan_w_only_one_resourcefile_supported)
-            else
-              current_module.resourcefiles.insert(FixFileName(s));
+          current_module.flags:=current_module.flags or uf_has_resourcefiles;
+          if (res_single_file in target_res.resflags) and
+                                 not (Current_module.ResourceFiles.Empty) then
+            Message(scan_w_only_one_resourcefile_supported)
+          else
+            current_module.resourcefiles.insert(FixFileName(s));
           end
         else
           Message(scan_e_resourcefiles_not_supported);
@@ -1738,7 +1721,7 @@ unit scandir;
       begin
         { old Delphi versions seem to use merely $WEAKPACKAGEUNIT while newer
           Delphis have $WEAPACKAGEUNIT ON... :/ }
-        do_moduleflagswitch(mf_package_weak, true);
+        do_moduleflagswitch(uf_package_weak, true);
       end;
 
     procedure dir_writeableconst;
@@ -1919,8 +1902,6 @@ unit scandir;
         AddDirective('BOOLEVAL',directive_all, @dir_booleval);
         AddDirective('BITPACKING',directive_all, @dir_bitpacking);
         AddDirective('CALLING',directive_all, @dir_calling);
-        AddDirective('CHECKCASECOVERAGE',directive_all, @dir_checkcasecoverage);
-        AddDirective('CHECKFPUEXCEPTIONS',directive_all, @dir_checkfpuexceptions);
         AddDirective('CHECKLOWADDRLOADS',directive_all, @dir_checklowaddrloads);
         AddDirective('CHECKPOINTER',directive_all, @dir_checkpointer);
         AddDirective('CODEALIGN',directive_all, @dir_codealign);

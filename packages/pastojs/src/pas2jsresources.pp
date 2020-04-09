@@ -5,13 +5,7 @@ unit pas2jsresources;
 interface
 
 uses
-  Classes, SysUtils,
-  {$IFDEF pas2js}
-  web,
-  {$ELSE}
-  base64,
-  {$ENDIF}
-  pas2jsfs, jsTree;
+  Classes, SysUtils, pas2jsfs, jsTree;
 
 Type
   TResourceScopeMode = (rmProgram,rmUnit);
@@ -68,8 +62,10 @@ Type
     function GetResourceCount: Integer; override;
     function GetAsString: String; override;
   end;
-
 implementation
+
+{$IFNDEF PAS2JS}
+uses base64;
 
 { TNoResources }
 
@@ -95,6 +91,8 @@ function TNoResources.GetAsString: String;
 begin
   Result:='';
 end;
+
+{$ENDIF}
 
 { TPas2jsResourceHandler }
 
@@ -150,11 +148,7 @@ Var
 
 begin
   F:=LoadFile(aFileName);
-  {$IFDEF pas2js}
-  Result:=window.atob(F.Source);
-  {$ELSE}
   Result:=EncodeStringBase64(F.Source);
-  {$ENDIF}
   // Do not release, FS will release all files
 end;
 

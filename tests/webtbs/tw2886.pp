@@ -23,8 +23,6 @@ type
 { TMyClass }
 
 procedure TMyClass.ShowRTTI;
-type
-  PParamFlags = ^TParamFlags;
 var
   TypeData: PTypeData;
   ParamCount: Integer;
@@ -32,7 +30,6 @@ var
   Len: Integer;
   CurParamName: string;
   CurTypeIdentifier: string;
-  CurFlags: TParamFlags;
   i: Integer;
 begin
   TypeData:=GetTypeData(GetPropInfo(Self,'MyEvent')^.PropType);
@@ -42,7 +39,6 @@ begin
   i:=0;
 //  for i:=0 to ParamCount-1 do begin
 
-    CurFlags := PParamFlags(@TypeData^.ParamList[0])^;
     // SizeOf(TParamFlags) is 4, but the data is only 1 byte
     //Len:=1; // typinfo.pp comment is wrong: SizeOf(TParamFlags)
     // Note by SB (2017-01-08): No longer true since typinfo uses packed sets
@@ -64,9 +60,7 @@ begin
     inc(Offset,Len+1);
 
     writeln('Param ',i+1,'/',ParamCount,' ',CurParamName,':',CurTypeIdentifier);
-    // Note by SB (2019-10-08): The first parameter might now be the hidden $self
-    if ((pfSelf in CurFlags) and ((CurParamName<>'$self')  or (CurTypeIdentifier<>'Pointer'))) or
-       (not (pfSelf in CurFlags) and ((CurParamName<>'Sender')  or (CurTypeIdentifier<>'TObject'))) then
+    if (CurParamName<>'Sender')  or (CurTypeIdentifier<>'TObject') then
       begin
         writeln('ERROR!');
         halt(1);

@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libcups');
-    P.ShortName := 'lcup';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
     P.Author := 'Header: Olivier GUILBAUD';
     P.License := 'Header: LGPL with modi ';

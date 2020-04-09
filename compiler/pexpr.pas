@@ -35,8 +35,7 @@ interface
       texprflag = (
         ef_accept_equal,
         ef_type_only,
-        ef_had_specialize,
-        ef_check_attr_suffix
+        ef_had_specialize
       );
       texprflags = set of texprflag;
 
@@ -517,8 +516,7 @@ implementation
             end;
 
           in_aligned_x,
-          in_unaligned_x,
-          in_volatile_x:
+          in_unaligned_x :
             begin
               err:=false;
               consume(_LKLAMMER);
@@ -919,15 +917,6 @@ implementation
             begin
               statement_syssym:=inline_insert;
             end;
-          in_const_eh_return_data_regno:
-            begin
-              consume(_LKLAMMER);
-              in_args:=true;
-              p1:=comp_expr([ef_accept_equal]);
-              p2:=geninlinenode(l,true,p1);
-              consume(_RKLAMMER);
-              statement_syssym:=p2;
-            end;
           else
             internalerror(15);
 
@@ -970,8 +959,6 @@ implementation
                  { We are calling a member }
                  maybe_load_methodpointer:=true;
                end;
-             else
-               ;
            end;
          end;
       end;
@@ -1152,7 +1139,7 @@ implementation
                  hp2:=cloadnode.create_procvar(tprocsym(tcallnode(hp).symtableprocentry),currprocdef,tcallnode(hp).symtableproc);
                  if (po_methodpointer in pv.procoptions) then
                    tloadnode(hp2).set_mp(tcallnode(hp).methodpointer.getcopy);
-                 hp.free;
+                 hp.destroy;
                  { replace the old callnode with the new loadnode }
                  hpp^:=hp2;
                end;
@@ -1380,12 +1367,7 @@ implementation
                                  not(po_staticmethod in tcallnode(p1).procdefinition.procoptions) and
                                  (not assigned(current_structdef) or
                                   not def_is_related(current_structdef,structh)) then
-                                begin
-                                  p1.free;
-                                  p1:=cerrornode.create;
-                                  Message(parser_e_only_static_members_via_object_type);
-                                  exit;
-                                end;
+                                Message(parser_e_only_static_members_via_object_type);
                             end;
                           { in Java, constructors are not automatically inherited
                             -> calling a constructor from a parent type will create
@@ -1992,7 +1974,7 @@ implementation
                       not is_objectpascal_helper(tdef(srsymtable.defowner)) then
                     internalerror(2013011401);
                   { convert const node to temp node of the extended type }
-                  if node.nodetype in (nodetype_const+[addrn]) then
+                  if node.nodetype in (nodetype_const+[niln,addrn]) then
                     begin
                       extdef:=tobjectdef(srsymtable.defowner).extendeddef;
                       newstatement:=nil;
@@ -2086,8 +2068,6 @@ implementation
                            cpointerdef.getreusable(tfiledef(p1.resultdef).typedfiledef)));
                          typecheckpass(p1);
                        end;
-                     else
-                       internalerror(2019050530);
                    end;
                  end
                else if not(p1.resultdef.typ in [pointerdef,undefineddef]) then
@@ -2376,6 +2356,8 @@ implementation
                      cst_longstring:
                        { let's see when someone stumbles upon this...}
                        internalerror(201301111);
+                     else
+                       internalerror(2013112903);
                    end;
                    if try_type_helper(p1,strdef) then
                      goto skippointdefcheck;
@@ -2843,7 +2825,6 @@ implementation
            storedpattern: string;
            callflags: tcallnodeflags;
            t : ttoken;
-           consumeid,
            wasgenericdummy,
            allowspecialize,
            isspecialize,
@@ -2851,7 +2832,6 @@ implementation
            dummypos,
            tokenpos: tfileposinfo;
            spezcontext : tspecializationcontext;
-           cufflags : tconsume_unitsym_flags;
          begin
            { allow post fix operators }
            again:=true;
@@ -2885,55 +2865,23 @@ implementation
              end
            else
              begin
-               storedpattern:=pattern;
-               orgstoredpattern:=orgpattern;
-               { store the position of the token before consuming it }
-               tokenpos:=current_filepos;
-               consumeid:=true;
-               srsym:=nil;
-               if ef_check_attr_suffix in flags then
-                 begin
-                   if not (ef_type_only in flags) then
-                     internalerror(2019063001);
-                   consume(_ID);
-                   consumeid:=false;
-                   if token<>_POINT then
-                     searchsym_type(storedpattern+custom_attribute_suffix,srsym,srsymtable);
-                 end;
-               if not assigned(srsym) then
-                 begin
-                   if ef_type_only in flags then
-                     searchsym_type(storedpattern,srsym,srsymtable)
-                   else
-                     searchsym(storedpattern,srsym,srsymtable);
-                 end;
+               if ef_type_only in flags then
+                 searchsym_type(pattern,srsym,srsymtable)
+               else
+                 searchsym(pattern,srsym,srsymtable);
                { handle unit specification like System.Writeln }
                if not isspecialize then
-                 begin
-                   cufflags:=[];
-                   if consumeid then
-                     include(cufflags,cuf_consume_id);
-                   if allowspecialize then
-                     include(cufflags,cuf_allow_specialize);
-                   if ef_check_attr_suffix in flags then
-                     include(cufflags,cuf_check_attr_suffix);
-                   unit_found:=try_consume_unitsym(srsym,srsymtable,t,cufflags,isspecialize,pattern);
-                   if unit_found then
-                     consumeid:=true;
-                 end
+                 unit_found:=try_consume_unitsym(srsym,srsymtable,t,true,allowspecialize,isspecialize,pattern)
                else
                  begin
                    unit_found:=false;
                    t:=_ID;
                  end;
-               if consumeid then
-                 begin
-                   storedpattern:=pattern;
-                   orgstoredpattern:=orgpattern;
-                   { store the position of the token before consuming it }
-                   tokenpos:=current_filepos;
-                   consume(t);
-                 end;
+               storedpattern:=pattern;
+               orgstoredpattern:=orgpattern;
+               { store the position of the token before consuming it }
+               tokenpos:=current_filepos;
+               consume(t);
                { named parameter support }
                found_arg_name:=false;
 
@@ -3011,11 +2959,11 @@ implementation
                wasgenericdummy:=false;
                if assigned(srsym) and
                    (sp_generic_dummy in srsym.symoptions) and
-                   (srsym.typ=typesym) and
                    (
                      (
                        (m_delphi in current_settings.modeswitches) and
                        not (token in [_LT, _LSHARPBRACKET]) and
+                       (srsym.typ=typesym) and
                        (ttypesym(srsym).typedef.typ=undefineddef)
                      )
                      or
@@ -3243,7 +3191,7 @@ implementation
                            { We need to know if this unit uses Variants }
                            if ((hdef=cvarianttype) or (hdef=colevarianttype)) and
                               not(cs_compilesystem in current_settings.moduleswitches) then
-                             include(current_module.moduleflags,mf_uses_variants);
+                             current_module.flags:=current_module.flags or uf_uses_variants;
                            p1:=handle_factor_typenode(hdef,getaddr,again,srsym,ef_type_only in flags);
                          end;
                      end;
@@ -3358,7 +3306,7 @@ implementation
                         if symtablestack.top.symtablelevel<>srsymtable.symtablelevel then
                           begin
                             tlabelsym(srsym).nonlocal:=true;
-                            include(current_procinfo.flags,pi_has_interproclabel);
+                            exclude(current_procinfo.procdef.procoptions,po_inline);
                           end;
                         if tlabelsym(srsym).nonlocal and
                           (current_procinfo.procdef.proctypeoption in [potype_unitinit,potype_unitfinalize]) then
@@ -4198,8 +4146,6 @@ implementation
             specializen:
               srsym:=tspecializenode(n).sym;
             { TODO : handle const nodes }
-            else
-              ;
           end;
           result:=assigned(srsym);
         end;
@@ -4526,8 +4472,6 @@ implementation
                        p1:=casnode.create(p1,p2);
                      _OP_IS:
                        p1:=cisnode.create(p1,p2);
-                     else
-                       internalerror(2019050528);
                    end;
                  end;
                _OP_IN :
@@ -4566,8 +4510,6 @@ implementation
                  p1:=cassignmentnode.create(p1,p2);
                _NE :
                  p1:=caddnode.create(unequaln,p1,p2);
-               else
-                 internalerror(2019050529);
              end;
              p1.fileinfo:=filepos;
            end

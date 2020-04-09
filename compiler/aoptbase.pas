@@ -49,9 +49,9 @@ unit aoptbase;
         { returns true if register Reg is used by instruction p1 }
         Function RegInInstruction(Reg: TRegister; p1: tai): Boolean;virtual;
         { returns true if register Reg occurs in operand op }
-        class function RegInOp(Reg: TRegister; const op: toper): Boolean; static;
+        Function RegInOp(Reg: TRegister; const op: toper): Boolean;
         { returns true if register Reg is used in the reference Ref }
-        class function RegInRef(Reg: TRegister; Const Ref: TReference): Boolean; static;
+        Function RegInRef(Reg: TRegister; Const Ref: TReference): Boolean;
 
         function RegModifiedByInstruction(Reg: TRegister; p1: tai): boolean;virtual;
 
@@ -61,13 +61,13 @@ unit aoptbase;
         { gets the next tai object after current that contains info relevant }
         { to the optimizer in p1. If there is none, it returns false and     }
         { sets p1 to nil                                                     }
-        class function GetNextInstruction(Current: tai; out Next: tai): Boolean; static;
-        { gets the previous tai object after current that contains info   }
-        { relevant to the optimizer in last. If there is none, it returns }
-        { false and sets last to nil                                      }
-        class function GetLastInstruction(Current: tai; out Last: tai): Boolean; static;
+        class Function GetNextInstruction(Current: tai; Var Next: tai): Boolean;
+        { gets the previous tai object after current that contains info  }
+        { relevant to the optimizer in last. If there is none, it retuns }
+        { false and sets last to nil                                     }
+        Function GetLastInstruction(Current: tai; Var Last: tai): Boolean;
 
-        class function SkipEntryExitMarker(current: tai; out next: tai): boolean; static;
+        function SkipEntryExitMarker(current: tai; var next: tai): boolean;
 
         { processor dependent methods }
 
@@ -104,10 +104,10 @@ unit aoptbase;
 
         { compares reg1 and reg2 having the same type and being the same super registers
           so the register size is neglected }
-        class function SuperRegistersEqual(reg1,reg2 : TRegister) : Boolean; static; {$ifdef USEINLINE}inline;{$endif}
+        function SuperRegistersEqual(reg1,reg2 : TRegister) : Boolean;
     end;
 
-    function labelCanBeSkipped(p: tai_label): boolean; {$ifdef USEINLINE}inline;{$endif}
+    function labelCanBeSkipped(p: tai_label): boolean;
 
   implementation
 
@@ -140,7 +140,7 @@ unit aoptbase;
     End;
 
 
-  class function TAOptBase.RegInOp(Reg: TRegister; const op: toper): Boolean;
+  Function TAOptBase.RegInOp(Reg: TRegister; const op: toper): Boolean;
     Begin
       Case op.typ Of
         Top_Reg: RegInOp := SuperRegistersEqual(Reg,op.reg);
@@ -154,7 +154,7 @@ unit aoptbase;
     End;
 
 
-  class function TAOptBase.RegInRef(Reg: TRegister; Const Ref: TReference): Boolean;
+  Function TAOptBase.RegInRef(Reg: TRegister; Const Ref: TReference): Boolean;
   Begin
     RegInRef := SuperRegistersEqual(Ref.Base,Reg)
 {$ifdef cpurefshaveindexreg}
@@ -176,13 +176,13 @@ unit aoptbase;
   End;
 
 
-  function labelCanBeSkipped(p: tai_label): boolean; {$ifdef USEINLINE}inline;{$endif}
+  function labelCanBeSkipped(p: tai_label): boolean;
   begin
     labelCanBeSkipped := not(p.labsym.is_used) or (p.labsym.labeltype<>alt_jump);
   end;
 
 
-  class function TAOptBase.GetNextInstruction(Current: tai; out Next: tai): Boolean;
+  class Function TAOptBase.GetNextInstruction(Current: tai; Var Next: tai): Boolean;
   Begin
     Repeat
       Current := tai(Current.Next);
@@ -195,12 +195,7 @@ unit aoptbase;
 {$endif cpudelayslot}
              ((Current.typ = ait_label) And
               labelCanBeSkipped(Tai_Label(Current)))) Do
-        begin
-          { this won't help the current loop, but it helps when returning from GetNextInstruction
-            as the next entry is probably already in the cache }
-          prefetch(pointer(Current.Next)^);
-          Current := Tai(Current.Next);
-        end;
+        Current := tai(Current.Next);
       If Assigned(Current) And
          (Current.typ = ait_Marker) And
          (Tai_Marker(Current).Kind = mark_NoPropInfoStart) Then
@@ -208,12 +203,7 @@ unit aoptbase;
           While Assigned(Current) And
                 ((Current.typ <> ait_Marker) Or
                  (Tai_Marker(Current).Kind <> mark_NoPropInfoEnd)) Do
-            begin
-              { this won't help the current loop, but it helps when returning from GetNextInstruction
-                as the next entry is probably already in the cache }
-              prefetch(pointer(Current.Next)^);
-              Current := Tai(Current.Next);
-            end;
+            Current := Tai(Current.Next);
         End;
     Until Not(Assigned(Current)) Or
           (Current.typ <> ait_Marker) Or
@@ -231,7 +221,7 @@ unit aoptbase;
         End;
   End;
 
-  class function TAOptBase.GetLastInstruction(Current: tai; out Last: tai): Boolean;
+  Function TAOptBase.GetLastInstruction(Current: tai; Var Last: tai): Boolean;
   Begin
     Repeat
       Current := Tai(Current.previous);
@@ -273,12 +263,12 @@ unit aoptbase;
   End;
 
 
-  class function TAOptBase.SkipEntryExitMarker(current: tai; out next: tai): boolean;
+  function TAOptBase.SkipEntryExitMarker(current: tai; var next: tai): boolean;
     begin
       result:=true;
-      next:=current;
       if current.typ<>ait_marker then
         exit;
+      next:=current;
       while GetNextInstruction(next,next) do
         begin
           if (next.typ<>ait_marker) or not(tai_marker(next).Kind in [mark_Position,mark_BlockStart]) then
@@ -326,16 +316,10 @@ unit aoptbase;
     end;
 
 
-  class function TAOptBase.SuperRegistersEqual(reg1,reg2 : TRegister) : Boolean;{$ifdef USEINLINE}inline;{$endif}
+  function TAOptBase.SuperRegistersEqual(reg1,reg2 : TRegister) : Boolean;
   Begin
-    { Do an optimized version of
-
-      Result:=(getregtype(reg1) = getregtype(reg2)) and
-      (getsupreg(reg1) = getsupreg(Reg2));
-
-      as SuperRegistersEqual is used a lot
-    }
-    Result:=(DWord(reg1) and $ff00ffff)=(DWord(reg2) and $ff00ffff);
+    Result:=(getregtype(reg1) = getregtype(reg2)) and
+            (getsupreg(reg1) = getsupreg(Reg2));
   end;
 
   { ******************* Processor dependent stuff *************************** }

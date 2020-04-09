@@ -18,8 +18,8 @@ interface
 implementation
 end.
 {$else}
-{$i globdir.inc}
 interface
+{$i globdir.inc}
 uses
 {$ifdef Windows}
   Windows,
@@ -469,13 +469,13 @@ const
       msg_programexitedwithexitcode = #3'Program exited with '#13+
                                       #3'exitcode = %d';
 
-      msg_programsignal             = #3'Program received signal %s'#13+
+      msg_programsignal             = #3'Program recieved signal %s'#13+
                                       #3'%s';
 
       msg_runningprogram  = 'Running...';
       msg_runningremotely = 'Executable running remotely on ';
       msg_connectingto    = 'Connecting to ';
-      msg_getting_info_on = 'Getting info from ';
+      msg_getting_info_on = 'Getting infos from ';
       msg_runninginanotherwindow = 'Executable running in another window..';
       msg_couldnotsetbreakpointat = #3'Could not set Breakpoint'#13+
                                     #3+'%s:%d';
@@ -770,7 +770,7 @@ procedure TDebugController.InsertBreakpoints;
   end;
 
 begin
-  BreakpointsCollection^.ForEach(TCallbackProcParam(@DoInsert));
+  BreakpointsCollection^.ForEach(@DoInsert);
   Disableallinvalidbreakpoints:=false;
 end;
 
@@ -782,7 +782,7 @@ procedure TDebugController.ReadWatches;
   end;
 
 begin
-  WatchesCollection^.ForEach(TCallbackProcParam(@DoRead));
+  WatchesCollection^.ForEach(@DoRead);
   If Assigned(WatchesWindow) then
     WatchesWindow^.Update;
 end;
@@ -795,7 +795,7 @@ procedure TDebugController.RereadWatches;
   end;
 
 begin
-  WatchesCollection^.ForEach(TCallbackProcParam(@DoRead));
+  WatchesCollection^.ForEach(@DoRead);
   If Assigned(WatchesWindow) then
     WatchesWindow^.Update;
 end;
@@ -807,7 +807,7 @@ procedure TDebugController.RemoveBreakpoints;
       PB^.Remove;
     end;
 begin
-   BreakpointsCollection^.ForEach(TCallbackProcParam(@DoDelete));
+   BreakpointsCollection^.ForEach(@DoDelete);
 end;
 
 procedure TDebugController.ResetBreakpointsValues;
@@ -816,7 +816,7 @@ procedure TDebugController.ResetBreakpointsValues;
       PB^.ResetValues;
     end;
 begin
-   BreakpointsCollection^.ForEach(TCallbackProcParam(@DoResetVal));
+   BreakpointsCollection^.ForEach(@DoResetVal);
 end;
 
 destructor TDebugController.Done;
@@ -1168,7 +1168,7 @@ procedure TDebugController.ResetDebuggerRows;
   end;
 
 begin
-  Desktop^.ForEach(TCallbackProcParam(@ResetDebuggerRow));
+  Desktop^.ForEach(@ResetDebuggerRow);
 end;
 
 procedure TDebugController.Reset;
@@ -1614,7 +1614,7 @@ function  ActiveBreakpoints : boolean;
 begin
    IsActive:=false;
    If assigned(BreakpointsCollection) then
-     BreakpointsCollection^.ForEach(TCallbackProcParam(@TestActive));
+     BreakpointsCollection^.ForEach(@TestActive);
    ActiveBreakpoints:=IsActive;
 end;
 
@@ -1959,7 +1959,7 @@ begin
   if index=0 then
     GetGDB:=nil
   else
-    GetGDB:=FirstThat(TCallbackFunBoolParam(@IsNum));
+    GetGDB:=FirstThat(@IsNum);
 end;
 
 procedure TBreakpointCollection.ShowBreakpoints(W : PFPWindow);
@@ -2008,9 +2008,9 @@ procedure TBreakpointCollection.ShowBreakpoints(W : PFPWindow);
 
 begin
   if W=PFPWindow(DisassemblyWindow) then
-    ForEach(TCallbackProcParam(@SetInDisassembly))
+    ForEach(@SetInDisassembly)
   else
-    ForEach(TCallbackProcParam(@SetInSource));
+    ForEach(@SetInSource);
 end;
 
 
@@ -2042,7 +2042,7 @@ procedure TBreakpointCollection.AdaptBreakpoints(Editor : PSourceEditor; Pos, Ch
   var
     I : longint;
 begin
-  ForEach(TCallbackProcParam(@AdaptInSource));
+  ForEach(@AdaptInSource);
   I:=Count-1;
   While (I>=0) do
     begin
@@ -2065,7 +2065,7 @@ function TBreakpointCollection.FindBreakpointAt(Editor : PSourceEditor; Line : l
   end;
 
 begin
-  FindBreakpointAt:=FirstThat(TCallbackFunBoolParam(@IsAtLine));
+  FindBreakpointAt:=FirstThat(@IsAtLine);
 end;
 
 procedure TBreakpointCollection.ShowAllBreakpoints;
@@ -2083,7 +2083,7 @@ procedure TBreakpointCollection.ShowAllBreakpoints;
   end;
 
 begin
-  ForEach(TCallbackProcParam(@SetInSource));
+  ForEach(@SetInSource);
 end;
 
 function TBreakpointCollection.GetType(typ : BreakpointType;Const s : String) : PBreakpoint;
@@ -2094,7 +2094,7 @@ function TBreakpointCollection.GetType(typ : BreakpointType;Const s : String) : 
   end;
 
 begin
-  GetType:=FirstThat(TCallbackFunBoolParam(@IsThis));
+  GetType:=FirstThat(@IsThis);
 end;
 
 
@@ -2111,7 +2111,7 @@ var
 begin
     ToggleFileLine:=false;
     FileName:=OSFileName(FExpand(FileName));
-    PB:=FirstThat(TCallbackFunBoolParam(@IsThere));
+    PB:=FirstThat(@IsThere);
     If Assigned(PB) then
       begin
         { delete it form source window }
@@ -2610,7 +2610,7 @@ procedure TBreakpointsWindow.ReloadBreakpoints;
 begin
   If not assigned(BreakpointsCollection) then
     exit;
-  BreakpointsCollection^.ForEach(TCallbackProcParam(@InsertInBreakLB));
+  BreakpointsCollection^.ForEach(@InsertInBreakLB);
   ReDraw;
 end;
 
@@ -3004,7 +3004,7 @@ destructor TWatch.Done;
 
          begin
           W:=0;
-          ForEach(TCallbackProcParam(@GetMax));
+          ForEach(@GetMax);
           MaxW:=W;
           If assigned(WatchesWindow) then
             WatchesWindow^.WLB^.Update(MaxW);

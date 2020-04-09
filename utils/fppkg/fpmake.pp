@@ -19,7 +19,7 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-fppkg');
-    P.ShortName:='fpkg';
+    P.ShortName:='fppkg';
 
     P.Author := '<various>';
     P.License := 'LGPL with modification';
@@ -29,9 +29,9 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
 
-    P.OSes := P.OSes - [embedded,nativent,msdos,go32v2,win16,atari,macos,palmos,symbian];
+    P.OSes:=AllOSes-[embedded,msdos,win16,go32v2,nativent,macos,palmos,atari];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

@@ -9,14 +9,11 @@ program regtestframework;
 {$ENDIF}
 
 uses
-  {$ifdef unix}
-  cwstring,
-  {$endif}
   SysUtils,
-  fpcunit,  testreport, testregistry, consoletestrunner,
+  fpcunit,  testreport, testregistry,
 // Units wich contains the tests
   tcxmlreg,
-  testbasics;
+  testbasics, consoletestrunner;
 
 Var
   A : TTestRunner;

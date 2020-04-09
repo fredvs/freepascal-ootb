@@ -84,7 +84,6 @@ interface
         if not assigned(res^.Data) then
           begin
             new(callpara);
-            callpara^.alignment:=std_param_align;
             callpara^.def:=cpointerdef.getreusable(sym.vardef);
             if (sym.typ=paravarsym) and
                paramanager.push_addr_param(sym.varspez,sym.vardef,current_procinfo.procdef.proccalloption) then
@@ -92,7 +91,7 @@ interface
             callpara^.sret:=false;
             callpara^.byval:=false;
             callpara^.valueext:=lve_none;
-            callpara^.typ:=top_reg;
+            callpara^.loc:=LOC_REGISTER;
             { address must be a temp register }
             if (sym.localloc.loc<>LOC_REFERENCE) or
                (sym.localloc.reference.base=NR_NO) or
@@ -100,7 +99,7 @@ interface
                (sym.localloc.reference.offset<>0) or
                assigned(sym.localloc.reference.symbol) then
               internalerror(2016111001);
-            callpara^.register:=sym.localloc.reference.base;
+            callpara^.reg:=sym.localloc.reference.base;
             fsymboldata.add(callpara);
             ptruint(res^.Data):=fsymboldata.count-1;
           end;
@@ -110,11 +109,11 @@ interface
 
     function tllvmasmnode.getllvmasmparasym(sym: tabstractnormalvarsym): tasmsymbol;
       begin
-        { these have to be transformed from `nr into into $nr; we use ` because
+        { these have to be transformed from ^nr into into $nr; we use ^ because
           we also have to double all other occurrences of '$' in the assembly
           code, and we can't differentiate between these and other '$'s in
           agllvm }
-        result:=current_asmdata.RefAsmSymbol('`'+tostr(getllvmasmopindexforsym(sym)),AT_DATA,false);
+        result:=current_asmdata.RefAsmSymbol('^'+tostr(getllvmasmopindexforsym(sym)),AT_DATA,false);
       end;
 
 
@@ -176,8 +175,6 @@ interface
                   internalerror(2016101506);
               end;
             end;
-          else
-            ;
         end;
       end;
 

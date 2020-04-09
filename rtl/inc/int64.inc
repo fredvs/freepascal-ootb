@@ -34,7 +34,7 @@
 {$ifdef  FPC_INCLUDE_SOFTWARE_SHIFT_INT64}
 
 {$ifndef FPC_SYSTEM_HAS_SHL_QWORD}
-    function fpc_shl_qword(value : qword;shift : ALUUInt) : qword; [public,alias: 'FPC_SHL_QWORD']; compilerproc;
+    function fpc_shl_qword(value : qword;shift : sizeint) : qword; [public,alias: 'FPC_SHL_QWORD']; compilerproc;
       begin
         shift:=shift and 63;
         if shift=0 then
@@ -54,7 +54,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHL_ASSIGN_QWORD}
-    procedure fpc_shl_assign_qword(var value : qword;shift : ALUUInt); [public,alias: 'FPC_SHL_ASSIGN_QWORD']; compilerproc;
+    procedure fpc_shl_assign_qword(var value : qword;shift : sizeint); [public,alias: 'FPC_SHL_ASSIGN_QWORD']; compilerproc;
       begin
         shift:=shift and 63;
         if shift<>0 then
@@ -75,7 +75,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHR_QWORD}
-   function fpc_shr_qword(value : qword;shift : ALUUInt) : qword; [public,alias: 'FPC_SHR_QWORD']; compilerproc;
+   function fpc_shr_qword(value : qword;shift : sizeint) : qword; [public,alias: 'FPC_SHR_QWORD']; compilerproc;
       begin
         shift:=shift and 63;
         if shift=0 then
@@ -95,7 +95,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHR_ASSIGN_QWORD}
-   procedure fpc_shr_assign_qword(var value : qword;shift : ALUUInt); [public,alias: 'FPC_SHR_ASSIGN_QWORD']; compilerproc;
+   procedure fpc_shr_assign_qword(var value : qword;shift : sizeint); [public,alias: 'FPC_SHR_ASSIGN_QWORD']; compilerproc;
       begin
         shift:=shift and 63;
         if shift<>0 then
@@ -116,7 +116,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHL_INT64}
-    function fpc_shl_int64(value : int64;shift : ALUUInt) : int64; [public,alias: 'FPC_SHL_INT64']; compilerproc;
+    function fpc_shl_int64(value : int64;shift : sizeint) : int64; [public,alias: 'FPC_SHL_INT64']; compilerproc;
       begin
         shift:=shift and 63;
         if shift=0 then
@@ -136,7 +136,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHL_ASSIGN_INT64}
-    procedure fpc_shl_assign_int64(var value : int64;shift : ALUUInt); [public,alias: 'FPC_SHL_ASSIGN_INT64']; compilerproc;
+    procedure fpc_shl_assign_int64(var value : int64;shift : sizeint); [public,alias: 'FPC_SHL_ASSIGN_INT64']; compilerproc;
       begin
         shift:=shift and 63;
         if shift<>0 then
@@ -157,7 +157,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHR_INT64}
-    function fpc_shr_int64(value : int64;shift : ALUUInt) : int64; [public,alias: 'FPC_SHR_INT64']; compilerproc;
+    function fpc_shr_int64(value : int64;shift : sizeint) : int64; [public,alias: 'FPC_SHR_INT64']; compilerproc;
       begin
         shift:=shift and 63;
         if shift=0 then
@@ -177,7 +177,7 @@
 
 
 {$ifndef FPC_SYSTEM_HAS_SHR_ASSIGN_INT64}
-    procedure fpc_shr_assign_int64(var value : int64;shift : ALUUInt); [public,alias: 'FPC_SHR_ASSIGN_INT64']; compilerproc;
+    procedure fpc_shr_assign_int64(var value : int64;shift : sizeint); [public,alias: 'FPC_SHR_ASSIGN_INT64']; compilerproc;
       begin
         shift:=shift and 63;
         if shift<>0 then
@@ -395,16 +395,18 @@
 {$ifndef FPC_SYSTEM_HAS_MUL_QWORD}
     function fpc_mul_qword(f1,f2 : qword) : qword;[public,alias: 'FPC_MUL_QWORD']; compilerproc;
       var
-        b : byte;
+         bitpos : qword;
+         l : longint;
       begin
         result:=0;
+        bitpos:=1;
 
-        for b:=0 to 63 do
+        for l:=0 to 63 do
           begin
-            if odd(f2) then
+            if (f2 and bitpos)<>0 then
               result:=result+f1;
             f1:=f1 shl 1;
-            f2:=f2 shr 1;
+            bitpos:=bitpos shl 1;
           end;
       end;
 
@@ -412,14 +414,14 @@
     function fpc_mul_qword_checkoverflow(f1,f2 : qword) : qword;[public,alias: 'FPC_MUL_QWORD_CHECKOVERFLOW']; compilerproc;
       var
          _f1,bitpos : qword;
-         b : byte;
+         l : longint;
          f1overflowed : boolean;
       begin
         result:=0;
         bitpos:=1;
         f1overflowed:=false;
 
-        for b:=0 to 63 do
+        for l:=0 to 63 do
           begin
             if (f2 and bitpos)<>0 then
               begin
@@ -530,16 +532,14 @@
          sign : boolean;
          q1,q2,q3 : qword;
       begin
+        sign:=false;
         if f1<0 then
           begin
+            sign:=not(sign);
             q1:=qword(-f1);
-            sign:=true;
           end
         else
-          begin
-            q1:=f1;
-            sign:=false;
-          end;
+          q1:=f1;
         if f2<0 then
           begin
             sign:=not(sign);

@@ -721,8 +721,6 @@ unit optvirt;
                   { static reference to FPC_ABSTRACTERROR }
                   classdevirtinfo.addstaticmethod(i,'FPC_ABSTRACTERROR');
                 end;
-              else
-                ;
             end;
       end;
 

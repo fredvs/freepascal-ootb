@@ -142,6 +142,7 @@ Unit rappcgas;
         l : tcgint;
         relsym: string;
         asmsymtyp: tasmsymtype;
+        isflags: tindsymflags;
 
       begin
         Consume(AS_LPAREN);
@@ -253,8 +254,6 @@ Unit rappcgas;
                         end;
                       end;
                   end;
-                else
-                  ;
               end;
               Consume(AS_RPAREN);
               if actasmtoken=AS_AT then

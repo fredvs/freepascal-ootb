@@ -198,8 +198,7 @@ type
 
   TPasAnalyzerOption = (
     paoOnlyExports, // default: use all class members accessible from outside (protected, but not private)
-    paoImplReferences, // collect references of top lvl proc implementations, initializationa dn finalization sections
-    paoSkipGenericProc // ignore generic procedure body
+    paoImplReferences // collect references of top lvl proc implementations, initializationa dn finalization sections
     );
   TPasAnalyzerOptions = set of TPasAnalyzerOption;
 
@@ -1079,7 +1078,6 @@ function TPasAnalyzer.CanSkipGenericProc(DeclProc: TPasProcedure): boolean;
 
 var
   Templates: TFPList;
-  Parent: TPasElement;
 begin
   Result:=false;
   if ScopeModule=nil then
@@ -1093,30 +1091,10 @@ begin
     // analyze a module
     Templates:=Resolver.GetProcTemplateTypes(DeclProc);
     if (Templates<>nil) and (Templates.Count>0) then
-      begin
-      // generic procedure
-      if paoSkipGenericProc in Options then
-        exit(true); // emit no hints for generic proc
-      // -> analyze
-      end
+      // generic template -> analyze
     else if not Resolver.IsFullySpecialized(DeclProc) then
       // half specialized -> skip
-      exit(true)
-    else if paoSkipGenericProc in Options then
-      begin
-      Parent:=DeclProc.Parent;
-      while Parent<>nil do
-        begin
-        if (Parent is TPasGenericType) then
-          begin
-          Templates:=TPasGenericType(Parent).GenericTemplateTypes;
-          if (Templates<>nil) and (Templates.Count>0) then
-            // procedure of a generic parent -> emit no hints
-            exit(true);
-          end;
-        Parent:=Parent.Parent;
-        end;
-      end;
+      exit(true);
     end;
 end;
 
@@ -1173,13 +1151,12 @@ var
   C: TClass;
   Members, Args: TFPList;
   i: Integer;
-  Member, Param: TPasElement;
+  Member: TPasElement;
   MemberResolved: TPasResolverResult;
   Prop: TPasProperty;
   ProcType: TPasProcedureType;
   ClassEl: TPasClassType;
   ArrType: TPasArrayType;
-  SpecType: TPasSpecializeType;
 begin
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.UsePublished START ',GetObjName(El));
@@ -1271,18 +1248,7 @@ begin
       UseSubEl(TPasFunctionType(El).ResultEl.ResultType);
     end
   else if C=TPasSpecializeType then
-    begin
-    SpecType:=TPasSpecializeType(El);
-    // SpecType.DestType is the generic type, which is never used
-    if SpecType.CustomData is TPasSpecializeTypeData then
-      UseSubEl(TPasSpecializeTypeData(El.CustomData).SpecializedType);
-    for i:=0 to SpecType.Params.Count-1 do
-      begin
-      Param:=TPasElement(SpecType.Params[i]);
-      if Param is TPasGenericTemplateType then continue;
-      UseSubEl(Param);
-      end;
-    end
+    UseSubEl(TPasSpecializeType(El).DestType)
   else if C=TPasGenericTemplateType then
     begin
     if ScopeModule=nil then
@@ -1957,9 +1923,9 @@ begin
   if Proc.Parent is TPasMembersType then
     UseClassOrRecType(TPasMembersType(Proc.Parent),paumElement);
 
-  UseProcedureType(Proc.ProcType);
-
   UseScopeReferences(ProcScope.References);
+
+  UseProcedureType(Proc.ProcType);
 
   ImplProc:=Proc;
   if ProcScope.ImplProc<>nil then
@@ -2397,7 +2363,7 @@ var
   i: Integer;
 begin
   if not MarkElementAsUsed(El) then exit;
-  // El.DestType is the generic type, which is never used
+  // El.DestType is TPasGenericType, which is never be used
   if El.CustomData is TPasSpecializeTypeData then
     UseElType(El,TPasSpecializeTypeData(El.CustomData).SpecializedType,Mode);
   for i:=0 to El.Params.Count-1 do
@@ -2702,7 +2668,7 @@ begin
         begin
         // declaration was never used
         if IsSpecializedGenericType(Decl) then
-          continue; // no hints for not used specializations
+          continue;
         EmitMessage(20170311231734,mtHint,nPALocalXYNotUsed,
           sPALocalXYNotUsed,[Decl.ElementTypeName,Decl.Name],Decl);
         end;
@@ -2738,7 +2704,7 @@ begin
           begin
           SpecEl:=TPRSpecializedItem(SpecializedItems[i]).SpecializedEl;
           if FindElement(SpecEl)<>nil then
-            exit; // a specialization of this generic type is used -> the generic is used
+            exit; // a specialization of this generic type is used
           end;
       end;
 
@@ -2844,7 +2810,7 @@ begin
     ImplProc:=ProcScope.ImplProc;
   if (ProcScope.ClassRecScope<>nil)
       and (ProcScope.ClassRecScope.SpecializedFromItem<>nil) then
-    exit; // no hints for not used specializations
+    exit; // specialized proc
 
   if not PAElementExists(DeclProc) then
     begin

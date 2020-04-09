@@ -12,11 +12,10 @@ begin
     begin
 {$endif ALLPACKAGES}
     P:=AddPackage('cairo');
-    P.ShortName := 'cai';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Author :=  'Library:  University of Southern California + Red Hat Inc., header: Luiz AmXrico Pereira CXmara';
     P.License := 'Library: MPL 1.1 + LGPL-2.1, header: LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';

@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.OSes:=[beos,haiku,freebsd,solaris,netbsd,openbsd,linux,os2,emx,aix,dragonfly];
     // Do not build x11 on iPhone (=arm-darwin)
     if Defaults.CPU<>arm then
@@ -73,7 +73,6 @@ begin
         begin
           AddUnit('x');
           AddUnit('xlib');
-          AddInclude('xfixeswire.inc');
         end;
     T:=P.Targets.AddUnit('xinput2.pp');
       with T.Dependencies do

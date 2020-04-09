@@ -330,22 +330,6 @@ unit raatt;
                end;
            end;
 {$endif aarch64}
-{$if defined(riscv32) or defined(riscv64)}
-           {
-             amo* instructions contain a postfix with size, and optionally memory ordering
-             fence* can contain memory type identifier
-             floating point instructions contain size, and optionally rounding mode
-           }
-           case c of
-             '.':
-               begin
-                 repeat
-                   actasmpattern:=actasmpattern+c;
-                   c:=current_scanner.asmgetchar;
-                 until not(c in ['a'..'z','A'..'Z','.']);
-               end;
-           end;
-{$endif riscv}
            { Opcode ? }
            If is_asmopcode(upper(actasmpattern)) then
             Begin
@@ -1254,7 +1238,7 @@ unit raatt;
                Consume(AS_ID);
                Consume(AS_COMMA);
                symofs:=BuildConstExpression(false,false);
-               curList.concat(Tai_datablock.Create(commname,symofs,carraydef.getreusable(u8inttype,symofs),AT_DATA));
+               curList.concat(Tai_datablock.Create(commname,symofs,carraydef.getreusable(u8inttype,symofs)));
                if actasmtoken<>AS_SEPARATOR then
                 Consume(AS_SEPARATOR);
              end;
@@ -1266,7 +1250,7 @@ unit raatt;
                Consume(AS_ID);
                Consume(AS_COMMA);
                symofs:=BuildConstExpression(false,false);
-               curList.concat(Tai_datablock.Create_global(commname,symofs,carraydef.getreusable(u8inttype,symofs),AT_DATA));
+               curList.concat(Tai_datablock.Create_global(commname,symofs,carraydef.getreusable(u8inttype,symofs)));
                if actasmtoken<>AS_SEPARATOR then
                 Consume(AS_SEPARATOR);
              end;
@@ -1316,7 +1300,7 @@ unit raatt;
              begin
                Consume(AS_SECTION);
                sectionname:=actasmpattern;
-               secflags:=[];
+               secflags:=SF_None;
                secprogbits:=SPB_None;
                Consume(AS_STRING);
                if actasmtoken=AS_COMMA then
@@ -1326,13 +1310,13 @@ unit raatt;
                      begin
                        case actasmpattern of
                          'a':
-                           Include(secflags,SF_A);
+                           secflags:=SF_A;
                          'w':
-                           Include(secflags,SF_W);
+                           secflags:=SF_W;
                          'x':
-                           Include(secflags,SF_X);
+                           secflags:=SF_X;
                          '':
-                           ;
+                           secflags:=SF_None;
                          else
                            Message(asmr_e_syntax_error);
                        end;
@@ -1340,9 +1324,9 @@ unit raatt;
                        if actasmtoken=AS_COMMA then
                          begin
                            Consume(AS_COMMA);
-                           if (actasmtoken=AS_MOD) or (actasmtoken=AS_AT) then
+                           if actasmtoken=AS_MOD then
                              begin
-                               Consume(actasmtoken);
+                               Consume(AS_MOD);
                                if actasmtoken=AS_ID then
                                  begin
                                    case actasmpattern of
@@ -1350,8 +1334,6 @@ unit raatt;
                                        secprogbits:=SPB_PROGBITS;
                                      'NOBITS':
                                        secprogbits:=SPB_NOBITS;
-                                     'NOTE':
-                                       secprogbits:=SPB_NOTE;
                                      else
                                        Message(asmr_e_syntax_error);
                                    end;

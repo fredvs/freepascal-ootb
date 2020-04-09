@@ -11,9 +11,9 @@ type
 type
   NSPopUpButton = objcclass external (NSButton)
   private
-    _pbFlags: bitpacked record
+    __pbFlags: bitpacked record
       case byte of
-        0: (_anonBitField__pbFlags0: cuint);
+        0: (_anonBitField___pbFlags0: cuint);
         1: (
           needsPullsDownFromTemplate: 0..1;
           RESERVED: 0..((1 shl 31)-1);

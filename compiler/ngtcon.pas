@@ -213,8 +213,6 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
                    wpoinfomanager.symbol_live(current_procinfo.procdef.mangledname) then
                   tobjectdef(tclassrefdef(n.resultdef).pointeddef).register_maybe_created_object_type;
               end;
-            else
-              ;
           end;
           tc_emit_classrefdef(def,n);
           n.free;
@@ -342,33 +340,20 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
         if (target_info.endian=endian_big) then
           begin
             { bitpacked format: left-aligned (i.e., "big endian bitness") }
-            { work around broken x86 shifting }
-            if (AIntBits<>bp.packedbitsize) and
-               (bp.curbitoffset<AIntBits) then
-              bp.curval:=bp.curval or ((value shl (AIntBits-bp.packedbitsize)) shr bp.curbitoffset);
+            bp.curval:=bp.curval or ((value shl (AIntBits-bp.packedbitsize)) shr bp.curbitoffset);
             shiftcount:=((AIntBits-bp.packedbitsize)-bp.curbitoffset);
             { carry-over to the next element? }
             if (shiftcount<0) then
-              begin
-                if shiftcount>=AIntBits then
-                  bp.nextval:=(value and ((aword(1) shl (-shiftcount))-1)) shl
-                              (AIntBits+shiftcount)
-                else
-                  bp.nextval:=0
-              end
+              bp.nextval:=(value and ((aword(1) shl (-shiftcount))-1)) shl
+                          (AIntBits+shiftcount)
           end
         else
           begin
             { bitpacked format: right aligned (i.e., "little endian bitness") }
-            { work around broken x86 shifting }
-            if bp.curbitoffset<AIntBits then
-              bp.curval:=bp.curval or (value shl bp.curbitoffset);
+            bp.curval:=bp.curval or (value shl bp.curbitoffset);
             { carry-over to the next element? }
             if (bp.curbitoffset+bp.packedbitsize>AIntBits) then
-              if bp.curbitoffset>0 then
-                bp.nextval:=value shr (AIntBits-bp.curbitoffset)
-              else
-                bp.nextval:=0;
+              bp.nextval:=value shr (AIntBits-bp.curbitoffset)
           end;
         inc(bp.curbitoffset,bp.packedbitsize);
       end;
@@ -735,6 +720,8 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
              ftcb.emit_tai(tai_realconst.create_s64compreal(round(value*10000)),def);
            s128real:
              ftcb.emit_tai(tai_realconst.create_s128real(value),def);
+           else
+             internalerror(200611053);
         end;
       end;
 
@@ -1146,8 +1133,6 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
               addstabx:=true;
             asmsym:=current_asmdata.DefineAsmSymbol(fsym.mangledname,AB_GLOBAL,AT_DATA,tcsym.vardef)
           end
-        else if tf_supports_hidden_symbols in target_info.flags then
-          asmsym:=current_asmdata.DefineAsmSymbol(fsym.mangledname,AB_PRIVATE_EXTERN,AT_DATA,tcsym.vardef)
         else
           asmsym:=current_asmdata.DefineAsmSymbol(fsym.mangledname,AB_LOCAL,AT_DATA,tcsym.vardef);
         if vo_has_section in fsym.varoptions then
@@ -1242,7 +1227,7 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
 
                     ftcb.finish_internal_data_builder(datatcb,ll,dynarrdef,sizeof(pint));
 
-                    ftcb.emit_dynarray_offset(llofs,dyncount,def,trecorddef(dynarrdef));
+                    ftcb.emit_dynarray_offset(llofs,dyncount,def);
                   end;
               end
             else
@@ -1250,7 +1235,6 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
           end
         { packed array constant }
         else if is_packed_array(def) and
-                (def.elementdef.typ in [orddef,enumdef]) and
                 ((def.elepackedbitsize mod 8 <> 0) or
                  not ispowerof2(def.elepackedbitsize div 8,i)) then
           begin
@@ -1456,7 +1440,7 @@ function get_next_varsym(def: tabstractrecorddef; const SymList:TFPHashObjectLis
         { get the address of the procedure, except if it's a C-block (then we
           we will end up with a record that represents the C-block) }
         if not is_block(def) then
-          procaddrdef:=cprocvardef.getreusableprocaddr(def,pc_address_only)
+          procaddrdef:=cprocvardef.getreusableprocaddr(def)
         else
           procaddrdef:=def;
         ftcb.queue_init(procaddrdef);

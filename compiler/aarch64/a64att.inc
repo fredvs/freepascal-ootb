@@ -187,6 +187,5 @@
 'fcsel',
 'umov',
 'ins',
-'movi',
-'veor'
+'movi'
 );

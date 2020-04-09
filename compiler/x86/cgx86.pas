@@ -32,8 +32,7 @@ unit cgx86;
        cgbase,cgutils,cgobj,
        aasmbase,aasmtai,aasmdata,aasmcpu,
        cpubase,cpuinfo,rgx86,
-       symconst,symtype,symdef,
-       parabase;
+       symconst,symtype,symdef;
 
     type
 
@@ -90,7 +89,6 @@ unit cgx86;
         procedure a_loadfpu_reg_reg(list: TAsmList; fromsize, tosize: tcgsize; reg1, reg2: tregister); override;
         procedure a_loadfpu_ref_reg(list: TAsmList; fromsize, tosize: tcgsize; const ref: treference; reg: tregister); override;
         procedure a_loadfpu_reg_ref(list: TAsmList; fromsize, tosize: tcgsize; reg: tregister; const ref: treference); override;
-        procedure a_loadfpu_ref_cgpara(list : TAsmList;size : tcgsize;const ref : treference;const cgpara : TCGPara); override;
 
         { vector register move instructions }
         procedure a_loadmm_reg_reg(list: TAsmList; fromsize, tosize : tcgsize;reg1, reg2: tregister;shuffle : pmmshuffle); override;
@@ -160,17 +158,26 @@ unit cgx86;
       TCGSize2OpSize: Array[tcgsize] of topsize =
         (S_NO,S_B,S_W,S_L,S_Q,S_XMM,S_B,S_W,S_L,S_Q,S_XMM,
          S_FS,S_FL,S_FX,S_IQ,S_FXX,
-         S_NO,S_NO,S_NO,S_MD,S_XMM,S_YMM,S_ZMM);
+         S_NO,S_NO,S_NO,S_MD,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_NO,S_NO,S_NO,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_XMM,S_YMM,S_ZMM);
 {$elseif defined(i386)}
       TCGSize2OpSize: Array[tcgsize] of topsize =
         (S_NO,S_B,S_W,S_L,S_L,S_T,S_B,S_W,S_L,S_L,S_L,
          S_FS,S_FL,S_FX,S_IQ,S_FXX,
-         S_NO,S_NO,S_NO,S_MD,S_XMM,S_YMM,S_ZMM);
+         S_NO,S_NO,S_NO,S_MD,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_NO,S_NO,S_NO,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_XMM,S_YMM,S_ZMM);
 {$elseif defined(i8086)}
       TCGSize2OpSize: Array[tcgsize] of topsize =
         (S_NO,S_B,S_W,S_W,S_W,S_T,S_B,S_W,S_W,S_W,S_W,
          S_FS,S_FL,S_FX,S_IQ,S_FXX,
-         S_NO,S_NO,S_NO,S_MD,S_XMM,S_YMM,S_ZMM);
+         S_NO,S_NO,S_NO,S_MD,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_NO,S_NO,S_NO,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_XMM,S_YMM,S_ZMM,
+         S_NO,S_XMM,S_YMM,S_ZMM);
 {$endif}
 
 {$ifndef NOTARGETWIN}
@@ -197,7 +204,7 @@ unit cgx86;
 
     function UseAVX: boolean;
       begin
-        Result:={$ifdef i8086}false{$else i8086}(FPUX86_HAS_AVXUNIT in fpu_capabilities[current_settings.fputype]){$endif i8086};
+        Result:=(current_settings.fputype in fpu_avx_instructionsets) {$ifndef i8086}or (CPUX86_HAS_AVXUNIT in cpu_capabilities[current_settings.cputype]){$endif i8086};
       end;
 
 
@@ -287,11 +294,17 @@ unit cgx86;
           OS_M64:
             result:=rg[R_MMREGISTER].getregister(list,R_SUBQ);
           OS_M128,
-          OS_F128:
+          OS_F128,
+          OS_MF128,
+          OS_MD128:
             result:=rg[R_MMREGISTER].getregister(list,R_SUBMMX); { R_SUBMMWHOLE seems a bit dangerous and ambiguous, so changed to R_SUBMMX. [Kit] }
-          OS_M256:
+          OS_M256,
+          OS_MF256,
+          OS_MD256:
             result:=rg[R_MMREGISTER].getregister(list,R_SUBMMY);
-          OS_M512:
+          OS_M512,
+          OS_MF512,
+          OS_MD512:
             result:=rg[R_MMREGISTER].getregister(list,R_SUBMMZ);
           else
             internalerror(200506041);
@@ -889,7 +902,10 @@ unit cgx86;
                { darwin's assembler doesn't want @PLT after call symbols }
                not(target_info.system in [system_x86_64_darwin,system_i386_iphonesim,system_x86_64_iphonesim]) then
               begin
-                r.refaddr:=addr_pic;
+{$ifdef i386}
+                include(current_procinfo.flags,pi_needs_got);
+{$endif i386}
+                r.refaddr:=addr_pic
               end
             else
               r.refaddr:=addr_full;
@@ -1082,7 +1098,6 @@ unit cgx86;
     procedure tcgx86.a_loadaddr_ref_reg(list : TAsmList;const ref : treference;r : tregister);
       var
         dirref,tmpref : treference;
-        tmpreg : TRegister;
       begin
         dirref:=ref;
 
@@ -1092,70 +1107,6 @@ unit cgx86;
 
         with dirref do
           begin
-{$ifdef i386}
-            if refaddr=addr_ntpoff then
-              begin
-                { Convert thread local address to a process global addres
-                  as we cannot handle far pointers.}
-                case target_info.system of
-                  system_i386_linux,system_i386_android:
-                    if segment=NR_GS then
-                      begin
-                        reference_reset(tmpref,1,[]);
-                        tmpref.segment:=NR_GS;
-                        tmpreg:=getaddressregister(list);
-                        a_load_ref_reg(list,OS_ADDR,OS_ADDR,tmpref,tmpreg);
-                        reference_reset(tmpref,1,[]);
-                        tmpref.symbol:=symbol;
-                        tmpref.refaddr:=refaddr;
-                        tmpref.base:=tmpreg;
-                        if base<>NR_NO then
-                          tmpref.index:=base;
-                        list.concat(Taicpu.op_ref_reg(A_LEA,tcgsize2opsize[OS_ADDR],tmpref,tmpreg));
-                        segment:=NR_NO;
-                        base:=tmpreg;
-                        symbol:=nil;
-                        refaddr:=addr_no;
-                      end
-                    else
-                      Internalerror(2018110402);
-                  else
-                    Internalerror(2018110403);
-                end;
-              end;
-{$endif i386}
-{$ifdef x86_64}
-            if refaddr=addr_tpoff then
-              begin
-                { Convert thread local address to a process global addres
-                  as we cannot handle far pointers.}
-                case target_info.system of
-                  system_x86_64_linux:
-                    if segment=NR_FS then
-                      begin
-                        reference_reset(tmpref,1,[]);
-                        tmpref.segment:=NR_FS;
-                        tmpreg:=getaddressregister(list);
-                        a_load_ref_reg(list,OS_ADDR,OS_ADDR,tmpref,tmpreg);
-                        reference_reset(tmpref,1,[]);
-                        tmpref.symbol:=symbol;
-                        tmpref.refaddr:=refaddr;
-                        tmpref.base:=tmpreg;
-                        if base<>NR_NO then
-                          tmpref.index:=base;
-                        list.concat(Taicpu.op_ref_reg(A_LEA,tcgsize2opsize[OS_ADDR],tmpref,tmpreg));
-                        segment:=NR_NO;
-                        base:=tmpreg;
-                        symbol:=nil;
-                        refaddr:=addr_no;
-                      end
-                    else
-                      Internalerror(2019012003);
-                  else
-                    Internalerror(2019012004);
-                end;
-              end;
-{$endif x86_64}
             if (base=NR_NO) and (index=NR_NO) then
               begin
                 if assigned(dirref.symbol) then
@@ -1245,7 +1196,26 @@ unit cgx86;
                 else
                   a_load_reg_reg(list,OS_16,OS_16,segment,GetNextReg(r));
 {$else i8086}
-                cgmessage(cg_e_cant_use_far_pointer_there);
+                if (tf_section_threadvars in target_info.flags) then
+                  begin
+                    { Convert thread local address to a process global addres
+                      as we cannot handle far pointers.}
+                    case target_info.system of
+                      system_i386_linux,system_i386_android:
+                        if segment=NR_GS then
+                          begin
+                            reference_reset_symbol(tmpref,current_asmdata.RefAsmSymbol('___fpc_threadvar_offset',AT_DATA),0,sizeof(pint),[]);
+                            tmpref.segment:=NR_GS;
+                            list.concat(Taicpu.op_ref_reg(A_ADD,tcgsize2opsize[OS_ADDR],tmpref,r));
+                          end
+                        else
+                          cgmessage(cg_e_cant_use_far_pointer_there);
+                      else
+                        cgmessage(cg_e_cant_use_far_pointer_there);
+                    end;
+                  end
+                else
+                  cgmessage(cg_e_cant_use_far_pointer_there);
 {$endif i8086}
               end;
           end;
@@ -1316,8 +1286,6 @@ unit cgx86;
               tosize:=OS_F32;
             OS_64:
               tosize:=OS_F64;
-            else
-              ;
           end;
          if reg<>NR_ST then
            a_loadfpu_reg_reg(list,fromsize,tosize,reg,NR_ST);
@@ -1325,23 +1293,7 @@ unit cgx86;
        end;
 
 
-    procedure tcgx86.a_loadfpu_ref_cgpara(list: TAsmList; size: tcgsize; const ref: treference; const cgpara: TCGPara);
-      var
-        href: treference;
-      begin
-        if cgpara.location^.loc in [LOC_REFERENCE,LOC_CREFERENCE] then
-          begin
-            cgpara.check_simple_location;
-            reference_reset_base(href,cgpara.location^.reference.index,cgpara.location^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
-            floatload(list,size,ref);
-            floatstore(list,size,href);
-          end
-        else
-          inherited a_loadfpu_ref_cgpara(list, size, ref, cgpara);
-      end;
-
-
-    function get_scalar_mm_op(fromsize,tosize : tcgsize;aligned : boolean) : tasmop;
+    function get_scalar_mm_op(fromsize,tosize : tcgsize) : tasmop;
       const
         convertopsse : array[OS_F32..OS_F128,OS_F32..OS_F128] of tasmop = (
           (A_MOVSS,A_CVTSS2SD,A_NONE,A_NONE,A_NONE),
@@ -1365,8 +1317,6 @@ unit cgx86;
               tosize:=OS_F32;
             OS_64:
               tosize:=OS_F64;
-            else
-              ;
           end;
         if (fromsize in [low(convertopsse)..high(convertopsse)]) and
            (tosize in [low(convertopsse)..high(convertopsse)]) then
@@ -1391,16 +1341,9 @@ unit cgx86;
               OS_M128:
                 { 128-bit aligned vector }
                 if UseAVX then
-                  begin
-                    if aligned then
-                      result:=A_VMOVAPS
-                    else
-                      result:=A_VMOVUPS;
-                  end
-                else if aligned then
-                  result:=A_MOVAPS
+                  result:=A_VMOVAPS
                 else
-                  result:=A_MOVUPS;
+                  result:=A_MOVAPS;
               OS_M256,
               OS_M512:
                 { 256-bit aligned vector }
@@ -1412,14 +1355,6 @@ unit cgx86;
               else
                 InternalError(2018012920);
             end;
-          end
-        else if (tcgsize2size[fromsize]=tcgsize2size[tosize]) and
-          (fromsize=OS_M128) then
-          begin
-            if UseAVX then
-              result:=A_VMOVDQU
-            else
-              result:=A_MOVDQU;
           end
         else
           internalerror(2010060104);
@@ -1438,12 +1373,14 @@ unit cgx86;
             if fromsize=tosize then
               { needs correct size in case of spilling }
               case fromsize of
-                OS_F32:
+                OS_F32,
+                OS_MF128:
                   if UseAVX then
                     instr:=taicpu.op_reg_reg(A_VMOVAPS,S_NO,reg1,reg2)
                   else
                     instr:=taicpu.op_reg_reg(A_MOVAPS,S_NO,reg1,reg2);
-                OS_F64:
+                OS_F64,
+                OS_MD128:
                   if UseAVX then
                     instr:=taicpu.op_reg_reg(A_VMOVAPD,S_NO,reg1,reg2)
                   else
@@ -1453,13 +1390,27 @@ unit cgx86;
                     instr:=taicpu.op_reg_reg(A_VMOVQ,S_NO,reg1,reg2)
                   else
                     instr:=taicpu.op_reg_reg(A_MOVQ,S_NO,reg1,reg2);
-                OS_M128:
+                OS_M128, OS_MS128:
                   if UseAVX then
                     instr:=taicpu.op_reg_reg(A_VMOVDQA,S_NO,reg1,reg2)
                   else
                     instr:=taicpu.op_reg_reg(A_MOVDQA,S_NO,reg1,reg2);
-                OS_M256,
-                OS_M512:
+                OS_MF256,
+                OS_MF512:
+                  if UseAVX then
+                    instr:=taicpu.op_reg_reg(A_VMOVAPS,S_NO,reg1,reg2)
+                  else
+                    { SSE doesn't support 512-bit vectors }
+                    InternalError(2018012931);
+                OS_MD256,
+                OS_MD512:
+                  if UseAVX then
+                    instr:=taicpu.op_reg_reg(A_VMOVAPD,S_NO,reg1,reg2)
+                  else
+                    { SSE doesn't support 512-bit vectors }
+                    InternalError(2018012932);
+                OS_M256, OS_MS256,
+                OS_M512, OS_MS512:
                   if UseAVX then
                     instr:=taicpu.op_reg_reg(A_VMOVDQA,S_NO,reg1,reg2)
                   else
@@ -1474,7 +1425,7 @@ unit cgx86;
           end
         else if shufflescalar(shuffle) then
           begin
-            op:=get_scalar_mm_op(fromsize,tosize,true);
+            op:=get_scalar_mm_op(fromsize,tosize);
 
             { MOVAPD/MOVAPS are normally faster }
             if op=A_MOVSD then
@@ -1505,8 +1456,6 @@ unit cgx86;
               A_MOVSD,
               A_MOVQ:
                 add_move_instruction(instr);
-              else
-                ;
             end;
           end
         else
@@ -1546,7 +1495,39 @@ unit cgx86;
                    op := A_VMOVQ
                  else
                    op := A_MOVQ;
-               OS_M128:
+               OS_MF128:
+                 { Use XMM transfer of packed singles }
+                 if UseAVX then
+                   begin
+                     if GetRefAlignment(tmpref) = 16 then
+                       op := A_VMOVAPS
+                     else
+                       op := A_VMOVUPS
+                   end
+                 else
+                   begin
+                     if GetRefAlignment(tmpref) = 16 then
+                       op := A_MOVAPS
+                     else
+                       op := A_MOVUPS
+                   end;
+               OS_MD128:
+                 { Use XMM transfer of packed doubles }
+                 if UseAVX then
+                   begin
+                     if GetRefAlignment(tmpref) = 16 then
+                       op := A_VMOVAPD
+                     else
+                       op := A_VMOVUPD
+                   end
+                 else
+                   begin
+                     if GetRefAlignment(tmpref) = 16 then
+                       op := A_MOVAPD
+                     else
+                       op := A_MOVUPD
+                   end;
+               OS_M128, OS_MS128:
                  { Use XMM integer transfer }
                  if UseAVX then
                    begin
@@ -1560,9 +1541,33 @@ unit cgx86;
                      if GetRefAlignment(tmpref) = 16 then
                        op := A_MOVDQA
                      else
-                       op := A_MOVDQU;
+                       op := A_MOVDQU
                    end;
-               OS_M256:
+               OS_MF256:
+                 { Use YMM transfer of packed singles }
+                 if UseAVX then
+                   begin
+                     if GetRefAlignment(tmpref) = 32 then
+                       op := A_VMOVAPS
+                     else
+                       op := A_VMOVUPS
+                   end
+                 else
+                   { SSE doesn't support 256-bit vectors }
+                   InternalError(2018012934);
+               OS_MD256:
+                 { Use YMM transfer of packed doubles }
+                 if UseAVX then
+                   begin
+                     if GetRefAlignment(tmpref) = 32 then
+                       op := A_VMOVAPD
+                     else
+                       op := A_VMOVUPD
+                   end
+                 else
+                   { SSE doesn't support 256-bit vectors }
+                   InternalError(2018012935);
+               OS_M256, OS_MS256:
                  { Use YMM integer transfer }
                  if UseAVX then
                    begin
@@ -1573,8 +1578,32 @@ unit cgx86;
                    end
                  else
                    { SSE doesn't support 256-bit vectors }
-                   Internalerror(2020010401);
-               OS_M512:
+                   InternalError(2018012936);
+               OS_MF512:
+                 { Use ZMM transfer of packed singles }
+                 if UseAVX then
+                   begin
+                     if GetRefAlignment(tmpref) = 64 then
+                       op := A_VMOVAPS
+                     else
+                       op := A_VMOVUPS
+                   end
+                 else
+                   { SSE doesn't support 512-bit vectors }
+                   InternalError(2018012937);
+               OS_MD512:
+                 { Use ZMM transfer of packed doubles }
+                 if UseAVX then
+                   begin
+                     if GetRefAlignment(tmpref) = 64 then
+                       op := A_VMOVAPD
+                     else
+                       op := A_VMOVUPD
+                   end
+                 else
+                   { SSE doesn't support 512-bit vectors }
+                   InternalError(2018012938);
+               OS_M512, OS_MS512:
                  { Use ZMM integer transfer }
                  if UseAVX then
                    begin
@@ -1594,7 +1623,7 @@ unit cgx86;
            end
          else if shufflescalar(shuffle) then
            begin
-             op:=get_scalar_mm_op(fromsize,tosize,tcgsize2size[fromsize]=ref.alignment);
+             op:=get_scalar_mm_op(fromsize,tosize);
 
              { A_VCVTSD2SS and A_VCVTSS2SD require always three operands }
              if (op=A_VCVTSD2SS) or (op=A_VCVTSS2SD) then
@@ -1640,7 +1669,37 @@ unit cgx86;
                    op := A_VMOVQ
                  else
                    op := A_MOVQ;
-               OS_M128:
+               OS_MF128:
+                 { Use XMM transfer of packed singles }
+                 if UseAVX then
+                 begin
+                   if GetRefAlignment(tmpref) = 16 then
+                     op := A_VMOVAPS
+                   else
+                     op := A_VMOVUPS
+                 end else
+                 begin
+                   if GetRefAlignment(tmpref) = 16 then
+                     op := A_MOVAPS
+                   else
+                     op := A_MOVUPS
+                 end;
+               OS_MD128:
+                 { Use XMM transfer of packed doubles }
+                 if UseAVX then
+                 begin
+                   if GetRefAlignment(tmpref) = 16 then
+                     op := A_VMOVAPD
+                   else
+                     op := A_VMOVUPD
+                 end else
+                 begin
+                   if GetRefAlignment(tmpref) = 16 then
+                     op := A_MOVAPD
+                   else
+                     op := A_MOVUPD
+                 end;
+               OS_M128, OS_MS128:
                  { Use XMM integer transfer }
                  if UseAVX then
                  begin
@@ -1655,7 +1714,29 @@ unit cgx86;
                    else
                      op := A_MOVDQU
                  end;
-               OS_M256:
+               OS_MF256:
+                 { Use XMM transfer of packed singles }
+                 if UseAVX then
+                 begin
+                   if GetRefAlignment(tmpref) = 32 then
+                     op := A_VMOVAPS
+                   else
+                     op := A_VMOVUPS
+                 end else
+                   { SSE doesn't support 256-bit vectors }
+                   InternalError(2018012940);
+               OS_MD256:
+                 { Use XMM transfer of packed doubles }
+                 if UseAVX then
+                 begin
+                   if GetRefAlignment(tmpref) = 32 then
+                     op := A_VMOVAPD
+                   else
+                     op := A_VMOVUPD
+                 end else
+                   { SSE doesn't support 256-bit vectors }
+                   InternalError(2018012941);
+               OS_M256, OS_MS256:
                  { Use XMM integer transfer }
                  if UseAVX then
                  begin
@@ -1666,7 +1747,29 @@ unit cgx86;
                  end else
                    { SSE doesn't support 256-bit vectors }
                    InternalError(2018012942);
-               OS_M512:
+               OS_MF512:
+                 { Use XMM transfer of packed singles }
+                 if UseAVX then
+                 begin
+                   if GetRefAlignment(tmpref) = 64 then
+                     op := A_VMOVAPS
+                   else
+                     op := A_VMOVUPS
+                 end else
+                   { SSE doesn't support 512-bit vectors }
+                   InternalError(2018012943);
+               OS_MD512:
+                 { Use XMM transfer of packed doubles }
+                 if UseAVX then
+                 begin
+                   if GetRefAlignment(tmpref) = 64 then
+                     op := A_VMOVAPD
+                   else
+                     op := A_VMOVUPD
+                 end else
+                   { SSE doesn't support 512-bit vectors }
+                   InternalError(2018012944);
+               OS_M512, OS_MS512:
                  { Use XMM integer transfer }
                  if UseAVX then
                  begin
@@ -1688,7 +1791,7 @@ unit cgx86;
              if tcgsize2size[tosize]<>tcgsize2size[fromsize] then
                begin
                  hreg:=getmmregister(list,tosize);
-                 op:=get_scalar_mm_op(fromsize,tosize,tcgsize2size[tosize]=ref.alignment);
+                 op:=get_scalar_mm_op(fromsize,tosize);
 
                  { A_VCVTSD2SS and A_VCVTSS2SD require always three operands }
                  if (op=A_VCVTSD2SS) or (op=A_VCVTSS2SD) then
@@ -1696,10 +1799,10 @@ unit cgx86;
                  else
                    list.concat(taicpu.op_reg_reg(op,S_NO,reg,hreg));
 
-                 list.concat(taicpu.op_reg_ref(get_scalar_mm_op(tosize,tosize,tcgsize2size[tosize]=tmpref.alignment),S_NO,hreg,tmpref))
+                 list.concat(taicpu.op_reg_ref(get_scalar_mm_op(tosize,tosize),S_NO,hreg,tmpref))
                end
              else
-               list.concat(taicpu.op_reg_ref(get_scalar_mm_op(fromsize,tosize,tcgsize2size[tosize]=tmpref.alignment),S_NO,reg,tmpref));
+               list.concat(taicpu.op_reg_ref(get_scalar_mm_op(fromsize,tosize),S_NO,reg,tmpref));
            end
          else
            internalerror(200312252);
@@ -1919,8 +2022,6 @@ unit cgx86;
               a_load_const_reg(list,size,a,dst);
               exit;
             end;
-          else
-            ;
         end;
         if (op in [OP_MUL,OP_IMUL]) and (size in [OS_32,OS_S32,OS_64,OS_S64]) and
           not(cs_check_overflow in current_settings.localswitches) and
@@ -1963,14 +2064,6 @@ unit cgx86;
             al := longint (a);
 {$pop}
             reference_reset_base(href,src,al,ctempposinvalid,0,[]);
-            list.concat(taicpu.op_ref_reg(A_LEA,TCgSize2OpSize[size],href,dst));
-          end
-        else if (op=OP_SHL) and (size in [OS_32,OS_S32,OS_64,OS_S64]) and
-          (int64(a)>=1) and (int64(a)<=3) then
-          begin
-            reference_reset_base(href,NR_NO,0,ctempposinvalid,0,[]);
-            href.index:=src;
-            href.scalefactor:=1 shl longint(a);
             list.concat(taicpu.op_ref_reg(A_LEA,TCgSize2OpSize[size],href,dst));
           end
         else if (op=OP_SUB) and
@@ -2441,7 +2534,10 @@ unit cgx86;
           end;
 {$endif x86_64}
         cg.a_reg_alloc(list,NR_DEFAULTFLAGS);
-        list.concat(taicpu.op_const_reg(A_CMP,tcgsize2opsize[size],a,reg));
+        if (a = 0) then
+          list.concat(taicpu.op_reg_reg(A_TEST,tcgsize2opsize[size],reg,reg))
+        else
+          list.concat(taicpu.op_const_reg(A_CMP,tcgsize2opsize[size],a,reg));
         a_jmp_cond(list,cmp_op,l);
         cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
       end;
@@ -2553,8 +2649,6 @@ unit cgx86;
                list.concat(ai);
                f2:=FPUFlags2Flags[f];
              end;
-           else
-             ;
          end;
          ai := Taicpu.op_sym(A_Jcc,S_NO,l);
          ai.SetCondition(flags_to_cond(f2));
@@ -2592,8 +2686,6 @@ unit cgx86;
             end;
           F_FA,F_FAE:                 { These do not need PF check }
             f2:=FPUFlags2Flags[f];
-          else
-            ;
         end;
         hreg:=makeregsize(list,reg,OS_8);
         ai:=Taicpu.op_reg(A_SETcc,S_B,hreg);
@@ -2621,8 +2713,6 @@ unit cgx86;
             end;
           F_FA,F_FAE:
             f2:=FPUFlags2Flags[f];
-          else
-            ;
         end;
          tmpref:=ref;
          make_simple_ref(list,tmpref);
@@ -2669,7 +2759,7 @@ unit cgx86;
 
     type  copymode=(copy_move,copy_mmx,copy_string,copy_mm,copy_avx);
 
-    var srcref,dstref,tmpref:Treference;
+    var srcref,dstref:Treference;
         r,r0,r1,r2,r3:Tregister;
         helpsize:tcgint;
         copysize:byte;
@@ -2684,42 +2774,6 @@ unit cgx86;
       make_simple_ref(list,srcref);
       make_simple_ref(list,dstref);
 {$endif not i8086}
-{$ifdef i386}
-      { we could handle "far" pointers here, but reloading es/ds is probably much slower
-        than just resolving the tls segment }
-      if (srcref.refaddr=addr_ntpoff) and (srcref.segment=NR_GS) then
-        begin
-          r:=getaddressregister(list);
-          a_loadaddr_ref_reg(list,srcref,r);
-          reference_reset(srcref,srcref.alignment,srcref.volatility);
-          srcref.base:=r;
-        end;
-       if (dstref.refaddr=addr_ntpoff) and (dstref.segment=NR_GS) then
-         begin
-           r:=getaddressregister(list);
-           a_loadaddr_ref_reg(list,dstref,r);
-           reference_reset(dstref,dstref.alignment,dstref.volatility);
-           dstref.base:=r;
-         end;
-{$endif i386}
-{$ifdef x86_64}
-      { we could handle "far" pointers here, but reloading es/ds is probably much slower
-        than just resolving the tls segment }
-      if (srcref.refaddr=addr_tpoff) and (srcref.segment=NR_FS) then
-        begin
-          r:=getaddressregister(list);
-          a_loadaddr_ref_reg(list,srcref,r);
-          reference_reset(srcref,srcref.alignment,srcref.volatility);
-          srcref.base:=r;
-        end;
-       if (dstref.refaddr=addr_tpoff) and (dstref.segment=NR_FS) then
-         begin
-           r:=getaddressregister(list);
-           a_loadaddr_ref_reg(list,dstref,r);
-           reference_reset(dstref,dstref.alignment,dstref.volatility);
-           dstref.base:=r;
-         end;
-{$endif x86_64}
       cm:=copy_move;
       helpsize:=3*sizeof(aword);
       if cs_opt_size in current_settings.optimizerswitches then
@@ -2727,7 +2781,7 @@ unit cgx86;
 {$ifndef i8086}
       { avx helps only to reduce size, using it in general does at least not help on
         an i7-4770 (FK) }
-      if (FPUX86_HAS_AVXUNIT in fpu_capabilities[current_settings.fputype]) and
+      if (CPUX86_HAS_AVXUNIT in cpu_capabilities[current_settings.cputype]) and
         // (cs_opt_size in current_settings.optimizerswitches) and
          ({$ifdef i386}(len=8) or{$endif i386}(len=16) or (len=24) or (len=32) { or (len=40) or (len=48)}) then
          cm:=copy_avx
@@ -2757,9 +2811,8 @@ unit cgx86;
          not(len in copy_len_sizes) then
         cm:=copy_string;
 {$ifndef i8086}
-      { using %fs and %gs as segment prefixes is perfectly valid }
-      if ((srcref.segment<>NR_NO) and (srcref.segment<>NR_FS) and (srcref.segment<>NR_GS)) or
-         ((dstref.segment<>NR_NO) and (dstref.segment<>NR_FS) and (dstref.segment<>NR_GS)) then
+      if (srcref.segment<>NR_NO) or
+         (dstref.segment<>NR_NO) then
         cm:=copy_string;
 {$endif not i8086}
       case cm of
@@ -2951,8 +3004,8 @@ unit cgx86;
         else {copy_string, should be a good fallback in case of unhandled}
           begin
             getcpuregister(list,REGDI);
-            if (dstref.segment=NR_NO) and
-               (segment_regs_equal(NR_SS,NR_DS) or ((dstref.base<>NR_BP) and (dstref.base<>NR_SP))) then
+            if (dest.segment=NR_NO) and
+               (segment_regs_equal(NR_SS,NR_DS) or ((dest.base<>NR_BP) and (dest.base<>NR_SP))) then
               begin
                 a_loadaddr_ref_reg(list,dstref,REGDI);
                 saved_es:=false;
@@ -2963,19 +3016,17 @@ unit cgx86;
               end
             else
               begin
-                { load offset of dest. reference }
-                tmpref:=dstref;
-                tmpref.segment:=NR_NO;
-                a_loadaddr_ref_reg(list,tmpref,REGDI);
+                dstref.segment:=NR_NO;
+                a_loadaddr_ref_reg(list,dstref,REGDI);
 {$ifdef volatile_es}
                 saved_es:=false;
 {$else volatile_es}
                 list.concat(taicpu.op_reg(A_PUSH,push_segment_size,NR_ES));
                 saved_es:=true;
 {$endif volatile_es}
-                if dstref.segment<>NR_NO then
-                  list.concat(taicpu.op_reg(A_PUSH,push_segment_size,dstref.segment))
-                else if (dstref.base=NR_BP) or (dstref.base=NR_SP) then
+                if dest.segment<>NR_NO then
+                  list.concat(taicpu.op_reg(A_PUSH,push_segment_size,dest.segment))
+                else if (dest.base=NR_BP) or (dest.base=NR_SP) then
                   list.concat(taicpu.op_reg(A_PUSH,push_segment_size,NR_SS))
                 else
                   internalerror(2014040401);
@@ -2993,8 +3044,8 @@ unit cgx86;
                 srcref.index:=NR_NO;
               end;
 {$endif i8086}
-            if ((srcref.segment=NR_NO) and (segment_regs_equal(NR_SS,NR_DS) or ((srcref.base<>NR_BP) and (srcref.base<>NR_SP)))) or
-               (is_segment_reg(srcref.segment) and segment_regs_equal(srcref.segment,NR_DS)) then
+            if ((source.segment=NR_NO) and (segment_regs_equal(NR_SS,NR_DS) or ((source.base<>NR_BP) and (source.base<>NR_SP)))) or
+               (is_segment_reg(source.segment) and segment_regs_equal(source.segment,NR_DS)) then
               begin
                 srcref.segment:=NR_NO;
                 a_loadaddr_ref_reg(list,srcref,REGSI);
@@ -3002,15 +3053,13 @@ unit cgx86;
               end
             else
               begin
-                { load offset of source reference }
-                tmpref:=srcref;
-                tmpref.segment:=NR_NO;
-                a_loadaddr_ref_reg(list,tmpref,REGSI);
+                srcref.segment:=NR_NO;
+                a_loadaddr_ref_reg(list,srcref,REGSI);
                 list.concat(taicpu.op_reg(A_PUSH,push_segment_size,NR_DS));
                 saved_ds:=true;
-                if srcref.segment<>NR_NO then
-                  list.concat(taicpu.op_reg(A_PUSH,push_segment_size,srcref.segment))
-                else if (srcref.base=NR_BP) or (srcref.base=NR_SP) then
+                if source.segment<>NR_NO then
+                  list.concat(taicpu.op_reg(A_PUSH,push_segment_size,source.segment))
+                else if (source.base=NR_BP) or (source.base=NR_SP) then
                   list.concat(taicpu.op_reg(A_PUSH,push_segment_size,NR_SS))
                 else
                   internalerror(2014040402);
@@ -3125,8 +3174,6 @@ unit cgx86;
              begin
                a_call_name(list,'__mcount',false);
              end;
-           else
-             internalerror(2019050701);
         end;
       end;
 
@@ -3255,7 +3302,6 @@ unit cgx86;
           r: longint;
           usedregs: tcpuregisterset;
           regs_to_save_int: tcpuregisterarray;
-          hreg: TRegister;
         begin
           regsize:=0;
           usedregs:=rg[R_INTREGISTER].used_in_proc-paramanager.get_volatile_registers_int(current_procinfo.procdef.proccalloption);
@@ -3264,20 +3310,11 @@ unit cgx86;
             if regs_to_save_int[r] in usedregs then
               begin
                 inc(regsize,sizeof(aint));
-                hreg:=newreg(R_INTREGISTER,regs_to_save_int[r],R_SUBWHOLE);
-                list.concat(Taicpu.Op_reg(A_PUSH,tcgsize2opsize[OS_ADDR],hreg));
-                if current_procinfo.framepointer<>NR_STACK_POINTER_REG then
-                  current_asmdata.asmcfi.cfa_offset(list,hreg,-(regsize+sizeof(pint)*2+localsize))
-                else
-                  begin
-                    current_asmdata.asmcfi.cfa_offset(list,hreg,-(regsize+sizeof(pint)+localsize));
-                    current_asmdata.asmcfi.cfa_def_cfa_offset(list,regsize+localsize+sizeof(pint));
-                  end;
+                list.concat(Taicpu.Op_reg(A_PUSH,tcgsize2opsize[OS_ADDR],newreg(R_INTREGISTER,regs_to_save_int[r],R_SUBWHOLE)));
               end;
         end;
 
       begin
-        regsize:=0;
         stackmisalignment:=0;
 {$ifdef i8086}
         { Win16 callback/exported proc prologue support.
@@ -3454,7 +3491,7 @@ unit cgx86;
                   localsize := align(localsize+stackmisalignment,target_info.stackalign)-stackmisalignment;
                 g_stackpointer_alloc(list,localsize);
                 if current_procinfo.framepointer=NR_STACK_POINTER_REG then
-                  current_asmdata.asmcfi.cfa_def_cfa_offset(list,regsize+localsize+sizeof(pint));
+                  current_asmdata.asmcfi.cfa_def_cfa_offset(list,localsize+sizeof(pint));
                 current_procinfo.final_localsize:=localsize;
               end
 {$ifdef i8086}
@@ -3563,7 +3600,6 @@ unit cgx86;
                   a_load_ref_reg(list,OS_ADDR,OS_ADDR,href,hreg);
                   inc(href.offset,sizeof(aint));
                 end;
-              current_asmdata.asmcfi.cfa_restore(list,hreg);
             end;
       end;
 
@@ -3575,16 +3611,10 @@ unit cgx86;
         else
           begin
 {$if defined(x86_64)}
-            current_asmdata.asmcfi.cfa_def_cfa_register(list,NR_RSP);
             list.Concat(taicpu.op_reg_reg(A_MOV,S_Q,NR_RBP,NR_RSP));
-            current_asmdata.asmcfi.cfa_restore(list,NR_RBP);
-            current_asmdata.asmcfi.cfa_def_cfa_offset(list,8);
             list.Concat(taicpu.op_reg(A_POP,S_Q,NR_RBP));
 {$elseif defined(i386)}
-            current_asmdata.asmcfi.cfa_def_cfa_register(list,NR_ESP);
             list.Concat(taicpu.op_reg_reg(A_MOV,S_L,NR_EBP,NR_ESP));
-            current_asmdata.asmcfi.cfa_restore(list,NR_EBP);
-            current_asmdata.asmcfi.cfa_def_cfa_offset(list,4);
             list.Concat(taicpu.op_reg(A_POP,S_L,NR_EBP));
 {$elseif defined(i8086)}
             list.Concat(taicpu.op_reg_reg(A_MOV,S_W,NR_BP,NR_SP));

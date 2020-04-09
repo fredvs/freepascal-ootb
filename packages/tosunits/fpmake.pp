@@ -13,7 +13,6 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('tosunits');
-    P.ShortName := 'tos';
 
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification';
@@ -23,7 +22,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.SourcePath.Add('src');
 
     P.OSes:=[atari];

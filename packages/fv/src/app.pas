@@ -567,7 +567,7 @@ VAR NumCols, NumRows, NumTileable, LeftOver, TileNum: Integer;
 
 BEGIN
    NumTileable := 0;                                  { Zero tileable count }
-   ForEach(TCallbackProcParam(@DoCountTileable));     { Count tileable views }
+   ForEach(@DoCountTileable);                         { Count tileable views }
    If (NumTileable>0) Then Begin
      MostEqualDivisors(NumTileable, NumCols, NumRows,
      NOT TileColumnsFirst);                           { Do pre calcs }
@@ -576,7 +576,7 @@ BEGIN
      Else Begin
        LeftOver := NumTileable MOD NumCols;           { Left over count }
        TileNum := NumTileable-1;                      { Tileable views }
-       ForEach(TCallbackProcParam(@DoTile));          { Tile each view }
+       ForEach(@DoTile);                              { Tile each view }
        DrawView;                                      { Now redraw }
      End;
    End;
@@ -622,14 +622,14 @@ VAR CascadeNum: Integer; LastView: PView; Min, Max: TPoint;
 
 BEGIN
    CascadeNum := 0;                                   { Zero cascade count }
-   ForEach(TCallbackProcParam(@DoCount));             { Count cascadable }
+   ForEach(@DoCount);                                 { Count cascadable }
    If (CascadeNum>0) Then Begin
      LastView^.SizeLimits(Min, Max);                  { Check size limits }
      If (Min.X > R.B.X - R.A.X - CascadeNum) OR
      (Min.Y > R.B.Y - R.A.Y - CascadeNum) Then
      TileError Else Begin                             { Check for error }
        Dec(CascadeNum);                               { One less view }
-       ForEach(TCallbackProcParam(@DoCascade));       { Cascade view }
+       ForEach(@DoCascade);                           { Cascade view }
        DrawView;                                      { Redraw now }
      End;
    End;

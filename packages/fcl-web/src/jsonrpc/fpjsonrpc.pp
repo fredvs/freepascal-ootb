@@ -147,7 +147,6 @@ Type
                             jdoRequireClass, // Require class name (as in Ext.Direct)
                             jdoNotifications, // Allow JSON Notifications
                             jdoStrictNotifications // Error if notification returned result. Default is to discard result.
-
                             );
   TJSONRPCDispatchOptions = set of TJSONRPCDispatchOption;
 

@@ -5,7 +5,7 @@
 { This program shoulf not be executed in a root directory }
 { Creates the following directory, and sets it as the     }
 { current directory.                                      }
-{       testdir                                           }
+{    ../testdir                                           }
 
 { %skiptarget=wince }
 
@@ -24,11 +24,12 @@ end;
 
 
 var
- s, old_dir: string;
+ s: string;
 Begin
-   WriteLn('getting current directory...');
-   getdir(0,old_dir);
-   WriteLn(old_dir);
+   Write('changing to parent directory...');
+   chdir('..');
+   test(IOResult, 0);
+   WriteLn('Passed!');
 
    Write('making directory...');
    mkdir('testdir');
@@ -93,9 +94,4 @@ Begin
    WriteLn('getting current directory...');
    getdir(0,s);
    WriteLn(s);
-   if s<>old_dir then
-     begin
-       WriteLn('Invalid current dir: ', s);
-       Halt(2);
-     end;
 end.

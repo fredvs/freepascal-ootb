@@ -132,7 +132,6 @@ end;
 
 var
 	top: boolean = true;
-  keys: integer;
 
 begin 
   videoSetMode(MODE_0_3D);
@@ -171,10 +170,6 @@ begin
   begin
     // wait for capture unit to be ready
     while (REG_DISPCAPCNT^ and DCAP_ENABLE) <> 0 do;
-    
-    scanKeys();
-		keys := keysDown();
-		if (keys and KEY_START) <> 0 then break;
     
     //-------------------------------------------------------
     //	 Switch render targets

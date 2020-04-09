@@ -59,6 +59,7 @@ uses
     type
       { Number of registers used for indexing in tables }
       tregisterindex=0..{$i rspnor.inc}-1;
+      totherregisterset = set of tregisterindex;
 
     const
       { Available Superregisters }
@@ -101,6 +102,7 @@ uses
     type
       { Number of registers used for indexing in tables }
       tregisterindex=0..{$i rsp64nor.inc}-1;
+      totherregisterset = set of tregisterindex;
 
     const
       { Available Superregisters }
@@ -335,9 +337,6 @@ uses
     function inverse_cond(const c: TAsmCond): TAsmCond; {$ifdef USEINLINE}inline;{$endif USEINLINE}
     function conditions_equal(const c1, c2: TAsmCond): boolean; {$ifdef USEINLINE}inline;{$endif USEINLINE}
 
-    { Checks if Subset is a subset of c (e.g. "less than" is a subset of "less than or equal" }
-    function condition_in(const Subset, c: TAsmCond): Boolean;
-
     function  flags_to_cond(const f: TResFlags) : TAsmCond;
     function cgsize2subreg(regtype: tregistertype; s:Tcgsize):Tsubregister;
     function reg_cgsize(const reg: tregister): tcgsize;
@@ -346,7 +345,7 @@ uses
     function findreg_by_number(r:Tregister):tregisterindex;
     function dwarf_reg(r:tregister):shortint;
     function dwarf_reg_no_error(r:tregister):shortint;
-    function eh_return_data_regno(nr: longint): longint;
+
 
 implementation
 
@@ -525,33 +524,6 @@ implementation
       end;
 
 
-    { Checks if Subset is a subset of c (e.g. "less than" is a subset of "less than or equal" }
-    function condition_in(const Subset, c: TAsmCond): Boolean;
-      begin
-        Result := (c = C_None) or conditions_equal(Subset, c);
-
-        { TODO: Can a SparcGEN programmer please update this procedure to
-          detect all subsets? Thanks. [Kit] }
-        if not Result then
-          case Subset of
-            C_A:
-              Result := (c in [C_A,  C_AE]);
-            C_B:
-              Result := (c in [C_B,  C_BE]);
-            C_E:
-              Result := (c in [C_AE, C_BE]);
-            C_FE:
-              Result := (c in [C_FLE,C_FGE]);
-            C_FL:
-              Result := (c in [C_FLE]);
-            C_FG:
-              Result := (c in [C_FGE]);
-            else
-              Result := False;
-          end;
-      end;
-
-
     function dwarf_reg(r:tregister):shortint;
       begin
         result:=regdwarf_table[findreg_by_number(r)];
@@ -563,15 +535,6 @@ implementation
       begin
         result:=regdwarf_table[findreg_by_number(r)];
       end;
-
-    function eh_return_data_regno(nr: longint): longint;
-      begin
-        if (nr>=0) and (nr<2) then
-          result:=nr+24
-        else
-          result:=-1;
-      end;
-
 
     procedure TResFlags.Init(r : TRegister; f : TSparcFlags);
       begin

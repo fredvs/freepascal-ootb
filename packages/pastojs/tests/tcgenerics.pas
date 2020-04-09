@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, fpcunit, testregistry,
-  TCModules, FPPas2Js, PScanner, PasResolveEval;
+  TCModules, FPPas2Js;
 
 type
 
@@ -34,14 +34,9 @@ type
     //Procedure TestGen_Class_ReferGenClass_DelphiFail;
     Procedure TestGen_Class_ClassConstructor;
     // ToDo: rename local const T
-    Procedure TestGen_Class_TypeCastSpecializesWarn;
-    Procedure TestGen_Class_TypeCastSpecializesJSValueNoWarn;
 
     // generic external class
     procedure TestGen_ExtClass_Array;
-    procedure TestGen_ExtClass_GenJSValueAssign;
-    procedure TestGen_ExtClass_AliasMemberType;
-    Procedure TestGen_ExtClass_RTTI;
 
     // statements
     Procedure TestGen_InlineSpec_Constructor;
@@ -61,7 +56,7 @@ type
     procedure TestGenProc_TypeInfo;
     procedure TestGenProc_Infer_Widen;
     procedure TestGenProc_Infer_PassAsArg;
-    // ToDo: FuncName:= instead of Result:=
+    // ToDo: FuncName:=
 
     // generic methods
     procedure TestGenMethod_ObjFPC;
@@ -633,101 +628,6 @@ begin
     '']));
 end;
 
-procedure TTestGenerics.TestGen_Class_TypeCastSpecializesWarn;
-begin
-  StartProgram(false);
-  Add([
-  '{$mode delphi}',
-  'type',
-  '  TObject = class end;',
-  '  TBird<T> = class F: T; end;',
-  '  TBirdWord = TBird<Word>;',
-  '  TBirdChar = TBird<Char>;',
-  'var',
-  '  w: TBirdWord;',
-  '  c: TBirdChar;',
-  'begin',
-  '  w:=TBirdWord(c);',
-  '']);
-  ConvertProgram;
-  CheckSource('TestGen_Class_TypeCastSpecializesWarn',
-    LinesToStr([ // statements
-    'rtl.createClass($mod, "TObject", null, function () {',
-    '  this.$init = function () {',
-    '  };',
-    '  this.$final = function () {',
-    '  };',
-    '});',
-    'rtl.createClass($mod, "TBird$G1", $mod.TObject, function () {',
-    '  this.$init = function () {',
-    '    $mod.TObject.$init.call(this);',
-    '    this.F = 0;',
-    '  };',
-    '});',
-    'rtl.createClass($mod, "TBird$G2", $mod.TObject, function () {',
-    '  this.$init = function () {',
-    '    $mod.TObject.$init.call(this);',
-    '    this.F = "";',
-    '  };',
-    '});',
-    'this.w = null;',
-    'this.c = null;',
-    '']),
-    LinesToStr([ // $mod.$main
-    '$mod.w = $mod.c;',
-    '']));
-  CheckHint(mtWarning,nClassTypesAreNotRelatedXY,'Class types "TBird$G2<Char>" and "TBird$G1<Word>" are not related');
-  CheckResolverUnexpectedHints();
-end;
-
-procedure TTestGenerics.TestGen_Class_TypeCastSpecializesJSValueNoWarn;
-begin
-  StartProgram(false);
-  Add([
-  '{$mode delphi}',
-  'type',
-  '  TObject = class end;',
-  '  TBird<T> = class F: T; end;',
-  '  TBirdWord = TBird<Word>;',
-  '  TBirdAny = TBird<JSValue>;',
-  'var',
-  '  w: TBirdWord;',
-  '  a: TBirdAny;',
-  'begin',
-  '  w:=TBirdWord(a);',
-  '  a:=TBirdAny(w);',
-  '']);
-  ConvertProgram;
-  CheckSource('TestGen_Class_TypeCastSpecializesJSValueNoWarn',
-    LinesToStr([ // statements
-    'rtl.createClass($mod, "TObject", null, function () {',
-    '  this.$init = function () {',
-    '  };',
-    '  this.$final = function () {',
-    '  };',
-    '});',
-    'rtl.createClass($mod, "TBird$G1", $mod.TObject, function () {',
-    '  this.$init = function () {',
-    '    $mod.TObject.$init.call(this);',
-    '    this.F = 0;',
-    '  };',
-    '});',
-    'rtl.createClass($mod, "TBird$G2", $mod.TObject, function () {',
-    '  this.$init = function () {',
-    '    $mod.TObject.$init.call(this);',
-    '    this.F = undefined;',
-    '  };',
-    '});',
-    'this.w = null;',
-    'this.a = null;',
-    '']),
-    LinesToStr([ // $mod.$main
-    '$mod.w = $mod.a;',
-    '$mod.a = $mod.w;',
-    '']));
-  CheckResolverUnexpectedHints();
-end;
-
 procedure TTestGenerics.TestGen_ExtClass_Array;
 begin
   StartProgram(false);
@@ -784,97 +684,6 @@ begin
     '$mod.wa.length = 10;',
     '$mod.wa[11] = $mod.w;',
     '$mod.w = $mod.wa[12];',
-    '']));
-end;
-
-procedure TTestGenerics.TestGen_ExtClass_GenJSValueAssign;
-begin
-  StartProgram(false);
-  Add([
-  '{$mode delphi}',
-  '{$modeswitch externalclass}',
-  'type',
-  '  TExt<T> = class external name ''Ext''',
-  '    F: T;',
-  '  end;',
-  '  TExtWord = TExt<Word>;',
-  '  TExtAny = TExt<JSValue>;',
-  'procedure Run(e: TExtAny);',
-  'begin end;',
-  'var',
-  '  w: TExtWord;',
-  '  a: TExtAny;',
-  'begin',
-  '  a:=w;',
-  '  Run(w);',
-  '']);
-  ConvertProgram;
-  CheckSource('TestGen_ExtClass_GenJSValueAssign',
-    LinesToStr([ // statements
-    'this.Run = function (e) {',
-    '};',
-    'this.w = null;',
-    'this.a = null;',
-    '']),
-    LinesToStr([ // $mod.$main
-    '$mod.a = $mod.w;',
-    '$mod.Run($mod.w);',
-    '']));
-  CheckResolverUnexpectedHints();
-end;
-
-procedure TTestGenerics.TestGen_ExtClass_AliasMemberType;
-begin
-  StartProgram(false);
-  Add([
-  '{$mode objfpc}',
-  '{$modeswitch externalclass}',
-  'type',
-  '  generic TExt<T> = class external name ''Ext''',
-  '  public type TRun = reference to function(a: T): T;',
-  '  end;',
-  '  TExtWord = specialize TExt<word>;',
-  '  TExtWordRun = TExtWord.TRun;',
-  'begin',
-  '']);
-  ConvertProgram;
-  CheckSource('TestGen_ExtClass_AliasMemberType',
-    LinesToStr([ // statements
-    '']),
-    LinesToStr([ // $mod.$main
-    '']));
-end;
-
-procedure TTestGenerics.TestGen_ExtClass_RTTI;
-begin
-  Converter.Options:=Converter.Options-[coNoTypeInfo];
-  StartProgram(false);
-  Add([
-  '{$mode objfpc}',
-  '{$modeswitch externalclass}',
-  'type',
-  '  generic TGJSSET<T> = class external name ''SET''',
-  '    A: T;',
-  '  end;',
-  '  TJSSet = specialize TGJSSET<JSValue>;',
-  '  TJSSetEventProc = reference to procedure(value : JSValue; key: NativeInt; set_: TJSSet);',
-  'var p: Pointer;',
-  'begin',
-  '  p:=typeinfo(TJSSetEventProc);',
-  '']);
-  ConvertProgram;
-  CheckSource('TestGen_ExtClass_RTTI',
-    LinesToStr([ // statements
-    '$mod.$rtti.$ExtClass("TGJSSET$G1", {',
-    '  jsclass: "SET"',
-    '});',
-    '$mod.$rtti.$RefToProcVar("TJSSetEventProc", {',
-    '  procsig: rtl.newTIProcSig([["value", rtl.jsvalue], ["key", rtl.nativeint], ["set_", $mod.$rtti["TGJSSET$G1"]]])',
-    '});',
-    'this.p = null;',
-    '']),
-    LinesToStr([ // $mod.$main
-    '$mod.p = $mod.$rtti["TJSSetEventProc"];',
     '']));
 end;
 

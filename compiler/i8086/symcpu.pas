@@ -541,6 +541,8 @@ implementation
           x86pt_near_fs,
           x86pt_near_gs:
             result:=s16inttype;
+          else
+            internalerror(2016100403);
         end;
       end;
 
@@ -559,6 +561,8 @@ implementation
           x86pt_near_fs,
           x86pt_near_gs:
             result:=u16inttype;
+          else
+            internalerror(2016100403);
         end;
       end;
 
@@ -578,6 +582,8 @@ implementation
           x86pt_near_fs,
           x86pt_near_gs:
             result:=s16inttype;
+          else
+            internalerror(2016100402);
         end;
       end;
 
@@ -596,6 +602,8 @@ implementation
           x86pt_near_fs,
           x86pt_near_gs:
             result:=s16inttype;
+          else
+            internalerror(2016100401);
         end;
       end;
 

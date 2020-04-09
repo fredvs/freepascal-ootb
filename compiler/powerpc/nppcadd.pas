@@ -226,8 +226,6 @@ interface
                 begin
                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
                 end;
-              else
-                internalerror(2019050947);
            end;
         end;
 
@@ -256,8 +254,6 @@ interface
                    cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
                    cg.a_jmp_always(current_asmdata.CurrAsmList,falselabel);
                 end;
-              else
-                internalerror(2019050946);
            end;
         end;
 
@@ -325,10 +321,11 @@ interface
             current_asmdata.getjumplabel(falselabel);
           end;
 
-        load_left_right(cmpop,needoverflowcheck or (nodetype = muln));
+        load_left_right(cmpop,((cs_check_overflow in current_settings.localswitches) and
+            (nodetype in [addn,subn])) or (nodetype = muln));
 
-        if (nodetype<>muln) and
-           (not needoverflowcheck or
+        if (nodetype <> muln) and
+           (not(cs_check_overflow in current_settings.localswitches) or
             not(nodetype in [addn,subn])) then
           begin
             case nodetype of
@@ -630,8 +627,6 @@ interface
                second_addfloat;
                exit;
              end;
-           else
-             ;
          end;
 
          { defaults }
@@ -656,7 +651,9 @@ interface
 
          checkoverflow:=
            (nodetype in [addn,subn,muln]) and
-           needoverflowcheck;
+           (cs_check_overflow in current_settings.localswitches) and
+           (left.resultdef.typ<>pointerdef) and
+           (right.resultdef.typ<>pointerdef);
 
          load_left_right(cmpop, checkoverflow);
 
@@ -730,8 +727,6 @@ interface
                  begin
                    emit_compare(unsigned);
                  end;
-               else
-                 internalerror(2019050945);
              end;
            end
          else
@@ -792,8 +787,6 @@ interface
                       cg.a_call_name(current_asmdata.CurrAsmList,'FPC_OVERFLOW',false);
                       cg.a_label(current_asmdata.CurrAsmList,hl);
                     end;
-                  else
-                    internalerror(2019050944);
                 end;
               end;
            end;

@@ -109,8 +109,6 @@ implementation
            end;
          consume(_END);
          statements_til_end:=cblocknode.create(first);
-         if assigned(first) then
-           statements_til_end.fileinfo:=first.fileinfo;
       end;
 
 
@@ -385,10 +383,7 @@ implementation
                ) and
                (hloopvar.resultdef.typ<>undefineddef)
                then
-               begin
-                 MessagePos(hloopvar.fileinfo,type_e_ordinal_expr_expected);
-                 hloopvar.resultdef:=generrordef;
-               end;
+               MessagePos(hloopvar.fileinfo,type_e_ordinal_expr_expected);
 
              hp:=hloopvar;
              while assigned(hp) and
@@ -507,13 +502,6 @@ implementation
                exclude(loopvarsym.varoptions,vo_is_loop_counter);
 
              result:=cfornode.create(hloopvar,hfrom,hto,hblock,backward);
-
-             { only in tp and mac pascal mode, we care about the value of the loop counter on loop exit
-
-               I am not sure though, if this is the right rule, at least in delphi the loop counter is undefined
-               on loop exit, we assume the same in all FPC modes }
-             if ([m_objfpc,m_fpc,m_delphi]*current_settings.modeswitches)<>[] then
-               Include(tfornode(Result).loopflags,lnf_dont_mind_loopvar_on_exit);
           end;
 
 
@@ -884,7 +872,6 @@ implementation
          t:ttoken;
          unit_found:boolean;
          oldcurrent_exceptblock: integer;
-         filepostry : tfileposinfo;
       begin
          p_default:=nil;
          p_specific:=nil;
@@ -893,7 +880,6 @@ implementation
 
          { read statements to try }
          consume(_TRY);
-         filepostry:=current_filepos;
          first:=nil;
          inc(exceptblockcounter);
          oldcurrent_exceptblock := current_exceptblock;
@@ -925,7 +911,6 @@ implementation
               current_exceptblock := exceptblockcounter;
               p_finally_block:=statements_til_end;
               try_statement:=ctryfinallynode.create(p_try_block,p_finally_block);
-              try_statement.fileinfo:=filepostry;
            end
          else
            begin
@@ -961,7 +946,7 @@ implementation
                                  with "e: Exception" the e is not necessary }
 
                                { support unit.identifier }
-                               unit_found:=try_consume_unitsym_no_specialize(srsym,srsymtable,t,[],objname);
+                               unit_found:=try_consume_unitsym_no_specialize(srsym,srsymtable,t,false,objname);
                                if srsym=nil then
                                  begin
                                    identifier_not_found(orgpattern);
@@ -1230,11 +1215,6 @@ implementation
                  Message(parser_e_no_assembler_in_generic);
                code:=_asm_statement;
              end;
-           _PLUS:
-             begin
-               Message(parser_e_syntax_error);
-               consume(_PLUS);
-             end;
            _EOF :
              Message(scan_f_end_of_file);
          else
@@ -1270,7 +1250,7 @@ implementation
                    if symtablestack.top.symtablelevel<>srsymtable.symtablelevel then
                      begin
                        tlabelsym(srsym).nonlocal:=true;
-                       include(current_procinfo.flags,pi_has_interproclabel);
+                       exclude(current_procinfo.procdef.procoptions,po_inline);
                      end;
                    if tlabelsym(srsym).nonlocal and
                      (current_procinfo.procdef.proctypeoption in [potype_unitinit,potype_unitfinalize]) then

@@ -180,7 +180,6 @@ end;
 
 var
   memUsageTemp: longint;// = $FFFFFFFF;
-  keys: integer;
 
 begin
   randomize;
@@ -227,9 +226,7 @@ begin
 		updateSprites();
 
 		swiWaitForVBlank();
-    scanKeys();
-		keys := keysDown();
-		if (keys and KEY_START) <> 0 then break;
+		
 		//api: updates real oam memory 
 		oamUpdate(oam^);
 
@@ -239,9 +236,9 @@ begin
 
 		consoleClear();
 
-    printf('Memory usage: %li %li%% '#10,  spriteMemoryUsage, 100 * spriteMemoryUsage div (spriteMemSize));
-    printf('Percentage fail: %li%% '#10, oomCount * 100 div allocationCount);
-    printf('Lowest Usage at fail %li %li%% '#10, memUsageTemp, 100 * memUsageTemp div (spriteMemSize));
+    printf('Memory usage: %i %i%% '#10,  spriteMemoryUsage, 100 * spriteMemoryUsage div (spriteMemSize));
+    printf('Percentage fail: %i%% '#10, oomCount * 100 div allocationCount);
+    printf('Lowest Usage at fail %i %i%% '#10, memUsageTemp, 100 * memUsageTemp div (spriteMemSize));
   end;
 end.
 		

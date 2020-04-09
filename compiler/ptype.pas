@@ -359,7 +359,7 @@ implementation
          if checkcurrentrecdef and
             try_parse_structdef_nested_type(def,current_structdef,isforwarddef) then
            exit;
-         if not allowunitsym and not (m_delphi in current_settings.modeswitches) and (idtoken=_SPECIALIZE) then
+         if not allowunitsym and (idtoken=_SPECIALIZE) then
            begin
              consume(_ID);
              is_specialize:=true;
@@ -376,7 +376,7 @@ implementation
            not_a_type:=false;
          { handle unit specification like System.Writeln }
          if allowunitsym then
-           is_unit_specific:=try_consume_unitsym(srsym,srsymtable,t,[cuf_consume_id,cuf_allow_specialize],is_specialize,s)
+           is_unit_specific:=try_consume_unitsym(srsym,srsymtable,t,true,true,is_specialize,s)
          else
            begin
              t:=_ID;
@@ -490,7 +490,7 @@ implementation
 
                _ID:
                  begin
-                   if not (m_delphi in current_settings.modeswitches) and try_to_consume(_SPECIALIZE) then
+                   if try_to_consume(_SPECIALIZE) then
                      begin
                        if ([stoAllowSpecialization,stoAllowTypeDef] * options = []) then
                          begin
@@ -538,13 +538,7 @@ implementation
                 dospecialize:=false;
               end;
           end;
-        { recover from error? }
-        if def.typ=errordef then
-          begin
-            while (token<>_SEMICOLON) and (token<>_RKLAMMER) do
-              consume(token);
-          end
-        else if dospecialize then
+        if dospecialize then
           begin
             if def.typ=forwarddef then
               def:=ttypesym(srsym).typedef;
@@ -683,7 +677,6 @@ implementation
         hadgeneric,
         fields_allowed, is_classdef, classfields, threadvarfields: boolean;
         vdoptions: tvar_dec_options;
-        rtti_attrs_def: trtti_attribute_list;
       begin
         { empty record declaration ? }
         if (token=_SEMICOLON) then
@@ -704,7 +697,6 @@ implementation
         classfields:=false;
         threadvarfields:=false;
         member_blocktype:=bt_general;
-        rtti_attrs_def := nil;
         repeat
           case token of
             _TYPE :
@@ -865,7 +857,7 @@ implementation
                               end;
                           end
                         else if member_blocktype=bt_type then
-                          types_dec(true,hadgeneric, rtti_attrs_def)
+                          types_dec(true,hadgeneric)
                         else if member_blocktype=bt_const then
                           consts_dec(true,true,hadgeneric)
                         else
@@ -877,7 +869,7 @@ implementation
               begin
                 if IsAnonOrLocal then
                   Message(parser_e_no_properties_in_local_anonymous_records);
-                struct_property_dec(is_classdef, rtti_attrs_def);
+                struct_property_dec(is_classdef);
                 fields_allowed:=false;
                 is_classdef:=false;
               end;
@@ -994,7 +986,7 @@ implementation
          if (n<>'') or
             not(target_info.system in systems_jvm) then
            begin
-             recst:=trecordsymtable.create(n,current_settings.packrecords,current_settings.alignment.recordalignmin);
+             recst:=trecordsymtable.create(n,current_settings.packrecords,current_settings.alignment.recordalignmin,current_settings.alignment.maxCrecordalign);
              { can't use recst.realname^ instead of n, because recst.realname is
                nil in case of an empty name }
              current_structdef:=crecorddef.create(n,recst);
@@ -1004,7 +996,7 @@ implementation
              { for the JVM target records always need a name, because they are
                represented by a class }
              recst:=trecordsymtable.create(current_module.realmodulename^+'__fpc_intern_recname_'+tostr(current_module.deflist.count),
-               current_settings.packrecords,current_settings.alignment.recordalignmin);
+               current_settings.packrecords,current_settings.alignment.recordalignmin,current_settings.alignment.maxCrecordalign);
              current_structdef:=crecorddef.create(recst.name^,recst);
            end;
          result:=current_structdef;
@@ -1059,7 +1051,7 @@ implementation
          { don't keep track of procdefs in a separate list, because the
            compiler may add additional procdefs (e.g. property wrappers for
            the jvm backend) }
-         insert_struct_hidden_paras(trecorddef(current_structdef));
+         insert_record_hidden_paras(trecorddef(current_structdef));
          { restore symtable stack }
          symtablestack.pop(recst);
          if trecorddef(current_structdef).is_packed and is_managed_type(current_structdef) then
@@ -1143,8 +1135,6 @@ implementation
                                else
                                  def:=corddef.create(range_to_basetype(lv,hv),lv,hv,true);
                            end;
-                         else
-                           internalerror(2019050527);
                        end;
                      end;
                  end
@@ -1724,11 +1714,6 @@ implementation
                     begin
                       storepos:=current_tokenpos;
                       current_tokenpos:=defpos;
-                      if (l.svalue<low(longint)) or (l.svalue>high(longint)) then
-                        if m_delphi in current_settings.modeswitches then
-                          Message(parser_w_enumeration_out_of_range)
-                        else
-                          Message(parser_e_enumeration_out_of_range);
                       tenumsymtable(aktenumdef.symtable).insert(cenumsym.create(s,aktenumdef,longint(l.svalue)));
                       if not (cs_scopedenums in current_settings.localswitches) then
                         tstoredsymtable(aktenumdef.owner).insert(cenumsym.create(s,aktenumdef,longint(l.svalue)));
@@ -1897,6 +1882,8 @@ implementation
                     def:=object_dec(odt_interfacecorba,name,newsym,genericdef,genericlist,nil,ht_none);
                   it_interfacejava:
                     def:=object_dec(odt_interfacejava,name,newsym,genericdef,genericlist,nil,ht_none);
+                  else
+                    internalerror(2010122612);
                 end;
               end;
             _OBJCPROTOCOL :

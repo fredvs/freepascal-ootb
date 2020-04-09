@@ -20,7 +20,6 @@ begin
     rdInteger               : Result := dtDword;
     rdBinary                : Result := dtBinary;
     rdMultiString           : Result := dtStrings;
-    rdInt64                 : Result := dtQword;
   else
     Raise ERegistryException.CreateFmt(SErrTypeNotSupported,[GetEnumName(TypeInfo(TRegDataType),Ord(RegData))]);
   end;
@@ -32,7 +31,6 @@ begin
   Case DataType of
     dtUnknown: Result:=rdUnknown;
     dtDword  : Result:=rdInteger;
-    dtQword  : Result:=rdInt64;
     dtString : Result:=rdString;
     dtBinary : Result:=rdBinary;
     dtStrings : Result:=rdMultiString;
@@ -223,22 +221,9 @@ end;
 
 function TRegistry.OpenKey(const Key: UnicodeString; CanCreate: Boolean): Boolean;
 
-var
-  S: UnicodeString;
-  P: SizeInt;
 begin
   Result:=TXmlRegistry(FSysData).SetKey(Key,CanCreate);
   FCurrentKey:=1;
-  If Result then begin
-    S:=TXmlRegistry(FSysData).CurrentKey;
-    if (S>'') then begin
-      //S starts with RootKey+'/'
-      P:=Pos('/',S);
-      if (P>0) then
-        System.Delete(S,1,P);
-    end;
-    ChangeKey(FCurrentKey, S);
-  end;
 end;
 
 function TRegistry.OpenKeyReadOnly(const Key: UnicodeString): Boolean;
@@ -279,7 +264,7 @@ end;
 
 procedure TRegistry.ChangeKey(Value: HKey; const Path: UnicodeString);
 begin
-  FCurrentPath:=FixPath(Path);
+
 end;
 
 function TRegistry.GetKeyNames: TUnicodeStringArray;

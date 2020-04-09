@@ -103,15 +103,14 @@ type
     tkMapLike,
     tkRecord,
     tkSetLike,
-    tkOther,
-    tkConstructor
+    tkOther
     );
   TIDLTokens = Set of TIDLToken;
   EWebIDLScanner = class(EParserError);
 
 Const
-  V2Tokens = [tkMixin,tkIncludes,tkMapLike,tkRecord,tkSetLike,tkFrozenArray,tkConstructor];
-  V1Tokens = [tkImplements];
+  V2Tokens = [tkMixin,tkIncludes,tkMapLike,tkRecord,tkSetLike,tkFrozenArray];
+  V1Tokens = [];
   VersionNonTokens : Array[TWebIDLVersion] of TIDLTokens = (V2Tokens,V1Tokens);
 
 Type
@@ -235,8 +234,7 @@ const
   'maplike',
   'record',
   'setlike',
-  'other',
-  'constructor'
+  'other'
   );
 
 Function GetTokenName(aToken : TIDLToken) : String;
@@ -668,7 +666,6 @@ begin
          inc(TokenStr);
          if TokenStr[0]<>'.' then
            Error(SErrInvalidEllipsis);
-         inc(TokenStr);
          FCurTokenString:='...';
          Result:=tkEllipsis;
          end;

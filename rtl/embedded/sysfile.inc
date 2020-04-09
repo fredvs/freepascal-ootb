@@ -107,7 +107,7 @@ begin
 end;
 
 
-function do_isdevice(handle: THandle): boolean;
+function do_isdevice(handle: longint): boolean;
 begin
   result := false;
   if assigned (rtl_do_isdevice) then

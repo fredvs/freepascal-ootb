@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('svgalib');
-    P.ShortName := 'svga';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.OSes := [beos,haiku,linux,freebsd,solaris,netbsd,openbsd,dragonfly];
     P.SourcePath.Add('src');
 

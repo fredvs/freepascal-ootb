@@ -13,11 +13,10 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('users');
-    P.ShortName := 'user';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.3.1';
+    P.Version:='3.2.0-beta';
     P.Author := 'Michael van Canneyt, Marco van de Voort';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';

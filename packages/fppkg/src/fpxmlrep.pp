@@ -122,13 +122,10 @@ Const
   SNodeDescription  = 'description';
   SNodeDependencies = 'dependencies';
   SNodeDependency   = 'dependency';
-  SNodeCategory     = 'category';
-  SNodeSupport      = 'support';
   SNodeOSes         = 'oses';
   SNodeCPUS         = 'cpus';
   SNodeOS           = 'os';
   SNodeCPU          = 'cpu';
-  SNodeKeywords     = 'keywords';
 
   // Mirrors
   SNodeURL          = 'url';
@@ -156,9 +153,9 @@ ResourceString
 
 function TFPXMLHandler.AddTextNode(Const NodeName,NodeContent : String; XML : TXMLDocument; Parent : TDomNode_WithChildren) : TDomElement;
 begin
-  Result:=XML.CreateElement(UTF8Decode(NodeName));
+  Result:=XML.CreateElement(NodeName);
   Try
-    Result.AppendChild(XML.CreateTextNode(UTF8Decode(NodeContent)));
+    Result.AppendChild(XML.CreateTextNode(NodeContent));
     If Assigned(Parent) then
       Parent.AppendChild(Result);
   Except
@@ -182,14 +179,14 @@ end;
 function TFPXMLHandler.FindNextElement(Start: TDomNode; NodeName: String): TDomElement;
 begin
   Result:=GetNextElement(Start);
-  While (Result<>Nil) and (Result.NodeName<>UTF8Decode(NodeName)) do
+  While (Result<>Nil) and (Result.NodeName<>NodeName) do
     Result:=GetNextElement(Result.NextSibling);
 end;
 
 
 procedure TFPXMLHandler.CheckNodeType(E : TDomElement; NodeName : String);
 begin
-  If (E.NodeName<>UTF8Decode(NodeName)) then
+  If (E.NodeName<>NodeName) then
     Raise EXMLPackage.CreateFmt(SErrInvalidXMLDocument,[NodeName,E.NodeName]);
 end;
 
@@ -202,7 +199,7 @@ begin
   While (N<>Nil) and (N.NodeType<>TEXT_NODE) do
     N:=N.NextSibling;
   If (N<>Nil) then
-    Result:=UTF8Encode(N.NodeValue)
+    Result:=N.NodeValue
   else
     Result:='';
 end;
@@ -220,13 +217,13 @@ begin
       Parent:=XML;
     Parent.AppendChild(Result);
     if V.Major > -1 then
-      Result[SAttrMajor]:=UTF8Decode(IntToStr(V.Major));
+      Result[SAttrMajor]:=IntToStr(V.Major);
     if V.Minor > -1 then
-      Result[SAttrMinor]:=UTF8Decode(IntToStr(V.Minor));
+      Result[SAttrMinor]:=IntToStr(V.Minor);
     if V.Micro > -1 then
-    Result[SAttrMicro]:=UTF8Decode(IntToStr(V.Micro));
+    Result[SAttrMicro]:=IntToStr(V.Micro);
     if V.Build > -1 then
-      Result[SAttrBuild]:=UTF8Decode(IntToStr(V.Build));
+      Result[SAttrBuild]:=IntToStr(V.Build);
   except
     Parent.RemoveChild(Result);
     Result.Free;
@@ -245,7 +242,7 @@ begin
       Parent:=XML;
     Parent.AppendChild(Result);
     E:=XML.CreateElement(SNodePackage);
-    E[SAttrPackageName]:=UTF8Decode(D.PackageName);
+    E[SAttrPackageName]:=D.PackageName;
     Result.AppendChild(E);
     if not D.MinVersion.Empty then
       VersionToXML(D.MinVersion,XML,Result);
@@ -294,7 +291,7 @@ begin
     If (O in OSes) then
       begin
         ES:=XML.CreateElement(SNodeOS);
-        ES[SAttrName]:=UTF8Decode(GetEnumName(TypeInfo(TOS),Ord(O)));
+        ES[SAttrName]:=GetEnumName(TypeInfo(TOS),Ord(O));
         Result.AppendChild(ES);
       end;
 end;
@@ -311,7 +308,7 @@ begin
     If (C in CPUs) then
       begin
         ES:=XML.CreateElement(SNodeCPU);
-        ES[SAttrName]:=UTF8Decode(GetEnumName(TypeInfo(TCPU),Ord(C)));
+        ES[SAttrName]:=GetEnumName(TypeInfo(TCPU),Ord(C));
         Result.AppendChild(ES);
       end;
 end;
@@ -324,7 +321,7 @@ begin
     If Not Assigned(Parent) then
       Parent:=XMl;
     Parent.AppendChild(Result);
-    Result[SAttrName]:=UTF8Decode(P.Name);
+    Result[SAttrName]:=P.Name;
     // Version
     VersionToXML(P.Version,XML,Result);
     AddTextNode(SNodeAuthor,P.Author,XML,Result);
@@ -334,8 +331,6 @@ begin
     AddTextNode(SNodeEmail,P.Email,XML,Result);
     AddTextNode(SNodeDescription,P.Description,XML,Result);
     AddTextNode(SNodeLicense,P.License,XML,Result);
-    AddTextNode(SNodeCategory,P.Category,XML,Result);
-    AddTextNode(SNodeSupport,P.Support,XML,Result);
     if P.OSes<>AllOSes then
       OSesToXML(P.OSes,XML,Result);
     if P.CPUs<>AllCPUs then
@@ -548,7 +543,7 @@ procedure TFPXMLRepositoryHandler.DoXMLToVersion(E: TDomElement; V: TFPVersion);
   var
     i: Longint;
   begin
-    if TryStrToInt(UTF8Encode(E[UTF8Decode(AttrName)]), i) then
+    if TryStrToInt(E[AttrName], i) then
       Result := Abs(i)
     else
       Result := -1;
@@ -577,7 +572,7 @@ begin
   While (N<>Nil) do
     begin
       if (N.NodeName=sNodePackage) then
-        D.PackageName:=UTF8Encode(N[SAttrPackageName])
+        D.PackageName:=N[SAttrPackageName]
       else if (N.NodeName=sNodeVersion) then
         DoXMlToVersion(N,D.MinVersion)
       else if (N.NodeName=sNodeOSes) then
@@ -634,7 +629,7 @@ begin
   E:=FindNextElement(N.FirstChild,SNodeOS);
   While (E<>Nil) do
     begin
-    J:=GetEnumValue(TypeInfo(TOS),UTF8Encode(E[SAttrName]));
+    J:=GetEnumValue(TypeInfo(TOS),E[SAttrName]);
     If (J<>-1) then
       Include(Result,TOS(J));
     E:=FindNextElement(E.NextSibling,SNodeOS);
@@ -651,7 +646,7 @@ begin
   E:=FindNextElement(N.FirstChild,SNodeCPU);
   While (E<>Nil) do
     begin
-      J:=GetEnumValue(TypeInfo(TCPU),UTF8Encode(E[SAttrName]));
+      J:=GetEnumValue(TypeInfo(TCPU),E[SAttrName]);
       If (J<>-1) then
         Include(Result,TCPU(J));
       E:=FindNextElement(E.NextSibling,SNodeCPU);
@@ -663,7 +658,7 @@ procedure TFPXMLRepositoryHandler.DoXMLToPackage(E: TDomElement; P: TFPPackage);
 Var
   N : TDomElement;
 begin
-  P.Name:=UTF8Encode(E[sAttrName]);
+  P.Name:=E[sAttrName];
   N:=GetNextElement(E.FirstChild);
   While (N<>Nil) do
     begin
@@ -687,14 +682,8 @@ begin
         P.OSes:=DoXMLToOSes(N)
       else if (N.NodeName=sNodeCPUS) then
         P.CPUs:=DoXMLToCPUs(N)
-      else if (N.NodeName=sNodeSupport) then
-        P.Support:=NodeText(N)
       else if (N.NodeName=sNodeDependencies) then
         DoXMlToDependencies(N,P.Dependencies)
-      else if (N.NodeName=SNodeKeywords) then
-        P.Keywords:=NodeText(N)
-      else if (N.NodeName=sNodeCategory) then
-        P.Category:=NodeText(N)
       else if Not IgnoreUnknownNodes then
         Raise EXMLPackage.CreateFmt(SErrUnknownNode,[N.NodeName,sNodePackage,P.Name]);
       N:=GetNextElement(N.NextSibling);
@@ -898,7 +887,7 @@ procedure TFPXMLMirrorHandler.DoXMLToMirror(E: TDomElement; P: TFPMirror);
 Var
   N : TDomElement;
 begin
-  P.Name:=UTF8Encode(E[sAttrName]);
+  P.Name:=E[sAttrName];
   N:=GetNextElement(E.FirstChild);
   While (N<>Nil) do
     begin

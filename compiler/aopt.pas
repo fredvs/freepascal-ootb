@@ -36,9 +36,6 @@ Unit aopt;
 
     Type
       TAsmOptimizer = class(TAoptObj)
-        { Pooled object that can be used by optimisation procedures to evaluate
-          future register usage without upsetting the current state. }
-        TmpUsedRegs: TAllUsedRegs;
 
         { _AsmL is the PAasmOutpout list that has to be optimized }
         Constructor create(_AsmL: TAsmList); virtual; reintroduce;
@@ -53,9 +50,9 @@ Unit aopt;
         { Builds a table with the locations of the labels in the TAsmList.
           Also fixes some RegDeallocs like "# %eax released; push (%eax)"  }
         Procedure BuildLabelTableAndFixRegAlloc;
+        procedure clear;
       protected
         procedure pass_1;
-        procedure clear;
       End;
       TAsmOptimizerClass = class of TAsmOptimizer;
 
@@ -79,7 +76,6 @@ Unit aopt;
 
     uses
       cutils,
-      cprofile,
       globtype, globals,
       verbose,
       cpubase,
@@ -91,7 +87,6 @@ Unit aopt;
         inherited create(_asml,nil,nil,nil);
         { setup labeltable, always necessary }
         New(LabelInfo);
-        CreateUsedRegs(TmpUsedRegs);
       End;
 
     procedure TAsmOptimizer.FindLoHiLabels;
@@ -148,7 +143,6 @@ Unit aopt;
           p := BlockStart;
           While (P <> BlockEnd) Do
             Begin
-              prefetch(pointer(p.Next)^);
               Case p.typ Of
                 ait_Label:
                   begin
@@ -192,6 +186,7 @@ Unit aopt;
                       End
                     else if tai_regalloc(p).ratype=ra_dealloc then
                       Begin
+                        ExcludeRegFromUsedRegs(tai_regalloc(p).Reg,Regs);
                         hp1 := p;
                         hp2 := nil;
                         While Not(assigned(FindRegAlloc(tai_regalloc(p).Reg, tai(hp1.Next)))) And
@@ -232,13 +227,9 @@ Unit aopt;
                             AsmL.remove(p);
                             p.free;
                             p := hp1;
-                          end
-                        else
-                          ExcludeRegFromUsedRegs(tai_regalloc(p).Reg,Regs);
+                          end;
                       End
                   End
-                else
-                  ;
               End;
               P := tai(p.Next);
               While Assigned(p) and
@@ -327,7 +318,6 @@ Unit aopt;
 
     Destructor TAsmOptimizer.Destroy;
       Begin
-        ReleaseUsedRegs(TmpUsedRegs);
         if assigned(LabelInfo^.LabelTable) then
           Freemem(LabelInfo^.LabelTable);
         Dispose(LabelInfo);
@@ -348,7 +338,6 @@ Unit aopt;
         p:=BlockStart;
         while p<>BlockEnd Do
           begin
-            prefetch(pointer(p.Next)^);
             if SchedulerPass1Cpu(p) then
               continue;
             p:=tai(p.next);
@@ -391,14 +380,12 @@ Unit aopt;
       var
         p : TAsmOptimizer;
       begin
-        ResumeTimer(ct_aopt);
         p:=casmoptimizer.Create(AsmL);
         p.Optimize;
 {$ifdef DEBUG_INSTRUCTIONREGISTERDEPENDENCIES}
         p.Debug_InsertInstrRegisterDependencyInfo;
 {$endif DEBUG_INSTRUCTIONREGISTERDEPENDENCIES}
-        p.free;
-        StopTimer;
+        p.free
       end;
 
 

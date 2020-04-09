@@ -596,7 +596,7 @@ begin
     end;
 end;
 
-Function FileAge (Const FileName : RawByteString): Int64;
+Function FileAge (Const FileName : RawByteString): Longint;
 Var
   Info : Stat;
   SystemFileName: RawByteString;
@@ -1044,7 +1044,7 @@ Begin
 End;
 
 
-Function FileGetDate (Handle : Longint) : Int64;
+Function FileGetDate (Handle : Longint) : Longint;
 
 Var Info : Stat;
 
@@ -1056,7 +1056,7 @@ begin
 end;
 
 
-Function FileSetDate (Handle : Longint;Age : Int64) : Longint;
+Function FileSetDate (Handle,Age : Longint) : Longint;
 
 begin
   // Impossible under Linux from FileHandle !!
@@ -1114,7 +1114,7 @@ begin
   Result:=fpAccess(PChar(SystemFileName),W_OK)<>0;
 end;
 
-Function FileSetDate (Const FileName : RawByteString; Age : Int64) : Longint;
+Function FileSetDate (Const FileName : RawByteString; Age : Longint) : Longint;
 var
   SystemFileName: RawByteString;
   t: TUTimBuf;

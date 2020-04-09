@@ -184,44 +184,50 @@ implementation
         if nf_swapped in flags then
           swapleftright;
 
-        if not (FPUM68K_HAS_HARDWARE in fpu_capabilities[current_settings.fputype]) then
-          internalerror(2015010201);
+        case current_settings.fputype of
+          fpu_68881,fpu_coldfire:
+            begin
+              { initialize the result }
+              location_reset(location,LOC_FPUREGISTER,def_cgsize(resultdef));
 
-        location_reset(location,LOC_FPUREGISTER,def_cgsize(resultdef));
+              { have left in the register, right can be a memory location }
+              if not (current_settings.fputype = fpu_coldfire) and
+                 inlineable_realconstnode(left) then
+                begin
+                  location.register := cg.getfpuregister(current_asmdata.CurrAsmList,location.size);
+                  current_asmdata.CurrAsmList.concat(taicpu.op_realconst_reg(A_FMOVE,tcgsize2opsize[left.location.size],trealconstnode(left).value_real,location.register))
+                end
+              else
+                begin
+                  hlcg.location_force_fpureg(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
 
-        { have left in the register, right can be a memory location }
-        if (FPUM68K_HAS_FLOATIMMEDIATE in fpu_capabilities[current_settings.fputype]) and
-           inlineable_realconstnode(left) then
-          begin
-            location.register := cg.getfpuregister(current_asmdata.CurrAsmList,location.size);
-            current_asmdata.CurrAsmList.concat(taicpu.op_realconst_reg(A_FMOVE,tcgsize2opsize[left.location.size],trealconstnode(left).value_real,location.register))
-          end
-        else
-          begin
-            hlcg.location_force_fpureg(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
+                  location.register := cg.getfpuregister(current_asmdata.CurrAsmList,location.size);
+                  cg.a_loadfpu_reg_reg(current_asmdata.CurrAsmlist,OS_NO,OS_NO,left.location.register,location.register);
+                end;
 
-            location.register := cg.getfpuregister(current_asmdata.CurrAsmList,location.size);
-            cg.a_loadfpu_reg_reg(current_asmdata.CurrAsmlist,OS_NO,OS_NO,left.location.register,location.register);
-          end;
-
-        { emit the actual operation }
-        case right.location.loc of
-          LOC_FPUREGISTER,LOC_CFPUREGISTER:
-              current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(op,fpuregopsize,right.location.register,location.register));
-          LOC_REFERENCE,LOC_CREFERENCE:
-              begin
-                if (FPUM68K_HAS_FLOATIMMEDIATE in fpu_capabilities[current_settings.fputype]) and
-                   inlineable_realconstnode(right) then
-                  current_asmdata.CurrAsmList.concat(taicpu.op_realconst_reg(op,tcgsize2opsize[right.location.size],trealconstnode(right).value_real,location.register))
+              { emit the actual operation }
+              case right.location.loc of
+                LOC_FPUREGISTER,LOC_CFPUREGISTER:
+                    current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(op,fpuregopsize,right.location.register,location.register));
+                LOC_REFERENCE,LOC_CREFERENCE:
+                    begin
+                      if not (current_settings.fputype = fpu_coldfire) and
+                         inlineable_realconstnode(right) then
+                        current_asmdata.CurrAsmList.concat(taicpu.op_realconst_reg(op,tcgsize2opsize[right.location.size],trealconstnode(right).value_real,location.register))
+                      else
+                        begin
+                          href:=right.location.reference;
+                          tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,current_settings.fputype = fpu_coldfire);
+                          current_asmdata.CurrAsmList.concat(taicpu.op_ref_reg(op,tcgsize2opsize[right.location.size],href,location.register));
+                        end;
+                    end
                 else
-                  begin
-                    href:=right.location.reference;
-                    tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,current_settings.fputype = fpu_coldfire);
-                    current_asmdata.CurrAsmList.concat(taicpu.op_ref_reg(op,tcgsize2opsize[right.location.size],href,location.register));
-                  end;
-              end
+                  internalerror(2015021501);
+              end;
+            end;
           else
-            internalerror(2015021501);
+            // softfpu should be handled in pass1, others are not yet supported...
+            internalerror(2015010201);
         end;
       end;
 
@@ -236,66 +242,72 @@ implementation
         if (nf_swapped in flags) then
           swapleftright;
 
-        if not (FPUM68K_HAS_HARDWARE in fpu_capabilities[current_settings.fputype]) then
-          internalerror(2019090601);
+        case current_settings.fputype of
+          fpu_68881,fpu_coldfire:
+            begin
+              location_reset(location,LOC_FLAGS,OS_NO);
+              location.resflags:=getfloatresflags;
 
-        location_reset(location,LOC_FLAGS,OS_NO);
-        location.resflags:=getfloatresflags;
-
-        { emit compare }
-        case right.location.loc of
-          LOC_FPUREGISTER,LOC_CFPUREGISTER:
-              begin
-                //current_asmdata.CurrAsmList.concat(tai_comment.create(strpnew('second_cmpfloat right reg!')));
-                if left.location.loc in [LOC_REFERENCE,LOC_CREFERENCE] then
-                  begin
-                    href:=left.location.reference;
-                    tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,current_settings.fputype = fpu_coldfire);
-                    current_asmdata.CurrAsmList.concat(taicpu.op_ref_reg(A_FCMP,tcgsize2opsize[left.location.size],href,right.location.register));
-                    toggleflag(nf_swapped);
-                    location.resflags:=getfloatresflags;
-                  end
-                else
-                  begin
-                    hlcg.location_force_fpureg(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
-                    current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(A_FCMP,fpuregopsize,right.location.register,left.location.register));
-                  end;
-              end;
-          LOC_REFERENCE,LOC_CREFERENCE:
-              begin
-                { use FTST, if realconst is 0.0, it would be hard to do this in the
-                  optimizer, because we would need to investigate the referenced value... }
-                if (right.nodetype = realconstn) and
-                   (trealconstnode(right).value_real = 0.0) then
-                  begin
-                    if left.location.loc in [LOC_FPUREGISTER,LOC_CFPUREGISTER] then
-                      current_asmdata.CurrAsmList.concat(taicpu.op_reg(A_FTST,fpuregopsize,left.location.register))
-                    else
+              { emit compare }
+              case right.location.loc of
+                LOC_FPUREGISTER,LOC_CFPUREGISTER:
+                    begin
+                      //current_asmdata.CurrAsmList.concat(tai_comment.create(strpnew('second_cmpfloat right reg!')));
                       if left.location.loc in [LOC_REFERENCE,LOC_CREFERENCE] then
                         begin
                           href:=left.location.reference;
-                          tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,false);
-                          current_asmdata.CurrAsmList.concat(taicpu.op_ref(A_FTST,tcgsize2opsize[left.location.size],href))
+                          tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,current_settings.fputype = fpu_coldfire);
+                          current_asmdata.CurrAsmList.concat(taicpu.op_ref_reg(A_FCMP,tcgsize2opsize[left.location.size],href,right.location.register));
+                          toggleflag(nf_swapped);
+                          location.resflags:=getfloatresflags;
                         end
                       else
-                        internalerror(2016051001);
-                  end
+                        begin
+                          hlcg.location_force_fpureg(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
+                          current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(A_FCMP,fpuregopsize,right.location.register,left.location.register));
+                        end;
+                    end;
+                LOC_REFERENCE,LOC_CREFERENCE:
+                    begin
+                      { use FTST, if realconst is 0.0, it would be hard to do this in the
+                        optimizer, because we would need to investigate the referenced value... }
+                      if (right.nodetype = realconstn) and
+                         (trealconstnode(right).value_real = 0.0) then
+                        begin
+                          if left.location.loc in [LOC_FPUREGISTER,LOC_CFPUREGISTER] then
+                            current_asmdata.CurrAsmList.concat(taicpu.op_reg(A_FTST,fpuregopsize,left.location.register))
+                          else
+                            if left.location.loc in [LOC_REFERENCE,LOC_CREFERENCE] then
+                              begin
+                                href:=left.location.reference;
+                                tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,false);
+                                current_asmdata.CurrAsmList.concat(taicpu.op_ref(A_FTST,tcgsize2opsize[left.location.size],href))
+                              end
+                            else
+                              internalerror(2016051001);
+                        end
+                      else
+                        begin
+                          hlcg.location_force_fpureg(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
+                          if not (current_settings.fputype = fpu_coldfire) and
+                             inlineable_realconstnode(right) then
+                            current_asmdata.CurrAsmList.concat(taicpu.op_realconst_reg(A_FCMP,tcgsize2opsize[right.location.size],trealconstnode(right).value_real,left.location.register))
+                          else
+                            begin
+                              href:=right.location.reference;
+                              tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,current_settings.fputype = fpu_coldfire);
+                              current_asmdata.CurrAsmList.concat(taicpu.op_ref_reg(A_FCMP,tcgsize2opsize[right.location.size],href,left.location.register));
+                            end;
+                        end;
+                    end
                 else
-                  begin
-                    hlcg.location_force_fpureg(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
-                    if not (current_settings.fputype = fpu_coldfire) and
-                       inlineable_realconstnode(right) then
-                      current_asmdata.CurrAsmList.concat(taicpu.op_realconst_reg(A_FCMP,tcgsize2opsize[right.location.size],trealconstnode(right).value_real,left.location.register))
-                    else
-                      begin
-                        href:=right.location.reference;
-                        tcg68k(cg).fixref(current_asmdata.CurrAsmList,href,current_settings.fputype = fpu_coldfire);
-                        current_asmdata.CurrAsmList.concat(taicpu.op_ref_reg(A_FCMP,tcgsize2opsize[right.location.size],href,left.location.register));
-                      end;
-                  end;
-              end
+                  internalerror(2015021502);
+              end;
+
+            end;
           else
-            internalerror(2015021502);
+            // softfpu should be handled in pass1, others are not yet supported...
+            internalerror(2015010201);
         end;
       end;
 
@@ -387,7 +399,9 @@ implementation
       begin
         { if we need to handle overflow checking, fall back to the generic cg }
         if (nodetype in [addn,subn,muln]) and
-           needoverflowcheck then
+           (left.resultdef.typ<>pointerdef) and
+           (right.resultdef.typ<>pointerdef) and
+           (cs_check_overflow in current_settings.localswitches) then
           begin
             inherited;
             exit;
@@ -595,7 +609,7 @@ implementation
 
     function t68kaddnode.use_generic_mul64bit: boolean;
     begin
-      result:=needoverflowcheck  or
+      result:=(cs_check_overflow in current_settings.localswitches) or
         (cs_opt_size in current_settings.optimizerswitches) or
         not (CPUM68K_HAS_64BITMUL in cpu_capabilities[current_settings.cputype]);
     end;
@@ -728,8 +742,6 @@ implementation
               cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.falselabel);
             unequaln:
               cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
-            else
-              ;
           end;
         end;
 
@@ -751,8 +763,6 @@ implementation
                 cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
                 cg.a_jmp_always(current_asmdata.CurrAsmList,location.falselabel);
               end;
-            else
-              ;
           end;
         end;
 
@@ -778,8 +788,6 @@ implementation
             case getresflags(true) of
               F_AE: hlab:=location.truelabel;
               F_B:  hlab:=location.falselabel;
-              else
-                ;
             end;
           end;
 

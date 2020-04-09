@@ -16,8 +16,6 @@
 }
 
 type
-  TOSTimestamp = Longint;
-
   FpcRunTimeError = class(JLException)
     errornr: longint;
     constructor create(l: longint);

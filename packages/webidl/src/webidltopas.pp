@@ -252,7 +252,7 @@ function TWebIDLToPas.WriteConst(aConst: TIDLConstDefinition): Boolean;
 
 Const
   ConstTypes : Array[TConstType] of String =
-     ('Double','NativeInt','Boolean','JSValue','JSValue','JSValue','JSValue','String','JSValue','JSValue');
+     ('Double','NativeInt','Boolean','JSValue','JSValue','JSValue','JSValue','String','JSValue');
 Var
   S : String;
 
@@ -452,6 +452,7 @@ Var
 
   var
     I : integer;
+    P : TPasData;
     NOrig,N,N2 : String;
     isDup : Boolean;
     D2 : TIDLDefinition;
@@ -671,7 +672,6 @@ begin
     'long long': TN:=UsePascalType('NativeInt');
     'unsigned short': TN:=UsePascalType('Cardinal');
     'unrestricted float': TN:=UsePascalType('Double');
-    'unrestricted double': TN:=UsePascalType('Double');
     'unsigned long': TN:=UsePascalType('NativeInt');
     'unsigned long long': TN:=UsePascalType('NativeInt');
     'octet': TN:=UsePascalType('Byte');
@@ -1131,34 +1131,21 @@ Var
 
 begin
   Result:=True;
-  if not (foConstructor in aDef.Options) then
-    begin
-    FN:=GetName(aDef);
-    if FN<>aDef.Name then
-      Suff:=Format('; external name ''%s''',[aDef.Name]);
-    RT:=GetTypeName(aDef.ReturnType,False);
-    if (RT='void') then
-      RT:='';
-    end
-  else
-    FN:='New';
+  FN:=GetName(aDef);
+  if FN<>aDef.Name then
+    Suff:=Format('; external name ''%s''',[aDef.Name]);
+  RT:=GetTypeName(aDef.ReturnType,False);
+  if (RT='void') then
+    RT:='';
   Overloads:=GetOverloads(ADef);
   try
-    for I:=0 to aDef.Arguments.Count-1 do
-      if aDef.Argument[i].HasEllipsis then
-        Suff:='; varargs';
     if Overloads.Count>1 then
       Suff:=Suff+'; overload';
     For I:=0 to Overloads.Count-1 do
       begin
       Args:=GetArguments(TIDLDefinitionList(Overloads[i]),False);
       if (RT='') then
-        begin
-        if not (foConstructor in aDef.Options) then
-          AddLn('Procedure %s%s%s;',[FN,Args,Suff])
-        else
-          AddLn('constructor %s%s%s;',[FN,Args,Suff]);
-        end
+        AddLn('Procedure %s%s%s;',[FN,Args,Suff])
       else
         AddLn('function %s%s: %s%s;',[FN,Args,RT,Suff])
       end;
@@ -1194,9 +1181,8 @@ begin
   EnsureSection(csType);
   for D in aList do
     if D is TIDLDictionaryDefinition then
-      if not TIDLDictionaryDefinition(D).IsPartial then
-        if WriteDictionaryDef(DD) then
-          Inc(Result);
+      if WriteDictionaryDef(DD) then
+        Inc(Result);
 end;
 
 function TWebIDLToPas.WriteInterfaceDefs(aList: TIDLDefinitionList): Integer;
@@ -1210,9 +1196,8 @@ begin
   EnsureSection(csType);
   for D in aList do
     if D is TIDLInterfaceDefinition then
-      if not TIDLInterfaceDefinition(D).IsPartial then
-        if WriteInterfaceDef(ID) then
-          Inc(Result);
+      if WriteInterfaceDef(ID) then
+        Inc(Result);
 end;
 
 procedure TWebIDLToPas.Getoptions(L : TStrings);
@@ -1378,6 +1363,7 @@ procedure TWebIDLToPas.ProcessDefinitions;
 begin
   FContext.AppendPartials;
   FContext.AppendIncludes;
+
   AllocatePasNames(FContext.Definitions);
 end;
 

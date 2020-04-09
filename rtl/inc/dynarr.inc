@@ -19,14 +19,7 @@ type
    { don't add new fields, the size is used }
    { to calculate memory requirements       }
    pdynarray = ^tdynarray;
-   { removed packed here as
-     1) both fields have typically the same size (2, 4 or 8 bytes), if this is not the case, packed
-        should be used only for this architecture
-     2) the memory blocks are sufficiently well aligned
-     3) in particular 64 bit CPUs which require natural alignment suffer from
-        the packed as it causes each field access being split in 8 single loads and appropriate shift operations
-   }
-   tdynarray = { packed } record
+   tdynarray = packed record
       refcount : ptrint;
       high : tdynarrayindex;
    end;
@@ -46,28 +39,18 @@ type
 
 {$endif FPC_REQUIRES_PROPER_ALIGNMENT}
    record
-     {$if declared(TRttiDataCommon)}
-     common: TRttiDataCommon;
-     {$endif declared TRttiDataCommon}
-     case TTypeKind of
-       tkArray: (
-         elSize : SizeUInt;
-         {$ifdef VER3_0}
-         elType2 : Pointer;
-         {$else}
-         elType2 : PPointer;
-         {$endif}
-         varType : Longint;
-         {$ifdef VER3_0}
-         elType : Pointer;
-         {$else}
-         elType : PPointer;
-         {$endif}
-       );
-       { include for proper alignment }
-       tkInt64: (
-         dummy : Int64
-       );
+     elSize : SizeUInt;
+     {$ifdef VER3_0}
+     elType2 : Pointer;
+     {$else}
+     elType2 : PPointer;
+     {$endif}
+     varType : Longint;
+     {$ifdef VER3_0}
+     elType : Pointer;
+     {$else}
+     elType : PPointer;
+     {$endif}
    end;
 
 procedure fpc_dynarray_rangecheck(p : pointer;i : tdynarrayindex);[Public,Alias:'FPC_DYNARRAY_RANGECHECK']; compilerproc;

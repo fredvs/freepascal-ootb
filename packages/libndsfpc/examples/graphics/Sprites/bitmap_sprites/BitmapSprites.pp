@@ -21,7 +21,6 @@ type
   end;
 
 var
-  keys: integer;
   sprites: array [0..2] of TMySprite;
   i, angle: integer;
 
@@ -120,10 +119,6 @@ begin
 
     swiWaitForVBlank();
 
-   
-    scanKeys();
-    keys := keysDown();
-    if (keys and KEY_START) <> 0 then break;
     //send the updates to the hardware
     oamUpdate(oamSub);
   end;

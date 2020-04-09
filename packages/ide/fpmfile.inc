@@ -205,7 +205,7 @@ function TIDEApp.SaveAll: boolean;
 
 begin
   SaveCancelled:=false;
-  Desktop^.ForEach(TCallbackProcParam(@SendSave));
+  Desktop^.ForEach(@SendSave);
   SaveAll:=not SaveCancelled;
 end;
 

@@ -372,14 +372,16 @@ Const
 function CallerAddr: Pointer;
 
 Var
-  address: CodePointer;
-  nframes: sizeint;
+  bp,pcaddr : pointer;
+  
 begin
-  nframes:=CaptureBacktrace(2,1,@address);
-  if nframes=1 then
-    result:=address
-  else
-    result:=nil;
+  Result:=Nil;
+  bp:=get_frame;
+  pcaddr:=get_pc_addr;
+  get_caller_stackinfo(bp,pcaddr);
+  if bp<>Nil then
+    get_caller_stackinfo(bp,pcaddr);
+  result:=pcaddr;
 end;
 
 function AddrsToStr(Addrs: Pointer): string;

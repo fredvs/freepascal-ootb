@@ -24,7 +24,6 @@ interface
     - list of args
     - list of env variables  (PM) }
 
-{$define FPC_IS_SYSTEM}
 {$ifndef NO_EXCEPTIONS_IN_SYSTEM}
 {$define EXCEPTIONS_IN_SYSTEM}
 {$endif NO_EXCEPTIONS_IN_SYSTEM}

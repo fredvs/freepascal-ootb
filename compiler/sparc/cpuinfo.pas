@@ -91,8 +91,7 @@ Const
      'SPARCV9'
    );
 
-   fputypestr : array[tfputype] of string[6] = (
-     'NONE',
+   fputypestr : array[tfputype] of string[6] = ('',
      'SOFT',
      'HARD'
    );

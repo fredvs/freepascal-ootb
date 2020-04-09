@@ -197,6 +197,10 @@ Type
 
   {$define SUPPORT_SINGLE}
   {$define SUPPORT_DOUBLE}
+
+  {$ifndef VER2_6}
+  FarPointer = Pointer;
+  {$endif}
 {$endif CPUX86_64}
 
 {$ifdef CPUM68K}
@@ -216,6 +220,8 @@ Type
 
     ValReal = Real;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUM68K}
 
 {$ifdef CPUPOWERPC}
@@ -229,62 +235,70 @@ Type
 
     ValReal = Double;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUPOWERPC}
 
 {$ifdef CPUSPARC}
   {$define DEFAULT_DOUBLE}
 
+  {$define SUPPORT_SINGLE}
+  {$define SUPPORT_DOUBLE}
+
   {$define FPC_INCLUDE_SOFTWARE_SHIFT_INT64}
 
   {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
-
     ValReal = Double;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUSPARC}
 
 {$ifdef CPUSPARC64}
   {$define DEFAULT_DOUBLE}
 
-  {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
+  {$define SUPPORT_SINGLE}
+  {$define SUPPORT_DOUBLE}
 
+  {$ifndef FPUNONE}
     ValReal = Double;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUSPARC64}
 
 {$if defined(CPUMIPS32) or defined(CPUMIPSEL32)}
   {$define DEFAULT_DOUBLE}
 
+  {$define SUPPORT_SINGLE}
+  {$define SUPPORT_DOUBLE}
+
   {$define FPC_INCLUDE_SOFTWARE_SHIFT_INT64}
 
   {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
-
     {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
-
     ValReal = Double;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUMIPS32}
 
 
 {$ifdef CPUARM}
   {$define DEFAULT_DOUBLE}
 
+  {$define SUPPORT_SINGLE}
+  {$define SUPPORT_DOUBLE}
+
   {$define FPC_INCLUDE_SOFTWARE_MOD_DIV}
   {$define FPC_INCLUDE_SOFTWARE_SHIFT_INT64}
+  {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
 
   {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
-
-    {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
-
     ValReal = Real;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUARM}
 
 {$ifdef CPUAVR}
@@ -302,6 +316,8 @@ Type
 
     ValReal = Real;
   {$endif}
+
+  FarPointer = Pointer;
 {$endif CPUAVR}
 
 {$ifdef CPUAARCH64}
@@ -311,61 +327,9 @@ Type
   {$define SUPPORT_DOUBLE}
 
   ValReal = Double;
-{$endif CPUAARCH64}
 
-{$ifdef CPURISCV32}
-  {$define DEFAULT_DOUBLE}
-
-  {$define FPC_INCLUDE_SOFTWARE_MOD_DIV}
-  {$define FPC_INCLUDE_SOFTWARE_MUL}
-  {$define FPC_INCLUDE_SOFTWARE_SHIFT_INT64}
-  {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
-
-  {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
-
-    {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
-
-    ValReal = Double;
-  {$endif}
-{$endif CPURISCV32}
-
-{$ifdef CPURISCV64}
-  {$define DEFAULT_DOUBLE}
-
-  {$define FPC_INCLUDE_SOFTWARE_MOD_DIV}
-  {$define FPC_INCLUDE_SOFTWARE_MUL}
-  {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
-
-  {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
-
-    {$define FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE}
-
-    ValReal = Double;
-  {$endif}
-{$endif CPURISCV64}
-
-{$ifdef CPUXTENSA}
-  {$define DEFAULT_DOUBLE}
-
-  {$define FPC_INCLUDE_SOFTWARE_MOD_DIV}
-  {$define FPC_INCLUDE_SOFTWARE_MUL}
-  {$define FPC_INCLUDE_SOFTWARE_SHIFT_INT64}
-
-  {$ifndef FPUNONE}
-    {$define SUPPORT_SINGLE}
-    {$define SUPPORT_DOUBLE}
-
-    ValReal = Double;
-  {$endif}
-{$endif CPUXTENSA}
-
-{$if not declared(FarPointer)}
   FarPointer = Pointer;
-{$endif}
+{$endif CPUAARCH64}
 
 
 {$ifdef CPU64}
@@ -495,9 +459,7 @@ Type
   TUCS4CharArray      = array[0..$effffff] of UCS4Char;
 {$endif CPU16}
   PUCS4CharArray      = ^TUCS4CharArray;
-{$ifdef FPC_HAS_FEATURE_DYNARRAYS}
   UCS4String          = array of UCS4Char;
-{$endif}
 
 {$ifdef FPC_HAS_CPSTRING}
   UTF8String          = type AnsiString(CP_UTF8);
@@ -852,6 +814,7 @@ procedure WriteBarrier;
 procedure MoveData(srcseg,srcoff,destseg,destoff:Word;n:Word);
 {$endif cpui8086}
 
+
 {****************************************************************************
                           Math Routines
 ****************************************************************************}
@@ -1064,10 +1027,10 @@ function RolQWord(Const AValue : QWord;const Dist : Byte): QWord;{$ifdef SYSTEMI
 {$define FPC_HAS_INTERNAL_SAR_DWORD}
 { $endif defined(cpux86_64) or defined(cpui386) or defined(cpuarm) or defined(cpupowerpc) or defined(cpupowerpc64) or defined(cpumips) or defined(cpumipsel)}
 
-{$if defined(cpux86_64) or defined(cpupowerpc64) or defined(cpuaarch64) or defined(cpuriscv64)}
+{$if defined(cpux86_64) or defined(cpupowerpc64) or defined(cpuaarch64)}
 {$define FPC_HAS_INTERNAL_SAR_QWORD}
 {$define FPC_HAS_INTERNAL_SAR_ASSIGN_QWORD}
-{$endif defined(cpux86_64) or defined(cpupowerpc64) or defined(cpuaarch64) or defined(cpuriscv64)}
+{$endif defined(cpux86_64) or defined(cpupowerpc64) or defined(cpuaarch64)}
 
 {$endif FPC_HAS_INTERNAL_SAR}
 
@@ -1582,12 +1545,10 @@ Procedure Halt;{$ifdef SYSTEMINLINE}inline;{$endif}noreturn;
 Procedure SysInitExceptions;
 {$endif FPC_HAS_FEATURE_EXCEPTIONS}
 {$ifdef FPC_HAS_FEATURE_CONSOLEIO}
-
-{$if not(defined(EMBEDDED)) and not(defined(FREERTOS))}
+{$ifndef EMBEDDED}
 procedure SysInitStdIO;
 procedure SysFlushStdIO;
-{$endif not(defined(EMBEDDED)) and not(defined(FREERTOS))}
-
+{$endif EMBEDDED}
 {$endif FPC_HAS_FEATURE_CONSOLEIO}
 {$ifndef FPUNONE}
 Procedure SysResetFPU;
@@ -1655,7 +1616,9 @@ const
                        Object Pascal support
 *****************************************************************************}
 
+{$ifdef FPC_HAS_FEATURE_CLASSES}
 {$i objpash.inc}
+{$endif FPC_HAS_FEATURE_CLASSES}
 
 {*****************************************************************************
                            Variant support
