@@ -1232,7 +1232,7 @@ implementation
                     s:=copy(s,length(target_info.sharedlibprefix)+1,255);
                   i:=Pos(target_info.sharedlibext,S);
                   if i>0 then
-                   Delete(S,i,255);
+                   Insert(':',s,1);   // needed for the linker
                   Add('-l'+s);
                 end;
                Add(')');

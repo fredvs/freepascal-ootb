@@ -216,7 +216,7 @@ begin
           S:=SharedLibFiles.GetFirst;
           i:=Pos(target_info.sharedlibext,S);
           if i>0 then
-            Delete(S,i,255);
+            Insert(':',s,1);   // needed for the linker
           Add('-l'+s);
         end;
        { when we have -static for the linker the we also need libgcc }
