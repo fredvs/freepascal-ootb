@@ -3345,15 +3345,15 @@ begin
      2 - configpath
      3 - compiler path
   }
-  if not FileExists(fn) then
+  if not FileExists(fn) then // current dir
    begin
 {$ifdef Unix}
      hs:=GetEnvironmentVariable('HOME');
-     if (hs<>'') and CfgFileExists(FixPath(hs,false)+'.'+fn) then
+     if (hs<>'') and CfgFileExists(FixPath(hs,false)+'.'+fn) then //
       foundfn:=FixPath(hs,false)+'.'+fn
      else
 {$endif}
-      if CfgFileExists(configpath+fn) then
+      if CfgFileExists(configpath+fn) then // configpath
        foundfn:=configpath+fn
      else
 {$ifdef WINDOWS}
@@ -3373,6 +3373,9 @@ begin
        foundfn:='/etc/'+fn
      else
 {$endif}
+      if CfgFileExists(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn) then
+       foundfn:=IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn
+      else      
       check_configfile:=false;
    end;
 end;
