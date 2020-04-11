@@ -992,12 +992,15 @@ end;
         end;
      end;
 
-
     procedure TSearchPathList.AddPath(s:TCmdStr;addfirst:boolean);
       begin
-        AddLibraryPath('',s,AddFirst);
+      if system.copy(s,1,2) = './' then
+        begin
+         s := AnsiString(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0))) + 
+         system.copy(s,3,length(s)-2));
+        end;
+      AddLibraryPath('',s,AddFirst);
       end;
-
 
    procedure TSearchPathList.AddLibraryPath(const sysroot: TCmdStr; s:TCmdStr;addfirst:boolean);
      var

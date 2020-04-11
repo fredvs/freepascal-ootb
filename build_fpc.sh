@@ -8,6 +8,6 @@ TARGET=x86_64-linux
 # COMPILER=/usr/lib/fpc/3.0.4/ppc386
 
 
-make clean
+# make clean
 make all FPC=$COMPILER OPT="-Fl/usr/local/lib" 
 make FPC=$COMPILER install INSTALL_PREFIX=/usr/
