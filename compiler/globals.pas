@@ -903,12 +903,12 @@ implementation
          i: integer;
        begin
          { Replace some macros }
-         Replace(s,'$FPCPATH',AnsiString(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))));
          Replace(s,'$FPCVERSION',version_string);
          Replace(s,'$FPCFULLVERSION',full_version_string);
          Replace(s,'$FPCDATE',date_string);
          Replace(s,'$FPCCPU',target_cpu_string);
          Replace(s,'$FPCOS',target_os_string);
+         Replace(s,'$FPCBINDIR',exepath);
          if (tf_use_8_3 in Source_Info.Flags) or
             (tf_use_8_3 in Target_Info.Flags) then
            Replace(s,'$FPCTARGET',target_os_string)
