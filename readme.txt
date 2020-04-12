@@ -10,12 +10,12 @@ This without the need to install dev package.
 
 Also you may place the fpc.cfg file in the same directory as the compiler, it will be loaded.
 
-Added a new macro: $FPCPATH means root directory of the compiler.
+Added a new macro: $FPCTARGET means root directory of the compiler.
 
-In your fpc.cfg file is allowed -Fu$FPCPATH/thedirectory.
+In your fpc.cfg file is allowed -Fu$FPCTARGET/thedirectory.
 
 Example:
 
--Fu$FPCPATH/units/$fpctarget
--Fu$FPCPATH/units/$fpctarget/*
--Fu$FPCPATH/units/$fpctarget/rtl
+-Fu$FPCTARGET/units/$fpctarget
+-Fu$FPCTARGET/units/$fpctarget/*
+-Fu$FPCTARGET/units/$fpctarget/rtl
