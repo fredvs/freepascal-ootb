@@ -11,6 +11,7 @@ This without the need to install dev package.
 Also you may place the fpc.cfg file in the same directory as the compiler, it will be loaded.
 
 Added a new macro: $FPCBINDIR means root directory of the compiler.
+[EDIT] That macro was added in commit 44697 12/04/20 of fpc trunk.
 
 In your fpc.cfg file is allowed -Fu$FPCBINDIR/thedirectory.
 
