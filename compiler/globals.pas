@@ -903,6 +903,7 @@ implementation
          i: integer;
        begin
          { Replace some macros }
+         Replace(s,'$FPCPATH',AnsiString(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))));
          Replace(s,'$FPCVERSION',version_string);
          Replace(s,'$FPCFULLVERSION',full_version_string);
          Replace(s,'$FPCDATE',date_string);
