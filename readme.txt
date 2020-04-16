@@ -22,3 +22,9 @@ Example:
 -Fu$FPCBINDIR/units/$fpctarget
 -Fu$FPCBINDIR/units/$fpctarget/*
 -Fu$FPCBINDIR/units/$fpctarget/rtl
+
+There is binary release for Windows 64/32 bit, Linux 64/32 bit and Rasbian ARM Rpi/
+https://github.com/fredvs/freepascal-ootb/releases
+
+Have lot of fun!
+
