@@ -24,6 +24,7 @@ Example:
 -Fu$FPCBINDIR/units/$fpctarget/rtl
 
 There is binary release for Windows 64/32 bit, Linux 64/32 bit and Rasbian ARM Rpi:
+[EDIT] Added release for FreeBSD 64 bit.
 https://github.com/fredvs/freepascal-ootb/releases
 
 Have lot of fun!
