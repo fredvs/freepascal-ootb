@@ -53,7 +53,7 @@ uses
   ctypes, x, xlib;
 
 const
-  libXfixes = 'Xfixes';
+  libXfixes = 'libXfixes.so.3';
 
 {$I xfixeswire.inc}
 

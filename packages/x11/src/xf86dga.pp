@@ -13,7 +13,7 @@ Uses
   ctypes, x, xlib;
 
 Const
-  libXxf86dga='Xxf86dga';
+  libXxf86dga='libXxf86dga.so.1';
 
 Type
   cfloat = Single;

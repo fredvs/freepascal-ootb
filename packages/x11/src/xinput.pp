@@ -57,7 +57,7 @@ uses
   ctypes, x, xlib, xi;
 
 const
-  libXi = 'Xi';
+  libXi = 'libXi.so.6';
 
   _deviceKeyPress         = 0;
   _deviceKeyRelease       = 1;

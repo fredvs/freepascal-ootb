@@ -34,7 +34,7 @@ uses
   ctypes, x, xlib;
 
 const
-  libXrandr = 'Xrandr';
+  libXrandr = 'libXrandr.so.2';
 
 {$I randr.inc}
 
