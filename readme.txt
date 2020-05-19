@@ -3,7 +3,7 @@ This is a fork from Free Pascal:
 
 Free Pascal OOTB works out of the box.
 
-The branch master branch is based on fpc 3.2.0 R1.
+The branch master is based on fpc 3.2.0 R1.
 https://svn.freepascal.org/svn/fpc/branches/fixes_3_2
 
 The branch fpc_3.0.5 is based on fpc 3.0.5
