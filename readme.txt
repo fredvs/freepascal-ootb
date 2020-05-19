@@ -6,7 +6,7 @@ Free Pascal OOTB works out of the box.
 The branch master branch is based on fpc 3.2.0 R1.
 https://svn.freepascal.org/svn/fpc/branches/fixes_3_2
 
-The fpc_3.0.5 branch is based on fpc 3.0.5
+The branch fpc_3.0.5 is based on fpc 3.0.5
 https://svn.freepascal.org/svn/fpc/branches/fixes_3_0
 
 With the possibility for Unix users to link libraries with so numbers, like libX11.so.6.
