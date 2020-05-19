@@ -27,18 +27,16 @@ type
 
   { TTestDecorator }
 
-  TTestDecorator = class(TTest{Assert})
+  TTestDecorator = class(TAssert)
   private
     FTest: TTest;
-  protected
     function GetTestName: string; override;
     function GetTestSuiteName: string; override;
     procedure SetTestSuiteName(const aName: string); override;
+  protected
     function GetEnableIgnores: boolean; override;
     procedure SetEnableIgnores(Value: boolean); override;
   public
-    Function GetChildTest(AIndex: Integer): TTest; override;
-    Function GetChildTestCount : Integer; override;
     function CountTestCases: integer; override;
     constructor Create(aTest: TTest); reintroduce; overload;
     destructor Destroy; override;
@@ -84,16 +82,6 @@ end;
 procedure TTestDecorator.SetEnableIgnores(Value: boolean);
 begin
   FTest.EnableIgnores := Value;
-end;
-
-function TTestDecorator.GetChildTest(AIndex: Integer): TTest;
-begin
-  Result:=FTest.GetChildTest(AIndex);
-end;
-
-function TTestDecorator.GetChildTestCount: Integer;
-begin
-  Result:=FTest.GetChildTestCount;
 end;
 
 function TTestDecorator.CountTestCases: integer;

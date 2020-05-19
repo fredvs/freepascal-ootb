@@ -33,7 +33,7 @@ implementation
        aasmbase,
        SysUtils,
        cutils,cfileutl,cclasses,
-       globtype,globals,systems,verbose,cscript,fmodule,i_nds,link;
+       globtype,globals,systems,verbose,script,fmodule,i_nds,link;
 
     type
        TlinkerNDS=class(texternallinker)
@@ -187,7 +187,7 @@ begin
        begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-         Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
        end
       else

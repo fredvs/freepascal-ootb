@@ -100,8 +100,6 @@ interface
           tableoptions : tsymtableoptions;
           { level of symtable, used for nested procedures }
           symtablelevel : byte;
-          { do not allow to add new definitions, can be extended to symbols probably }
-          sealed : boolean;
           symtabletype  : TSymtabletype;
           constructor Create(const s:string);
           destructor  destroy;override;
@@ -283,10 +281,6 @@ implementation
         while assigned(st.defowner) do
           begin
             st:=st.defowner.owner;
-            { this can happen for specializations of routines that are not yet
-              owned cause they might be thrown away again }
-            if not assigned(st) then
-              break;
             { the flag is already set, so by definition it is set in the
               owning symtables as well }
             if option in st.tableoptions then

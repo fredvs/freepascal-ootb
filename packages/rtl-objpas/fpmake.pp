@@ -14,23 +14,19 @@ Const
 
 //  AllUnixOSes  = [Linux,FreeBSD,NetBSD,OpenBSD,Darwin,QNX,BeOS,Solaris,Haiku,iphonesim,aix,Android];
 //    unixlikes-[beos];
-//
-  StrUtilsOSes  = [atari,emx,gba,go32v2,msdos,nds,netware,wince,nativent,os2,netwlibc,symbian,watcom,wii,win32,win64]+UnixLikes+AllAmigaLikeOSes;
-  VarUtilsOSes  = [atari,emx,gba,go32v2,msdos,nds,netware,wince,nativent,os2,netwlibc,symbian,watcom,wii,win32,win64]+UnixLikes+AllAmigaLikeOSes;
-  ConvUtilsOSes = [nativent,netware,netwlibc,win32,win64,wince]+AllAmigaLikeOSes+UnixLikes-[BeOS];
-  ConvUtilOSes  = [atari,Go32v2,msdos,os2,emx];
-  DateUtilsOSes = [gba,nativent,nds,netware,netwlibc,symbian,wii,win32,win64,wince]+UnixLikes+AllAmigaLikeOSes;
-  DateUtilOSes  = [atari,Go32v2,msdos,os2,emx];
+// 
+  StrUtilsOSes  = [amiga,aros,emx,gba,go32v2,msdos,nds,netware,wince,morphos,nativent,os2,netwlibc,win32,win64]+UnixLikes;
+  VarUtilsOSes  = [amiga,aros,emx,gba,go32v2,msdos,nds,netware,wince,morphos,nativent,os2,netwlibc,watcom,wii,win32,win64]+UnixLikes;
+  ConvUtilsOSes = [nativent,netware,netwlibc,win32,win64,wince]+UnixLikes-[BeOS];
+  ConvUtilOSes  = [Go32v2,msdos,os2,emx];
+  DateUtilsOSes = [Amiga,aros,gba,morphos,nativent,nds,netware,netwlibc,wii,win32,win64,wince]+UnixLikes;
+  DateUtilOSes  = [Go32v2,msdos,os2,emx];
   StdConvsOSes  = [NativeNT,Win32,win64,os2,msdos,go32v2]+UnixLikes-[BeOS];
-  FmtBCDOSes    = [atari,emx,gba,go32v2,msdos,nativent,nds,netware,netwlibc,os2,symbian,watcom,wii,win32,win64,wince]+UnixLikes+AllAmigaLikeOSes;
-  VariantsOSes  = [atari,emx,gba,go32v2,msdos,nativent,nds,netware,netwlibc,os2,symbian,watcom,wii,win32,win64,wince]+UnixLikes+AllAmigaLikeOSes;
-  RttiOSes      = [atari,emx,gba,go32v2,msdos,nativent,nds,netware,netwlibc,os2,watcom,wii,win32,win64,wince]+UnixLikes+AllAmigaLikeOSes;
-  UItypesOSes   = [atari,emx,gba,go32v2,msdos,nativent,nds,netware,netwlibc,os2,watcom,wii,win32,win64,wince]+UnixLikes+AllAmigaLikeOSes-ConvUtilOSes;
+  FmtBCDOSes    = [amiga,aros,emx,gba,go32v2,morphos,msdos,nativent,nds,netware,netwlibc,os2,win32,win64,wince]+UnixLikes;
+  VariantsOSes  = [amiga,aros,emx,gba,go32v2,morphos,msdos,nativent,nds,netware,netwlibc,os2,watcom,wii,win32,win64,wince]+UnixLikes;
   AllTargetsObjPas = DateUtilsOses +DateUtilOSes+
                   VarutilsOses + ConvutilsOSes + ConvutilOSes + StdConvsOSes+
-                  FmtBCDOSes + StrUtilsOSes + UITypesOSes;
-
-  CommonSrcOSes = [atari,emx,gba,go32v2,msdos,nds,netware,wince,nativent,os2,netwlibc,symbian,watcom,wii]+UnixLikes+AllAmigaLikeOSes;
+		  FmtBCDOSes + StrUtilsOSes;
 
 Var
   P : TPackage;
@@ -42,32 +38,29 @@ begin
     P:=AddPackage('rtl-objpas');
     P.ShortName:='rtlo';
     P.Directory:=ADirectory;
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
     P.OSes:=AllTargetsObjPas;
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
-
     P.Email := '';
     P.Description := 'Rtl-objpas, aux. Delphi compat units';
     P.NeedLibC:= false;
 
     P.SourcePath.Add('src/inc');
     P.SourcePath.Add('src/$(OS)');
+    P.SourcePath.Add('src/darwin',[iphonesim]);
+    P.SourcePath.Add('src/unix',AllUnixOSes);
+    P.SourcePath.Add('src/os2commn',[os2,emx]);
     P.SourcePath.Add('src/win',[win32,win64]);
-    P.SourcePath.Add('src/common',CommonSrcOSes);
 
     P.IncludePath.Add('src/inc');
+    P.IncludePath.Add('src/unix',AllUnixOSes);
     P.IncludePath.Add('src/$(OS)');
-    P.IncludePath.Add('src/$(CPU)');
-    P.IncludePath.Add('src/common',CommonSrcOSes);
+    P.IncludePath.Add('src/darwin',[iphonesim]);
 
-    T:=P.Targets.AddUnit('system.uitypes.pp',uitypesOses);
 
     T:=P.Targets.AddUnit('strutils.pp',StrUtilsOses);
-      T.ResourceStrings:=true;
     T:=P.Targets.AddUnit('widestrutils.pp',StrUtilsOses-ConvUtilOSes);
     T:=P.Targets.AddUnit('varutils.pp',VarUtilsOses);
     with T.Dependencies do
@@ -125,13 +118,6 @@ begin
        AddUnit('varutils');
        // AddUnit('Math');
      end;
-
-    T:=P.Targets.AddUnit('rtti.pp',RttiOSes);
-    with T.Dependencies do
-       begin
-         AddInclude('invoke.inc',[x86_64],RttiOSes);
-       end;
-    T.ResourceStrings:=true;
   end
 end;
  

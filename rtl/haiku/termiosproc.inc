@@ -26,7 +26,7 @@ end;
 
 Function TCSetAttr(fd:cint;OptAct:cint;const tios:TermIOS):cint;
 var
-  nr: TIOCtlRequest;
+  nr:cint;
 begin
   case OptAct of
    TCSANOW   : nr:=TIOCSETA;

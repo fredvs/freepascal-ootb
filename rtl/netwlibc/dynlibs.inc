@@ -13,50 +13,50 @@
 
  **********************************************************************}
 
+{$ifdef readinterface}
+
+{ ---------------------------------------------------------------------
+    Interface declarations
+  ---------------------------------------------------------------------}
+
+Type
+  TLibHandle = Pointer;
+
+Const
+  NilHandle = Nil;
+// these are for easier crossplatform construction of dll names in dynloading libs.
+  SharedSuffix = 'so';
+
+{$else}
+
+{ ---------------------------------------------------------------------
+    Implementation section
+  ---------------------------------------------------------------------}
+
 uses libc;
 
-Function SysLoadLibraryA(const Name : RawByteString) : TLibHandle;
+Function DoLoadLibrary(const Name : RawByteString) : TLibHandle;
 
 begin
   Result:=dlopen(PAnsiChar(Name),RTLD_LAZY);
 end;
 
-Function SysLoadLibraryU(const Name: UnicodeString) : TLibHandle;
-
-begin
-  Result:=SysLoadLibraryA(ToSingleByteFileSystemEncodedFileName(Name));
-end;
-
-Function SysGetProcedureAddress(Lib : TLibHandle; const ProcName : AnsiString) : Pointer;
+Function GetProcedureAddress(Lib : TLibHandle; const ProcName : AnsiString) : Pointer;
 
 begin
   Result:=dlsym(lib,pchar(ProcName));
 end;
 
-Function SysUnloadLibrary(Lib : TLibHandle) : Boolean;
+Function UnloadLibrary(Lib : TLibHandle) : Boolean;
 
 begin
   Result:=dlClose(Lib)=0;
 end;
 
-Function SysGetLoadErrorStr: string;
+Function GetLoadErrorStr: string;
 
 begin  
   Result:='';
 end;
-
-const
-  SysDynLibsManager: TDynLibsManager = (
-    LoadLibraryU: @SysLoadLibraryU;
-    LoadLibraryA: @SysLoadLibraryA;
-    GetProcAddress: @SysGetProcedureAddress;
-    GetProcAddressOrdinal: Nil;
-    UnloadLibrary: @SysUnloadLibrary;
-    GetLoadErrorStr: @SysGetLoadErrorStr;
-  );
-
-procedure InitDynLibs;
-begin
-  SetDynLibsManager(SysDynLibsManager);
-end;
+{$endif}
 

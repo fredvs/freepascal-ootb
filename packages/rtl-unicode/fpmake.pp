@@ -7,15 +7,15 @@ uses fpmkunit;
 
 procedure add_rtl_unicode(const ADirectory: string);
 
-Const
+Const 
   // All Unices have full set of KVM+Crt in unix/ except QNX which is not
   // in workable state atm.
   UnixLikes = AllUnixOSes -[QNX];
 
-  CollationOSes = [aix,android,darwin,emx,freebsd,go32v2,linux,netbsd,openbsd,os2,solaris,win32,win64,dragonfly,haiku];
+  CollationOSes = [aix,android,darwin,emx,freebsd,linux,netbsd,openbsd,os2,solaris,win32,win64,dragonfly,haiku];
   CPUnits       = [aix,amiga,aros,android,beos,darwin,iphonesim,emx,gba,nds,freebsd,go32v2,haiku,linux,morphos,netbsd,netware,netwlibc,openbsd,os2,solaris,watcom,wii,win32,win64,wince,dragonfly];
   utf8bidiOSes  = [netware,netwlibc];
-  freebidiOSes  = [netware,netwlibc];
+  freebidiOSes  = [netware,netwlibc];  
 
 // Character not movable because fpwidestring depends on it.
 //  CharacterOSes = [android,darwin,freebsd,linux,netbsd,openbsd,solaris,win32,win64,dragonfly];
@@ -34,14 +34,11 @@ begin
     P:=AddPackage('rtl-unicode');
     P.ShortName:='rtlu';
     P.Directory:=ADirectory;
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
     P.OSes:=unicodeAllOSes;
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
-
     P.Email := '';
     P.Description := 'Rtl-unicode, misc Unicode units';
     P.NeedLibC:= false;
@@ -79,10 +76,6 @@ begin
         AddInclude('collation_ru_le.inc');
       end;
     T:=P.Targets.AddImplicitUnit('collation_de.pas',CollationOSes);
-    with T.Dependencies do
-      begin
-        AddInclude('collation_de_le.inc');
-      end;
     T:=P.Targets.AddImplicitUnit('collation_ja.pas',CollationOSes);
     with T.Dependencies do
       begin
@@ -140,7 +133,7 @@ begin
 //    T:=P.Targets.AddUnit('character.pp',characterOSes);
   end
 end;
-
+ 
 {$ifndef ALLPACKAGES}
 begin
   add_rtl_unicode('');

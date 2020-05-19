@@ -1,8 +1,7 @@
 {$mode objfpc}{$h+}
 program Drawing;
 
-uses 
-  {$IFDEF UNIX}cwstring,{$ENDIF} classes, sysutils, FPImage, FPCanvas, FPImgCanv, FPWritePNG, FPReadPNG;
+uses cwstring,classes, sysutils, FPImage, FPCanvas, FPImgCanv, FPWritePNG, FPReadPNG;
 
 const
   MyColor : TFPColor = (Red: $7FFF; Green: $0000; Blue: $FFFF; Alpha: alphaOpaque);

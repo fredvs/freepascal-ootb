@@ -1,4 +1,4 @@
-{ %OPT=-O-1 -Oonoregvar }
+{ %OPT=-O-1 -Ooasmcse -Oonoregvar }
 
 function B(n, k: Integer):Integer;
 var

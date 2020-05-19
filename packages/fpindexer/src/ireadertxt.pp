@@ -28,7 +28,7 @@ type
   TIReaderTXT = class(TCustomFileReader)
   private
   protected
-    function AllowedToken(token: UTF8String): boolean; override;
+    function AllowedToken(token: string): boolean; override;
   public
     procedure LoadFromStream(FileStream: TStream); override;
   end;
@@ -37,14 +37,14 @@ implementation
 
 { TIReaderTXT }
 
-function TIReaderTXT.AllowedToken(token: UTF8String): boolean;
+function TIReaderTXT.AllowedToken(token: string): boolean;
 begin
   Result := inherited AllowedToken(token) and (Length(token) > 1);
 end;
 
 procedure TIReaderTXT.LoadFromStream(FileStream: TStream);
 var
-  token: UTF8String;
+  token: string;
   p: TSearchWordData;
 begin
   inherited LoadFromStream(FileStream);

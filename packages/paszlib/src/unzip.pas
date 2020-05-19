@@ -1,7 +1,5 @@
 unit Unzip;
 
-{$mode tp}
-
 { ----------------------------------------------------------------- }
 { unzip.c -- IO on .zip files using zlib
    Version 0.15 beta, Mar 19th, 1998,
@@ -36,7 +34,7 @@ uses
 const
   UNZ_OK    = (0);
   UNZ_END_OF_LIST_OF_FILE = (-100);
-   UNZ_ERRNO = (Z_ERRNO);
+  UNZ_ERRNO = (Z_ERRNO);
   UNZ_EOF   = (0);
   UNZ_PARAMERROR = (-102);
   UNZ_BADZIPFILE = (-103);
@@ -263,7 +261,7 @@ type
     stream_initialised: boolean;     { flag set if stream structure is initialised}
 
     offset_local_extrafield: longint;   { offset of the local extra field }
-    size_local_extrafield:   smallint;    { size of the local extra field }
+    size_local_extrafield:   integer;    { size of the local extra field }
     pos_local_extrafield:    longint;   { position in the local extra field in read}
 
     crc32:      longint;                { crc32 of all data uncompressed }
@@ -501,17 +499,17 @@ begin
     if fseek(fin, uReadPos, SEEK_SET) <> 0 then
       break;
 
-    if fread(buf, uReadSize, 1, fin) <> 1 then
+    if fread(buf, integer(uReadSize), 1, fin) <> 1 then
       break;
 
-    i := uReadSize - 3;
+    i := longint(uReadSize) - 3;
     while (i > 0) do
     begin
       Dec(i);
       if (buf^[i] = $50) and (buf^[i + 1] = $4b) and    { ENDHEADERMAGIC }
         (buf^[i + 2] = $05) and (buf^[i + 3] = $06) then
       begin
-        uPosFound := uReadPos + i;
+        uPosFound := uReadPos + integer(i);
         break;
       end;
     end;
@@ -784,7 +782,7 @@ begin
       uSizeRead := fileNameBufferSize;
 
     if (file_info.size_filename > 0) and (fileNameBufferSize > 0) then
-      if fread(szFileName, uSizeRead, 1, s^.afile) <> 1 then
+      if fread(szFileName, integer(uSizeRead), 1, s^.afile) <> 1 then
         err := UNZ_ERRNO;
     Dec(lSeek, uSizeRead);
   end;
@@ -803,7 +801,7 @@ begin
         err   := UNZ_ERRNO;
 
     if ((file_info.size_file_extra > 0) and (extraFieldBufferSize > 0)) then
-      if fread(extraField, uSizeRead, 1, s^.afile) <> 1 then
+      if fread(extraField, integer(uSizeRead), 1, s^.afile) <> 1 then
         err := UNZ_ERRNO;
     Inc(lSeek, file_info.size_file_extra - uSizeRead);
   end
@@ -826,7 +824,7 @@ begin
       else
         err   := UNZ_ERRNO;
     if ((file_info.size_file_comment > 0) and (commentBufferSize > 0)) then
-      if fread(szComment, uSizeRead, 1, s^.afile) <> 1 then
+      if fread(szComment, integer(uSizeRead), 1, s^.afile) <> 1 then
         err := UNZ_ERRNO;
     Inc(lSeek, file_info.size_file_comment - uSizeRead);
   end
@@ -989,7 +987,7 @@ end;
   store in *piSizeVar the size of extra info in local header
         (filename and size of extra field data) }
 
-function unzlocal_CheckCurrentFileCoherencyHeader(s: unz_s_ptr; var piSizeVar: longint; var poffset_local_extrafield: longint; var psize_local_extrafield: integer): longint;
+function unzlocal_CheckCurrentFileCoherencyHeader(s: unz_s_ptr; var piSizeVar: integer; var poffset_local_extrafield: longint; var psize_local_extrafield: integer): longint;
 var
   uMagic, uData, uFlags: longint;
   size_filename: longint;
@@ -1087,11 +1085,11 @@ function unzOpenCurrentFile(afile: unzFile): longint; { ZEXPORT }
 var
   err: longint;
   Store: boolean;
-  iSizeVar: longint;
+  iSizeVar: integer;
   s: unz_s_ptr;
   pfile_in_zip_read_info: file_in_zip_read_info_s_ptr;
   offset_local_extrafield: longint;  { offset of the local extra field }
-  size_local_extrafield: smallint;     { size of the local extra field }
+  size_local_extrafield: integer;     { size of the local extra field }
 begin
   err := UNZ_OK;
 
@@ -1172,7 +1170,7 @@ begin
   pfile_in_zip_read_info^.pos_in_zipfile :=
     s^.cur_file_info_internal.offset_curfile + SIZEZIPLOCALHEADER + iSizeVar;
 
-  pfile_in_zip_read_info^.stream.avail_in := 0;
+  pfile_in_zip_read_info^.stream.avail_in := integer(0);
 
 
   s^.pfile_in_zip_read := pfile_in_zip_read_info;
@@ -1193,13 +1191,13 @@ function unzReadCurrentFile(afile: unzFile; buf: pointer; len: cardinal): longin
 
 var
   err:   longint;
-  iRead: Longint;
+  iRead: integer;
   s:     unz_s_ptr;
   pfile_in_zip_read_info: file_in_zip_read_info_s_ptr;
 var
-  uReadThis: longint;
+  uReadThis: integer;
 var
-  uDoCopy, i: longint;
+  uDoCopy, i: integer;
 var
   uTotalOutBefore, uTotalOutAfter: longint;
   bufBefore: pbyte;
@@ -1236,11 +1234,11 @@ begin
 
   pfile_in_zip_read_info^.stream.next_out := pbyte(buf);
 
-  pfile_in_zip_read_info^.stream.avail_out := len;
+  pfile_in_zip_read_info^.stream.avail_out := integer(len);
 
   if (len > pfile_in_zip_read_info^.rest_read_uncompressed) then
     pfile_in_zip_read_info^.stream.avail_out :=
-      pfile_in_zip_read_info^.rest_read_uncompressed;
+      integer(pfile_in_zip_read_info^.rest_read_uncompressed);
 
   while (pfile_in_zip_read_info^.stream.avail_out > 0) do
   begin
@@ -1249,7 +1247,7 @@ begin
     begin
       uReadThis := UNZ_BUFSIZE;
       if (pfile_in_zip_read_info^.rest_read_compressed < uReadThis) then
-        uReadThis := pfile_in_zip_read_info^.rest_read_compressed;
+        uReadThis := integer(pfile_in_zip_read_info^.rest_read_compressed);
       if (uReadThis = 0) then
       begin
         unzReadCurrentFile := UNZ_EOF;
@@ -1274,7 +1272,7 @@ begin
 
       pfile_in_zip_read_info^.stream.next_in  :=
         pbyte(pfile_in_zip_read_info^.read_buffer);
-      pfile_in_zip_read_info^.stream.avail_in := uReadThis;
+      pfile_in_zip_read_info^.stream.avail_in := integer(uReadThis);
     end;
 
     if (pfile_in_zip_read_info^.compression_method = 0) then
@@ -1318,11 +1316,11 @@ begin
       uOutThis := uTotalOutAfter - uTotalOutBefore;
 
       pfile_in_zip_read_info^.crc32 :=
-        crc32(pfile_in_zip_read_info^.crc32, bufBefore, uOutThis);
+        crc32(pfile_in_zip_read_info^.crc32, bufBefore, integer(uOutThis));
 
       Dec(pfile_in_zip_read_info^.rest_read_uncompressed, uOutThis);
 
-      Inc(iRead, uTotalOutAfter - uTotalOutBefore);
+      Inc(iRead, integer(uTotalOutAfter - uTotalOutBefore));
 
       if (err = Z_STREAM_END) then
       begin
@@ -1415,7 +1413,7 @@ function unzGetLocalExtrafield(afile: unzFile; buf: pointer; len: cardinal): lon
 var
   s: unz_s_ptr;
   pfile_in_zip_read_info: file_in_zip_read_info_s_ptr;
-  read_now: longint;
+  read_now: integer;
   size_to_read: longint;
 begin
   if (afile = nil) then
@@ -1443,9 +1441,9 @@ begin
   end;
 
   if (len > size_to_read) then
-    read_now := size_to_read
+    read_now := integer(size_to_read)
   else
-    read_now := len;
+    read_now := integer(len);
 
   if (read_now = 0) then
   begin
@@ -1461,7 +1459,7 @@ begin
     exit;
   end;
 
-  if fread(buf, size_to_read, 1, pfile_in_zip_read_info^.afile) <> 1 then
+  if fread(buf, integer(size_to_read), 1, pfile_in_zip_read_info^.afile) <> 1 then
   begin
     unzGetLocalExtrafield := UNZ_ERRNO;
     exit;
@@ -1545,7 +1543,7 @@ begin
   if (uReadThis > 0) then
   begin
     szComment^ := #0;
-    if fread(szComment, uReadThis, 1, s^.afile) <> 1 then
+    if fread(szComment, integer(uReadThis), 1, s^.afile) <> 1 then
     begin
       unzGetGlobalComment := UNZ_ERRNO;
       exit;

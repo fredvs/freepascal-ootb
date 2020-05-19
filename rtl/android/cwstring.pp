@@ -38,8 +38,6 @@ type
 var
   hlibICU: TLibHandle;
   hlibICUi18n: TLibHandle;
-  LibVer: ansistring;
-
   ucnv_open: function (converterName: PAnsiChar; var pErrorCode: UErrorCode): PUConverter; cdecl;
   ucnv_close: procedure (converter: PUConverter); cdecl;
   ucnv_setSubstChars: procedure (converter: PUConverter; subChars: PAnsiChar; len: byte; var pErrorCode: UErrorCode); cdecl;
@@ -50,14 +48,12 @@ var
   u_strToLower: function (dest: PUnicodeChar; destCapacity: int32_t; src: PUnicodeChar; srcLength: int32_t; locale: PAnsiChar; var pErrorCode: UErrorCode): int32_t; cdecl;
   u_strCompare: function (s1: PUnicodeChar; length1: int32_t; s2: PUnicodeChar; length2: int32_t; codePointOrder: UBool): int32_t; cdecl;
   u_strCaseCompare: function (s1: PUnicodeChar; length1: int32_t; s2: PUnicodeChar; length2: int32_t; options: uint32_t; var pErrorCode: UErrorCode): int32_t; cdecl;
-  u_getDataDirectory: function(): PAnsiChar; cdecl;
-  u_setDataDirectory: procedure(directory: PAnsiChar); cdecl;
-  u_init: procedure(var status: UErrorCode); cdecl;
 
   ucol_open: function(loc: PAnsiChar; var status: UErrorCode): PUCollator; cdecl;
   ucol_close: procedure (coll: PUCollator); cdecl;
   ucol_strcoll: function (coll: PUCollator; source: PUnicodeChar; sourceLength: int32_t; target: PUnicodeChar; targetLength: int32_t): int32_t; cdecl;
 	ucol_setStrength: procedure (coll: PUCollator; strength: int32_t); cdecl;
+  u_errorName: function (code: UErrorCode): PAnsiChar; cdecl;
 
 threadvar
   ThreadDataInited: boolean;
@@ -65,37 +61,16 @@ threadvar
   LastCP: TSystemCodePage;
   DefColl: PUCollator;
 
-function MaskExceptions: dword;
-begin
-{$if defined(cpux86_64) or defined(cpui386)}
-  Result:=GetMXCSR;
-  SetMXCSR(Result or %0000000010000000 {MM_MaskInvalidOp} or %0001000000000000 {MM_MaskPrecision});
-{$else}
-  Result:=0;
-{$endif}
-end;
-
-procedure UnmaskExceptions(oldmask: dword);
-begin
-{$if defined(cpux86_64) or defined(cpui386)}
-  SetMXCSR(oldmask);
-{$endif}
-end;
-
 function OpenConverter(const name: ansistring): PUConverter;
 var
   err: UErrorCode;
-  oldmask: dword;
 begin
-  { ucnv_open() must be called with some SSE exception masked on x86_64-android. }
-  oldmask:=MaskExceptions;
   err:=0;
   Result:=ucnv_open(PAnsiChar(name), err);
   if Result <> nil then begin
     ucnv_setSubstChars(Result, '?', 1, err);
     ucnv_setFallback(Result, True);
   end;
-  UnmaskExceptions(oldmask);
 end;
 
 procedure InitThreadData;
@@ -148,7 +123,7 @@ begin
   conv:=GetConverter(cp);
   if (conv = nil) and not ( (cp = CP_UTF8) or (cp = CP_ACP) ) then begin
     // fallback implementation
-    DefaultUnicode2AnsiMove(source,dest,cp,len);
+    DefaultUnicode2AnsiMove(source,dest,DefaultSystemCodePage,len);
     exit;
   end;
 
@@ -189,7 +164,7 @@ begin
   conv:=GetConverter(cp);
   if (conv = nil) and not ( (cp = CP_UTF8) or (cp = CP_ACP) ) then begin
     // fallback implementation
-    DefaultAnsi2UnicodeMove(source,cp,dest,len);
+    DefaultAnsi2UnicodeMove(source,DefaultSystemCodePage,dest,len);
     exit;
   end;
 
@@ -481,65 +456,54 @@ end;
 
 procedure UnloadICU;
 begin
-  if DefColl <> nil then
-    ucol_close(DefColl);
-  if DefConv <> nil then
-    ucnv_close(DefConv);
-  if LastConv <> nil then
-    ucnv_close(LastConv);
-
-  if LibVer = '_3_8' then
-    exit;  // ICU v3.8 on Android 1.5-2.1 is buggy and can't be unloaded properly
-
-  if hlibICU <> 0 then begin
-    UnloadLibrary(hlibICU);
-    hlibICU:=0;
-  end;
   if hlibICUi18n <> 0 then begin
+    if DefColl <> nil then
+      ucol_close(DefColl);
     UnloadLibrary(hlibICUi18n);
     hlibICUi18n:=0;
   end;
+  if hlibICU <> 0 then begin
+    if DefConv <> nil then
+      ucnv_close(DefConv);
+    if LastConv <> nil then
+      ucnv_close(LastConv);
+    UnloadLibrary(hlibICU);
+    hlibICU:=0;
+  end;
 end;
 
-function GetIcuProc(const Name: AnsiString; out ProcPtr; libId: longint = 0): boolean;
+procedure LoadICU;
 var
-  p: pointer;
-  hLib: TLibHandle;
-begin
-  Result:=False;
-  if libId = 0 then
-    hLib:=hlibICU
-  else
-    hLib:=hlibICUi18n;
-  if hLib = 0 then
-    exit;
-  p:=GetProcedureAddress(hlib, Name + LibVer);
-  if p = nil then
-    exit;
-  pointer(ProcPtr):=p;
-  Result:=True;
-end;
+  LibVer: ansistring;
 
-function LoadICU: boolean;
+  function _GetProc(const Name: AnsiString; out ProcPtr; hLib: TLibHandle = 0): boolean;
+  var
+    p: pointer;
+  begin
+    if hLib = 0 then
+      hLib:=hlibICU;
+    p:=GetProcedureAddress(hlib, Name + LibVer);
+    if p = nil then begin
+      // unload lib on failure
+      UnloadICU;
+      Result:=False;
+    end
+    else begin
+      pointer(ProcPtr):=p;
+      Result:=True;
+    end;
+  end;
+
 const
-  ICUver: array [1..12] of ansistring = ('3_8', '4_2', '44', '46', '48', '50', '51', '53', '55', '56', '58', '60');
+  ICUver: array [1..9] of ansistring = ('3_8', '4_2', '44', '46', '48', '50', '51', '53', '55');
   TestProcName = 'ucnv_open';
 
 var
   i: longint;
   s: ansistring;
-  dir: PAnsiChar;
-  err: UErrorCode;
 begin
-  Result:=False;
-{$ifdef android}
   hlibICU:=LoadLibrary('libicuuc.so');
   hlibICUi18n:=LoadLibrary('libicui18n.so');
-{$else}
-  hlibICU:=LoadLibrary('icuuc40.dll');
-  hlibICUi18n:=LoadLibrary('icuin40.dll');
-  LibVer:='_4_0';
-{$endif android}
   if (hlibICU = 0) or (hlibICUi18n = 0) then begin
     UnloadICU;
     exit;
@@ -571,62 +535,38 @@ begin
     // Trying versionless name
     if GetProcedureAddress(hlibICU, TestProcName) = nil then begin
       // Unable to get ICU version
-      SysLogWrite(ANDROID_LOG_ERROR, 'cwstring: Unable to get ICU version.');
       UnloadICU;
       exit;
     end;
   end;
 
-  if not GetIcuProc('ucnv_open', ucnv_open) then exit;
-  if not GetIcuProc('ucnv_close', ucnv_close) then exit;
-  if not GetIcuProc('ucnv_setSubstChars', ucnv_setSubstChars) then exit;
-  if not GetIcuProc('ucnv_setFallback', ucnv_setFallback) then exit;
-  if not GetIcuProc('ucnv_fromUChars', ucnv_fromUChars) then exit;
-  if not GetIcuProc('ucnv_toUChars', ucnv_toUChars) then exit;
-  if not GetIcuProc('u_strToUpper', u_strToUpper) then exit;
-  if not GetIcuProc('u_strToLower', u_strToLower) then exit;
-  if not GetIcuProc('u_strCompare', u_strCompare) then exit;
-  if not GetIcuProc('u_strCaseCompare', u_strCaseCompare) then exit;
-  if not GetIcuProc('u_getDataDirectory', u_getDataDirectory) then exit;
-  if not GetIcuProc('u_setDataDirectory', u_setDataDirectory) then exit;
-  if not GetIcuProc('u_init', u_init) then exit;
+  if not _GetProc('ucnv_open', ucnv_open) then exit;
+  if not _GetProc('ucnv_close', ucnv_close) then exit;
+  if not _GetProc('ucnv_setSubstChars', ucnv_setSubstChars) then exit;
+  if not _GetProc('ucnv_setFallback', ucnv_setFallback) then exit;
+  if not _GetProc('ucnv_fromUChars', ucnv_fromUChars) then exit;
+  if not _GetProc('ucnv_toUChars', ucnv_toUChars) then exit;
+  if not _GetProc('u_strToUpper', u_strToUpper) then exit;
+  if not _GetProc('u_strToLower', u_strToLower) then exit;
+  if not _GetProc('u_strCompare', u_strCompare) then exit;
+  if not _GetProc('u_strCaseCompare', u_strCaseCompare) then exit;
 
-  if not GetIcuProc('ucol_open', ucol_open, 1) then exit;
-  if not GetIcuProc('ucol_close', ucol_close, 1) then exit;
-  if not GetIcuProc('ucol_strcoll', ucol_strcoll, 1) then exit;
-  if not GetIcuProc('ucol_setStrength', ucol_setStrength, 1) then exit;
+  if not _GetProc('u_errorName', u_errorName) then exit;
 
-  // Checking if ICU data dir is set
-  dir:=u_getDataDirectory();
-  if (dir = nil) or (dir^ = #0) then
-    u_setDataDirectory('/system/usr/icu');
-
-  err:=0;
-  u_init(err);
-
-  Result:=True;
+  if not _GetProc('ucol_open', ucol_open, hlibICUi18n) then exit;
+  if not _GetProc('ucol_close', ucol_close, hlibICUi18n) then exit;
+  if not _GetProc('ucol_strcoll', ucol_strcoll, hlibICUi18n) then exit;
+  if not _GetProc('ucol_setStrength', ucol_setStrength, hlibICUi18n) then exit;
 end;
 
-var
-  oldm: TUnicodeStringManager;
-{$ifdef android}
-  SysGetIcuProc: pointer; external name 'ANDROID_GET_ICU_PROC';
-{$endif android}
-
 initialization
-  GetUnicodeStringManager(oldm);
   DefaultSystemCodePage:=GetStandardCodePage(scpAnsi);
   DefaultUnicodeCodePage:=CP_UTF16;
-  if LoadICU then begin
-    SetCWideStringManager;
-    {$ifdef android}
-    SysGetIcuProc:=@GetIcuProc;
-    SetStdIOCodePages;
-    {$endif android}
-  end;
+  LoadICU;
+  SetCWideStringManager;
+  SetStdIOCodePages;
 
 finalization
-  SetUnicodeStringManager(oldm);
   UnloadICU;
 
 end.

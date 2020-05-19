@@ -7,7 +7,7 @@ unit uw0701d;
 uses erroru;
 
 var
-   startmem : sizeuint;
+   startmem : sizeint;
 
 initialization
    startmem:=0;

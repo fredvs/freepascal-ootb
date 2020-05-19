@@ -16,7 +16,6 @@ uses
   pkgoptions,
   pkgdownload,
   pkgrepos,
-  pkgFppkg,
   fpxmlrep,
   fprepos;
 
@@ -25,184 +24,166 @@ type
 
   TCommandAddConfig = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandUpdate }
 
   TCommandUpdate = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandListPackages }
 
   TCommandListPackages = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandScanPackages }
 
   TCommandScanPackages = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandDownload }
 
   TCommandDownload = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandUnzip }
 
   TCommandUnzip = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandCompile }
 
   TCommandCompile = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandBuild }
 
   TCommandBuild = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandInstall }
 
   TCommandInstall = Class(TPackagehandler)
-  protected
-    function ForceInstall: Boolean; virtual;
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
-
-  { TCommandInstallForced }
-
-  TCommandInstallForced = Class(TCommandInstall)
-  protected
-    function ForceInstall: Boolean; override;
-  end;
-
 
   { TCommandUnInstall }
 
   TCommandUnInstall = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandClean }
 
   TCommandClean = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandArchive }
 
   TCommandArchive = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandInstallDependencies }
 
   TCommandInstallDependencies = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandFixBroken }
 
   TCommandFixBroken = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandListSettings }
 
   TCommandListSettings = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
   { TCommandInfo }
 
   TCommandInfo = Class(TPackagehandler)
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
 var
   DependenciesDepth: integer;
 
-{ TCommandInstallForced }
-
-function TCommandInstallForced.ForceInstall: Boolean;
-begin
-  Result := True;
-end;
-
 { TCommandInfo }
 
-function TCommandInfo.Execute: Boolean;
+procedure TCommandInfo.Execute;
 var
   P : TFPPackage;
   S : string;
   I : Integer;
 begin
-  Result := True;
   if PackageName='' then
     Error(SErrNoPackageSpecified);
-  P:=PackageManager.PackageByName(PackageName, pkgpkAvailable);
+  P:=AvailableRepository.PackageByName(PackageName);
 
-  log(llProgress,SLogPackageInfoName,[P.Name]);
+  log(llProgres,SLogPackageInfoName,[P.Name]);
   S := P.Email;
   if S <> '' then
     S := '<' + S +'>';
-  log(llProgress,SLogPackageInfoAuthor,[P.Author, S]);
-  log(llProgress,SLogPackageInfoVersion,[P.Version.AsString]);
-  log(llProgress,SLogPackageInfoCategory,[P.Category]);
-  log(llProgress,SLogPackageInfoWebsite,[P.HomepageURL]);
-  log(llProgress,SLogPackageInfoLicense,[P.License]);
+  log(llProgres,SLogPackageInfoAuthor,[P.Author, S]);
+  log(llProgres,SLogPackageInfoVersion,[P.Version.AsString]);
+  log(llProgres,SLogPackageInfoCategory,[P.Category]);
+  log(llProgres,SLogPackageInfoWebsite,[P.HomepageURL]);
+  log(llProgres,SLogPackageInfoLicense,[P.License]);
 
-  log(llProgress,SLogPackageInfoOSes,[OSesToString(P.OSes)]);
-  log(llProgress,SLogPackageInfoCPUs,[CPUSToString(P.CPUs)]);
+  log(llProgres,SLogPackageInfoOSes,[OSesToString(P.OSes)]);
+  log(llProgres,SLogPackageInfoCPUs,[CPUSToString(P.CPUs)]);
 
-  log(llProgress,SLogPackageInfoDescription1);
-  log(llProgress,SLogPackageInfoDescription2,[P.Description]);
+  log(llProgres,SLogPackageInfoDescription1);
+  log(llProgres,SLogPackageInfoDescription2,[P.Description]);
 
   if P.Dependencies.Count>0 then
     begin
-      log(llProgress,SLogPackageInfoDependencies1,[]);
+      log(llProgres,SLogPackageInfoDependencies1,[]);
       for I := 0 to P.Dependencies.Count-1 do
         begin
           if not P.Dependencies[I].MinVersion.Empty then
             S := '('+P.Dependencies[I].MinVersion.AsString+')'
           else
             S := '';
-          log(llProgress,SLogPackageInfoDependencies2,[P.Dependencies[I].PackageName,S]);
+          log(llProgres,SLogPackageInfoDependencies2,[P.Dependencies[I].PackageName,S]);
         end;
     end;
 end;
 
 { TCommandUnInstall }
 
-function TCommandUnInstall.Execute: Boolean;
+procedure TCommandUnInstall.Execute;
 var
   AvailP: TFPPackage;
+  APackage: TFPPackage;
 begin
-  Result := False;
   if PackageName<>'' then
     begin
       if (PackageName=CmdLinePackageName) then
@@ -211,31 +192,40 @@ begin
         end
       else if (PackageName<>CurrentDirPackageName) then
         begin
-          AvailP:=PackageManager.FindPackage(PackageName, pkgpkAvailable);
-          if Assigned(AvailP) then
+          AvailP:=AvailableRepository.FindPackage(PackageName);
+          if not assigned(AvailP) then
             begin
-              if AvailP.PackagesStructure.UnzipBeforeUse then
-                ExecuteAction(PackageName,'unzip');
+              APackage := InstalledRepository.FindPackage(PackageName);
+              if assigned(APackage) and (APackage.SourcePath<>'') then
+                begin
+                  AvailP := AvailableRepository.AddPackage(PackageName);
+                  AvailP.Assign(APackage);
+                  // The package won't be recompiled, but should be handled as such.
+                  AvailP.RecompileBroken:=true;
+                end
+              else
+                begin
+                  // The package is not available locally, download and unzip it.
+                  ExecuteAction(PackageName,'unzip');
+                end;
             end;
         end;
     end;
-  Result := ExecuteAction(PackageName,'fpmakeuninstall');
+  ExecuteAction(PackageName,'fpmakeuninstall');
 end;
 
 { TCommandListSettings }
 
-function TCommandListSettings.Execute: Boolean;
+procedure TCommandListSettings.Execute;
 begin
-  Result := True;
-  PackageManager.Options.LogValues(llProgress);
-  PackageManager.CompilerOptions.LogValues(llProgress,'');
-  PackageManager.FPMakeCompilerOptions.LogValues(llProgress,'fpmake-building ');
+  GlobalOptions.LogValues(llProgres);
+  CompilerOptions.LogValues(llProgres,'');
+  FPMakeCompilerOptions.LogValues(llProgres,'fpmake-building ');
 end;
 
 
-function TCommandAddConfig.Execute: Boolean;
+procedure TCommandAddConfig.Execute;
 begin
-  Result := False;
 {
   Log(llInfo,SLogGeneratingCompilerConfig,[S]);
   Options.InitCompilerDefaults(Args[2]);
@@ -244,79 +234,68 @@ begin
 end;
 
 
-function TCommandUpdate.Execute: Boolean;
+procedure TCommandUpdate.Execute;
 var
   PackagesURL :  String;
 begin
-  Result := True;
   // Download and load mirrors.xml
   // This can be skipped when a custom RemoteRepository is configured
-  if (PackageManager.Options.GlobalSection.RemoteMirrorsURL<>'') and
-     (PackageManager.Options.GlobalSection.RemoteRepository='auto') then
+  if (GlobalOptions.RemoteMirrorsURL<>'') and
+     (GlobalOptions.RemoteRepository='auto') then
     begin
-      Log(llCommands,SLogDownloading,[PackageManager.Options.GlobalSection.RemoteMirrorsURL,PackageManager.Options.GlobalSection.LocalMirrorsFile]);
-      Result := DownloadFile(PackageManager.Options.GlobalSection.RemoteMirrorsURL,PackageManager.Options.GlobalSection.LocalMirrorsFile, PackageManager);
-      PackageManager.LoadLocalAvailableMirrors;
+      Log(llCommands,SLogDownloading,[GlobalOptions.RemoteMirrorsURL,GlobalOptions.LocalMirrorsFile]);
+      DownloadFile(GlobalOptions.RemoteMirrorsURL,GlobalOptions.LocalMirrorsFile);
+      LoadLocalAvailableMirrors;
     end;
   // Download packages.xml
-  PackagesURL:=PackageManager.GetRemoteRepositoryURL(PackagesFileName);
-  Log(llCommands,SLogDownloading,[PackagesURL,PackageManager.Options.GlobalSection.LocalPackagesFile]);
-  Result := Result and DownloadFile(PackagesURL,PackageManager.Options.GlobalSection.LocalPackagesFile,PackageManager);
+  PackagesURL:=GetRemoteRepositoryURL(PackagesFileName);
+  Log(llCommands,SLogDownloading,[PackagesURL,GlobalOptions.LocalPackagesFile]);
+  DownloadFile(PackagesURL,GlobalOptions.LocalPackagesFile);
   // Read the repository again
-  PackageManager.ScanAvailablePackages;
+  LoadLocalAvailableRepository;
   // no need to log errors again
-  PackageManager.ScanPackages;
+  FindInstalledPackages(CompilerOptions,False);
 end;
 
 
-function TCommandListPackages.Execute: Boolean;
+procedure TCommandListPackages.Execute;
 begin
-  Result := True;
-  ListPackages(PackageManager.Options.CommandLineSection.ShowLocation);
+  ListPackages(GlobalOptions.ShowLocation);
 end;
 
 
-function TCommandScanPackages.Execute: Boolean;
+procedure TCommandScanPackages.Execute;
 begin
-  Result := True;
   { nothing, already handled in fppkg.pp as special case
     before the local fppkg directory is processed }
 end;
 
 
-function TCommandDownload.Execute: Boolean;
+procedure TCommandDownload.Execute;
 var
   P : TFPPackage;
 begin
-  Result := False;
   if PackageName='' then
     Error(SErrNoPackageSpecified);
-  P:=PackageManager.PackageByName(PackageName, pkgpkAvailable);
-  if not FileExists(PackageManager.PackageLocalArchive(P)) then
-    Result := ExecuteAction(PackageName,'downloadpackage')
-  else
-    Result := True;
+  P:=AvailableRepository.PackageByName(PackageName);
+  if not FileExists(PackageLocalArchive(P)) then
+    ExecuteAction(PackageName,'downloadpackage');
 end;
 
 
-function TCommandUnzip.Execute: Boolean;
+procedure TCommandUnzip.Execute;
 Var
   BuildDir : string;
   ArchiveFile : String;
   P : TFPPackage;
 begin
-  Result := False;
   if PackageName='' then
-    begin
-      Error(SErrNoPackageSpecified);
-      Exit;
-    end;
-  P:=PackageManager.PackageByName(PackageName, pkgpkAvailable);
-  BuildDir:=PackageManager.PackageBuildPath(P);
-  ArchiveFile:=PackageManager.PackageLocalArchive(P);
+    Error(SErrNoPackageSpecified);
+  P:=AvailableRepository.PackageByName(PackageName);
+  BuildDir:=PackageBuildPath(P);
+  ArchiveFile:=PackageLocalArchive(P);
   if not FileExists(ArchiveFile) then
-    if not ExecuteAction(PackageName,'downloadpackage') then
-      Exit;
+    ExecuteAction(PackageName,'downloadpackage');
   { Create builddir, remove it first if needed }
   if DirectoryExists(BuildDir) then
     DeleteDir(BuildDir);
@@ -326,215 +305,180 @@ begin
   With TUnZipper.Create do
     try
       Log(llCommands,SLogUnzippping,[ArchiveFile]);
-      OutputPath:=PackageManager.PackageBuildPath(P);
+      OutputPath:=PackageBuildPath(P);
       UnZipAllFiles(ArchiveFile);
-      Result := True;
     Finally
       Free;
     end;
 end;
 
 
-function TCommandCompile.Execute: Boolean;
+procedure TCommandCompile.Execute;
 begin
   if PackageName<>'' then
     begin
       // For local files we need the information inside the zip to get the
       // dependencies
-      if (PackageName=CmdLinePackageName) or (PackageName=URLPackageName) then
+      if (PackageName=CmdLinePackageName) then
         begin
-          if not ExecuteAction(PackageName,'unzip') then
-            Exit;
-          if not ExecuteAction(PackageName,'installdependencies') then
-            Exit;
+          ExecuteAction(PackageName,'unzip');
+          ExecuteAction(PackageName,'installdependencies');
         end
       else
         if (PackageName=CurrentDirPackageName) then
           begin
-            if not ExecuteAction(PackageName,'installdependencies') then
-              Exit;
+            ExecuteAction(PackageName,'installdependencies');
           end
       else
         begin
-          if not ExecuteAction(PackageName,'installdependencies') then
-            Exit;
-          if not ExecuteAction(PackageName,'unzip') then
-            Exit;
+          ExecuteAction(PackageName,'installdependencies');
+          ExecuteAction(PackageName,'unzip');
         end;
     end;
-  Result := ExecuteAction(PackageName,'fpmakecompile');
+  ExecuteAction(PackageName,'fpmakecompile');
 end;
 
 
-function TCommandBuild.Execute: Boolean;
+procedure TCommandBuild.Execute;
 var
   P: TFPPackage;
 begin
-  Result := False;
   if PackageName<>'' then
     begin
       // For local files we need the information inside the zip to get the
       // dependencies
-      if (PackageName=CmdLinePackageName) or (PackageName=URLPackageName) then
+      if (PackageName=CmdLinePackageName) then
         begin
-          if not ExecuteAction(PackageName,'unzip') then
-            Exit;
-          if not ExecuteAction(PackageName,'installdependencies') then
-            Exit;
+          ExecuteAction(PackageName,'unzip');
+          ExecuteAction(PackageName,'installdependencies');
         end
       else
         if (PackageName=CurrentDirPackageName) then
           begin
-            if not ExecuteAction(PackageName,'installdependencies') then
-              Exit;
+            ExecuteAction(PackageName,'installdependencies');
           end
       else
         begin
-          P:=PackageManager.FindPackage(PackageName, pkgpkAvailable);
-          if not Assigned(P) then
-            begin
-              Error(Format(SErrPackageNotAvailable, [PackageName]));
-              Exit;
-            end;
-
-          if P.PackagesStructure.UnzipBeforeUse then
-            if not ExecuteAction(PackageName,'unzip') then
-              Exit;
-          if not ExecuteAction(PackageName,'installdependencies') then
-            Exit;
+          ExecuteAction(PackageName,'installdependencies');
+          // Check if the package is not installed but being recompiled because of changed
+          // dependencies while the original source is still available.
+          P := AvailableRepository.FindPackage(PackageName);
+          if not (assigned(P) and P.RecompileBroken and (P.SourcePath<>'')) then
+            // The package is not available locally, download and unzip it.
+            ExecuteAction(PackageName,'unzip');
         end;
     end;
-  Result := ExecuteAction(PackageName,'fpmakebuild');
+  ExecuteAction(PackageName,'fpmakebuild');
 end;
 
-function TCommandInstall.ForceInstall: Boolean;
-begin
-  Result := False;
-end;
 
-function TCommandInstall.Execute: Boolean;
+procedure TCommandInstall.Execute;
 
 var
   S : String;
   P   : TFPPackage;
-  InstallRepo: TFPRepository;
 
-  function GetFpmFilename(APackage: TFPPackage): string;
-  var
-    ConfFile: string;
+  function GetUnitConfigFilename: string;
   begin
-    Result := '';
-    if Assigned(InstallRepo.DefaultPackagesStructure) then
+    if P.RecompileBroken then
       begin
-        ConfFile := InstallRepo.DefaultPackagesStructure.GetConfigFileForPackage(APackage);
-        if not FileExistsLog(ConfFile) then
-          begin
-            // If there is no fpm-file, search for an (obsolete, pre-2.7.x)
-            // fpunits.cfg-file
-            ConfFile := IncludeTrailingPathDelimiter(Result)+APackage.Name+PathDelim+UnitConfigFileName;
-            if FileExistsLog(ConfFile) then
-              Result := ConfFile;
-          end
+        // If the package is recompiled, the installation-location is dependent on where
+        // the package was installed originally.
+        if P.InstalledLocally then
+          Result:=CompilerOptions.LocalUnitDir
         else
-          Result := ConfFile;
+          Result:=CompilerOptions.GlobalUnitDir;
+        // Setting RecompileBroken to false is in a strict sense not needed. But it is better
+        // to clean this temporary flag, to avoid problems with changes in the future
+        P.RecompileBroken := false;
+        AvailableRepository.FindPackage(P.Name).RecompileBroken:=false;
+      end
+    else
+      begin
+        if (IsSuperUser or GlobalOptions.InstallGlobal) then
+          Result:=CompilerOptions.GlobalUnitDir
+        else
+          Result:=CompilerOptions.LocalUnitDir;
       end;
+    Result:=IncludeTrailingPathDelimiter(Result)+S+PathDelim+UnitConfigFileName;
   end;
+
+  function GetFpmFilename: string;
+  begin
+    if P.RecompileBroken then
+      begin
+        // If the package is recompiled, the installation-location is dependent on where
+        // the package was installed originally.
+        if P.InstalledLocally then
+          Result:=CompilerOptions.LocalInstallDir
+        else
+          Result:=CompilerOptions.GlobalInstallDir;
+        // Setting RecompileBroken to false is in a strict sense not needed. But it is better
+        // to clean this temporary flag, to avoid problems with changes in the future
+        P.RecompileBroken := false;
+        AvailableRepository.FindPackage(P.Name).RecompileBroken:=false;
+      end
+    else
+      begin
+        if (IsSuperUser or GlobalOptions.InstallGlobal) then
+          Result:=CompilerOptions.GlobalInstallDir
+        else
+          Result:=CompilerOptions.LocalInstallDir;
+      end;
+    Result:=IncludeTrailingPathDelimiter(Result)+'fpmkinst'+PathDelim+CompilerOptions.CompilerTarget+PathDelim+s+FpmkExt;
+  end;
+
 
 var
   UFN : String;
-  AvailPackage: TFPPackage;
 begin
   if PackageName<>'' then
     begin
-      Result := False;
-      if not ExecuteAction(PackageName,'build') then
-        Exit;
-
-      AvailPackage := PackageManager.DetermineSourcePackage(PackageName);
-      InstallRepo := PackageManager.GetInstallRepository(AvailPackage);   // AvailPackage can be nil! currentdir - fixbroken ||  embweb - install-req
-      case InstallRepo.DefaultPackagesStructure.IsInstallationNeeded(AvailPackage) of
-        fpinInstallationNeeded:
-          begin
-            if Assigned(AvailPackage) then
-              S := AvailPackage.GetDebugName
-            else
-              S := PackageName;
-            log(llDebug,SDbgPackageInstallRequired,[S, InstallRepo.RepositoryName]);
-            if not ExecuteAction(PackageName,'fpmakeinstall') then
-              Exit;
-          end;
-        fpinInstallationImpossible:
-          begin
-            Error(SErrInstallationImpossible,[PackageName, InstallRepo.RepositoryName]);
-            Exit;
-          end
-        else if ForceInstall then
-          begin
-            log(llDebug,SDbgForcePackageInstall,[PackageName]);
-            if not ExecuteAction(PackageName,'fpmakeinstall') then
-              Exit;
-          end;
-      end;
-
-      if (PackageName=CmdLinePackageName) or (PackageName=CurrentDirPackageName) or
-         (PackageName=URLPackageName) then
+      ExecuteAction(PackageName,'build');
+      ExecuteAction(PackageName,'fpmakeinstall');
+      if (PackageName=CmdLinePackageName) or (PackageName=CurrentDirPackageName) then
         begin
           // Load package name from manifest
           if not FileExists(ManifestFileName) then
-            if not ExecuteAction(PackageName,'fpmakemanifest') then
-              Exit;
+            ExecuteAction(PackageName,'fpmakemanifest');
           P:=LoadManifestFromFile(ManifestFileName);
           S:=P.Name;
           FreeAndNil(P);
         end
       else
         S:=PackageName;
+      P:=InstalledRepository.FindPackage(S);
+      if not assigned(P) then
+        P:=InstalledRepository.AddPackage(S);
 
-      if Assigned(InstallRepo) then
-        begin
-          P := InstallRepo.FindPackage(S);
-          if not Assigned(P) then
-            P := InstallRepo.AddPackage(S);
-          if Assigned(P) then
-            begin
-              UFN:=GetFpmFilename(P);
-              if UFN<>'' then
-                begin
-                  P.LoadUnitConfigFromFile(UFN);
-                  if P.IsFPMakeAddIn then
-                    AddFPMakeAddIn(P);
-                end;
-            end;
-        end;
-      Result := True;
+      UFN:=GetFpmFilename;
+      // If there is no fpm-file, search for an (obsolete, pre-2.7.x)
+      // fpunits.cfg-file
+      if not FileExists(ufn) then
+        UFN:=GetUnitConfigFilename;
+
+      P.LoadUnitConfigFromFile(UFN);
+      if P.IsFPMakeAddIn then
+        AddFPMakeAddIn(P);
     end
   else
-    Result := ExecuteAction(PackageName,'fpmakeinstall');
+    ExecuteAction(PackageName,'fpmakeinstall');
 end;
 
 
-function TCommandClean.Execute: Boolean;
+procedure TCommandClean.Execute;
 begin
-  Result := ExecuteAction(PackageName,'fpmakeclean');
+  ExecuteAction(PackageName,'fpmakeclean');
 end;
 
 
-function TCommandArchive.Execute: Boolean;
+procedure TCommandArchive.Execute;
 begin
-  Result := ExecuteAction(PackageName,'fpmakearchive');
+  ExecuteAction(PackageName,'fpmakearchive');
 end;
 
 
-function TCommandInstallDependencies.Execute: Boolean;
-
-  function PackageVersionStr(APackage: TFPPackage): string;
-  begin
-    if Assigned(APackage) then
-      Result := APackage.Version.AsString
-    else
-      Result := 'N/A';
-  end;
-
+procedure TCommandInstallDependencies.Execute;
 var
   i : Integer;
   MissingDependency,
@@ -546,16 +490,13 @@ var
   ManifestPackages : TFPPackages;
   X : TFPXMLRepositoryHandler;
   L : TStringList;
-  s : string;
   status : string;
 begin
-  Result := False;
   if PackageName='' then
     Error(SErrNoPackageSpecified);
   ManifestPackages:=nil;
   // Load dependencies for local packages
-  if (PackageName=CmdLinePackageName) or (PackageName=CurrentDirPackageName) or
-     (PackageName=URLPackageName) then
+  if (PackageName=CmdLinePackageName) or (PackageName=CurrentDirPackageName) then
     begin
       ExecuteAction(PackageName,'fpmakemanifest');
       ManifestPackages:=TFPPackages.Create(TFPPackage);
@@ -574,11 +515,10 @@ begin
         begin
           ManifestPackages.Free;
           Error(SErrManifestNoSinglePackage,[ManifestFileName]);
-          Exit;
         end;
     end
   else
-    P:=PackageManager.PackageByName(PackageName, pkgpkBoth);
+    P:=AvailableRepository.PackageByName(PackageName);
 
   MissingDependency:=nil;
   while assigned(P) do
@@ -588,18 +528,17 @@ begin
       for i:=0 to P.Dependencies.Count-1 do
         begin
           D:=P.Dependencies[i];
-          if not ((PackageManager.CompilerOptions.CompilerOS in D.OSes) and (PackageManager.CompilerOptions.CompilerCPU in D.CPUs)) then
-            Log(llDebug,SDbgPackageDependencyOtherTarget,[D.PackageName,MakeTargetString(PackageManager.CompilerOptions.CompilerCPU,PackageManager.CompilerOptions.CompilerOS)])
+          if not ((CompilerOptions.CompilerOS in D.OSes) and (CompilerOptions.CompilerCPU in D.CPUs)) then
+            Log(llDebug,SDbgPackageDependencyOtherTarget,[D.PackageName,MakeTargetString(CompilerOptions.CompilerCPU,CompilerOptions.CompilerOS)])
           // Skip dependencies that are available within the fpmake-file itself
           else if not (assigned(ManifestPackages) and assigned(ManifestPackages.FindPackage(D.PackageName))) then
             begin
-              AvailP := nil;
-              InstalledP:=PackageManager.FindPackage(D.PackageName, pkgpkInstalled);
+              InstalledP:=InstalledRepository.FindPackage(D.PackageName);
               // Need installation?
               if not assigned(InstalledP) or
                  (InstalledP.Version.CompareVersion(D.MinVersion)<0) then
                 begin
-                  AvailP:=PackageManager.FindPackage(D.PackageName, pkgpkAvailable);
+                  AvailP:=AvailableRepository.FindPackage(D.PackageName);
                   if not assigned(AvailP) or
                      (AvailP.Version.CompareVersion(D.MinVersion)<0) then
                     begin
@@ -614,7 +553,7 @@ begin
                 end
               else
                 begin
-                  if PackageManager.PackageIsBroken(InstalledP, s, nil) then
+                  if PackageIsBroken(InstalledP, True) then
                     begin
                       status:='Broken, recompiling';
                       L.Add(D.PackageName);
@@ -623,8 +562,8 @@ begin
                     status:='OK';
                 end;
               Log(llInfo,SLogPackageDependency,
-                  [D.PackageName,D.MinVersion.AsString,PackageVersionStr(InstalledP),
-                   PackageVersionStr(AvailP),status])
+                  [D.PackageName,D.MinVersion.AsString,PackageInstalledVersionStr(D.PackageName),
+                   PackageAvailableVersionStr(D.PackageName),status])
             end
         end;
       if assigned(ManifestPackages) and (PackNr<ManifestPackages.Count-1)  then
@@ -642,53 +581,39 @@ begin
   if L.Count > 0 then
     begin
       if DependenciesDepth=0 then
-        pkgglobals.Log(llProgress,SProgrInstallDependencies);
+        pkgglobals.Log(llProgres,SProgrInstallDependencies);
       inc(DependenciesDepth);
 
       for i:=0 to L.Count-1 do
-        if not ExecuteAction(L[i],'install-req') then
-          Exit;
+        ExecuteAction(L[i],'install');
 
       dec(DependenciesDepth);
       if DependenciesDepth=0 then
-        pkgglobals.Log(llProgress,SProgrDependenciesInstalled);
+        pkgglobals.Log(llProgres,SProgrDependenciesInstalled);
     end;
   FreeAndNil(L);
   if assigned(ManifestPackages) then
     ManifestPackages.Free;
-  Result := True;
 end;
 
 
-function TCommandFixBroken.Execute: Boolean;
+procedure TCommandFixBroken.Execute;
 var
   i : integer;
   SL : TStringList;
-  BreakLoop : Boolean;
-  Reason: string;
 begin
-  Result := False;
   SL:=TStringList.Create;
-  BreakLoop := false;
   repeat
-    PackageManager.FindBrokenPackages(SL);
+    FindBrokenPackages(SL);
     if SL.Count=0 then
       break;
-    pkgglobals.Log(llProgress,SProgrReinstallDependent);
+    pkgglobals.Log(llProgres,SProgrReinstallDependent);
     for i:=0 to SL.Count-1 do
       begin
-        if not ExecuteAction(SL[i],'build') then
-          Exit;
-        if not ExecuteAction(SL[i],'install-req') then
-          Exit;
-        if PackageManager.PackageIsBroken(PackageManager.PackageByName(SL[i], pkgpkInstalled), Reason, nil) then
-          begin
-            BreakLoop := true;
-            pkgglobals.Log(llWarning, SWarnBrokenAfterReinstall, [SL[i], Reason]);
-          end;
+        ExecuteAction(SL[i],'build');
+        ExecuteAction(SL[i],'install');
       end;
-  until BreakLoop;
-  Result := True;
+  until false;
   FreeAndNil(SL);
 end;
 
@@ -702,8 +627,7 @@ initialization
   RegisterPkgHandler('unzip',TCommandUnzip);
   RegisterPkgHandler('compile',TCommandCompile);
   RegisterPkgHandler('build',TCommandBuild);
-  RegisterPkgHandler('install',TCommandInstallForced);
-  RegisterPkgHandler('install-req',TCommandInstall);
+  RegisterPkgHandler('install',TCommandInstall);
   RegisterPkgHandler('uninstall',TCommandUnInstall);
   RegisterPkgHandler('clean',TCommandClean);
   RegisterPkgHandler('archive',TCommandArchive);

@@ -59,7 +59,7 @@ implementation
     SysUtils,
     cutils,cfileutl,cclasses,
     verbose,systems,globtype,globals,
-    symconst,cscript,
+    symconst,script,
     fmodule,aasmbase,aasmtai,aasmdata,aasmcpu,cpubase,i_beos,ogbase;
 
 {*****************************************************************************
@@ -93,7 +93,7 @@ var
   hp2 : texported_item;
 begin
   { first test the index value }
-  if eo_index in hp.options then
+  if (hp.options and eo_index)<>0 then
    begin
      Message1(parser_e_no_export_with_index_for_target,'beos');
      exit;
@@ -107,7 +107,7 @@ begin
   if assigned(hp2) and (hp2.name^=hp.name^) then
     begin
       { this is not allowed !! }
-      duplicatesymbol(hp.name^);
+      Message1(parser_e_export_name_double,hp.name^);
       exit;
     end;
   if hp2=texported_item(current_module._exports.first) then
@@ -151,8 +151,8 @@ begin
 {$ifdef i386}
            { place jump in al_procedures }
            current_asmdata.asmlists[al_procedures].concat(Tai_align.Create_op(4,$90));
-           current_asmdata.asmlists[al_procedures].concat(Tai_symbol.Createname_global(hp2.name^,AT_FUNCTION,0,pd));
-           current_asmdata.asmlists[al_procedures].concat(Taicpu.Op_sym(A_JMP,S_NO,current_asmdata.RefAsmSymbol(pd.mangledname,AT_FUNCTION)));
+           current_asmdata.asmlists[al_procedures].concat(Tai_symbol.Createname_global(hp2.name^,AT_FUNCTION,0));
+           current_asmdata.asmlists[al_procedures].concat(Taicpu.Op_sym(A_JMP,S_NO,current_asmdata.RefAsmSymbol(pd.mangledname)));
            current_asmdata.asmlists[al_procedures].concat(Tai_symbol_end.Createname(hp2.name^));
 {$endif i386}
          end;
@@ -176,15 +176,14 @@ begin
   Inherited Create;
   s:=GetEnvironmentVariable('BELIBRARIES');
   { convert to correct format in case under unix system }
-  Replace(s,':',';=');
-  Insert('=',s,1);
-  if s[length(s)]='=' then
-    setlength(s,length(s)-1);
+  for i:=1 to length(s) do
+    if s[i] = ':' then
+      s[i] := ';';
   { just in case we have a single path : add the ending ; }
   { since that is what the compiler expects.              }
   if pos(';',s) = 0 then
     s:=s+';';
-  LibrarySearchPath.AddLibraryPath(sysrootpath,s,true); {format:'path1;path2;...'}
+  LibrarySearchPath.AddPath(sysrootpath,s,true); {format:'path1;path2;...'}
 end;
 
 
@@ -325,7 +324,7 @@ begin
          begin
            i:=Pos(target_info.sharedlibext,S);
            if i>0 then
-            Insert(':',s,1);   // needed for the linker
+            Delete(S,i,255);
            LinkRes.Add('-l'+s);
          end
         else

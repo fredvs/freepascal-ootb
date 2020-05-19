@@ -25,9 +25,6 @@ interface
 
 {$define DISABLE_NO_THREAD_MANAGER}
 {$define HAS_WIDESTRINGMANAGER}
-{$define DISABLE_NO_DYNLIBS_MANAGER}
-{$define FPC_SYSTEM_HAS_SYSDLH}
-{$define FPC_HAS_SETCTRLBREAKHANDLER}
 
 {$ifdef FPC_USE_WIN64_SEH}
   {$define FPC_SYSTEM_HAS_RAISEEXCEPTION}
@@ -107,15 +104,7 @@ implementation
 {$asmmode att}
 
 var
-{$ifdef VER3_0}
-  SysInstance : qword;
-  FPCSysInstance: PQWord = @SysInstance; public name '_FPC_SysInstance';
-{$else VER3_0}
-  FPCSysInstance : PQWord;public name '_FPC_SysInstance';
-{$endif VER3_0}
-
-{$define FPC_SYSTEM_HAS_OSSETUPENTRYINFORMATION}
-procedure OsSetupEntryInformation(constref info: TEntryInformation); forward;
+  SysInstance : qword;public;
 
 {$ifdef FPC_USE_WIN64_SEH}
 function main_wrapper(arg: Pointer; proc: Pointer): ptrint; assembler; nostackframe;
@@ -146,24 +135,13 @@ end;
 {$ifndef FPC_USE_WIN64_SEH}
 procedure install_exception_handlers;forward;
 {$endif FPC_USE_WIN64_SEH}
-{$ifdef VER3_0}
-procedure PascalMain;external name 'PASCALMAIN';
-{$endif VER3_0}
+procedure PascalMain;stdcall;external name 'PASCALMAIN';
 
 { include code common with win32 }
 {$I syswin.inc}
 
-{$ifdef VER3_0}
 { TLS directory code }
 {$I systlsdir.inc}
-{$endif VER3_0}
-
-procedure OsSetupEntryInformation(constref info: TEntryInformation);
-begin
-  TlsKey := info.OS.TlsKeyAddr;
-  FPCSysInstance := info.OS.SysInstance;
-  WStrInitTablesTable := info.OS.WideInitTables;
-end;
 
 Procedure system_exit;
 begin
@@ -202,15 +180,9 @@ var
   _SS : Cardinal;
 
 
-{$ifdef VER3_0}
+
 procedure Exe_entry;[public,alias:'_FPC_EXE_Entry'];
-{$else VER3_0}
-procedure Exe_entry(constref info: TEntryInformation);[public,alias:'_FPC_EXE_Entry'];
-{$endif VER3_0}
   begin
-{$ifndef VER3_0}
-     SetupEntryInformation(info);
-{$endif VER3_0}
      IsLibrary:=false;
      { install the handlers for exe only ?
        or should we install them for DLL also ? (PM) }
@@ -224,7 +196,6 @@ procedure Exe_entry(constref info: TEntryInformation);[public,alias:'_FPC_EXE_En
         movl %eax,_SS(%rip)
         movq %rbp,%rsi
         xorq %rbp,%rbp
-{$ifdef VER3_0}
 {$ifdef FPC_USE_WIN64_SEH}
         xor  %rcx,%rcx
         lea  PASCALMAIN(%rip),%rdx
@@ -232,17 +203,6 @@ procedure Exe_entry(constref info: TEntryInformation);[public,alias:'_FPC_EXE_En
 {$else FPC_USE_WIN64_SEH}
         call PASCALMAIN
 {$endif FPC_USE_WIN64_SEH}
-{$else VER3_0}
-{$ifdef FPC_USE_WIN64_SEH}
-        xor  %rcx,%rcx
-        lea  EntryInformation(%rip),%rdx
-        movq TEntryInformation.PascalMain(%rdx),%rdx
-        call main_wrapper
-{$else FPC_USE_WIN64_SEH}
-        lea  EntryInformation(%rip),%rdx
-        call TEntryInformation.PascalMain(%rdx)
-{$endif FPC_USE_WIN64_SEH}
-{$endif VER3_0}
         movq %rsi,%rbp
      end ['RSI','RBP'];     { <-- specifying RSI allows compiler to save/restore it properly }
      { if we pass here there was no error ! }
@@ -250,7 +210,6 @@ procedure Exe_entry(constref info: TEntryInformation);[public,alias:'_FPC_EXE_En
   end;
 
 
-{$ifdef VER3_0}
 procedure _FPC_DLLMainCRTStartup(_hinstance : qword;_dllreason : dword;_dllparam:Pointer);stdcall;public name '_DLLMainCRTStartup';
 begin
   IsConsole:=true;
@@ -269,7 +228,6 @@ begin
   dllparam:=PtrInt(_dllparam);
   DLL_Entry;
 end;
-{$endif VER3_0}
 
 function is_prefetch(p : pointer) : boolean;
   var
@@ -496,7 +454,7 @@ procedure install_exception_handlers;
   end;
 {$endif ndef FPC_USE_WIN64_SEH}
 
-{$ifdef VER3_0}
+
 procedure LinkIn(p1,p2,p3: Pointer); inline;
 begin
 end;
@@ -520,7 +478,6 @@ begin
 {$endif FPC_USE_TLS_DIRECTORY}
   Exe_entry;
 end;
-{$endif VER3_0}
 
 {$ifdef FPC_SECTION_THREADVARS}
 function fpc_tls_add(addr: pointer): pointer; assembler; nostackframe;
@@ -641,8 +598,8 @@ begin
   GetStartupInfo(@startupinfo);
   { some misc Win32 stuff }
   if not IsLibrary then
-    FPCSysInstance^:=getmodulehandle(nil);
-  MainInstance:=FPCSysInstance^;
+    SysInstance:=getmodulehandle(nil);
+  MainInstance:=SysInstance;
   cmdshow:=startupinfo.wshowwindow;
   { Setup heap and threading, these may be already initialized from TLS callback }
   if not Assigned(CurrentTM.BeginThread) then
@@ -656,7 +613,6 @@ begin
   SysInitStdIO;
   { Arguments }
   setup_arguments;
-  InitSystemDynLibs;
   { Reset IO Error }
   InOutRes:=0;
   ProcessID := GetCurrentProcessID;

@@ -39,14 +39,11 @@ Var
         SysInitFPU;
 {$endif}
 {$ifndef HAS_MEMORYMANAGER}
-{$ifndef FPC_NO_DEFAULT_HEAP}
         { initialize this thread's heap }
         InitHeapThread;
-{$endif ndef FPC_NO_DEFAULT_HEAP}
-{$else HAS_MEMORYMANAGER}
+{$endif HAS_MEMORYMANAGER}
         if MemoryManager.InitThread <> nil then
           MemoryManager.InitThread();
-{$endif HAS_MEMORYMANAGER}
 {$ifdef FPC_HAS_FEATURE_WIDESTRINGS}
         if assigned(widestringmanager.ThreadInitProc) then
           widestringmanager.ThreadInitProc;
@@ -79,9 +76,7 @@ Var
           widestringmanager.ThreadFiniProc;
 {$endif FPC_HAS_FEATURE_WIDESTRINGS}
 {$ifndef HAS_MEMORYMANAGER}
-{$ifndef FPC_NO_DEFAULT_HEAP}
         FinalizeHeap;
-{$endif ndef FPC_NO_DEFAULT_HEAP}
 {$endif HAS_MEMORYMANAGER}
         if MemoryManager.DoneThread <> nil then
           MemoryManager.DoneThread();
@@ -211,25 +206,25 @@ begin
   CurrentTM.InitCriticalSection(cs);
 end;
 
-procedure DoneCriticalSection(var cs : TRTLCriticalSection);
+procedure DoneCriticalsection(var cs : TRTLCriticalSection);
 
 begin
   CurrentTM.DoneCriticalSection(cs);
 end;
 
-procedure EnterCriticalSection(var cs : TRTLCriticalSection);
+procedure EnterCriticalsection(var cs : TRTLCriticalSection);
 
 begin
   CurrentTM.EnterCriticalSection(cs);
 end;
 
-function TryEnterCriticalSection(var cs : TRTLCriticalSection):longint;
+function TryEnterCriticalsection(var cs : TRTLCriticalSection):longint;
 
 begin
   result:=CurrentTM.TryEnterCriticalSection(cs);
 end;
 
-procedure LeaveCriticalSection(var cs : TRTLCriticalSection);
+procedure LeaveCriticalsection(var cs : TRTLCriticalSection);
 
 begin
   CurrentTM.LeaveCriticalSection(cs);
@@ -269,65 +264,85 @@ begin
   result:=currenttm.BasicEventCreate(EventAttributes,AManualReset,InitialState, Name);
 end;
 
-procedure BasicEventDestroy(state:peventstate);
+procedure basiceventdestroy(state:peventstate);
 
 begin
-  currenttm.BasicEventDestroy(state);
+  currenttm.basiceventdestroy(state);
 end;
 
-procedure BasicEventResetEvent(state:peventstate);
+procedure basiceventResetEvent(state:peventstate);
 
 begin
-  currenttm.BasicEventResetEvent(state);
+  currenttm.basiceventResetEvent(state);
 end;
 
-procedure BasicEventSetEvent(state:peventstate);
+procedure basiceventSetEvent(state:peventstate);
 
 begin
-  currenttm.BasicEventSetEvent(state);
+  currenttm.basiceventSetEvent(state);
 end;
 
-function  BasicEventWaitFor(Timeout : Cardinal;state:peventstate) : longint;
+function  basiceventWaitFor(Timeout : Cardinal;state:peventstate) : longint;
 
 begin
- result:=currenttm.BasicEventWaitFor(Timeout,state);
+ result:=currenttm.basiceventWaitFor(Timeout,state);
 end;
 
 function  RTLEventCreate :PRTLEvent;
 
 begin
-  result:=currenttm.RTLEventCreate();
+  result:=currenttm.rtleventcreate();
 end;
 
 
-procedure RTLeventDestroy(state:pRTLEvent);
+procedure RTLeventdestroy(state:pRTLEvent);
 
 begin
-  currenttm.RTLEventDestroy(state);
+  currenttm.rtleventdestroy(state);
 end;
 
 procedure RTLeventSetEvent(state:pRTLEvent);
 
 begin
-  currenttm.RTLEventSetEvent(state);
+  currenttm.rtleventsetEvent(state);
 end;
 
 procedure RTLeventResetEvent(state:pRTLEvent);
 
 begin
-  currenttm.RTLEventResetEvent(state);
+  currenttm.rtleventResetEvent(state);
 end;
 
 procedure RTLeventWaitFor(state:pRTLEvent);
 
 begin
-  currenttm.RTLEventWaitFor(state);
+  currenttm.rtleventWaitFor(state);
 end;
 
 procedure RTLeventWaitFor(state:pRTLEvent;timeout : longint);
 
 begin
-  currenttm.RTLEventWaitForTimeout(state,timeout);
+  currenttm.rtleventWaitForTimeout(state,timeout);
+end;
+
+function SemaphoreInit: pointer;
+begin
+  result:=currenttm.SemaphoreInit();
+end;
+
+procedure SemaphoreDestroy(const sem: pointer);
+begin
+  currenttm.SemaphoreDestroy(sem);
+end;
+
+procedure SemaphoreWait(const sem: pointer);
+begin
+  currenttm.SemaphoreWait(sem);
+end;
+
+procedure SemaphorePost(const sem: pointer);
+begin
+  currenttm.SemaphorePost(sem);
 end;
 
 { ---------------------------------------------------------------------
@@ -422,13 +437,13 @@ begin
   Result:=-1;
 end;
 
-procedure NoInitThreadvar(var offset : {$ifdef cpu16}word{$else}dword{$endif};size : dword);
+procedure NoInitThreadvar(var offset : dword;size : dword);
 
 begin
   NoThreadError;
 end;
 
-function NoRelocateThreadvar(offset : {$ifdef cpu16}word{$else}dword{$endif}) : pointer;
+function NoRelocateThreadvar(offset : dword) : pointer;
 
 begin
   NoThreadError;
@@ -493,6 +508,28 @@ begin
 end;
 
 
+function NoSemaphoreInit: Pointer;
+begin
+  if IsMultiThread then
+    NoThreadError
+  else
+    ThreadingAlreadyUsed:=true;
+  result:=nil;
+end;
+
+procedure NoSemaphoreWait(const FSem: Pointer);
+begin
+  NoThreadError;
+end;
+
+procedure NoSemaphore(const FSem: Pointer);
+begin
+  if IsMultiThread then
+    NoThreadError
+  else
+    ThreadingAlreadyUsed:=true;
+end;
+
 const
   NoThreadManager : TThreadManager = (
          InitManager            : Nil;
@@ -521,16 +558,20 @@ const
          AllocateThreadVars     : @NoThreadError;
          ReleaseThreadVars      : @NoThreadError;
          BasicEventCreate       : TBasicEventCreateHandler(@NoThreadError);
-         BasicEventdestroy      : TBasicEventHandler(@NoThreadError);
-         BasicEventResetEvent   : TBasicEventHandler(@NoThreadError);
-         BasicEventSetEvent     : TBasicEventHandler(@NoThreadError);
-         BasicEventWaitFor      : TBasicEventWaitForHandler(@NoThreadError);
-         RTLEventCreate         : TRTLCreateEventHandler(@NoThreadError);
-         RTLEventdestroy        : TRTLEventHandler(@NoThreadError);
-         RTLEventSetEvent       : TRTLEventHandler(@NoThreadError);
-         RTLEventResetEvent     : TRTLEventHandler(@NoThreadError);
-         RTLEventWaitFor        : TRTLEventHandler(@NoThreadError);
-         RTLEventwaitfortimeout : TRTLEventHandlerTimeout(@NoThreadError);
+         basiceventdestroy      : TBasicEventHandler(@NoThreadError);
+         basiceventResetEvent   : TBasicEventHandler(@NoThreadError);
+         basiceventSetEvent     : TBasicEventHandler(@NoThreadError);
+         basiceventWaitFor      : TBasicEventWaitForHandler(@NoThreadError);
+         rtlEventCreate         : TRTLCreateEventHandler(@NoThreadError);
+         rtleventdestroy        : TRTLEventHandler(@NoThreadError);
+         rtleventSetEvent       : TRTLEventHandler(@NoThreadError);
+         rtleventResetEvent     : TRTLEventHandler(@NoThreadError);
+         rtleventWaitFor        : TRTLEventHandler(@NoThreadError);
+         rtleventwaitfortimeout : TRTLEventHandlerTimeout(@NoThreadError);
+         SemaphoreInit          : TSempahoreInitHandler(@NoThreadError);
+         SemaphoreDestroy       : TSemaphoreDestroyHandler(@NoThreadError);
+         SemaphorePost          : TSemaphorePostHandler(@NoThreadError);
+         SemaphoreWait          : TSemaphoreWaitHandler(@NoThreadError)
 {$else EMBEDDED}
          BeginThread            : @NoBeginThread;
          EndThread              : @NoEndThread;
@@ -553,16 +594,20 @@ const
          AllocateThreadVars     : @NoThreadError;
          ReleaseThreadVars      : @NoThreadError;
          BasicEventCreate       : @NoBasicEventCreate;
-         BasicEventDestroy      : @NoBasicEvent;
-         BasicEventResetEvent   : @NoBasicEvent;
-         BasicEventSetEvent     : @NoBasicEvent;
-         BasicEventWaitFor      : @NoBasiceventWaitFor;
-         RTLEventCreate         : @NoRTLEventCreate;
-         RTLEventDestroy        : @NoRTLevent;
-         RTLEventSetEvent       : @NoRTLevent;
-         RTLEventResetEvent     : @NoRTLEvent;
-         RTLEventWaitFor        : @NoRTLEvent;
-         RTLEventWaitforTimeout : @NoRTLEventWaitForTimeout;
+         basiceventdestroy      : @NoBasicEvent;
+         basiceventResetEvent   : @NoBasicEvent;
+         basiceventSetEvent     : @NoBasicEvent;
+         basiceventWaitFor      : @NoBasiceventWaitFor;
+         rtlEventCreate         : @NoRTLEventCreate;
+         rtleventdestroy        : @NoRTLevent;
+         rtleventSetEvent       : @NoRTLevent;
+         rtleventResetEvent     : @NoRTLEvent;
+         rtleventWaitFor        : @NoRTLEvent;
+         rtleventwaitfortimeout : @NoRTLEventWaitForTimeout;
+         SemaphoreInit          : @NoSemaphoreInit;
+         SemaphoreDestroy       : @NoSemaphore;
+         SemaphorePost          : @NoSemaphore;
+         SemaphoreWait          : @NoSemaphoreWait
 {$endif EMBEDDED}
       );
 

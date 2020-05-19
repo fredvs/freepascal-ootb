@@ -33,9 +33,9 @@ interface
 
   type
 
-    { tcpuprocinfo }
+    { TMIPSProcInfo }
 
-    tcpuprocinfo=class(tcgprocinfo)
+    TMIPSProcInfo=class(tcgprocinfo)
       intregstart,
       floatregstart : aint;
       intregssave,
@@ -63,7 +63,7 @@ implementation
       cpubase,cgbase,cgobj,
       tgobj,paramgr,symconst,symcpu,aasmcpu;
 
-    constructor tcpuprocinfo.create(aparent: tprocinfo);
+    constructor TMIPSProcInfo.create(aparent: tprocinfo);
       begin
         inherited create(aparent);
         if (cs_generate_stackframes in current_settings.localswitches) or
@@ -85,7 +85,7 @@ implementation
       end;
 
 
-    procedure tcpuprocinfo.set_first_temp_offset;
+    procedure TMIPSProcInfo.set_first_temp_offset;
       begin
         { MIPS stack frame is always "optimized" }
         framepointer:=NR_STACK_POINTER_REG;
@@ -120,7 +120,7 @@ implementation
       end;
 
 
-    procedure tcpuprocinfo.allocate_got_register(list:tasmlist);
+    procedure TMIPSProcInfo.allocate_got_register(list:tasmlist);
       begin
         if (cs_create_pic in current_settings.moduleswitches) then
           begin
@@ -133,7 +133,7 @@ implementation
       end;
 
 
-    function tcpuprocinfo.calc_stackframe_size:longint;
+    function TMIPSProcInfo.calc_stackframe_size:longint;
       begin
         result:=maxpushedparasize;
         floatregstart:=result;
@@ -147,11 +147,11 @@ implementation
             tcpuprocdef(procdef).total_local_size:=result;
           end
         else if computed_local_size <> result then
-          Comment(V_Error,'tcpuprocinfo.calc_stackframe_size result changed');
+          Comment(V_Error,'TMIPSProcInfo.calc_stackframe_size result changed');
       end;
 
 
-    procedure tcpuprocinfo.postprocess_code;
+    procedure TMIPSProcInfo.postprocess_code;
       begin
         fixup_jmps(aktproccode);
       end;
@@ -166,5 +166,5 @@ implementation
       end;
 
 begin
-  cprocinfo:=tcpuprocinfo;
+  cprocinfo:=TMIPSProcInfo;
 end.

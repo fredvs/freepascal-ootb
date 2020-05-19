@@ -4,7 +4,6 @@ type
   generic TNode<T> = class
   public
     type
-      TAlias = T;
       PT = ^T;
   private
     var
@@ -26,7 +25,7 @@ type
     destructor Destroy; override;
 
     function GetAddr: TTNode.PT;
-    procedure SetV(v: TTNode.TAlias);
+    procedure SetV(v: TTNode.T);
   end;
 
 constructor TNode.Create;
@@ -55,7 +54,7 @@ begin
 end;
 
 
-procedure TContainer.SetV(v: TTNode.TAlias);
+procedure TContainer.SetV(v: TTNode.T);
 begin
   Data.Data:=v;
 end;

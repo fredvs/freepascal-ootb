@@ -28,36 +28,18 @@ unit hlcgcpu;
 
 interface
 
-  uses
-    aasmdata,
-    symdef,
-    hlcg2ll;
-
-  type
-    thlcgcpu = class(thlcg2ll)
-      procedure g_intf_wrapper(list: TAsmList; procdef: tprocdef; const labelname: string; ioffset: longint);override;
-    end;
-
   procedure create_hlcodegen;
 
 implementation
 
   uses
-    hlcgobj,
+    hlcgobj, hlcg2ll,
     cgcpu;
-
-  procedure thlcgcpu.g_intf_wrapper(list: TAsmList; procdef: tprocdef; const labelname: string; ioffset: longint);
-    begin
-      //internalerror(2011021324);
-    end;
-
 
   procedure create_hlcodegen;
     begin
-      hlcg:=thlcgcpu.create;
+      hlcg:=thlcg2ll.create;
       create_codegen;
     end;
 
-begin
-  chlcgobj:=thlcgcpu;
 end.

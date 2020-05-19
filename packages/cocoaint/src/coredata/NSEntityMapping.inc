@@ -1,15 +1,10 @@
-{ Parsed from CoreData.framework NSEntityMapping.h }
-
-
-{$ifdef TYPES}
-type
-  NSEntityMappingPtr = ^NSEntityMapping;
-{$endif}
+{ Parsed from Coredata.framework NSEntityMapping.h }
 
 {$ifdef TYPES}
-type
-  NSEntityMappingType = NSUInteger;
-  NSEntityMappingTypePtr = ^NSEntityMappingType;
+{$ifndef NSENTITYMAPPING_PAS_T}
+{$define NSENTITYMAPPING_PAS_T}
+
+{ Constants }
 
 const
   NSUndefinedEntityMappingType = $00;
@@ -18,16 +13,53 @@ const
   NSRemoveEntityMappingType = $03;
   NSCopyEntityMappingType = $04;
   NSTransformEntityMappingType = $05;
+
+{ Types }
+type
+  NSEntityMappingType = NSUInteger;
+  NSEntityMappingTypePtr = ^NSEntityMappingType;
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSENTITYMAPPING_PAS_R}
+{$define NSENTITYMAPPING_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSENTITYMAPPING_PAS_F}
+{$define NSENTITYMAPPING_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSENTITYMAPPING_PAS_S}
+{$define NSENTITYMAPPING_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSEntityMapping = objcclass;
+  NSEntityMappingPointer = ^NSEntityMapping;
+  NSEntityMappingPtr = NSEntityMappingPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSENTITYMAPPING_PAS_C}
+{$define NSENTITYMAPPING_PAS_C}
 
-type
+{ NSEntityMapping }
   NSEntityMapping = objcclass external (NSObject)
   private
-    _reserved: pointer;
-    _reserved1: pointer;
-    _mappingsByName: NSDictionary;
+    _reserved: Pointer;
+    _reserved1: Pointer;
+    _reserved2: Pointer;
     _name: NSString;
     _mappingType: NSEntityMappingType;
     _sourceEntityName: NSString;
@@ -39,37 +71,40 @@ type
     _entityMigrationPolicyClassName: NSString;
     _attributeMappings: NSMutableArray;
     _relationshipMappings: NSMutableArray;
-    _entityMappingFlags: bitpacked record
+    __entityMappingFlags: record
       case byte of
-        0: (_anonBitField__entityMappingFlags0: cuint);
-        1: (
-          _isInUse: 0..1;
-          _reservedEntityMapping: 0..((1 shl 31)-1);
-        );
+       0: (_anonbitfield_NSEntityMapping0: cuint);
+       1: (data: bitpacked record
+        _isInUse: 0..1;
+        _reservedEntityMapping: 0..((1 shl 31)-1);
+       end;
+      );
       end;
+    
   public
-    procedure setName(newValue: NSString); message 'setName:';
     function name: NSString; message 'name';
-    procedure setMappingType(newValue: NSEntityMappingType); message 'setMappingType:';
+    procedure setName(name_: NSString); message 'setName:';
     function mappingType: NSEntityMappingType; message 'mappingType';
-    procedure setSourceEntityName(newValue: NSString); message 'setSourceEntityName:';
+    procedure setMappingType(type_: NSEntityMappingType); message 'setMappingType:';
     function sourceEntityName: NSString; message 'sourceEntityName';
-    procedure setSourceEntityVersionHash(newValue: NSData); message 'setSourceEntityVersionHash:';
+    procedure setSourceEntityName(name_: NSString); message 'setSourceEntityName:';
     function sourceEntityVersionHash: NSData; message 'sourceEntityVersionHash';
-    procedure setDestinationEntityName(newValue: NSString); message 'setDestinationEntityName:';
+    procedure setSourceEntityVersionHash(vhash: NSData); message 'setSourceEntityVersionHash:';
     function destinationEntityName: NSString; message 'destinationEntityName';
-    procedure setDestinationEntityVersionHash(newValue: NSData); message 'setDestinationEntityVersionHash:';
+    procedure setDestinationEntityName(name_: NSString); message 'setDestinationEntityName:';
     function destinationEntityVersionHash: NSData; message 'destinationEntityVersionHash';
-    procedure setAttributeMappings(newValue: NSArray); message 'setAttributeMappings:';
+    procedure setDestinationEntityVersionHash(vhash: NSData); message 'setDestinationEntityVersionHash:';
     function attributeMappings: NSArray; message 'attributeMappings';
-    procedure setRelationshipMappings(newValue: NSArray); message 'setRelationshipMappings:';
+    procedure setAttributeMappings(mappings: NSArray); message 'setAttributeMappings:';
     function relationshipMappings: NSArray; message 'relationshipMappings';
-    procedure setSourceExpression(newValue: NSExpression); message 'setSourceExpression:';
+    procedure setRelationshipMappings(mappings: NSArray); message 'setRelationshipMappings:';
     function sourceExpression: NSExpression; message 'sourceExpression';
-    procedure setUserInfo(newValue: NSDictionary); message 'setUserInfo:';
+    procedure setSourceExpression(source: NSExpression); message 'setSourceExpression:';
     function userInfo: NSDictionary; message 'userInfo';
-    procedure setEntityMigrationPolicyClassName(newValue: NSString); message 'setEntityMigrationPolicyClassName:';
+    procedure setUserInfo(dict: NSDictionary); message 'setUserInfo:';
     function entityMigrationPolicyClassName: NSString; message 'entityMigrationPolicyClassName';
+    procedure setEntityMigrationPolicyClassName(name_: NSString); message 'setEntityMigrationPolicyClassName:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

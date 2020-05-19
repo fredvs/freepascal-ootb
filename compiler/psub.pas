@@ -31,6 +31,9 @@ interface
       symdef,procinfo,optdfa;
 
     type
+
+      { tcgprocinfo }
+
       tcgprocinfo = class(tprocinfo)
       private
         procedure CreateInlineInfo;
@@ -51,11 +54,7 @@ interface
         final_asmnode : tasmnode;
         final_used : boolean;
         dfabuilder : TDFABuilder;
-
         destructor  destroy;override;
-
-        function calc_stackframe_size : longint;override;
-
         procedure printproc(pass:string);
         procedure generate_code;
         procedure generate_code_tree;
@@ -80,12 +79,9 @@ interface
     { reads any routine in the implementation, or a non-method routine
       declaration in the interface (depending on whether or not parse_only is
       true) }
-    procedure read_proc(isclassmethod:boolean; usefwpd: tprocdef;isgeneric:boolean);
+    procedure read_proc(isclassmethod:boolean; usefwpd: tprocdef);
 
-    { parses only the body of a non nested routine; needs a correctly setup pd }
-    procedure read_proc_body(pd:tprocdef);
-
-    procedure import_external_proc(pd:tprocdef);
+    procedure generate_specialization_procs;
 
 
 implementation
@@ -98,9 +94,9 @@ implementation
        globtype,tokens,verbose,comphook,constexp,
        systems,cpubase,aasmbase,aasmtai,aasmdata,
        { symtable }
-       symconst,symbase,symsym,symtype,symtable,defutil,defcmp,symcreat,
+       symconst,symbase,symsym,symtype,symtable,defutil,symcreat,
        paramgr,
-       fmodule,
+       ppu,fmodule,
        { pass 1 }
        nutils,ngenutil,nld,ncal,ncon,nflw,nadd,ncnv,nmem,
        pass_1,
@@ -115,25 +111,23 @@ implementation
        scanner,gendef,
        pbase,pstatmnt,pdecl,pdecsub,pexports,pgenutil,pparautl,
        { codegen }
-       tgobj,cgbase,cgobj,hlcgobj,hlcgcpu,dbgbase,
-{$ifdef llvm}
-      { override create_hlcodegen from hlcgcpu }
-      hlcgllvm,
-{$endif}
-       ncgutil,
+       tgobj,cgbase,cgobj,cgutils,hlcgobj,hlcgcpu,dbgbase,
+       ncgutil,regvars,
        optbase,
        opttail,
        optcse,
        optloop,
        optconstprop,
-       optdeadstore,
-       optloadmodifystore,
-       optutils
+       optdeadstore
 {$if defined(arm)}
        ,cpuinfo
 {$endif arm}
        {$ifndef NOOPT}
-       ,aopt
+         {$ifdef i386}
+           ,aopt386
+         {$else i386}
+           ,aopt
+         {$endif i386}
        {$endif}
        ;
 
@@ -143,11 +137,6 @@ implementation
         currpara : tparavarsym;
       begin
         result := false;
-        { this code will never be used (only specialisations can be inlined),
-          and moreover contains references to defs that are not stored in the
-          ppu file }
-        if df_generic in current_procinfo.procdef.defoptions then
-          exit;
         if pi_has_assembler_block in current_procinfo.flags then
           begin
             Message1(parser_h_not_supported_for_inline,'assembler');
@@ -237,7 +226,7 @@ implementation
                b.left:=cstatementnode.create(
                          ccallnode.createintern('fpc_zeromem',
                            ccallparanode.create(
-                             cordconstnode.create(vardef.size,sizeuinttype,false),
+                             cordconstnode.create(vardef.size,ptruinttype,false),
                              ccallparanode.create(
                                caddrnode.create_internal(
                                  cloadnode.create(tsym(p),tsym(p).owner)),
@@ -483,7 +472,7 @@ implementation
                                     voidpointertype),
                                 ccallnode.create(nil,tprocsym(srsym),srsym.owner,
                                   ctypeconvnode.create_internal(load_self_pointer_node,cclassrefdef.create(current_structdef)),
-                                  [],nil)),
+                                  [])),
                             nil));
                       end
                     else
@@ -530,7 +519,7 @@ implementation
                          if assigned(srsym) and
                             (srsym.typ=procsym) then
                            begin
-                             call:=ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[cnf_inherited],nil);
+                             call:=ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[cnf_inherited]);
                              exclude(tcallnode(call).callnodeflags,cnf_return_value_used);
                              addstatement(newstatement,call);
                            end
@@ -572,7 +561,7 @@ implementation
                               load_vmt_pointer_node,ptrsinttype),
                             ctypeconvnode.create_internal(
                               cnilnode.create,ptrsinttype)),
-                        ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[],nil),
+                        ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[]),
                         nil));
                   end
                 else
@@ -623,7 +612,7 @@ implementation
                                         load_vmt_pointer_node,
                                         voidpointertype),
                                     cpointerconstnode.create(0,voidpointertype))),
-                            ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[],nil),
+                            ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[]),
                             nil));
                       end
                     else
@@ -677,17 +666,12 @@ implementation
 
      destructor tcgprocinfo.destroy;
        begin
-         code.free;
+         if assigned(code) then
+           code.free;
          if not final_used then
            final_asmnode.free;
          inherited destroy;
        end;
-
-
-    function tcgprocinfo.calc_stackframe_size:longint;
-      begin
-        result:=Align(tg.direction*tg.lasttemp,current_settings.alignment.localalignmin);
-      end;
 
 
     procedure tcgprocinfo.printproc(pass:string);
@@ -717,12 +701,11 @@ implementation
       var
         oldlocalswitches: tlocalswitches;
         srsym: tsym;
-        constructionblock,
+        afterconstructionblock,
         exceptblock,
         newblock: tblocknode;
         newstatement: tstatementnode;
         pd: tprocdef;
-        constructionsuccessful: tlocalvarsym;
       begin
         if assigned(procdef.struct) and
            (procdef.proctypeoption=potype_constructor) then
@@ -736,62 +719,45 @@ implementation
             current_settings.localswitches:=oldlocalswitches-[cs_check_object,cs_check_range];
 
             { call AfterConstruction for classes }
-            constructionsuccessful:=nil;
             if is_class(procdef.struct) then
               begin
-                constructionsuccessful:=clocalvarsym.create(internaltypeprefixName[itp_vmt_afterconstruction_local],vs_value,ptrsinttype,[]);
-                procdef.localst.insert(constructionsuccessful,false);
                 srsym:=search_struct_member(procdef.struct,'AFTERCONSTRUCTION');
-                if not assigned(srsym) or
-                   (srsym.typ<>procsym) then
-                  internalerror(200305106);
-
-                current_filepos:=entrypos;
-                constructionblock:=internalstatements(newstatement);
-                { initialise constructionsuccessful with -1, indicating that
-                  the construction was not successful and hence
-                  beforedestruction should not be called if a destructor is
-                  called from the constructor }
-                addstatement(newstatement,cassignmentnode.create(
-                  cloadnode.create(constructionsuccessful,procdef.localst),
-                  genintconstnode(-1))
-                );
-                { first execute all constructor code. If no exception
-                  occurred then we will execute afterconstruction,
-                  otherwise we won't (the exception will jump over us) }
-                addstatement(newstatement,tocode);
-                current_filepos:=exitpos;
-                { if implicit finally node wasn't created, then exit label and
-                  finalization code must be handled here and placed before
-                  afterconstruction }
-                if not ((pi_needs_implicit_finally in flags) and
-                  (cs_implicit_exceptions in current_settings.moduleswitches)) then
+                if assigned(srsym) and
+                   (srsym.typ=procsym) then
                   begin
-                    include(tocode.flags,nf_block_with_exit);
-                    addstatement(newstatement,final_asmnode);
-                    cnodeutils.procdef_block_add_implicit_finalize_nodes(procdef,newstatement);
-                    final_used:=true;
-                  end;
+                    current_filepos:=exitpos;
+                    afterconstructionblock:=internalstatements(newstatement);
+                    { first execute all constructor code. If no exception
+                      occurred then we will execute afterconstruction,
+                      otherwise we won't (the exception will jump over us) }
+                    addstatement(newstatement,tocode);
+                    { if implicit finally node wasn't created, then exit label and
+                      finalization code must be handled here and placed before
+                      afterconstruction }
+                    if not ((pi_needs_implicit_finally in flags) and
+                      (cs_implicit_exceptions in current_settings.moduleswitches)) then
+                      begin
+                        include(tocode.flags,nf_block_with_exit);
+                        addstatement(newstatement,final_asmnode);
+                        final_used:=true;
+                      end;
 
-                { construction successful -> beforedestruction should be called
-                  if an exception happens now }
-                addstatement(newstatement,cassignmentnode.create(
-                  cloadnode.create(constructionsuccessful,procdef.localst),
-                  genintconstnode(1))
-                );
-                { Self can be nil when fail is called }
-                { if self<>nil and vmt<>nil then afterconstruction }
-                addstatement(newstatement,cifnode.create(
-                  caddnode.create(andn,
-                    caddnode.create(unequaln,
-                      load_self_node,
-                      cnilnode.create),
-                    caddnode.create(unequaln,
-                      load_vmt_pointer_node,
-                      cnilnode.create)),
-                    ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[],nil),
-                    nil));
-                tocode:=constructionblock;
+                    { Self can be nil when fail is called }
+                    { if self<>nil and vmt<>nil then afterconstruction }
+                    addstatement(newstatement,cifnode.create(
+                      caddnode.create(andn,
+                        caddnode.create(unequaln,
+                          load_self_node,
+                          cnilnode.create),
+                        caddnode.create(unequaln,
+                          load_vmt_pointer_node,
+                          cnilnode.create)),
+                        ccallnode.create(nil,tprocsym(srsym),srsym.owner,load_self_node,[]),
+                        nil));
+                    tocode:=afterconstructionblock;
+                  end
+                else
+                  internalerror(200305106);
               end;
 
             if withexceptblock and (procdef.struct.typ=objectdef) then
@@ -814,7 +780,7 @@ implementation
                             load_vmt_pointer_node,
                             cnilnode.create),
                           { cnf_create_failed -> don't call BeforeDestruction }
-                          ccallnode.create(nil,tprocsym(pd.procsym),pd.procsym.owner,load_self_node,[cnf_create_failed],nil),
+                          ccallnode.create(nil,tprocsym(pd.procsym),pd.procsym.owner,load_self_node,[cnf_create_failed]),
                           nil))
                     else
                       { object without destructor, call 'fail' helper }
@@ -887,32 +853,19 @@ implementation
         { Generate procedure by combining init+body+final,
           depending on the implicit finally we need to add
           an try...finally...end wrapper }
-        current_filepos:=entrypos;
         newblock:=internalstatements(newstatement);
         { initialization is common for all cases }
         addstatement(newstatement,loadpara_asmnode);
         addstatement(newstatement,stackcheck_asmnode);
         addstatement(newstatement,entry_asmnode);
-        cnodeutils.procdef_block_add_implicit_initialize_nodes(procdef,newstatement);
         addstatement(newstatement,init_asmnode);
-        if assigned(procdef.parentfpinitblock) then
-          begin
-            if assigned(tblocknode(procdef.parentfpinitblock).left) then
-              begin
-                { could be an asmn in case of a pure assembler procedure,
-                  but those shouldn't access nested variables }
-                addstatement(newstatement,procdef.parentfpinitblock);
-              end
-            else
-              procdef.parentfpinitblock.free;
-            procdef.parentfpinitblock:=nil;
-          end;
         addstatement(newstatement,bodyentrycode);
 
         if (cs_implicit_exceptions in current_settings.moduleswitches) and
            (pi_needs_implicit_finally in flags) and
            { but it's useless in init/final code of units }
            not(procdef.proctypeoption in [potype_unitfinalize,potype_unitinit]) and
+           not(po_assembler in procdef.procoptions) and
            not(target_info.system in systems_garbage_collected_managed_types) then
           begin
             { Any result of managed type must be returned in parameter }
@@ -927,11 +880,13 @@ implementation
             { Generate code that will be in the try...finally }
             finalcode:=internalstatements(codestatement);
             addstatement(codestatement,final_asmnode);
-            cnodeutils.procdef_block_add_implicit_finalize_nodes(procdef,codestatement);
             final_used:=true;
 
             current_filepos:=entrypos;
-            wrappedbody:=ctryfinallynode.create_implicit(code,finalcode);
+            wrappedbody:=ctryfinallynode.create_implicit(
+               code,
+               finalcode,
+               cnothingnode.create);
             { afterconstruction must be called after final_asmnode, because it
                has to execute after the temps have been finalised in case of a
                refcounted class (afterconstruction decreases the refcount
@@ -950,9 +905,7 @@ implementation
               have managed variables/temps }
             maybe_add_constructor_wrapper(code,
               cs_implicit_exceptions in current_settings.moduleswitches);
-            current_filepos:=entrypos;
             addstatement(newstatement,code);
-            current_filepos:=exitpos;
             if assigned(nestedexitlabel) then
               addstatement(newstatement,clabelnode.create(cnothingnode.create,nestedexitlabel));
             addstatement(newstatement,exitlabel_asmnode);
@@ -960,14 +913,8 @@ implementation
             if not is_constructor then
               begin
                 addstatement(newstatement,final_asmnode);
-                cnodeutils.procdef_block_add_implicit_finalize_nodes(procdef,newstatement);
                 final_used:=true;
               end;
-          end;
-        if not final_used then
-          begin
-            current_filepos:=exitpos;
-            cnodeutils.procdef_block_add_implicit_finalize_nodes(procdef,newstatement);
           end;
         do_firstpass(newblock);
         code:=newblock;
@@ -995,17 +942,20 @@ implementation
                  if (tabstractnormalvarsym(p).localloc.registerhi<>NR_NO) then
                    cg.translate_register(tabstractnormalvarsym(p).localloc.registerhi);
                end;
+             if cs_asm_source in current_settings.globalswitches then
+               begin
+                 TAsmList(list).concat(Tai_comment.Create(strpnew('Var '+tabstractnormalvarsym(p).realname+' located in register '+
+                   location_reg2string(tabstractnormalvarsym(p).localloc))));
+               end;
            end;
       end;
 
 
-{$if defined(i386) or defined(x86_64) or defined(arm)}
     const
       exception_flags: array[boolean] of tprocinfoflags = (
         [],
         [pi_uses_exceptions,pi_needs_implicit_finally,pi_has_implicit_finally]
       );
-{$endif}
 
     procedure tcgprocinfo.setup_tempgen;
       begin
@@ -1249,6 +1199,7 @@ implementation
         templist : TAsmList;
         headertai : tai;
         i : integer;
+        varsym : tabstractnormalvarsym;
         {RedoDFA : boolean;}
 
         procedure delete_marker(anode: tasmnode);
@@ -1345,16 +1296,13 @@ implementation
           begin
             include(flags,pi_do_call);
             { the main program never returns due to the do_exit call }
-            if not(current_module.islibrary) and (procdef.proctypeoption=potype_proginit) then
+            if not(DLLsource) then
               include(procdef.procoptions,po_noreturn);
           end;
 
         { set implicit_finally flag when there are locals/paras to be finalized }
-        if not(po_assembler in current_procinfo.procdef.procoptions) then
-          begin
-            procdef.parast.SymList.ForEachCall(@check_finalize_paras,nil);
-            procdef.localst.SymList.ForEachCall(@check_finalize_locals,nil);
-          end;
+        procdef.parast.SymList.ForEachCall(@check_finalize_paras,nil);
+        procdef.localst.SymList.ForEachCall(@check_finalize_locals,nil);
 
 {$ifdef SUPPORT_SAFECALL}
         { set implicit_finally flag for if procedure is safecall }
@@ -1412,13 +1360,7 @@ implementation
                         { do not warn about initialized hidden parameters }
                         ((tparavarsym(tloadnode(dfabuilder.nodemap[i]).symtableentry).varoptions*[vo_is_high_para,vo_is_parentfp,vo_is_result,vo_is_self])<>[]))) then
                         CheckAndWarn(GetUserCode,tnode(dfabuilder.nodemap[i]));
-                    end
-                  else
-                    begin
-                      if (tnode(dfabuilder.nodemap[i]).nodetype=loadn) and
-                        (tloadnode(dfabuilder.nodemap[i]).symtableentry.typ in [staticvarsym,localvarsym]) then
-                        tabstractnormalvarsym(tloadnode(dfabuilder.nodemap[i]).symtableentry).noregvarinitneeded:=true
-                    end;
+                     end;
                 end;
           end;
 
@@ -1443,9 +1385,6 @@ implementation
 
         if cs_opt_nodecse in current_settings.optimizerswitches then
           do_optcse(code);
-
-        if cs_opt_use_load_modify_store in current_settings.optimizerswitches then
-          do_optloadmodifystore(code);
 
         { only do secondpass if there are no errors }
         if (ErrorCount=0) then
@@ -1486,12 +1425,6 @@ implementation
             { caller paraloc info is also necessary in the stackframe_entry
               code of the ppc (and possibly other processors)               }
             procdef.init_paraloc_info(callerside);
-
-            CalcExecutionWeights(code);
-
-            { Print the node to tree.log }
-            if paraprintnodetree=1 then
-              printproc( 'right before code generation');
 
             { generate code for the node tree }
             do_secondpass(code);
@@ -1590,7 +1523,7 @@ implementation
                (procdef.proctypeoption<>potype_proginit) then
               begin
                 current_filepos:=entrypos;
-                hlcg.gen_stack_check_call(templist);
+                gen_stack_check_call(templist);
                 aktproccode.insertlistafter(stackcheck_asmnode.currenttai,templist)
               end;
 
@@ -1661,7 +1594,7 @@ implementation
                (procdef.proctypeoption<>potype_proginit) then
               begin
                 current_filepos:=entrypos;
-                hlcg.gen_stack_check_size_para(templist);
+                gen_stack_check_size_para(templist);
                 aktproccode.insertlistafter(stackcheck_asmnode.currenttai,templist)
               end;
             { Add entry code (stack allocation) after header }
@@ -1685,6 +1618,7 @@ implementation
             if (cs_implicit_exceptions in current_settings.moduleswitches) and
                not(procdef.proctypeoption in [potype_unitfinalize,potype_unitinit]) and
                (pi_needs_implicit_finally in flags) and
+               not(po_assembler in procdef.procoptions) and
                not(pi_has_implicit_finally in flags) and
                not(target_info.system in systems_garbage_collected_managed_types) then
              internalerror(200405231);
@@ -1824,9 +1758,7 @@ implementation
          old_current_structdef: tabstractrecorddef;
          old_current_genericdef,
          old_current_specializedef: tstoreddef;
-         parentfpinitblock: tnode;
          old_parse_generic: boolean;
-         recordtokens : boolean;
 
       begin
          old_current_procinfo:=current_procinfo;
@@ -1838,27 +1770,7 @@ implementation
 
          current_procinfo:=self;
          current_structdef:=procdef.struct;
-
-
-        { check if the definitions of certain types are available which might not be available in older rtls and
-          which are assigned "on the fly" in types_dec }
-{$ifndef jvm}
-        if not assigned(rec_exceptaddr) then
-          Message1(cg_f_internal_type_not_found,'TEXCEPTADDR');
-        if not assigned(rec_tguid) then
-          Message1(cg_f_internal_type_not_found,'TGUID');
-        if not assigned(rec_jmp_buf) then
-          Message1(cg_f_internal_type_not_found,'TJMPBUF');
-{$endif}
-
-         { if the procdef is truly a generic (thus takes parameters itself) then
-           /that/ is our genericdef, not the - potentially - generic struct }
-         if procdef.is_generic then
-           begin
-             current_genericdef:=procdef;
-             parse_generic:=true;
-           end
-         else if assigned(current_structdef) and (df_generic in current_structdef.defoptions) then
+         if assigned(current_structdef) and (df_generic in current_structdef.defoptions) then
            begin
              current_genericdef:=current_structdef;
              parse_generic:=true;
@@ -1885,15 +1797,7 @@ implementation
          entrypos:=current_filepos;
          entryswitches:=current_settings.localswitches;
 
-         recordtokens:=procdef.is_generic or
-                       (
-                         assigned(procdef.struct) and
-                         (df_generic in procdef.struct.defoptions) and
-                         assigned(procdef.owner) and
-                         (procdef.owner.defowner=procdef.struct)
-                       );
-
-         if recordtokens then
+         if (df_generic in procdef.defoptions) then
            begin
              { start token recorder for generic template }
              procdef.initgeneric;
@@ -1903,7 +1807,7 @@ implementation
          { parse the code ... }
          code:=block(current_module.islibrary);
 
-         if recordtokens then
+         if (df_generic in procdef.defoptions) then
            begin
              { stop token recorder for generic template }
              current_scanner.stoprecordtokens;
@@ -1911,11 +1815,11 @@ implementation
              { Give an error for accesses in the static symtable that aren't visible
                outside the current unit }
              st:=procdef.owner;
-             while (st.symtabletype in [ObjectSymtable,recordsymtable]) do
+             while (st.symtabletype=ObjectSymtable) do
                st:=st.defowner.owner;
              if (pi_uses_static_symtable in flags) and
                 (st.symtabletype<>staticsymtable) then
-               Message(parser_e_global_generic_references_static);
+               Comment(V_Error,'Global Generic template references static symtable');
            end;
 
          { save exit info }
@@ -1935,12 +1839,9 @@ implementation
 
              if assigned(procdef.parentfpinitblock) then
                begin
-                 if assigned(tblocknode(procdef.parentfpinitblock).left) then
-                   begin
-                     parentfpinitblock:=procdef.parentfpinitblock;
-                     do_typecheckpass(parentfpinitblock);
-                     procdef.parentfpinitblock:=parentfpinitblock;
-                   end
+                 tblocknode(code).left:=cstatementnode.create(procdef.parentfpinitblock,tblocknode(code).left);
+                 do_typecheckpass(tblocknode(code).left);
+                 procdef.parentfpinitblock:=nil;
                end;
 
            end;
@@ -2008,6 +1909,7 @@ implementation
       end;
 
 
+
     procedure read_proc_body(old_current_procinfo:tprocinfo;pd:tprocdef);
       {
         Parses the procedure directives, then parses the procedure body, then
@@ -2056,16 +1958,15 @@ implementation
 
         tcgprocinfo(current_procinfo).parse_body;
 
-        { reset _FAIL as _SELF normal }
-        if (pd.proctypeoption=potype_constructor) then
-          tokeninfo^[_FAIL].keyword:=oldfailtokenmode;
-
         { We can't support inlining for procedures that have nested
           procedures because the nested procedures use a fixed offset
           for accessing locals in the parent procedure (PFV) }
         if current_procinfo.has_nestedprocs then
           begin
-            if (po_inline in current_procinfo.procdef.procoptions) then
+            if (df_generic in current_procinfo.procdef.defoptions) then
+              Comment(V_Error,'Generic methods cannot have nested procedures')
+            else
+             if (po_inline in current_procinfo.procdef.procoptions) then
               begin
                 Message1(parser_h_not_supported_for_inline,'nested procedures');
                 Message(parser_h_inlining_disabled);
@@ -2079,13 +1980,12 @@ implementation
         if not isnestedproc then
           begin
             if not(df_generic in current_procinfo.procdef.defoptions) then
-              begin
-                { also generate the bodies for all previously done
-                  specializations so that we might inline them }
-                generate_specialization_procs;
-                tcgprocinfo(current_procinfo).generate_code_tree;
-              end;
+              tcgprocinfo(current_procinfo).generate_code_tree;
           end;
+
+        { reset _FAIL as _SELF normal }
+        if (pd.proctypeoption=potype_constructor) then
+          tokeninfo^[_FAIL].keyword:=oldfailtokenmode;
 
         { release procinfo }
         if tprocinfo(current_module.procinfo)<>current_procinfo then
@@ -2095,15 +1995,7 @@ implementation
         { For specialization we didn't record the last semicolon. Moving this parsing
           into the parse_body routine is not done because of having better file position
           information available }
-        if not current_procinfo.procdef.is_specialization and
-            (
-              not assigned(current_procinfo.procdef.struct) or
-              not (df_specialization in current_procinfo.procdef.struct.defoptions)
-              or not (
-                assigned(current_procinfo.procdef.owner) and
-                (current_procinfo.procdef.owner.defowner=current_procinfo.procdef.struct)
-              )
-            ) then
+        if not(df_specialization in current_procinfo.procdef.defoptions) then
           consume(_SEMICOLON);
 
         if not isnestedproc then
@@ -2112,22 +2004,7 @@ implementation
       end;
 
 
-    procedure read_proc_body(pd:tprocdef);
-      var
-        old_module_procinfo : tobject;
-        old_current_procinfo : tprocinfo;
-      begin
-        old_current_procinfo:=current_procinfo;
-        old_module_procinfo:=current_module.procinfo;
-        current_procinfo:=nil;
-        current_module.procinfo:=nil;
-        read_proc_body(nil,pd);
-        current_procinfo:=old_current_procinfo;
-        current_module.procinfo:=old_module_procinfo;
-      end;
-
-
-    procedure read_proc(isclassmethod:boolean; usefwpd: tprocdef;isgeneric:boolean);
+    procedure read_proc(isclassmethod:boolean; usefwpd: tprocdef);
       {
         Parses the procedure directives, then parses the procedure body, then
         generates the code for it
@@ -2139,9 +2016,8 @@ implementation
         old_current_genericdef,
         old_current_specializedef: tstoreddef;
         pdflags    : tpdflags;
-        def,pd,firstpd : tprocdef;
-        srsym : tsym;
-        i : longint;
+        pd,firstpd : tprocdef;
+        s          : string;
       begin
          { save old state }
          old_current_procinfo:=current_procinfo;
@@ -2158,7 +2034,7 @@ implementation
 
          if not assigned(usefwpd) then
            { parse procedure declaration }
-           pd:=parse_proc_dec(isclassmethod,old_current_structdef,isgeneric)
+           pd:=parse_proc_dec(isclassmethod,old_current_structdef)
          else
            pd:=usefwpd;
 
@@ -2167,7 +2043,7 @@ implementation
           begin
             pd.forwarddef:=true;
             { set also the interface flag, for better error message when the
-              implementation doesn't match this header }
+              implementation doesn't much this header }
             pd.interfacedef:=true;
             include(pd.procoptions,po_global);
             pdflags:=[pd_interface];
@@ -2178,7 +2054,7 @@ implementation
             if (not current_module.in_interface) then
               include(pdflags,pd_implemen);
             if (not current_module.is_unit) or
-               create_smartlink_library then
+               create_smartlink then
               include(pd.procoptions,po_global);
             pd.forwarddef:=false;
           end;
@@ -2194,10 +2070,7 @@ implementation
               Consume(_SEMICOLON);
 
              { Set calling convention }
-             if parse_only then
-               handle_calling_convention(pd,hcc_default_actions_intf)
-             else
-               handle_calling_convention(pd,hcc_default_actions_impl)
+             handle_calling_convention(pd);
            end;
 
          { search for forward declarations }
@@ -2228,57 +2101,12 @@ implementation
                  begin
                    MessagePos1(pd.fileinfo,parser_e_header_dont_match_forward,pd.fullprocname(false));
                    tprocsym(pd.procsym).write_parameter_lists(pd);
-                 end
-                else
-                  begin
-                    if pd.is_generic and not assigned(pd.struct) then
-                      tprocsym(pd.procsym).owner.includeoption(sto_has_generic);
-                  end;
+                 end;
               end;
            end;
 
          { Set mangled name }
          proc_set_mangledname(pd);
-
-         { inherit generic flags from parent routine }
-         if assigned(old_current_procinfo) and
-             (old_current_procinfo.procdef.defoptions*[df_specialization,df_generic]<>[]) then
-           begin
-             if df_generic in old_current_procinfo.procdef.defoptions then
-               include(pd.defoptions,df_generic);
-             if df_specialization in old_current_procinfo.procdef.defoptions then
-               begin
-                 include(pd.defoptions,df_specialization);
-                 { the procdefs encountered here are nested procdefs of which
-                   their complete definition also resides inside the current token
-                   stream, thus access to their genericdef is not required }
-                 {$ifdef genericdef_for_nested}
-                 { find the corresponding routine in the generic routine }
-                 if not assigned(old_current_procinfo.procdef.genericdef) then
-                   internalerror(2016121701);
-                 srsym:=tsym(tprocdef(old_current_procinfo.procdef.genericdef).getsymtable(gs_local).find(pd.procsym.name));
-                 if not assigned(srsym) or (srsym.typ<>procsym) then
-                   internalerror(2016121702);
-                 { in practice the generic procdef should be at the same index
-                   as the index of the current procdef, but as there *might* be
-                   differences between the amount of defs generated for the
-                   specialization and the generic search for the def using
-                   parameter comparison }
-                 for i:=0 to tprocsym(srsym).procdeflist.count-1 do
-                   begin
-                     def:=tprocdef(tprocsym(srsym).procdeflist[i]);
-                     if (compare_paras(def.paras,pd.paras,cp_none,[cpo_ignorehidden,cpo_openequalisexact,cpo_ignoreuniv])=te_exact) and
-                         (compare_defs(def.returndef,pd.returndef,nothingn)=te_exact) then
-                       begin
-                         pd.genericdef:=def;
-                         break;
-                       end;
-                   end;
-                 if not assigned(pd.genericdef) then
-                   internalerror(2016121703);
-                 {$endif}
-               end;
-           end;
 
          { compile procedure when a body is needed }
          if (pd_body in pdflags) then
@@ -2290,54 +2118,66 @@ implementation
              { Handle imports }
              if (po_external in pd.procoptions) then
                begin
-                 import_external_proc(pd);
-{$ifdef cpuhighleveltarget}
-                 { it's hard to factor this out in a virtual method, because the
-                   generic version (the one inside this ifdef) doesn't fit in
-                   hlcgobj but in symcreat or here, while the other version
-                   doesn't fit in symcreat (since it uses the code generator).
-                   Maybe we need another class for this kind of code that could
-                   either be symcreat- or hlcgobj-based
-                 }
-                 if (not pd.forwarddef) and
-                    (pd.hasforward) and
-                    (proc_get_importname(pd)<>'') then
-                   call_through_new_name(pd,proc_get_importname(pd))
-                 else
-{$endif cpuhighleveltarget}
+                 { Import DLL specified? }
+                 if assigned(pd.import_dll) then
                    begin
-                     create_hlcodegen;
-                     hlcg.handle_external_proc(
-                       current_asmdata.asmlists[al_procedures],
-                       pd,
-                       proc_get_importname(pd));
-                     destroy_hlcodegen;
+                     if assigned (pd.import_name) then
+                       current_module.AddExternalImport(pd.import_dll^,
+                         pd.import_name^,proc_get_importname(pd),
+                         pd.import_nr,false,false)
+                     else
+                       current_module.AddExternalImport(pd.import_dll^,
+                         proc_get_importname(pd),proc_get_importname(pd),
+                         pd.import_nr,false,true);
                    end
-               end;
-           end;
+                 else
+                   begin
+                     { add import name to external list for DLL scanning }
+                     if tf_has_dllscanner in target_info.flags then
+                       current_module.dllscannerinputlist.Add(proc_get_importname(pd),pd);
+                   end;
 
-         { always register public functions that are only declared in the
-           implementation section as they might be called using an external
-           declaration from another unit }
-         if (po_global in pd.procoptions) and
-             not pd.interfacedef and
-             ([df_generic,df_specialization]*pd.defoptions=[]) then
-           begin
-             pd.register_def;
-             pd.procsym.register_sym;
+                 { External declared in implementation, and there was already a
+                   forward (or interface) declaration then we need to generate
+                   a stub that calls the external routine }
+                 if (not pd.forwarddef) and
+                    (pd.hasforward)
+                    { it is unclear to me what's the use of the following condition,
+                      so commented out, see also issue #18371 (FK)
+                    and
+                    not(
+                        assigned(pd.import_dll) and
+                        (target_info.system in [system_i386_wdosx,
+                                                system_arm_wince,system_i386_wince])
+                       ) } then
+                   begin
+                     s:=proc_get_importname(pd);
+                     if s<>'' then
+                       gen_external_stub(current_asmdata.asmlists[al_procedures],pd,s);
+                     { remove the external stuff, so that the interface crc
+                       doesn't change. This makes the function calls less
+                       efficient, but it means that the interface doesn't
+                       change if the function is ever redirected to another
+                       function or implemented in the unit. }
+                     pd.procoptions:=pd.procoptions-[po_external,po_has_importname,po_has_importdll];
+                     stringdispose(pd.import_name);
+                     stringdispose(pd.import_dll);
+                     pd.import_nr:=0;
+                   end;
+               end;
            end;
 
          { make sure that references to forward-declared functions are not }
          { treated as references to external symbols, needed for darwin.   }
 
          { make sure we don't change the binding of real external symbols }
-         if (([po_external,po_weakexternal]*pd.procoptions)=[]) and (pocall_internproc<>pd.proccalloption) then
+         if not(po_external in pd.procoptions) then
            begin
              if (po_global in pd.procoptions) or
                 (cs_profile in current_settings.moduleswitches) then
-               current_asmdata.DefineAsmSymbol(pd.mangledname,AB_GLOBAL,AT_FUNCTION,pd)
+               current_asmdata.DefineAsmSymbol(pd.mangledname,AB_GLOBAL,AT_FUNCTION)
              else
-               current_asmdata.DefineAsmSymbol(pd.mangledname,AB_LOCAL,AT_FUNCTION,pd);
+               current_asmdata.DefineAsmSymbol(pd.mangledname,AB_LOCAL,AT_FUNCTION);
            end;
 
          current_structdef:=old_current_structdef;
@@ -2346,36 +2186,6 @@ implementation
          current_procinfo:=old_current_procinfo;
       end;
 
-
-    procedure import_external_proc(pd:tprocdef);
-      var
-        name : string;
-      begin
-        if not (po_external in pd.procoptions) then
-          internalerror(2015121101);
-
-        { Import DLL specified? }
-        if assigned(pd.import_dll) then
-          begin
-            if assigned (pd.import_name) then
-              current_module.AddExternalImport(pd.import_dll^,
-                pd.import_name^,proc_get_importname(pd),
-                pd.import_nr,false,false)
-            else
-              current_module.AddExternalImport(pd.import_dll^,
-                proc_get_importname(pd),proc_get_importname(pd),
-                pd.import_nr,false,true);
-          end
-        else
-          begin
-            name:=proc_get_importname(pd);
-            { add import name to external list for DLL scanning }
-            if tf_has_dllscanner in target_info.flags then
-              current_module.dllscannerinputlist.Add(name,pd);
-            { needed for units that use functions in packages this way }
-            current_module.add_extern_asmsym(name,AB_EXTERNAL,AT_FUNCTION);
-          end;
-      end;
 
 {****************************************************************************
                              DECLARATION PARSING
@@ -2393,51 +2203,23 @@ implementation
 
     procedure read_declarations(islibrary : boolean);
       var
-        hadgeneric : boolean;
-
-        procedure handle_unexpected_had_generic;
-          begin
-            if hadgeneric then
-              begin
-                Message(parser_e_procedure_or_function_expected);
-                hadgeneric:=false;
-              end;
-          end;
-
-      var
         is_classdef:boolean;
       begin
         is_classdef:=false;
-        hadgeneric:=false;
         repeat
            if not assigned(current_procinfo) then
              internalerror(200304251);
            case token of
               _LABEL:
-                begin
-                  handle_unexpected_had_generic;
-                  label_dec;
-                end;
+                label_dec;
               _CONST:
-                begin
-                  handle_unexpected_had_generic;
-                  const_dec(hadgeneric);
-                end;
+                const_dec;
               _TYPE:
-                begin
-                  handle_unexpected_had_generic;
-                  type_dec(hadgeneric);
-                end;
+                type_dec;
               _VAR:
-                begin
-                  handle_unexpected_had_generic;
-                  var_dec(hadgeneric);
-                end;
+                var_dec;
               _THREADVAR:
-                begin
-                  handle_unexpected_had_generic;
-                  threadvar_dec(hadgeneric);
-                end;
+                threadvar_dec;
               _CLASS:
                 begin
                   is_classdef:=false;
@@ -2445,7 +2227,7 @@ implementation
                    begin
                      { class modifier is only allowed for procedures, functions, }
                      { constructors, destructors                                 }
-                     if not((token in [_FUNCTION,_PROCEDURE,_DESTRUCTOR,_OPERATOR]) or (token=_CONSTRUCTOR)) and
+                     if not(token in [_FUNCTION,_PROCEDURE,_CONSTRUCTOR,_DESTRUCTOR,_OPERATOR]) and
                         not((token=_ID) and (idtoken=_OPERATOR)) then
                        Message(parser_e_procedure_or_function_expected);
 
@@ -2462,18 +2244,11 @@ implementation
               _PROCEDURE,
               _OPERATOR:
                 begin
-                  if hadgeneric and not (token in [_PROCEDURE,_FUNCTION]) then
-                    begin
-                      Message(parser_e_procedure_or_function_expected);
-                      hadgeneric:=false;
-                    end;
-                  read_proc(is_classdef,nil,hadgeneric);
+                  read_proc(is_classdef,nil);
                   is_classdef:=false;
-                  hadgeneric:=false;
                 end;
               _EXPORTS:
                 begin
-                   handle_unexpected_had_generic;
                    if (current_procinfo.procdef.localst.symtablelevel>main_program_level) then
                      begin
                         Message(parser_e_syntax_error);
@@ -2490,7 +2265,6 @@ implementation
                 end;
               _PROPERTY:
                 begin
-                  handle_unexpected_had_generic;
                   if (m_fpc in current_settings.modeswitches) then
                     property_dec
                   else
@@ -2501,36 +2275,23 @@ implementation
                   case idtoken of
                     _RESOURCESTRING:
                       begin
-                        handle_unexpected_had_generic;
                         { m_class is needed, because the resourcestring
                           loading is in the ObjPas unit }
 {                        if (m_class in current_settings.modeswitches) then}
-                          resourcestring_dec(hadgeneric)
+                          resourcestring_dec
 {                        else
                           break;}
                       end;
                     _OPERATOR:
                       begin
-                        handle_unexpected_had_generic;
                         if is_classdef then
                           begin
-                            read_proc(is_classdef,nil,false);
+                            read_proc(is_classdef,nil);
                             is_classdef:=false;
                           end
                         else
                           break;
                       end;
-                    _GENERIC:
-                      begin
-                        handle_unexpected_had_generic;
-                        if not (m_delphi in current_settings.modeswitches) then
-                          begin
-                            consume(_ID);
-                            hadgeneric:=true;
-                          end
-                        else
-                          break;
-                      end
                     else
                       break;
                   end;
@@ -2552,81 +2313,33 @@ implementation
 
 
     procedure read_interface_declarations;
-      var
-        hadgeneric : boolean;
-
-        procedure handle_unexpected_had_generic;
-          begin
-            if hadgeneric then
-              begin
-                Message(parser_e_procedure_or_function_expected);
-                hadgeneric:=false;
-              end;
-          end;
-
       begin
-         hadgeneric:=false;
          repeat
            case token of
              _CONST :
-               begin
-                 handle_unexpected_had_generic;
-                 const_dec(hadgeneric);
-               end;
+               const_dec;
              _TYPE :
-               begin
-                 handle_unexpected_had_generic;
-                 type_dec(hadgeneric);
-               end;
+               type_dec;
              _VAR :
-               begin
-                 handle_unexpected_had_generic;
-                 var_dec(hadgeneric);
-               end;
+               var_dec;
              _THREADVAR :
-               begin
-                 handle_unexpected_had_generic;
-                 threadvar_dec(hadgeneric);
-               end;
+               threadvar_dec;
              _FUNCTION,
              _PROCEDURE,
              _OPERATOR :
-               begin
-                 if hadgeneric and not (token in [_FUNCTION, _PROCEDURE]) then
-                   begin
-                     message(parser_e_procedure_or_function_expected);
-                     hadgeneric:=false;
-                   end;
-                 read_proc(false,nil,hadgeneric);
-                 hadgeneric:=false;
-               end;
+               read_proc(false,nil);
              else
                begin
                  case idtoken of
                    _RESOURCESTRING :
-                     begin
-                       handle_unexpected_had_generic;
-                       resourcestring_dec(hadgeneric);
-                     end;
+                     resourcestring_dec;
                    _PROPERTY:
                      begin
-                       handle_unexpected_had_generic;
                        if (m_fpc in current_settings.modeswitches) then
                          property_dec
                        else
                          break;
                      end;
-                   _GENERIC:
-                     begin
-                       handle_unexpected_had_generic;
-                       if not (m_delphi in current_settings.modeswitches) then
-                         begin
-                           hadgeneric:=true;
-                           consume(_ID);
-                         end
-                       else
-                         break;
-                     end
                    else
                      break;
                  end;
@@ -2639,5 +2352,88 @@ implementation
           symtablestack.top.SymList.ForEachCall(@check_forward_class,nil);
       end;
 
+
+{****************************************************************************
+                      SPECIALIZATION BODY GENERATION
+****************************************************************************}
+
+
+    procedure specialize_objectdefs(p:TObject;arg:pointer);
+      var
+        oldcurrent_filepos : tfileposinfo;
+        specobj : tabstractrecorddef;
+        state : tspecializationstate;
+
+      procedure process_abstractrecorddef(def:tabstractrecorddef);
+        var
+          i  : longint;
+          hp : tdef;
+          hmodule : tmodule;
+        begin
+          hmodule:=find_module_from_symtable(def.genericdef.owner);
+          if hmodule=nil then
+            internalerror(201202041);
+          for i:=0 to def.symtable.DefList.Count-1 do
+            begin
+              hp:=tdef(def.symtable.DefList[i]);
+              if hp.typ=procdef then
+               begin
+                 { only generate the code if we need a body }
+                 if assigned(tprocdef(hp).struct) and not tprocdef(hp).forwarddef then
+                   continue;
+                 if assigned(tprocdef(hp).genericdef) and
+                   (tprocdef(hp).genericdef.typ=procdef) and
+                   assigned(tprocdef(tprocdef(hp).genericdef).generictokenbuf) then
+                   begin
+                     oldcurrent_filepos:=current_filepos;
+                     current_filepos:=tprocdef(tprocdef(hp).genericdef).fileinfo;
+                     { use the index the module got from the current compilation process }
+                     current_filepos.moduleindex:=hmodule.unit_index;
+                     current_tokenpos:=current_filepos;
+                     current_scanner.startreplaytokens(tprocdef(tprocdef(hp).genericdef).generictokenbuf);
+                     read_proc_body(nil,tprocdef(hp));
+                     current_filepos:=oldcurrent_filepos;
+                   end
+                 { synthetic routines will be implemented afterwards }
+                 else if tprocdef(hp).synthetickind=tsk_none then
+                   MessagePos1(tprocdef(hp).fileinfo,sym_e_forward_not_resolved,tprocdef(hp).fullprocname(false));
+               end
+             else
+               if hp.typ in [objectdef,recorddef] then
+                 { generate code for subtypes as well }
+                 process_abstractrecorddef(tabstractrecorddef(hp));
+           end;
+        end;
+
+      begin
+        if not((tsym(p).typ=typesym) and
+               (ttypesym(p).typedef.typesym=tsym(p)) and
+               (ttypesym(p).typedef.typ in [objectdef,recorddef]) and
+               (df_specialization in ttypesym(p).typedef.defoptions)
+              ) then
+          exit;
+
+        { Setup symtablestack a definition time }
+        specobj:=tabstractrecorddef(ttypesym(p).typedef);
+
+        if not (is_class_or_object(specobj) or is_record(specobj) or is_javaclass(specobj)) then
+          exit;
+
+        specialization_init(specobj.genericdef,state);
+
+        { procedure definitions for classes or objects }
+        process_abstractrecorddef(specobj);
+
+        specialization_done(state);
+      end;
+
+
+    procedure generate_specialization_procs;
+      begin
+        if assigned(current_module.globalsymtable) then
+          current_module.globalsymtable.SymList.WhileEachCall(@specialize_objectdefs,nil);
+        if assigned(current_module.localsymtable) then
+          current_module.localsymtable.SymList.WhileEachCall(@specialize_objectdefs,nil);
+      end;
 
 end.

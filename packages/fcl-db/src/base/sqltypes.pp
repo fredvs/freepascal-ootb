@@ -1,4 +1,4 @@
-unit SQLTypes;
+unit sqltypes;
 
 interface
 
@@ -28,7 +28,6 @@ type
     FSchemaName: String;
   public
     constructor Create(ACollection: TSqlObjectIdentifierList; Const AObjectName: String; Const ASchemaName: String = '');
-    function FullName: String;
     property SchemaName: String read FSchemaName write FSchemaName;
     property ObjectName: String read FObjectName write FObjectName;
   end;
@@ -50,20 +49,12 @@ implementation
 
 { TSqlObjectIdenfier }
 
-constructor TSqlObjectIdenfier.Create(ACollection: TSqlObjectIdentifierList; const AObjectName: String; const ASchemaName: String = '');
-
+constructor TSqlObjectIdenfier.Create(ACollection: TSqlObjectIdentifierList;
+  const AObjectName: String; Const ASchemaName: String = '');
 begin
   inherited Create(ACollection);
   FSchemaName:=ASchemaName;
   FObjectName:=AObjectName;
-end;
-
-function TSqlObjectIdenfier.FullName: String;
-
-begin
-  Result:=FObjectName;
-  if FSchemaName<>'' then
-    Result:=FSchemaName+'.'+FObjectName;
 end;
 
 { TSqlObjectIdentifierList }
@@ -90,5 +81,6 @@ begin
   Result.SchemaName:=ASchemaName;
   Result.ObjectName:=AObjectName;
 end;
+
 
 end.

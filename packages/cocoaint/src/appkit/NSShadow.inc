@@ -1,36 +1,69 @@
-{ Parsed from AppKit.framework NSShadow.h }
-
+{ Parsed from Appkit.framework NSShadow.h }
 
 {$ifdef TYPES}
-type
-  NSShadowPtr = ^NSShadow;
+{$ifndef NSSHADOW_PAS_T}
+{$define NSSHADOW_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSSHADOW_PAS_R}
+{$define NSSHADOW_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSSHADOW_PAS_F}
+{$define NSSHADOW_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSSHADOW_PAS_S}
+{$define NSSHADOW_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSShadow = objcclass;
+  NSShadowPointer = ^NSShadow;
+  NSShadowPtr = NSShadowPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSSHADOW_PAS_C}
+{$define NSSHADOW_PAS_C}
 
-type
+{ NSShadow }
   NSShadow = objcclass external (NSObject, NSCopyingProtocol, NSCodingProtocol)
   private
     _shadowFlags: NSUInteger;
     _shadowOffset: NSSize;
     _shadowBlurRadius: CGFloat;
     _shadowColor: NSColor;
-    _reservedFloat:array[0..2] of CGFloat;
-    _reserved: pointer;
+    _reservedFloat: array[0..(3)-1] of CGFloat;
+    _reserved: Pointer;
+    
   public
-    function init: instancetype; message 'init';
-    procedure setShadowOffset(newValue: NSSize); message 'setShadowOffset:';
+    function init: id; message 'init';
     function shadowOffset: NSSize; message 'shadowOffset';
-    procedure setShadowBlurRadius(newValue: CGFloat); message 'setShadowBlurRadius:';
+    procedure setShadowOffset(offset: NSSize); message 'setShadowOffset:';
     function shadowBlurRadius: CGFloat; message 'shadowBlurRadius';
-    procedure setShadowColor(newValue: NSColor); message 'setShadowColor:';
+    procedure setShadowBlurRadius(val: CGFloat); message 'setShadowBlurRadius:';
     function shadowColor: NSColor; message 'shadowColor';
+    procedure setShadowColor(color: NSColor); message 'setShadowColor:';
     procedure set_; message 'set';
 
-    { Adopted protocols }
-    function copyWithZone (zone: NSZonePtr): id; message 'copyWithZone:';
-    procedure encodeWithCoder (aCoder: NSCoder); message 'encodeWithCoder:';
-    function initWithCoder (aDecoder: NSCoder): id; message 'initWithCoder:';
+    { Adopted Protocols }
+    function copyWithZone(zone_: NSZonePtr): id;
+    procedure encodeWithCoder(aCoder: NSCoder);
+    function initWithCoder(aDecoder: NSCoder): id;
   end;
-{$endif}
 
+{$endif}
+{$endif}

@@ -32,7 +32,7 @@ unit cpupi;
        procinfo,cpuinfo,psub;
 
     type
-       tcpuprocinfo = class(tcgprocinfo)
+       tavrprocinfo = class(tcgprocinfo)
           // procedure handle_body_start;override;
           // procedure after_pass1;override;
           procedure set_first_temp_offset;override;
@@ -53,30 +53,23 @@ unit cpupi;
        cgobj,
        aasmcpu;
 
-    procedure tcpuprocinfo.set_first_temp_offset;
+    procedure tavrprocinfo.set_first_temp_offset;
       begin
         if tg.direction = -1 then
-          tg.setfirsttemp(-1)
-        else if not (po_nostackframe in procdef.procoptions) then
-          tg.setfirsttemp(maxpushedparasize+1)
+          tg.setfirsttemp(0)
         else
           tg.setfirsttemp(maxpushedparasize);
       end;
 
 
-    function tcpuprocinfo.calc_stackframe_size:longint;
+    function tavrprocinfo.calc_stackframe_size:longint;
       begin
-        if tg.lasttemp=2 then
-          { correct that lasttemp is 2 in case of an empty stack due to the post-decrement pushing and an additional correction
-            in tgobj.setfirsttemp.
-          }
-          result:=maxpushedparasize
-        else
-          result:=tg.direction*tg.lasttemp+maxpushedparasize;
+        maxpushedparasize:=align(maxpushedparasize,max(current_settings.alignment.localalignmin,4));
+        result:=Align(tg.direction*tg.lasttemp,max(current_settings.alignment.localalignmin,4))+maxpushedparasize;
       end;
 
 
-    procedure tcpuprocinfo.postprocess_code;
+    procedure tavrprocinfo.postprocess_code;
       begin
         { because of the limited branch distance of cond. branches, they must be replaced
           sometimes by normal jmps and an inverse branch }
@@ -84,6 +77,6 @@ unit cpupi;
       end;
 
 begin
-   cprocinfo:=tcpuprocinfo;
+   cprocinfo:=tavrprocinfo;
 end.
 

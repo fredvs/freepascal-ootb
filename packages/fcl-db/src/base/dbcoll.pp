@@ -1,4 +1,4 @@
-unit DBColl;
+unit dbcoll;
 
 interface
 

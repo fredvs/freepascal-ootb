@@ -26,7 +26,7 @@ unit symcpu;
 interface
 
 uses
-  symconst,symtype,symdef,symsym,symx86;
+  symtype,symdef,symsym,symx86;
 
 type
   { defs }
@@ -86,20 +86,11 @@ type
   end;
   tcpufloatdefclass = class of tcpufloatdef;
 
-  tcpuprocvardef = class(tx86procvardef)
+  tcpuprocvardef = class(tprocvardef)
   end;
   tcpuprocvardefclass = class of tcpuprocvardef;
 
-  tcpuprocdef = class(tx86procdef)
-    procedure ppuload_platform(ppufile: tcompilerppufile); override;
-    procedure ppuwrite_platform(ppufile: tcompilerppufile); override;
-   public
-    { library symbol for AROS }
-    libsym : tsym;
-    libsymderef : tderef;
-    function getcopyas(newtyp: tdeftyp; copytyp: tproccopytyp; const paraprefix: string): tstoreddef; override;
-    procedure buildderef; override;
-    procedure deref; override;
+  tcpuprocdef = class(tprocdef)
   end;
   tcpuprocdefclass = class of tcpuprocdef;
 
@@ -183,52 +174,6 @@ const
 
 implementation
 
-{****************************************************************************
-                             tcpuprocdef
-****************************************************************************}
-
-  procedure tcpuprocdef.ppuload_platform(ppufile: tcompilerppufile);
-    begin
-      inherited;
-      if po_syscall_has_libsym in procoptions then
-        ppufile.getderef(libsymderef);
-    end;
-
-
-  procedure tcpuprocdef.ppuwrite_platform(ppufile: tcompilerppufile);
-    begin
-      inherited;
-      if po_syscall_has_libsym in procoptions then
-        ppufile.putderef(libsymderef);
-    end;
-
-
-  function tcpuprocdef.getcopyas(newtyp: tdeftyp; copytyp: tproccopytyp; const paraprefix: string): tstoreddef;
-    begin
-      result:=inherited;
-      if newtyp=procdef then
-        tcpuprocdef(result).libsym:=libsym;
-    end;
-
-
-  procedure tcpuprocdef.buildderef;
-    begin
-      inherited;
-      if po_syscall_has_libsym in procoptions then
-        libsymderef.build(libsym);
-    end;
-
-
-  procedure tcpuprocdef.deref;
-    begin
-      inherited;
-      if po_syscall_has_libsym in procoptions then
-        libsym:=tsym(libsymderef.resolve)
-      else
-        libsym:=nil;
-    end;
-
-
 begin
   { used tdef classes }
   cfiledef:=tcpufiledef;
@@ -267,5 +212,7 @@ begin
   cconstsym:=tcpuconstsym;
   cenumsym:=tcpuenumsym;
   csyssym:=tcpusyssym;
+
+  cPtrDefHashSet:=tx86PtrDefHashSet;
 end.
 

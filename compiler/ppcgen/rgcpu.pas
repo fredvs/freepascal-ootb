@@ -35,8 +35,8 @@ unit rgcpu;
 
      type
        trgcpu = class(trgobj)
-         procedure do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
-         procedure do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
+         procedure do_spill_read(list:TAsmList;pos:tai;const spilltemp:treference;tempreg:tregister);override;
+         procedure do_spill_written(list:TAsmList;pos:tai;const spilltemp:treference;tempreg:tregister);override;
        end;
 
        trgintcpu = class(trgcpu)
@@ -53,7 +53,7 @@ unit rgcpu;
       procinfo;
 
 
-    procedure trgcpu.do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
+    procedure trgcpu.do_spill_read(list:TAsmList;pos:tai;const spilltemp:treference;tempreg:tregister);
       var
         tmpref : treference;
         helplist : TAsmList;
@@ -77,7 +77,7 @@ unit rgcpu;
             else
               hreg:=cg.getintregister(helplist,OS_ADDR);
 
-            reference_reset(tmpref,sizeof(aint),[]);
+            reference_reset(tmpref,sizeof(aint));
             tmpref.offset:=spilltemp.offset;
             tmpref.refaddr := addr_higha;
             ins:=taicpu.op_reg_reg_ref(A_ADDIS,hreg,spilltemp.base,tmpref);
@@ -100,11 +100,11 @@ unit rgcpu;
             helplist.free;
           end
         else
-          inherited;
+          inherited do_spill_read(list,pos,spilltemp,tempreg);
       end;
 
 
-    procedure trgcpu.do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
+    procedure trgcpu.do_spill_written(list:TAsmList;pos:tai;const spilltemp:treference;tempreg:tregister);
       var
         tmpref : treference;
         helplist : TAsmList;
@@ -127,7 +127,7 @@ unit rgcpu;
               end
             else
               hreg:=cg.getintregister(helplist,OS_ADDR);
-            reference_reset(tmpref,sizeof(aint),[]);
+            reference_reset(tmpref,sizeof(aint));
             tmpref.offset:=spilltemp.offset;
             tmpref.refaddr := addr_higha;
             ins:=taicpu.op_reg_reg_ref(A_ADDIS,hreg,spilltemp.base,tmpref);
@@ -147,7 +147,7 @@ unit rgcpu;
             helplist.free;
           end
         else
-          inherited;
+          inherited do_spill_written(list,pos,spilltemp,tempreg);
       end;
 
 {$ifdef user0}

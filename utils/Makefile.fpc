@@ -19,9 +19,6 @@ endif
 ifdef INSTALL_BINDIR
 FPMAKE_INSTALL_OPT+=--bininstalldir=$(INSTALL_BINDIR)
 endif
-ifdef INSTALL_LIBDIR
-FPMAKE_INSTALL_OPT+=--libinstalldir=$(INSTALL_LIBDIR)
-endif
 
 # Translate OS_TARGET and CPU_TARGET to fpmake's --os and --cpu parameters
 ifdef OS_TARGET
@@ -51,7 +48,7 @@ FPMAKE_OPT+=$(addprefix -o ,$(FPCOPT))
 FPMAKE_OPT+=--compiler=$(FPC)
 FPMAKE_OPT+=-bu
 ifndef BUILDFULLNATIVE
-FPMAKE_OPT+=-scp
+FPMAKE_OPT+=-sp
 endif
 .NOTPARALLEL:
 
@@ -136,9 +133,8 @@ vpath %.ppu $(ALLPPUDIRS)
 vpath %.log-ppu $(ALLPPUDIRS)
 vpath %.rm-log-ppu $(ALLPPUDIRS)
 
-# Do not try to recompile ppudump, as this does not work if trying to test cross-compiled units
-%.log-ppu : %.ppu
-	ppudump -VA -M $< > $@
+%.log-ppu : %.ppu ../compiler/utils/ppudump$(EXEEXT)
+	..$(PATHSEP)compiler$(PATHSEP)utils$(PATHSEP)ppudump -VA -M $< > $@
 
 %.rm-log-ppu : %.ppu ../compiler/utils/ppudump$(EXEEXT)
 	-$(RMPROG) $<

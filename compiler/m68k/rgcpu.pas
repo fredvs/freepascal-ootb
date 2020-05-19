@@ -27,15 +27,15 @@ unit rgcpu;
   interface
 
      uses
-       aasmbase,aasmtai,aasmdata,aasmsym,aasmcpu,
+       aasmbase,aasmtai,aasmdata,aasmcpu,
        cgbase,cgutils,cpubase,
        rgobj;
 
      type
        trgcpu = class(trgobj)
-         procedure do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
-         procedure do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
-         function do_spill_replace(list : TAsmList;instr : tai_cpu_abstract_sym; orgreg : tsuperregister;const spilltemp : treference) : boolean; override;
+         procedure do_spill_read(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);override;
+         procedure do_spill_written(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);override;
+         function do_spill_replace(list:TAsmList;instr:taicpu;orgreg:tsuperregister;const spilltemp:treference):boolean;override;
        end;
 
   implementation
@@ -53,7 +53,7 @@ unit rgcpu;
       end;
 
 
-    procedure trgcpu.do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
+    procedure trgcpu.do_spill_read(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);
       var
         helpins  : tai;
         tmpref   : treference;
@@ -73,7 +73,7 @@ unit rgcpu;
 {$endif}
 
             helplist.concat(taicpu.op_const_reg(A_MOVE,S_L,spilltemp.offset,hreg));
-            reference_reset_base(tmpref,spilltemp.base,0,spilltemp.temppos,sizeof(aint),[]);
+            reference_reset_base(tmpref,spilltemp.base,0,sizeof(aint));
             tmpref.index:=hreg;
 
             helpins:=spilling_create_load(tmpref,tempreg);
@@ -82,11 +82,11 @@ unit rgcpu;
             helplist.free;
           end
         else
-          inherited;
+          inherited do_spill_read(list,pos,spilltemp,tempreg);
       end;
 
 
-    procedure trgcpu.do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
+    procedure trgcpu.do_spill_written(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);
       var
         tmpref   : treference;
         helplist : tasmlist;
@@ -105,7 +105,7 @@ unit rgcpu;
 {$endif}
 
             helplist.concat(taicpu.op_const_reg(A_MOVE,S_L,spilltemp.offset,hreg));
-            reference_reset_base(tmpref,spilltemp.base,0,spilltemp.temppos,sizeof(aint),[]);
+            reference_reset_base(tmpref,spilltemp.base,0,sizeof(aint));
             tmpref.index:=hreg;
 
             helplist.concat(spilling_create_store(tempreg,tmpref));
@@ -116,11 +116,11 @@ unit rgcpu;
             helplist.free;
           end
         else
-          inherited;
+          inherited do_spill_written(list,pos,spilltemp,tempreg);
     end;
 
 
-    function trgcpu.do_spill_replace(list : TAsmList;instr : tai_cpu_abstract_sym; orgreg : tsuperregister;const spilltemp : treference) : boolean;
+    function trgcpu.do_spill_replace(list:TAsmList;instr:taicpu;orgreg:tsuperregister;const spilltemp:treference):boolean;
       var
         opidx: longint;
       begin
@@ -152,12 +152,11 @@ unit rgcpu;
                 end
               else if (instr.oper[1]^.typ=top_reg) and (getregtype(instr.oper[1]^.reg)=regtype) and
                 (get_alias(getsupreg(instr.oper[1]^.reg))=orgreg) and
-                ((
+                (
                   (instr.opcode in [A_MOVE,A_ADD,A_SUB,A_AND,A_OR]) and
-                  (instr.oper[0]^.typ=top_reg) and not
-                  (isaddressregister(instr.oper[0]^.reg))
+                  (instr.oper[0]^.typ=top_reg)
                 ) or
-                (instr.opcode in [A_ADDQ,A_SUBQ,A_MOV3Q])) then
+                (instr.opcode in [A_ADDQ,A_SUBQ,A_MOV3Q]) then
                 opidx:=1;
             end;
         end;
@@ -167,7 +166,7 @@ unit rgcpu;
         instr.oper[opidx]^.typ:=top_ref;
         new(instr.oper[opidx]^.ref);
         instr.oper[opidx]^.ref^:=spilltemp;
-        case taicpu(instr).opsize of
+        case instr.opsize of
           S_B: inc(instr.oper[opidx]^.ref^.offset,3);
           S_W: inc(instr.oper[opidx]^.ref^.offset,2);
         end;

@@ -62,7 +62,7 @@ end;
 // multiple issues with its old GNU assembler (Mantis #19188).
 // Even after fixing them, it can be enabled only for the trunk version,
 // otherwise bootstrapping won't be possible.
-// Modified to use oldbinutils as in cpu.pp source, to allow easier use for other targets.
+// Modifed to use oldbinutils as in cpu.pp source, to allow easier use for other targets.
 {$ifdef freebsd}
   {$ifndef overridebinutils}
     {$define oldbinutils}
@@ -640,35 +640,27 @@ asm
     mov    %rsi, %rdx
     mov    %rdi, %rcx
 {$endif win64}
-    negq    %r8
-    jz      .LCmpbyteZero
+    testq   %r8,%r8
+    je      .LCmpbyteZero
 
-    subq    %r8, %rcx
-    subq    %r8, %rdx
-
-    .balign 16
+    .balign 8
 .LCmpbyteLoop:
-{$ifdef oldbinutils}
-// for the reason why this alternate coding of movzbl is given here
-// see the comments in FillChar above
-    .byte 0x42,0x0F,0xB6,0x04,0x01
-{$else}
-    movzbl  (%rcx,%r8), %eax
-{$endif}    cmpb    (%rdx,%r8), %al
+    movb    (%rcx),%r9b
+    cmpb    (%rdx),%r9b
+    leaq    1(%rcx),%rcx
+    leaq    1(%rdx),%rdx
     jne     .LCmpbyteExitFast
-    incq     %r8
+    decq    %r8
     jne     .LCmpbyteLoop
-.LCmpbyteZero:
-     xorl    %eax, %eax
-     retq
-
 .LCmpbyteExitFast:
-{$ifdef oldbinutils}
-    .byte 0x42,0x0F,0xB6,0x0C,0x02
-{$else}
-     movzbl  (%rdx,%r8), %ecx    { Compare last position }
-{$endif}
-     subq    %rcx, %rax
+     movzbq  -1(%rdx),%r8     { Compare last position }
+     movzbq  %r9b,%rax
+     subq    %r8,%rax
+     ret
+
+.LCmpbyteZero:
+     movq    $0,%rax
+     ret
 end;
 {$endif FPC_SYSTEM_HAS_COMPAREBYTE}
 

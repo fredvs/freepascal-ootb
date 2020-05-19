@@ -58,8 +58,8 @@ constructor TDatabase.Create(AOwner: TComponent);
 begin
   Inherited Create(AOwner);
   FParams:=TStringlist.Create;
-  FDatasets:=TThreadList.Create;
-  FTransactions:=TThreadList.Create;
+  FDatasets:=TList.Create;
+  FTransactions:=TList.Create;
   FConnected:=False;
 end;
 
@@ -77,81 +77,51 @@ end;
 
 procedure TDatabase.CloseDataSets;
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
   If Assigned(FDatasets) then
     begin
-    L:=FDatasets.LockList;
-    try
-      For I:=L.Count-1 downto 0 do
-        TDataset(L[i]).Close;
-    finally
-      FDatasets.UnlockList;
-    end;
+    For I:=FDatasets.Count-1 downto 0 do
+      TDataset(FDatasets[i]).Close;
     end;
 end;
 
 procedure TDatabase.CloseTransactions;
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
   If Assigned(FTransactions) then
     begin
-    L:=FTransactions.LockList;
-    try
-      For I:=L.Count-1 downto 0 do
-        try
-          TDBTransaction(L[i]).EndTransaction;
-        except
-          if not ForcedClose then
-            Raise;
-        end;
-    finally
-      FTransactions.UnlockList
-    end;
+    For I:=FTransactions.Count-1 downto 0 do
+      try
+        TDBTransaction(FTransactions[i]).EndTransaction;
+      except
+        if not ForcedClose then
+          Raise;
+      end;    
     end;
 end;
 
 procedure TDatabase.RemoveDataSets;
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
+
 begin
   If Assigned(FDatasets) then
-    begin
-    L:=FDatasets.LockList;
-    try
-      For I:=L.Count-1 downto 0 do
-        TDBDataset(L[i]).Database:=Nil;
-    finally
-      FDatasets.UnlockList;
-    end;
-    end;
+    For I:=FDataSets.Count-1 downto 0 do
+      TDBDataset(FDataSets[i]).Database:=Nil;
 end;
 
 procedure TDatabase.RemoveTransactions;
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
+
 begin
   If Assigned(FTransactions) then
-    begin
-    L:=FTransactions.LockList;
-    try
-      For I:=L.Count-1 downto 0 do
-        TDBTransaction(L[i]).Database:=Nil;
-    finally
-      FTransactions.UnlockList
-    end;
-    end;
+    For I:=FTransactions.Count-1 downto 0 do
+      TDBTransaction(FTransactions[i]).Database:=Nil;
 end;
 
 procedure TDatabase.SetParams(AValue: TStrings);
@@ -162,157 +132,92 @@ end;
 
 Function TDatabase.GetDataSetCount : Longint;
 
-Var
-  L : TList;
-
 begin
-  Result:=0;
   If Assigned(FDatasets) Then
-    begin
-    L:=FDatasets.LockList;
-    try
-      Result:=L.Count;
-    finally
-      FDatasets.Unlocklist;
-    end;
-    end;
+    Result:=FDatasets.Count
+  else
+    Result:=0;
 end;
 
 Function TDatabase.GetTransactionCount : Longint;
 
-Var
-  L : TList;
-
 begin
-  Result:=0;
   If Assigned(FTransactions) Then
-    begin
-    L:=FTransactions.LockList;
-    try
-      Result:=L.Count;
-    finally
-      FTransactions.UnlockList;
-    end;
-    end;
+    Result:=FTransactions.Count
+  else
+    Result:=0;
 end;
 
 Function TDatabase.GetDataset(Index : longint) : TDataset;
 
-Var
-  L : TList;
-
 begin
-  If Not Assigned(FDatasets) then
+  If Assigned(FDatasets) then
+    Result:=TDataset(FDatasets[Index])
+  else
     begin
     result := nil;
     DatabaseError(SNoDatasets);
-    end
-  else
-    begin
-    L:=FDatasets.LockList;
-    try
-      Result:=TDataset(L[Index])
-    finally
-      FDatasets.UnlockList;
-    end;
     end;
 end;
 
 Function TDatabase.GetTransaction(Index : longint) : TDBtransaction;
 
-Var
-  L : TList;
-
 begin
-  If Not Assigned(FTransactions) then
+  If Assigned(FTransactions) then
+    Result:=TDBTransaction(FTransactions[Index])
+  else
     begin
     result := nil;
     DatabaseError(SNoTransactions);
-    end
-  else
-    begin
-    L:=FTransactions.LockList;
-    try
-      Result:=TDBTransaction(L[Index])
-    finally
-      FTransactions.UnlockList;
-    end;
     end;
 end;
 
 procedure TDatabase.RegisterDataset (DS : TDBDataset);
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
+
 begin
-  L:=FDatasets.LockList;
-  try
-    I:=L.IndexOf(DS);
-    If I=-1 then
-      L.Add(DS)
-    else
-      DatabaseErrorFmt(SDatasetRegistered,[DS.Name]);
-  finally
-    FDatasets.UnlockList;
-  end;
+  I:=FDatasets.IndexOf(DS);
+  If I=-1 then
+    FDatasets.Add(DS)
+  else
+    DatabaseErrorFmt(SDatasetRegistered,[DS.Name]);
 end;
 
 procedure TDatabase.RegisterTransaction (TA : TDBTransaction);
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
-  L:=FTransactions.LockList;
-  try
-    I:=L.IndexOf(TA);
-    If I=-1 then
-      L.Add(TA)
-    else
-      DatabaseErrorFmt(STransactionRegistered,[TA.Name]);
-  finally
-    FTransactions.UnlockList;
-  end;
+  I:=FTransactions.IndexOf(TA);
+  If I=-1 then
+    FTransactions.Add(TA)
+  else
+    DatabaseErrorFmt(STransactionRegistered,[TA.Name]);
 end;
 
 procedure TDatabase.UnRegisterDataset (DS : TDBDataset);
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
-  L:=FDatasets.LockList;
-  try
-    I:=L.IndexOf(DS);
-    If I<>-1 then
-      L.Delete(I)
-    else
-      DatabaseErrorFmt(SNoDatasetRegistered,[DS.Name]);
-  finally
-    FDatasets.UnlockList;
-  end;
+  I:=FDatasets.IndexOf(DS);
+  If I<>-1 then
+    FDatasets.Delete(I)
+  else
+    DatabaseErrorFmt(SNoDatasetRegistered,[DS.Name]);
 end;
 
 procedure TDatabase.UnRegisterTransaction (TA : TDBTransaction);
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
-  L:=FTransactions.LockList;
-  try
-    I:=L.IndexOf(TA);
-    If I<>-1 then
-      L.Delete(I)
-    else
-      DatabaseErrorFmt(SNoTransactionRegistered,[TA.Name]);
-  finally
-    FTransactions.UnlockList;
-  end;
+  I:=FTransactions.IndexOf(TA);
+  If I<>-1 then
+    FTransactions.Delete(I)
+  else
+    DatabaseErrorFmt(SNoTransactionRegistered,[TA.Name]);
 end;
 
 
@@ -469,7 +374,7 @@ constructor TDBTransaction.Create(AOwner: TComponent);
 
 begin
   inherited Create(AOwner);
-  FDatasets:=TThreadList.Create;
+  FDatasets:=TList.Create;
 end;
 
 procedure TDBTransaction.CheckDatabase;
@@ -489,23 +394,17 @@ procedure TDBTransaction.CloseDataSets;
 
 Var
   I : longint;
-  L : TList;
   DS : TDBDataset;
 
 begin
   If Assigned(FDatasets) then
     begin
-    L:=FDatasets.LockList;
-    try
-      For I:=L.Count-1 downto 0 do
-        begin
-        DS:=TDBDataset(L[i]);
-        If AllowClose(DS) then
-          DS.Close;
-        end;
-    finally
-      FDatasets.UnlockList;
-    end;
+    For I:=FDatasets.Count-1 downto 0 do
+      begin
+      DS:=TDBDataset(FDatasets[i]);
+      If AllowClose(DS) then
+        DS.Close;
+      end;
     end;
 end;
 
@@ -521,91 +420,57 @@ end;
 
 procedure TDBTransaction.RemoveDataSets;
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
-  If Not Assigned(FDatasets) then
-    exit;
-  L:=FDatasets.LockList;
-  try
-    For I:=L.Count-1 downto 0 do
-      TDBDataset(L[i]).Transaction:=Nil;
-  finally
-    FDatasets.unlockList;
-  end;
+  If Assigned(FDatasets) then
+    For I:=FDataSets.Count-1 downto 0 do
+      TDBDataset(FDataSets[i]).Transaction:=Nil;
 end;
 
 function TDBTransaction.GetDataset(Index: longint): TDBDataset;
 
-Var
-  L : TList;
-
-
 begin
-  If Not Assigned(FDatasets) then
+  If Assigned(FDatasets) then
+    Result:=TDBDataset(FDatasets[Index])
+  else
+  begin
+    Result := nil;
     DatabaseError(SNoDatasets);
-  L:=FDatasets.LockList;
-  try
-    Result:=TDBDataset(L[Index])
-  finally
-    FDatasets.UnlockList;
   end;
 end;
 
 function TDBTransaction.GetDataSetCount: Longint;
 
-Var
-  L : TList;
-
 begin
-  Result:=0;
-  If Not Assigned(FDatasets) Then
-    exit;
-  L:=FDatasets.lockList;
-  try
-    Result:=L.Count
-  finally
-    FDatasets.UnlockList;
-  end;
+  If Assigned(FDatasets) Then
+    Result:=FDatasets.Count
+  else
+    Result:=0;
 end;
 
 procedure TDBTransaction.RegisterDataset (DS : TDBDataset);
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
+
 begin
-  L:=FDatasets.LockList;
-  try
-    I:=L.IndexOf(DS);
-    If I=-1 then
-      L.Add(DS)
-    else
-      DatabaseErrorFmt(SDatasetRegistered,[DS.Name]);
-  finally
-    FDatasets.UnlockList;
-  end;
+  I:=FDatasets.IndexOf(DS);
+  If I=-1 then
+    FDatasets.Add(DS)
+  else
+    DatabaseErrorFmt(SDatasetRegistered,[DS.Name]);
 end;
 
 procedure TDBTransaction.UnRegisterDataset (DS : TDBDataset);
 
-Var
-  I : longint;
-  L : TList;
+Var I : longint;
 
 begin
-  L:=FDatasets.LockList;
-  try
-    I:=L.IndexOf(DS);
-    If I<>-1 then
-      L.Delete(I)
-    else
-      DatabaseErrorFmt(SNoDatasetRegistered,[DS.Name]);
-  finally
-    FDatasets.UnlockList;
-  end;
+  I:=FDatasets.IndexOf(DS);
+  If I<>-1 then
+    FDatasets.Delete(I)
+  else
+    DatabaseErrorFmt(SNoDatasetRegistered,[DS.Name]);
 end;
 
 { ---------------------------------------------------------------------

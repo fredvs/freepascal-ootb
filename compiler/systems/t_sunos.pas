@@ -37,8 +37,9 @@ implementation
     sysutils,
     cutils,cfileutl,cclasses,
     verbose,systems,globtype,globals,
-    cscript,
-    fmodule,
+    symconst,script,
+    fmodule,aasmbase,aasmtai,aasmdata,aasmcpu,cpubase,symsym,symdef,
+    cgobj,
     import,export,expunix,link,comprsrc,rescmn,i_sunos,ogbase;
 
   type
@@ -47,6 +48,10 @@ implementation
     end;
 
     texportlibsolaris=class(texportlibunix)
+(*
+      procedure setinitname(list: TAsmList; const s: string); override;
+      procedure setfininame(list: TAsmList; const s: string); override;
+*)
     end;
 
     tlinkersolaris=class(texternallinker)
@@ -82,6 +87,31 @@ implementation
 
 
 {*****************************************************************************
+                               TEXPORTLIBsolaris
+*****************************************************************************}
+(*
+    procedure texportlibsolaris.setinitname(list: TAsmList; const s: string);
+      begin
+        inherited setinitname(list,s);
+{$ifdef sparc}
+        new_section(list,sec_init,'',4);
+        list.concat(tai_symbol.createname_global('_init',AT_FUNCTION,0));
+        list.concat(taicpu.op_reg_const_reg(A_SAVE,NR_STACK_POINTER_REG,-96,NR_STACK_POINTER_REG));
+{$endif sparc}
+      end;
+
+
+    procedure texportlibsolaris.setfininame(list: TAsmList; const s: string);
+      begin
+        inherited setfininame(list,s);
+{$ifdef sparc}
+        new_section(list,sec_fini,'',4);
+        list.concat(tai_symbol.createname_global('_fini',AT_FUNCTION,0));
+        list.concat(taicpu.op_reg_const_reg(A_SAVE,NR_STACK_POINTER_REG,-96,NR_STACK_POINTER_REG));
+{$endif sparc}
+      end;
+*)
+{*****************************************************************************
                                   TLINKERsolaris
 *****************************************************************************}
 
@@ -108,9 +138,9 @@ begin
     use_gnu_ld:=true;
   if NOT Dontlinkstdlibpath Then
 {$ifdef x86_64}
-   LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib/64;=/usr/lib/64;=/usr/X11R6/lib/64;=/opt/sfw/lib/64',true);
+   LibrarySearchPath.AddPath(sysrootpath,'/lib/64;/usr/lib/64;/usr/X11R6/lib/64;/opt/sfw/lib/64',true);
 {$else not x86_64}
-   LibrarySearchPath.AddLibraryPath(sysrootpath,'=/lib;=/usr/lib;=/usr/X11R6/lib;=/opt/sfw/lib',true);
+   LibrarySearchPath.AddPath(sysrootpath,'/lib;/usr/lib;/usr/X11R6/lib;/opt/sfw/lib',true);
 {$endif not x86_64}
 {$ifdef  LinkTest}
      if (cs_link_staticflag in current_settings.globalswitches) then  WriteLN('ForceLinkStaticFlag');
@@ -288,7 +318,7 @@ begin
          begin
            i:=Pos(target_info.sharedlibext,S);
            if i>0 then
-            Insert(':',s,1);   // needed for the linker
+            Delete(S,i,255);
            LinkRes.Add('-l'+s);
          end
         else
@@ -515,7 +545,7 @@ begin
       while not linkres.data.Empty do
         begin
           s:=linkres.data.GetFirst;
-          if s<>'' then
+	  if s<>'' then
             linkstr:=linkstr+' '+s;
         end;
       linkres.free;
@@ -625,7 +655,7 @@ begin
       while not linkres.data.Empty do
         begin
           s:=linkres.data.GetFirst;
-          if s<>'' then
+	  if s<>'' then
             linkstr:=linkstr+' '+s;
         end;
       linkres.free;

@@ -59,49 +59,6 @@ interface
 
 {$undef GDB_VERSION_RECOGNIZED}
 
-{ GDB 7.12 is the last version
-  that use a plain C compiler
-  Later version will not work
-  for gdbint unit unless we get a
-  working g++ mangler into Free Pascal compiler }
-
-{ 7.12.x }
-{$ifdef GDB_V712}
-  {$info using gdb 7.12.x}
-  {$define GDB_VERSION_RECOGNIZED}
-  {$define GDB_VER_GE_712}
-  {$define GDB_NO_INSTREAM_VAR}
-  {$define GDB_CURRENT_UIOUT_MACRO}
-  {$define GDB_NEW_UI}
-{$endif}
-
-{$ifdef GDB_VER_GE_712}
-  {$define GDB_VER_GE_711}
-{$endif}
-
-{ 7.11.x }
-{$ifdef GDB_V711}
-  {$info using gdb 7.11.x}
-  {$define GDB_VERSION_RECOGNIZED}
-  {$define GDB_VER_GE_711}
-  {$define GDB_HAS_SAVED_COMMAND_LINE_SIZE}
-{$endif}
-
-{$ifdef GDB_VER_GE_711}
-  {$define GDB_VER_GE_710}
-{$endif}
-
-{ 7.10.x }
-{$ifdef GDB_V710}
-  {$info using gdb 7.10.x}
-  {$define GDB_VERSION_RECOGNIZED}
-  {$define GDB_VER_GE_710}
-{$endif}
-
-{$ifdef GDB_VER_GE_710}
-  {$define GDB_VER_GE_709}
-{$endif}
-
 { 7.9.x }
 {$ifdef GDB_V709}
   {$info using gdb 7.9.x}
@@ -111,7 +68,6 @@ interface
 
 {$ifdef GDB_VER_GE_709}
   {$define GDB_VER_GE_708}
-  {$define SYMTAB_HAS_COMPUNIT_SYMTAB}
 {$endif}
 
 { 7.8.x }
@@ -352,7 +308,7 @@ interface
   {$define GDB_INIT_HAS_ARGV0}
 {$endif GDB_V6}
 
-{$ifndef GDB_VERSION_RECOGNIZED}
+{$ifdef GDB_VERSION_RECOGNIZED}
   {$warning no recognized GDB_VXYZ conditional found, linking might fail. }
 {$endif}
 
@@ -760,15 +716,6 @@ interface
 {$packrecords C}
 
 type
-{$if defined(CPUSPARC) and defined(LINUX)}
-  {$define GDB_CORE_ADDR_FORCE_64BITS}
-{$endif}
-{$ifdef GDB_CORE_ADDR_FORCE_64BITS}
-  CORE_ADDR = qword;
-{$else}
-  CORE_ADDR = ptruint; { might be target dependent PM }
-{$endif}
-
   psyminfo=^tsyminfo;
   tsyminfo=record
     address  : ptrint;
@@ -783,7 +730,7 @@ type
     function_name : pchar;
     args : pchar;
     line_number : longint;
-    address : CORE_ADDR;
+    address : ptrint;
     level : longint;
     constructor init;
     destructor done;
@@ -800,6 +747,14 @@ const
  k=1;
 
 type
+{$if defined(CPUSPARC) and defined(LINUX)}
+  {$define GDB_CORE_ADDR_FORCE_64BITS}
+{$endif}
+{$ifdef GDB_CORE_ADDR_FORCE_64BITS}
+  CORE_ADDR = qword;
+{$else}
+  CORE_ADDR = ptrint; { might be target dependent PM }
+{$endif}
   streamtype = (afile,astring);
   C_FILE     = ptrint; { at least under DJGPP }
   P_C_FILE   = ^C_FILE;
@@ -916,9 +871,6 @@ type
 
   pgdbinterface=^tgdbinterface;
   tgdbinterface=object
-  private
-    stop_breakpoint_number : longint;
-  public
     gdberrorbuf,
     gdboutputbuf  : tgdbbuffer;
     got_error,
@@ -934,6 +886,7 @@ type
     frame_begin_seen : boolean;
     frame_level,
     command_level,
+    stop_breakpoint_number,
     current_line_number,
     signal_start,
     signal_end,
@@ -955,8 +908,8 @@ type
     current_pc      : CORE_ADDR;
     { breakpoint }
     last_breakpoint_number,
+    last_breakpoint_address,
     last_breakpoint_line : longint;
-    last_breakpoint_address : CORE_ADDR;
     last_breakpoint_file : pchar;
     invalid_breakpoint_line : boolean;
     user_screen_shown,
@@ -979,7 +932,7 @@ type
     procedure clear_frames;
     { Highlevel }
     procedure GetAddrSyminfo(addr:ptrint;var si:tsyminfo);
-    function SelectSourceline(fn:pchar;line,BreakIndex:longint): Boolean;
+    procedure SelectSourceline(fn:pchar;line:longint);
     procedure StartSession;
     procedure BreakSession;
     procedure EndSession(code:longint);
@@ -988,7 +941,7 @@ type
     procedure FlushAll; virtual;
     function Query(question : pchar; args : pchar) : longint; virtual;
     { Hooks }
-    function DoSelectSourceline(const fn:string;line,BreakIndex:longint): Boolean;virtual;
+    procedure DoSelectSourceline(const fn:string;line:longint);virtual;
     procedure DoStartSession;virtual;
     procedure DoBreakSession;virtual;
     procedure DoEndSession(code:longint);virtual;
@@ -1013,32 +966,6 @@ function  inferior_pid : longint;
 {$ifdef GDB_V6}
 type
   ui_out = pointer;
-{$ifdef GDB_CURRENT_UIOUT_MACRO}
-type
-  pui_out = ^ui_out;
-function current_ui_current_uiout_ptr : ui_out;cdecl;external;
-var
-  cli_uiout : ui_out;
-  current_uiout : ui_out;
-  { out local copy for catch_exceptions call }
-  our_uiout : ui_out;
-
-type
-  pui = ^ui;
-  ui  = record
-   { ui record }
-   next : pui;
-   num : longint;
-  end;
-
-{$ifdef GDB_NEW_UI}
-var
-  local_ui : pui;
-
-function new_ui (instream, outstream,errstream: pui_file) : pui; cdecl;external;
-{$endif GDB_NEW_UI}
-
-{$else not GDB_CURRENT_UIOUT_MACRO}
 {$ifndef GDB_NO_UIOUT}
 var
   uiout : ui_out;cvar;external;
@@ -1049,7 +976,6 @@ var
   { out local copy for catch_exceptions call }
   our_uiout : ui_out;
 {$endif GDB_NO_UIOUT}
-{$endif not GDB_CURRENT_UIOUT_MACRO}
 function cli_out_new (stream : pui_file):ui_out;cdecl;external;
 {$endif GDB_V6}
 
@@ -1327,15 +1253,6 @@ type
      psymtab = ^symtab;
      symtab = record
           next : psymtab;
-{$ifdef SYMTAB_HAS_COMPUNIT_SYMTAB}
-          comp_unit : pointer; {^compunit_symtab }
-          linetable : pointer; {^linetable;}
-          filename : pchar;
-          nlines : longint;
-          line_charpos : ^longint;
-          language : tlanguage;
-          fullname : pchar;
-{$else not SYMTAB_HAS_COMPUNIT_SYMTAB}
           blockvector : pointer; {^blockvector;}
           linetable : pointer; {^linetable;}
           block_line_section : longint;
@@ -1355,7 +1272,6 @@ type
           version : pchar;
           fullname : pchar;
           objfile : pointer; {^objfile;}
-{$endif not SYMTAB_HAS_COMPUNIT_SYMTAB}
        end;
 
      psymtab_and_line = ^symtab_and_line;
@@ -1869,23 +1785,16 @@ var
 {$endif GDB_HAS_DB_COMMANDS}
 
 {$ifdef GDB_NEEDS_SET_INSTREAM}
-{$ifndef GDB_NO_INSTREAM_VAR}
 var
   instream : P_C_FILE;cvar;external;
-{$endif not GDB_NO_INSTREAM_VAR}
-
   function gdb_fopen (filename : pchar; mode : pchar) : pui_file;cdecl;external;
 {$ifdef LIBGDB_HAS_GET_STDIN}
   { this function is generated by the gen-libgdb-inc.sh script
     in a object called gdb_get_stdin.o added to the libgdb.a archive }
   function gdb_get_stdin : P_C_FILE; cdecl; external;
-{$ifdef GDB_HAS_SAVED_COMMAND_LINE_SIZE}
-  { In some GDB versions, saved_command_line needs to 
-    be explicitly allocated at startup }
 var
   saved_command_line : pchar;cvar;external; { defined in top.c source }
   saved_command_line_size : longint;cvar;external; {defined in top.c source }
-{$endif def GDB_HAS_SAVED_COMMAND_LINE_SIZE}
 {$endif}
 {$endif GDB_NEEDS_SET_INSTREAM}
 var
@@ -1968,7 +1877,6 @@ begin
   args:=nil;
   line_number:=0;
   address:=0;
-  level:=0;
 end;
 
 procedure tframeentry.clear;
@@ -2243,8 +2151,7 @@ begin
       fname:=sym.symtab^.filename
      else
       fname:=nil;
-     if not SelectSourceLine(fname,sym.line,stop_breakpoint_number) then
-       gdb_command('continue');
+     SelectSourceLine(fname,sym.line);
    end;
 end;
 
@@ -2368,7 +2275,7 @@ end;
 
 procedure annotate_frame_begin(level:longint;
 {$ifdef GDB_ANNOTATE_FRAME_BEGIN_HAS_GDBARCH_FIELD}
-  gdbarch : pgdbarch;
+  gdbarch : pointer;
 {$endif GDB_ANNOTATE_FRAME_BEGIN_HAS_GDBARCH_FIELD}
 pc:CORE_ADDR);cdecl;public;
 begin
@@ -2589,11 +2496,7 @@ begin
 {$endif}
 end;
 
-procedure annotate_source(filename:pchar;line,character,mid:longint;
-{$ifdef GDB_ANNOTATE_FRAME_BEGIN_HAS_GDBARCH_FIELD}
-  gdbarch : pgdbarch;
-{$endif GDB_ANNOTATE_FRAME_BEGIN_HAS_GDBARCH_FIELD}
-pc:CORE_ADDR);cdecl;public;
+procedure annotate_source(filename:pchar;line,character,mid:longint;pc:CORE_ADDR);cdecl;public;
 begin
 {$ifdef Verbose}
   Debug('|source|');
@@ -3310,12 +3213,12 @@ begin
 end;
 
 
-function tgdbinterface.SelectSourceLine(fn:pchar;line,BreakIndex:longint): Boolean;
+procedure tgdbinterface.SelectSourceLine(fn:pchar;line:longint);
 begin
   if assigned(fn) then
-    SelectSourceLine:=DoSelectSourceLine(StrPas(fn),line,BreakIndex)
+   DoSelectSourceLine(StrPas(fn),line)
   else
-    SelectSourceLine:=DoSelectSourceLine('',line,BreakIndex);
+   DoSelectSourceLine('',line);
 end;
 
 
@@ -3377,16 +3280,15 @@ end;
           Default Hooks
 ---------------------------------------}
 
-function tgdbinterface.DoSelectSourceLine(const fn:string;line,BreakIndex:longint): Boolean;
+procedure tgdbinterface.DoSelectSourceLine(const fn:string;line:longint);
 {$ifdef Verbose}
 var
-  s,bs : string;
+  s : string;
 {$endif}
 begin
 {$ifdef Verbose}
   Str(line,S);
-  Str(BreakIndex,BS);
-  Debug('|SelectSource '+fn+':'+s+','+bs+'|');
+  Debug('|SelectSource '+fn+':'+s+'|');
 {$endif}
 end;
 
@@ -3552,12 +3454,8 @@ begin
   gdb_stdin:=mem_fileopen;
   save_gdb_stdin:=gdb_stdin;
 {$ifdef LIBGDB_HAS_GET_STDIN}
-{$ifndef GDB_NO_INSTREAM_VAR}
   instream:=gdb_get_stdin;
-{$endif ndef GDB_NO_INSTREAM_VAR}
-{$ifdef GDB_HAS_SAVED_COMMAND_LINE_SIZE}
   saved_command_line:=xmalloc(saved_command_line_size);
-{$endif def GDB_HAS_SAVED_COMMAND_LINE_SIZE}
 {$else}
   dummy_file :=gdb_fopen('dummy.$$$','a');
   {in captured_main code, this is simply
@@ -3600,9 +3498,6 @@ begin
   uiout := cli_out_new (gdb_stdout);
 {$endif not GDB_NO_UIOUT}
 {$endif GDB_V6}
-{$ifdef GDB_NEW_UI}
-  local_ui := new_ui (gdb_stdin,gdb_stdout,gdb_stderr);
-{$endif not GDB_NEW_UI}
 {$ifdef GDB_INIT_HAS_ARGV0}
   getmem(argv0,length(paramstr(0))+1);
   strpcopy(argv0,paramstr(0));
@@ -3636,9 +3531,6 @@ begin
   current_uiout:=cli_uiout;
   our_uiout:=cli_uiout;
 {$endif GDB_NO_UIOUT}
-{$ifdef GDB_NEW_UI}
-  local_ui := new_ui (gdb_stdin,gdb_stdout,gdb_stderr);
-{$endif not GDB_NEW_UI}
 {$endif GDB_NEEDS_INTERPRETER_SETUP}
 {$ifdef supportexceptions}
   {$ifdef unix}

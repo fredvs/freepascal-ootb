@@ -15,7 +15,7 @@ begin
     end;
 end;
 
-var Mem : sizeuint;
+var Mem : sizeint;
 begin
   domem(mem);
   Test;

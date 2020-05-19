@@ -1,3 +1,5 @@
+{ %FAIL }
+
 program tgeneric88;
 
 {$mode objfpc}

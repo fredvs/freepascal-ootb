@@ -88,9 +88,7 @@ const
   TiffCompressionIT8BL = 32898; { IT8BL }
   TiffCompressionPixarFilm = 32908; { PIXARFILM }
   TiffCompressionPixarLog = 32909; { PIXARLOG }
-  TiffCompressionDeflateZLib = 32946; { DeflatePKZip - obsolete,
-       same as TiffCompressionDeflateAdobe,
-       Macos Finder does not like this, use Adobe instead }
+  TiffCompressionDeflateZLib = 32946; { DeflatePKZip }
   TiffCompressionDCS = 32947; { DCS }
   TiffCompressionJBIG = 34661; { JBIG }
   TiffCompressionSGILog = 34676; { SGILOG }

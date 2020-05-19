@@ -1,4 +1,4 @@
- unit TestDBBasics;
+unit TestDBBasics;
 
 {$IFDEF FPC}
   {$mode Delphi}{$H+}
@@ -28,7 +28,6 @@ type
     // fields
     procedure TestSetFieldValues;
     procedure TestGetFieldValues;
-    procedure TestClearFields;
 
     procedure TestSupportIntegerFields;
     procedure TestSupportSmallIntFields;
@@ -197,22 +196,7 @@ uses
   strutils,
   FmtBCD;
 
-type
-  THackDataLink=class(TDataLink);
-
-  { TMyCustomBufDataset }
-
-  TMyCustomBufDataset = Class(TCustomBufDataset)
-  protected
-    procedure LoadBlobIntoBuffer(FieldDef: TFieldDef; ABlobBuf: PBufBlobField); override;
-  end;
-
-{ TMyCustomBufDataset }
-
-procedure TMyCustomBufDataset.LoadBlobIntoBuffer(FieldDef: TFieldDef; ABlobBuf: PBufBlobField);
-begin
-  Raise ENotImplemented.Create('LoadBlobIntoBuffer not implemented');
-end;
+type THackDataLink=class(TDataLink);
 
 { TTestCursorDBBasics }
 
@@ -294,7 +278,6 @@ begin
 end;
 
 procedure TTestDBBasics.TestMove;
-
 var i,count      : integer;
     aDatasource  : TDataSource;
     aDatalink    : TDataLink;
@@ -726,7 +709,6 @@ begin
   for i:=13 to 15 do begin
     datalink1.BufferCount := datalink1.BufferCount+1;
     r := dataset1.RecNo; // syncronizes source dataset to ActiveRecord
-    AssertTrue(r>=0);
     datalink1.ActiveRecord := datalink1.BufferCount-1;
     CheckEquals(i, dataset1.FieldByName('ID').AsInteger);
   end;
@@ -1038,7 +1020,6 @@ begin
   ds.Open;
   ds.InsertRecord([0,'name']);
   v := VarToStr(ds.Fields[1].OldValue);
-  AssertTrue(v<>null);
 end;
 
 procedure TTestCursorDBBasics.TestFieldOldValue;
@@ -1200,15 +1181,6 @@ begin
     end;
     CheckTrue(PassException);
 
-    end;
-end;
-
-procedure TTestDBBasics.TestClearFields;
-begin
-  with DBConnector.GetNDataset(true,14) do
-    begin
-    Open;
-    AssertException('Cannot call ClearFields when not in edit mode',EDatabaseError,ClearFields);
     end;
 end;
 
@@ -1605,7 +1577,7 @@ begin
   TCustomBufDataset(ds).SaveToFile('test.xml');
   ds.close;
 
-  LoadDs := TMyCustomBufDataset.Create(nil);
+  LoadDs := TCustomBufDataset.Create(nil);
   try
     LoadDs.LoadFromFile('test.xml');
     FTestXMLDatasetDefinition(LoadDS);
@@ -1639,7 +1611,7 @@ procedure TTestBufDatasetDBBasics.TestClientDatasetAsMemDataset;
 var ds : TCustomBufDataset;
     i  : integer;
 begin
-  ds := TMyCustomBufDataset.Create(nil);
+  ds := TCustomBufDataset.Create(nil);
     try
     DS.FieldDefs.Add('ID',ftInteger);
     DS.FieldDefs.Add('NAME',ftString,50);
@@ -1952,6 +1924,7 @@ begin
       end
     else
       MaxIndexesCount := 3;
+
     try
       open;
     except
@@ -1974,9 +1947,9 @@ begin
     while not eof do
       begin
       if AFieldType=ftString then
-        CheckTrue(AnsiCompareStr(VarToStr(LastValue),VarToStr(FieldByName('F'+FieldTypeNames[AfieldType]).AsString))<=0,'Forward, Correct string value')
+        CheckTrue(AnsiCompareStr(VarToStr(LastValue),VarToStr(FieldByName('F'+FieldTypeNames[AfieldType]).AsString))<=0)
       else
-        CheckTrue(LastValue<=FieldByName('F'+FieldTypeNames[AfieldType]).AsVariant,'Forward, Correct variant value');
+        CheckTrue(LastValue<=FieldByName('F'+FieldTypeNames[AfieldType]).AsVariant);
       LastValue:=FieldByName('F'+FieldTypeNames[AfieldType]).AsVariant;
       Next;
       end;
@@ -1984,9 +1957,9 @@ begin
     while not bof do
       begin
       if AFieldType=ftString then
-        CheckTrue(AnsiCompareStr(VarToStr(LastValue),VarToStr(FieldByName('F'+FieldTypeNames[AfieldType]).AsString))>=0,'Backward, Correct string value')
+        CheckTrue(AnsiCompareStr(VarToStr(LastValue),VarToStr(FieldByName('F'+FieldTypeNames[AfieldType]).AsString))>=0)
       else
-        CheckTrue(LastValue>=FieldByName('F'+FieldTypeNames[AfieldType]).AsVariant,'Backward, Correct variant value');
+        CheckTrue(LastValue>=FieldByName('F'+FieldTypeNames[AfieldType]).AsVariant);
       LastValue:=FieldByName('F'+FieldTypeNames[AfieldType]).AsVariant;
       Prior;
       end;
@@ -2422,19 +2395,19 @@ procedure TTestBufDatasetDBBasics.TestIndexEditRecord;
 // with a value at the end of the alphabet
 var ds : TCustomBufDataset;
     AFieldType : TFieldType;
+    OldID : Integer;
     OldStringValue : string;
 begin
   ds := DBConnector.GetFieldDataset as TCustomBufDataset;
   with ds do
     begin
     AFieldType:=ftString;
-
     AddIndex('testindex','F'+FieldTypeNames[AfieldType],[]);
     IndexName:='testindex';
-    Open;
+    open; //Record 0
     OldStringValue:=FieldByName('F'+FieldTypeNames[AfieldType]).AsString;
     next; //Now on record 1
-    CheckTrue(AnsiCompareStr(OldStringValue,FieldByName('F'+FieldTypeNames[AfieldType]).AsString)<=0,'Record 0 must be smaller than record 1 with asc sorted index');
+    CheckTrue(OldStringValue<=FieldByName('F'+FieldTypeNames[AfieldType]).AsString,'Record 0 must be smaller than record 1 with asc sorted index');
     OldStringValue:=FieldByName('F'+FieldTypeNames[AfieldType]).AsString;
     next; //Now on record 2
     CheckTrue(AnsiCompareStr(OldStringValue,FieldByName('F'+FieldTypeNames[AfieldType]).AsString)<=0,'Record 1 must be smaller than record 2 with asc sorted index');
@@ -2443,6 +2416,7 @@ begin
     edit;
     FieldByName('F'+FieldTypeNames[AfieldType]).AsString := 'ZZZ'; //should be sorted last
     post;
+
     prior; // Now on record 0
     // Check ZZZ is sorted on/after record 0
     CheckTrue(AnsiCompareStr('ZZZ',FieldByName('F'+FieldTypeNames[AfieldType]).AsString)>=0, 'Prior>');
@@ -2469,6 +2443,7 @@ begin
     // empty dataset and other than default index (default_order) active
     CheckTrue(BOF, 'No BOF when opening empty dataset');
     CheckTrue(EOF, 'No EOF when opening empty dataset');
+
     // append data at end
     for i:=20 downto 0 do
       AppendRecord([i, inttostr(i)]);
@@ -2527,16 +2502,20 @@ begin
   with ds do
     begin
     AFieldType:=ftString;
+    
     IndexFieldNames:='F'+FieldTypeNames[AfieldType];
+
     open;
     PrevValue:='';
     while not eof do
       begin
-      CheckTrue(AnsiCompareStr(FieldByName('F'+FieldTypeNames[AfieldType]).AsString,PrevValue)>=0,IntToStr(RecNo)+': '+FieldByName('F'+FieldTypeNames[AfieldType]).AsString+'>='+PrevValue+' ?');
+      CheckTrue(AnsiCompareStr(FieldByName('F'+FieldTypeNames[AfieldType]).AsString,PrevValue)>=0);
       PrevValue:=FieldByName('F'+FieldTypeNames[AfieldType]).AsString;
       Next;
       end;
+
     CheckEquals('F'+FieldTypeNames[AfieldType],IndexFieldNames);
+
     end;
 end;
 
@@ -2547,7 +2526,6 @@ begin
   bufds := DBConnector.GetNDataset(5) as TCustomBufDataset;
   s := bufds.IndexFieldNames;
   s := bufds.IndexName;
-  CheckEquals('',S,'Default index name');
   bufds.CompareBookmarks(nil,nil);
 end;
 {$endif fpc}
@@ -2684,7 +2662,7 @@ var i          : byte;
     Fld        : TField;
 
 begin
-  TestFieldDefinition(ftString, 10*DBConnector.CharSize+1, ds, Fld);
+  TestFieldDefinition(ftString,11,ds,Fld);
 
   for i := 0 to testValuesCount-1 do
     begin
@@ -2837,8 +2815,8 @@ begin
 
   for i := 0 to testValuesCount-1 do
     begin
-    CheckEquals(testCurrencyValues[i], Fld.AsCurrency, 'AsCurrency');
     CheckEquals(CurrToStr(testCurrencyValues[i]), Fld.AsString, 'AsString');
+    CheckEquals(testCurrencyValues[i], Fld.AsCurrency, 'AsCurrency');
     CheckEquals(testCurrencyValues[i], Fld.AsFloat, 'AsFloat');
     ds.Next;
     end;
@@ -2872,7 +2850,7 @@ var i          : byte;
     Fld        : TField;
 
 begin
-  TestFieldDefinition(ftFixedChar, 10*DBConnector.CharSize+1, ds, Fld);
+  TestFieldDefinition(ftFixedChar,11,ds,Fld);
 
   for i := 0 to testValuesCount-1 do
     begin
@@ -2937,7 +2915,7 @@ begin
       if Fields[i].DataType in ftBlobTypes then
         begin
           // Type should certainly fall into wider old style, imprecise TBlobType
-          if not(TBlobField(Fields[i]).BlobType in ftBlobTypes) then
+          if not(TBlobField(Fields[i]).BlobType in [Low(TBlobType)..High(TBlobType)]) then
             fail('BlobType for field '+
               Fields[i].FieldName+' is not in old wide incorrect TBlobType range. Actual value: '+
               inttostr(word(TBlobField(Fields[i]).BlobType)));

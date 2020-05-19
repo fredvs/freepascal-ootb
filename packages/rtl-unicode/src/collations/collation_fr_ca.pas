@@ -1,6 +1,6 @@
     {   Unicode implementation tables. 
  
-        Copyright (c) 2013 - 2017 by Inoussa OUEDRAOGO 
+        Copyright (c) 2013 by Inoussa OUEDRAOGO 
  
         Permission is hereby granted, free of charge, to any person 
         obtaining a copy of the Unicode data files and any associated 
@@ -24,14 +24,7 @@
         but WITHOUT ANY WARRANTY; without even the implied warranty of 
         MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. }
 
-{$IFDEF FPC}
-  {$mode DELPHI}{$H+}
-{$ENDIF FPC}
-
-{$IFNDEF FPC}
-  {$DEFINE ENDIAN_LITTLE}
-{$ENDIF !FPC}
-
+{$mode objfpc}{$H+}
 unit collation_fr_ca;
 
 interface
@@ -41,41 +34,23 @@ uses
   unicodedata, unicodeducet;
 
 const
-  UPDATED_FIELDS = [  ];
-  COLLATION_NAME = 'fr_CA';
+  UPDATED_FIELDS = [ TCollationField.BackWard ];
+  COLLATION_NAME = 'fr';
   BASE_COLLATION = '';
+  VERSION_STRING = '$Revision: 8242 $';
   VARIABLE_LOW_LIMIT = 65535;
   VARIABLE_HIGH_LIMIT = 0;
   VARIABLE_WEIGHT = 0;
   BACKWARDS_0 = False;
-  BACKWARDS_1 = False;
+  BACKWARDS_1 = True;
   BACKWARDS_2 = False;
   BACKWARDS_3 = False;
-  NO_STRING_NORMALIZATION = False;
-  COMPARISON_STRENGTH = 3;
 
 var
   CLDR_Collation : TUCA_DataBook = (
     Base               : nil;
-    Version            : 
-      (
-        Ord('$'),Ord('R'),Ord('e'),Ord('v'),Ord('i'),Ord('s'),Ord('i'),Ord('o'),
-        Ord('n'),Ord(':'),Ord(' '),Ord('1'),Ord('1'),Ord('9'),Ord('1'),Ord('4'),
-        Ord(' '),Ord('$'),
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-      );
-    CollationName      : 
-      (
-        Ord('f'),Ord('r'),Ord('_'),Ord('C'),Ord('A'),
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0
-      );
+    Version            : VERSION_STRING;
+    CollationName      : COLLATION_NAME;
     VariableWeight     : TUCA_VariableKind(VARIABLE_WEIGHT);
     Backwards          : (BACKWARDS_0,BACKWARDS_1,BACKWARDS_2,BACKWARDS_3);
     BMP_Table1         : nil;
@@ -86,9 +61,6 @@ var
     Props              : nil;
     VariableLowLimit   : VARIABLE_LOW_LIMIT;
     VariableHighLimit  : VARIABLE_HIGH_LIMIT;
-    NoNormalization    : NO_STRING_NORMALIZATION;
-    ComparisonStrength : COMPARISON_STRENGTH;
-    Dynamic            : False;
   );
 
 procedure Register();

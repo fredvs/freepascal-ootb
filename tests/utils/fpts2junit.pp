@@ -24,7 +24,6 @@ uses
   DOM, XMLWrite;
 
 const
-  MAX_XML_CHARS = 1000;
   LOG_SHORT = 'log';
   LOG_LONG  = 'longlog';
 
@@ -67,13 +66,11 @@ var
   skipped: LongInt;
   success: LongInt;
   tmpLine: String;
-  Line: string;
 
   startIdx: LongInt;
   tmpString: String;
   className: String;
   caseName: String;
-  i: Integer;
 begin
   logShort:=TStringList.Create;
   logLong:=TStringList.Create;
@@ -105,9 +102,8 @@ begin
   rootNode:=junitXML.CreateElement('testsuite');
   junitXML.AppendChild(rootNode);
 
-  for Line in logShort do
+  for tmpLine in logShort do
     begin
-      tmpline := Line;
       // this is pretty fubar in the logfile, to break the format
       // lets fix it up...
       if AnsiEndsText(IE_FUBAR, tmpLine) then
@@ -122,8 +118,8 @@ begin
 
       // create testcase node
       caseNode:=junitXML.CreateElement('testcase');
-      TDOMElement(caseNode).SetAttribute('classname',WideString(className));
-      TDOMElement(caseNode).SetAttribute('name',WideString(caseName));
+      TDOMElement(caseNode).SetAttribute('classname',className);
+      TDOMElement(caseNode).SetAttribute('name',caseName);
       rootNode.AppendChild(caseNode);
 
       if AnsiStartsText(PATTERN_FAILED, tmpLine) then
@@ -142,7 +138,7 @@ begin
               tmpNode:=junitXML.CreateElement('failure');
             end;
 
-          TDOMElement(tmpNode).SetAttribute('message',WideString(tmpString));
+          TDOMElement(tmpNode).SetAttribute('message',tmpString);
           startIdx:=getIndexInList(logLong, className, caseName);
           tmpString:='';
           while startIdx > 0 do
@@ -153,14 +149,7 @@ begin
                  AnsiStartsText('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', logLong[startIdx]) then break;
             end;
           if tmpString <> '' then
-          begin
-            if Length(tmpString) > MAX_XML_CHARS then
-              tmpString := '--- ' + IntToStr(Length(tmpstring) - MAX_XML_CHARS) + 'bytes cut away --- '+ #10 + Copy(tmpString, Length(tmpstring) - MAX_XML_CHARS, MAX_XML_CHARS);
-            for i := 1 to Length(tmpString) do
-              if tmpString[i] in [#0..#9,#11..#31] then
-                tmpString[i] := ' ';
-            tmpNode.AppendChild(junitXML.CreateTextNode(WideString(tmpString+#10)));
-          end;
+            tmpNode.AppendChild(junitXML.CreateTextNode(tmpString+#10));
           caseNode.AppendChild(tmpNode);
           continue;
         end;
@@ -180,9 +169,9 @@ begin
     end;
 
   // set required elements in the root node
-  TDOMElement(rootNode).SetAttribute('errors',WideString(IntToStr(error)));
-  TDOMElement(rootNode).SetAttribute('failures',WideString(IntToStr(failed)));
-  TDOMElement(rootNode).SetAttribute('tests',WideString(IntToStr(logShort.Count)));
+  TDOMElement(rootNode).SetAttribute('errors',IntToStr(error));
+  TDOMElement(rootNode).SetAttribute('failures',IntToStr(failed));
+  TDOMElement(rootNode).SetAttribute('tests',IntToStr(logShort.Count));
   TDOMElement(rootNode).SetAttribute('name','Compiler.Testsuite');
   TDOMElement(rootNode).SetAttribute('package','FPC');
 

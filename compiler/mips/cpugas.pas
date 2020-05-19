@@ -26,13 +26,13 @@ unit cpugas;
   interface
 
     uses
-      cpubase, aasmbase, globtype, systems,
+      cpubase, aasmbase, globtype,
       aasmtai, aasmcpu, assemble, aggas;
 
     type
       TMIPSGNUAssembler = class(TGNUassembler)
         nomacro, noreorder, noat : boolean;
-        constructor CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean); override;
+        constructor create(smart: boolean); override;
         {# Constructs the command line for calling the assembler }
         function MakeCmdLine: TCmdStr; override;
       end;
@@ -52,7 +52,7 @@ unit cpugas;
   implementation
 
     uses
-      cutils, cpuinfo,
+      cutils, systems, cpuinfo,
       globals, verbose, itcpugas, cgbase, cgutils;
 
 
@@ -69,10 +69,10 @@ unit cpugas;
 {                         GNU MIPS  Assembler writer                           }
 {****************************************************************************}
 
-    constructor TMIPSGNUAssembler.CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean);
+    constructor TMIPSGNUAssembler.create(smart: boolean);
       begin
-        inherited;
-        InstrWriter:=TMIPSInstrWriter.create(self);
+        inherited create(smart);
+        InstrWriter := TMIPSInstrWriter.create(self);
         nomacro:=false;
         noreorder:=false;
         noat:=false;
@@ -173,12 +173,73 @@ unit cpugas;
           end;
       end;
 
+      function getopstr_4(const Oper: TOper): string;
+      var
+        tmpref: treference;
+      begin
+        with Oper do
+          case typ of
+            top_ref:
+            begin
+              tmpref := ref^;
+              Inc(tmpref.offset, 4);
+              getopstr_4 := getreferencestring(tmpref);
+            end;
+            else
+              internalerror(2007050403);
+          end;
+      end;
+
+{
+     function getnextfpreg(tmpfpu : shortstring) : shortstring;
+     begin
+       case length(tmpfpu) of
+       3:
+        if (tmpfpu[3] = '9') then
+          tmpfpu:='$f10'
+        else
+          tmpfpu[3] := succ(tmpfpu[3]);
+       4:
+        if (tmpfpu[4] = '9') then
+          tmpfpu:='$f20'
+        else
+          tmpfpu[4] := succ(tmpfpu[4]);
+        else
+          internalerror(20120531);
+        end;
+        getnextfpreg := tmpfpu;
+     end;
+}
+
+    function is_macro_instruction(ai : taicpu) : boolean;
+      var
+        op: tasmop;
+      begin
+        op:=ai.opcode;
+        is_macro_instruction :=
+        { 'seq', 'sge', 'sgeu', 'sgt', 'sgtu', 'sle', 'sleu', 'sne', }
+          (op=A_SEQ) or (op = A_SGE) or (op=A_SGEU) or (op=A_SGT) or
+          (op=A_SGTU) or (op=A_SLE) or (op=A_SLEU) or (op=A_SNE)
+          { JAL is not here! See comments in TCGMIPS.a_call_name. }
+          or (op=A_LA) or ((op=A_BC) and
+            not (ai.condition in [C_EQ,C_NE,C_GTZ,C_GEZ,C_LTZ,C_LEZ,C_COP1TRUE,C_COP1FALSE])) {or (op=A_JAL)}
+          or (op=A_REM) or (op=A_REMU)
+          { DIV and DIVU are normally macros, but use $zero as first arg to generate a CPU instruction. }
+          or (((op=A_DIV) or (op=A_DIVU)) and
+            ((ai.ops<>3) or (ai.oper[0]^.typ<>top_reg) or (ai.oper[0]^.reg<>NR_R0)))
+          or (op=A_MULO) or (op=A_MULOU)
+          { A_LI is only a macro if the immediate is not in thez 16-bit range }
+          or (op=A_LI);
+      end;
 
     procedure TMIPSInstrWriter.WriteInstruction(hp: Tai);
       var
         Op: TAsmOp;
-        s:  string;
+        s,s1:  string;
         i:  integer;
+        tmpfpu: string;
+        tmpfpu_len: longint;
+        r: TRegister;
       begin
         if hp.typ <> ait_instruction then
           exit;
@@ -187,65 +248,115 @@ unit cpugas;
         case op of
           A_P_SET_NOMIPS16:
             begin
-              owner.writer.AsmWriteLn(#9'.set'#9'nomips16');
+              owner.AsmWriteLn(#9'.set'#9'nomips16');
             end;
           A_P_MASK,
           A_P_FMASK:
             begin
               s := #9 + gas_op2str[op] + #9'0x' + hexstr(taicpu(hp).oper[0]^.val,8)+ ',' + getopstr(taicpu(hp).oper[1]^) ;
-              owner.writer.AsmWriteLn(s);
+              owner.AsmWriteLn(s);
             end;
           A_P_SET_MACRO:
             begin
-              owner.writer.AsmWriteLn(#9'.set'#9'macro');
+              owner.AsmWriteLn(#9'.set'#9'macro');
               TMIPSGNUAssembler(owner).nomacro:=false;
             end;
           A_P_SET_REORDER:
             begin
-              owner.writer.AsmWriteLn(#9'.set'#9'reorder');
+              owner.AsmWriteLn(#9'.set'#9'reorder');
               TMIPSGNUAssembler(owner).noreorder:=false;
             end;
           A_P_SET_NOMACRO:
             begin
-              owner.writer.AsmWriteLn(#9'.set'#9'nomacro');
+              owner.AsmWriteLn(#9'.set'#9'nomacro');
               TMIPSGNUAssembler(owner).nomacro:=true;
             end;
           A_P_SET_NOREORDER:
             begin
-              owner.writer.AsmWriteLn(#9'.set'#9'noreorder');
+              owner.AsmWriteLn(#9'.set'#9'noreorder');
               TMIPSGNUAssembler(owner).noreorder:=true;
             end;
           A_P_SET_NOAT:
             begin
-              owner.writer.AsmWriteln(#9'.set'#9'noat');
+              owner.AsmWriteln(#9'.set'#9'noat');
               TMIPSGNUAssembler(owner).noat:=true;
             end;
           A_P_SET_AT:
             begin
-              owner.writer.AsmWriteln(#9'.set'#9'at');
+              owner.AsmWriteln(#9'.set'#9'at');
               TMIPSGNUAssembler(owner).noat:=false;
+            end;
+          A_LDC1:
+            begin
+              if (target_info.endian = endian_big) then
+                begin
+                  s := #9 + gas_op2str[A_LDC1] + #9 + getopstr(taicpu(hp).oper[0]^)
+                       + ',' + getopstr(taicpu(hp).oper[1]^);
+                end
+              else
+                begin
+                  tmpfpu := getopstr(taicpu(hp).oper[0]^);
+                  s := #9 + gas_op2str[A_LWC1] + #9 + tmpfpu + ',' + getopstr(taicpu(hp).oper[1]^); // + '(' + getopstr(taicpu(hp).oper[1]^) + ')';
+                  owner.AsmWriteLn(s);
+
+{ bug if $f9/$f19
+              tmpfpu_len := length(tmpfpu);
+              tmpfpu[tmpfpu_len] := succ(tmpfpu[tmpfpu_len]);
+
+}
+                  r := taicpu(hp).oper[0]^.reg;
+                  setsupreg(r, getsupreg(r) + 1);
+                  tmpfpu := asm_regname(r);
+                  s := #9 + gas_op2str[A_LWC1] + #9 + tmpfpu + ',' + getopstr_4(taicpu(hp).oper[1]^); // + '(' + getopstr(taicpu(hp).oper[1]^) + ')';
+                end;
+              owner.AsmWriteLn(s);
+            end;
+          A_SDC1:
+            begin
+              if (target_info.endian = endian_big) then
+                begin
+                  s := #9 + gas_op2str[A_SDC1] + #9 + getopstr(taicpu(hp).oper[0]^)
+                       + ',' + getopstr(taicpu(hp).oper[1]^);
+                end
+              else
+                begin
+                  tmpfpu := getopstr(taicpu(hp).oper[0]^);
+                  s := #9 + gas_op2str[A_SWC1] + #9 + tmpfpu + ',' + getopstr(taicpu(hp).oper[1]^); //+ ',' + getopstr(taicpu(hp).oper[2]^) + '(' + getopstr(taicpu(hp).oper[1]^) + ')';
+                  owner.AsmWriteLn(s);
+
+{
+              tmpfpu_len := length(tmpfpu);
+              tmpfpu[tmpfpu_len] := succ(tmpfpu[tmpfpu_len]);
+}
+                  r := taicpu(hp).oper[0]^.reg;
+                  setsupreg(r, getsupreg(r) + 1);
+                  tmpfpu := asm_regname(r);
+                  s := #9 + gas_op2str[A_SWC1] + #9 + tmpfpu + ',' + getopstr_4(taicpu(hp).oper[1]^); //+ ',' + getopstr(taicpu(hp).oper[2]^) + '(' + getopstr(taicpu(hp).oper[1]^) + ')';
+                end;
+              owner.AsmWriteLn(s);
             end;
           else
             begin
-              if taicpu(hp).is_macro and TMIPSGNUAssembler(owner).nomacro then
-                owner.writer.AsmWriteln(#9'.set'#9'macro');
+              if is_macro_instruction(taicpu(hp)) and TMIPSGNUAssembler(owner).nomacro then
+                owner.AsmWriteln(#9'.set'#9'macro');
               s := #9 + gas_op2str[op] + cond2str[taicpu(hp).condition];
+              if taicpu(hp).delayslot_annulled then
+                s := s + ',a';
               if taicpu(hp).ops > 0 then
               begin
                 s := s + #9 + getopstr(taicpu(hp).oper[0]^);
                 for i := 1 to taicpu(hp).ops - 1 do
                   s := s + ',' + getopstr(taicpu(hp).oper[i]^);
               end;
-              owner.writer.AsmWriteLn(s);
-              if taicpu(hp).is_macro and TMIPSGNUAssembler(owner).nomacro then
-                owner.writer.AsmWriteln(#9'.set'#9'nomacro');
+              owner.AsmWriteLn(s);
+              if is_macro_instruction(taicpu(hp)) and TMIPSGNUAssembler(owner).nomacro then
+                owner.AsmWriteln(#9'.set'#9'nomacro');
             end;
         end;
       end;
 
 
     const
-{$ifdef MIPSEL}
       as_MIPSEL_as_info: tasminfo =
         (
         id: as_gas;
@@ -258,7 +369,6 @@ unit cpugas;
         comment: '# ';
         dollarsign: '$';
         );
-{$else MIPSEL}
       as_MIPSEB_as_info: tasminfo =
         (
         id: as_gas;
@@ -271,7 +381,6 @@ unit cpugas;
         comment: '# ';
         dollarsign: '$';
         );
-{$endif MIPSEL}
 
 begin
 {$ifdef MIPSEL}

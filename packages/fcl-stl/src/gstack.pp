@@ -24,7 +24,6 @@ type
     type TContainer= specialize TVector<T>;
     var FData:TContainer;
     public
-    Procedure Clear;
     procedure Push(x:T);inline;
     procedure Pop();inline;
     function Top():T;inline;
@@ -39,11 +38,6 @@ implementation
 constructor TStack.Create;
 begin
   FData:=TContainer.Create;
-end;
-
-Procedure TStack.Clear;
-begin
-  FData.Clear;
 end;
 
 destructor TStack.Destroy;

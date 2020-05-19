@@ -20,20 +20,26 @@ unit simpleipc;
 interface
 
 uses
-  Contnrs, SyncObjs, Classes, SysUtils;
+  Contnrs, Classes, SysUtils;
 
-const
+Const
   MsgVersion = 1;
+  DefaultThreadTimeOut = 50;
 
-  { IPC message types }
+  //Message types
   mtUnknown = 0;
   mtString = 1;
 
 type
   TIPCMessageOverflowAction = (ipcmoaNone, ipcmoaDiscardOld, ipcmoaDiscardNew, ipcmoaError);
 
-  TMessageType = LongInt;
+var
+  DefaultIPCMessageOverflowAction: TIPCMessageOverflowAction = ipcmoaNone;
+  DefaultIPCMessageQueueLimit: Integer = 0;
 
+Type
+
+  TMessageType = LongInt;
   TMsgHeader = Packed record
     Version : Byte;
     MsgType : TMessageType;
@@ -43,29 +49,17 @@ type
   TSimpleIPCServer = class;
   TSimpleIPCClient = class;
 
-  { TIPCServerMsg }
   TIPCServerMsg = class
-  private type
-    TStreamClass = class of TStream;
-  private const
-    // TMemoryStream uses an effecient grow algorithm.
-    DefaultStreamClass: TStreamClass = TMemoryStream;
   strict private
     FStream: TStream;
-    FOwnsStream: Boolean;
     FMsgType: TMessageType;
-    function GetStringMessage: String;
   public
     constructor Create;
-    constructor Create(AStream: TStream; AOwnsStream: Boolean = True);
     destructor Destroy; override;
     property Stream: TStream read FStream;
     property MsgType: TMessageType read FMsgType write FMsgType;
-    property OwnsStream: Boolean read FOwnsStream write FOwnsStream;
-    property StringMessage: String read GetStringMessage;
   end;
 
-  { TIPCServerMsgQueue }
   TIPCServerMsgQueue = class
   strict private
     FList: TFPObjectList;
@@ -86,6 +80,7 @@ type
   end;
 
   { TIPCServerComm }
+  
   TIPCServerComm = Class(TObject)
   Private
     FOwner  : TSimpleIPCServer;
@@ -99,10 +94,10 @@ type
     Property Owner : TSimpleIPCServer read FOwner;
     Procedure StartServer; virtual; Abstract;
     Procedure StopServer;virtual; Abstract;
-    // Check for new messages, may read and push messages to the queue.
-    Function PeekMessage(Timeout: Integer): Boolean; virtual; Abstract;
-    // Read and push new message to the queue, if not done by PeekMessage.
-    Procedure ReadMessage; virtual; Abstract;
+    // May push messages on the queue
+    Function  PeekMessage(TimeOut : Integer) : Boolean;virtual; Abstract;
+    // Must put message on the queue.
+    Procedure ReadMessage ;virtual; Abstract;
     Property InstanceID : String read GetInstanceID;
   end;
   TIPCServerCommClass = Class of TIPCServerComm;
@@ -116,7 +111,6 @@ type
     FBusy: Boolean;
     FActive : Boolean;
     FServerID : String;
-    procedure PrepareServerID;
     Procedure DoError(const Msg: String; const Args: array of const);
     Procedure CheckInactive;
     Procedure CheckActive;
@@ -129,44 +123,26 @@ type
     Property ServerID : String Read FServerID Write SetServerID;
   end;
 
-  TMessageQueueEvent = Procedure(Sender: TObject; Msg: TIPCServerMsg) of object;
-
   { TSimpleIPCServer }
+
+  TMessageQueueEvent = Procedure(Sender : TObject; Msg : TIPCServerMsg) of object;
+
   TSimpleIPCServer = Class(TSimpleIPC)
-  private const
-    DefaultThreaded = False;
-    DefaultThreadTimeout = 50;
-    DefaultSynchronizeEvents = True;
-    DefaultMaxAction = ipcmoaNone;
-    DefaultMaxQueue = 0;
-  private
+  protected
+  Private
     FOnMessageError: TMessageQueueEvent;
     FOnMessageQueued: TNotifyEvent;
-    FOnMessage: TNotifyEvent;
-    FOnThreadError: TNotifyEvent;
-    FQueue: TIPCServerMsgQueue;
-    FQueueLock: TCriticalSection;
-    FQueueAddEvent: TSimpleEvent;
+    FQueue : TIPCServerMsgQueue;
     FGlobal: Boolean;
-    // Access to the message is not locked by design!
-    // In the threaded mode, it must be accessed only during event callbacks.
-    FMessage: TIPCServerMsg;
-    FTempMessage: TIPCServerMsg;
-    FThreaded: Boolean;
-    FThreadTimeout: Integer;
-    FThreadError: String;
-    FThreadExecuting: Boolean;
-    FThreadReadyEvent: TSimpleEvent;
-    FThread: TThread;
-    FSynchronizeEvents: Boolean;
-    procedure DoOnMessage;
-    procedure DoOnMessageQueued;
-    procedure DoOnMessageError(Msg: TIPCServerMsg);
-    procedure DoOnThreadError;
-    procedure InternalDoOnMessage;
-    procedure InternalDoOnMessageQueued;
-    procedure InternalDoOnMessageError;
-    procedure InternalDoOnThreadError;
+    FOnMessage: TNotifyEvent;
+    FMsgType: TMessageType;
+    FMsgData : TStream;
+    FThreadTimeOut: Integer;
+    FThread : TThread;
+    FLock : TRTLCriticalSection;
+    FErrMsg : TIPCServerMsg;
+    procedure DoMessageQueued;
+    procedure DoMessageError;
     function GetInstanceID: String;
     function GetMaxAction: TIPCMessageOverflowAction;
     function GetMaxQueue: Integer;
@@ -174,43 +150,31 @@ type
     procedure SetGlobal(const AValue: Boolean);
     procedure SetMaxAction(AValue: TIPCMessageOverflowAction);
     procedure SetMaxQueue(AValue: Integer);
-    procedure SetThreaded(AValue: Boolean);
-    procedure SetThreadTimeout(AValue: Integer);
-    procedure SetSynchronizeEvents(AValue: Boolean);
-    function WaitForReady(Timeout: Integer = -1): Boolean;
-    function GetMsgType: TMessageType;
-    function GetMsgData: TStream;
-  protected
+  Protected
     FIPCComm: TIPCServerComm;
+    procedure StartThread; virtual;
+    procedure StopThread; virtual;
     Function CommClass : TIPCServerCommClass; virtual;
     Procedure PushMessage(Msg : TIPCServerMsg); virtual;
     function PopMessage: Boolean; virtual;
-    procedure StartComm; virtual;
-    procedure StopComm; virtual;
-    function StartThread: Boolean; virtual;
-    procedure StopThread; virtual;
     Procedure Activate; override;
     Procedure Deactivate; override;
-    function ProcessMessage(Timeout: Integer): Boolean;
     Property Queue : TIPCServerMsgQueue Read FQueue;
     Property Thread : TThread Read FThread;
   Public
     Constructor Create(AOwner : TComponent); override;
     Destructor Destroy; override;
-    Procedure StartServer;
-    Procedure StartServer(AThreaded: Boolean);
+    Procedure StartServer(Threaded : Boolean = False);
     Procedure StopServer;
-    Function PeekMessage(Timeout: Integer; DoReadMessage: Boolean): Boolean;
-    Function ReadMessage: Boolean;
+    Function PeekMessage(TimeOut : Integer; DoReadMessage : Boolean): Boolean;
+    Procedure ReadMessage;
     Property  StringMessage : String Read GetStringMessage;
     Procedure GetMessageData(Stream : TStream);
-    Property  Message: TIPCServerMsg read FMessage;
-    Property  MsgType: TMessageType Read GetMsgType;
-    Property  MsgData: TStream Read GetMsgData;
+    Property  MsgType: TMessageType Read FMsgType;
+    Property  MsgData : TStream Read FMsgData;
     Property  InstanceID : String Read GetInstanceID;
-    property  ThreadExecuting: Boolean read FThreadExecuting;
-    property  ThreadError: String read FThreadError;
   Published
+    Property ThreadTimeOut : Integer Read FThreadTimeOut Write FThreadTimeOut;
     Property Global : Boolean Read FGlobal Write SetGlobal;
     // Called during ReadMessage
     Property OnMessage : TNotifyEvent Read FOnMessage Write FOnMessage;
@@ -218,21 +182,14 @@ type
     Property OnMessageQueued : TNotifyEvent Read FOnMessageQueued Write FOnMessageQueued;
     // Called when the queue overflows and  MaxAction = ipcmoaError.
     Property OnMessageError : TMessageQueueEvent Read FOnMessageError Write FOnMessageError;
-    // Called when the server thread catches an exception.
-    property OnThreadError: TNotifyEvent read FOnThreadError write FOnThreadError;
     // Maximum number of messages to keep in the queue
-    property MaxQueue: Integer read GetMaxQueue write SetMaxQueue default DefaultMaxQueue;
+    property MaxQueue: Integer read GetMaxQueue write SetMaxQueue;
     // What to do when the queue overflows
-    property MaxAction: TIPCMessageOverflowAction read GetMaxAction write SetMaxAction default DefaultMaxAction;
-    // Instruct IPC server to operate in a threaded mode.
-    property Threaded: Boolean read FThreaded write SetThreaded;
-    // Amount of time thread waits for a message before checking for termination.
-    property ThreadTimeout: Integer read FThreadTimeout write SetThreadTimeout default DefaultThreadTimeout;
-    // Synchronize events with the main thread when in threaded mode.
-    property SynchronizeEvents: Boolean read FSynchronizeEvents write SetSynchronizeEvents default DefaultSynchronizeEvents;
+    property MaxAction: TIPCMessageOverflowAction read GetMaxAction write SetMaxAction;
   end;
 
-  { TIPCClientComm }
+
+  { TIPCClientComm}
   TIPCClientComm = Class(TObject)
   private
     FOwner: TSimpleIPCClient;
@@ -272,23 +229,17 @@ type
     Property  ServerInstance : String Read FServerInstance Write SetServerInstance;
   end;
 
+
   EIPCError = Class(Exception);
 
-var
+Var
   DefaultIPCServerClass : TIPCServerCommClass = Nil;
   DefaultIPCClientClass : TIPCClientCommClass = Nil;
-
-var
-  DefaultIPCMessageOverflowAction: TIPCMessageOverflowAction = TSimpleIPCServer.DefaultMaxAction;
-  DefaultIPCMessageQueueLimit: Integer = TSimpleIPCServer.DefaultMaxQueue;
 
 resourcestring
   SErrServerNotActive = 'Server with ID %s is not active.';
   SErrActive = 'This operation is illegal when the server is active.';
   SErrInActive = 'This operation is illegal when the server is inactive.';
-  SErrThreadContext = 'This operation is illegal outside of IPC thread context.';
-  SErrThreadFailure = 'IPC thread failure.';
-  SErrMessageQueueOverflow = 'Message queue overflow (limit %s)';
 
 
 implementation
@@ -301,107 +252,34 @@ implementation
   This comes first, to allow the uses clause to be set.
   If the include file defines OSNEEDIPCINITDONE then the unit will
   call IPCInit and IPCDone in the initialization/finalization code.
+  
   --------------------------------------------------------------------- }
 {$UNDEF OSNEEDIPCINITDONE}
 
 {$i simpleipc.inc}
 
-// Convert content of any stream type to a string.
-function FastStreamToString(Stream: TStream): String;
-var
-  CharCount, CharSize: Integer;
-  StringStream: TStringStream;
-  OldPosition: Int64;
-begin
-  // Optimized for TStringStream
-  if Stream is TStringStream then
-  begin
-    Result := TStringStream(Stream).DataString;
-  end
-  // Optimized for TCustomMemoryStream
-  else if Stream is TCustomMemoryStream then
-  begin
-    Result := '';
-    CharSize := StringElementSize(Result);
-    CharCount := Stream.Size div CharSize;
-    SetLength(Result, CharCount);
-    Move(TCustomMemoryStream(Stream).Memory^, Result[1], CharCount * CharSize);
-  end
-  // Any other stream type
-  else
-  begin
-    OldPosition := Stream.Position;
-    try
-      StringStream := TStringStream.Create('');
-      try
-        Stream.Position := 0;
-        StringStream.CopyFrom(Stream, Stream.Size);
-        Result := StringStream.DataString;
-      finally
-        StringStream.Free;
-      end;
-    finally
-      Stream.Position := OldPosition;
-    end;
-  end;
-end;
+Resourcestring
+  SErrMessageQueueOverflow = 'Message queue overflow (limit %s)';
 
-// Timeout values:
-//   >  0  -- Number of milliseconds to wait
-//   =  0  -- return immediately
-//   = -1  -- wait infinitely (converted to INFINITE)
-//   < -1  -- wait infinitely (converted to INFINITE)
-function IPCTimeoutToEventTimeout(Timeout: Integer): Cardinal; inline;
-begin
-  if Timeout >= 0 then
-    Result := Timeout
-  else
-    Result := SyncObjs.INFINITE;
-end;
+{ ---------------------------------------------------------------------
+    TIPCServerMsg
+  ---------------------------------------------------------------------}
 
-// Timeout values:
-//   >  0  -- Number of milliseconds to wait
-//   =  0  -- return immediately
-//   = -1  -- wait infinitely
-//   < -1  -- wait infinitely (force to -1)
-function IPCTimeoutSanitized(Timeout: Integer): Integer; inline;
-begin
-  if Timeout >= 0 then
-    Result := Timeout
-  else
-    Result := -1;
-end;
-
-{$REGION 'TIPCServerMsg'}
 
 constructor TIPCServerMsg.Create;
 begin
-  FMsgType := mtUnknown;
-  FStream := Self.DefaultStreamClass.Create;
-  FOwnsStream := True;
-end;
-
-constructor TIPCServerMsg.Create(AStream: TStream; AOwnsStream: Boolean);
-begin
-  FMsgType := mtUnknown;
-  FStream := AStream;
-  FOwnsStream := AOwnsStream;
+  FMsgType := 0;
+  FStream := TMemoryStream.Create;
 end;
 
 destructor TIPCServerMsg.Destroy;
 begin
-  if FOwnsStream then
-    FreeAndNil(FStream);
+  FStream.Free;
 end;
 
-function TIPCServerMsg.GetStringMessage: String;
-begin
-  Result := FastStreamToString(FStream);
-end;
-
-{$ENDREGION}
-
-{$REGION 'TIPCServerMsgQueue'}
+{ ---------------------------------------------------------------------
+    TIPCServerMsgQueue
+  ---------------------------------------------------------------------}
 
 constructor TIPCServerMsgQueue.Create;
 begin
@@ -458,7 +336,6 @@ end;
 
 procedure TIPCServerMsgQueue.Push(AItem: TIPCServerMsg);
 begin
-  // PrepareToPush may throw an exception, e.g. if message queue is full.
   if PrepareToPush then
     FList.Insert(0, AItem);
 end;
@@ -478,9 +355,10 @@ begin
     Result := nil;
 end;
 
-{$ENDREGION}
 
-{$REGION 'TIPCServerComm'}
+{ ---------------------------------------------------------------------
+    TIPCServerComm
+  ---------------------------------------------------------------------}
 
 constructor TIPCServerComm.Create(AOwner: TSimpleIPCServer);
 begin
@@ -488,13 +366,16 @@ begin
 end;
 
 procedure TIPCServerComm.DoError(const Msg: String; const Args: array of const);
+
 begin
   FOwner.DoError(Msg,Args);
 end;
 
 procedure TIPCServerComm.PushMessage(const Hdr: TMsgHeader; AStream: TStream);
-var
+
+Var
   M : TIPCServerMsg;
+
 begin
   M:=TIPCServerMsg.Create;
   try
@@ -513,9 +394,9 @@ begin
   FOwner.PushMessage(Msg);
 end;
 
-{$ENDREGION}
-
-{$REGION 'TIPCClientComm'}
+{ ---------------------------------------------------------------------
+    TIPCClientComm
+  ---------------------------------------------------------------------}
   
 constructor TIPCClientComm.Create(AOwner: TSimpleIPCClient);
 begin
@@ -528,9 +409,9 @@ begin
   FOwner.DoError(Msg,Args);
 end;  
 
-{$ENDREGION}
-
-{$REGION 'TSimpleIPC'}
+{ ---------------------------------------------------------------------
+    TSimpleIPC
+  ---------------------------------------------------------------------}
 
 Procedure TSimpleIPC.DoError(const Msg: String; const Args: array of const);
 var
@@ -560,7 +441,7 @@ end;
 procedure TSimpleIPC.SetActive(const AValue: Boolean);
 begin
   if (FActive<>AValue) then
-  begin
+    begin
     if ([]<>([csLoading,csDesigning]*ComponentState)) then
       FActive:=AValue
     else  
@@ -568,89 +449,36 @@ begin
         Activate
       else
         Deactivate;
-  end;
+    end;
 end;
 
 procedure TSimpleIPC.SetServerID(const AValue: String);
 begin
   if (FServerID<>AValue) then
-  begin
+    begin
     CheckInactive;
-    FServerID:=AValue;
-  end;
+    FServerID:=AValue
+    end;
 end;
 
-procedure TSimpleIPC.PrepareServerID;
-begin
-  if FServerID = '' then
-    FServerID := ApplicationName;
-  // Extra precaution for thread-safety
-  UniqueString(FServerID);
-end;
+Procedure TSimpleIPC.Loaded; 
 
-procedure TSimpleIPC.Loaded;
-var
+Var
   B : Boolean;
+
 begin
-  inherited;
+  Inherited;
   B:=FActive;
   if B then
-  begin
-    FActive:=False;
-    Activate;
-  end;
-end;
-
-{$ENDREGION}
-
-{$REGION 'TIPCServerThread'}
-
-type
-  TIPCServerThread = class(TThread)
-  private
-    FServer: TSimpleIPCServer;
-  protected
-    procedure Execute; override;
-  public
-    constructor Create(AServer: TSimpleIPCServer);
-    property Server: TSimpleIPCServer read FServer;
-  end;
-
-constructor TIPCServerThread.Create(AServer: TSimpleIPCServer);
-begin
-  inherited Create(True); // CreateSuspended = True
-  FServer := AServer;
-end;
-
-procedure TIPCServerThread.Execute;
-begin
-  FServer.FThreadExecuting := True;
-  try
-    FServer.StartComm;
-    try
-      // Notify server that thread has started.
-      FServer.FThreadReadyEvent.SetEvent;
-      // Run message loop
-      while not Terminated do
-        FServer.ProcessMessage(FServer.ThreadTimeout);
-    finally
-      FServer.StopComm;
-    end;
-  except on E: Exception do
     begin
-      FServer.FThreadExecuting := False;
-      FServer.FThreadError := E.Message;
-      // Trigger event to wake up the caller from potentially indefinite wait.
-      FServer.FThreadReadyEvent.SetEvent;
-      FServer.DoOnThreadError;
+    Factive:=False;
+    Activate;
     end;
-  end;
-  FServer.FThreadExecuting := False;
 end;
 
-{$ENDREGION}
-
-{$REGION 'TSimpleIPCServer'}
+{ ---------------------------------------------------------------------
+    TSimpleIPCServer
+  ---------------------------------------------------------------------}
 
 constructor TSimpleIPCServer.Create(AOwner: TComponent);
 begin
@@ -658,55 +486,35 @@ begin
   FGlobal:=False;
   FActive:=False;
   FBusy:=False;
-  FMessage:=nil;
+  FMsgData:=TStringStream.Create('');
   FQueue:=TIPCServerMsgQueue.Create;
-  FThreaded:=DefaultThreaded;
-  FThreadTimeout:=DefaultThreadTimeout;
-  FSynchronizeEvents:=DefaultSynchronizeEvents;
+  FThreadTimeOut:=DefaultThreadTimeOut;
 end;
 
 destructor TSimpleIPCServer.Destroy;
 begin
   Active:=False;
   FreeAndNil(FQueue);
-  if Assigned(FMessage) then
-    FreeAndNil(FMessage);
+  FreeAndNil(FMsgData);
   inherited Destroy;
 end;
 
 procedure TSimpleIPCServer.SetGlobal(const AValue: Boolean);
 begin
-  CheckInactive;
-  FGlobal:=AValue;
-end;
-
-procedure TSimpleIPCServer.SetThreaded(AValue: Boolean);
-begin
-  CheckInactive;
-  FThreaded:=AValue;
-end;
-
-procedure TSimpleIPCServer.SetThreadTimeout(AValue: Integer);
-begin
-  CheckInactive;
-  FThreadTimeout:=AValue;
-end;
-
-procedure TSimpleIPCServer.SetSynchronizeEvents(AValue: Boolean);
-begin
-  CheckInactive;
-  FSynchronizeEvents:=AValue;
+  if (FGlobal<>AValue) then
+    begin
+    CheckInactive;
+    FGlobal:=AValue;
+    end;
 end;
 
 procedure TSimpleIPCServer.SetMaxAction(AValue: TIPCMessageOverflowAction);
 begin
-  CheckInactive;
   FQueue.MaxAction:=AValue;
 end;
 
 procedure TSimpleIPCServer.SetMaxQueue(AValue: Integer);
 begin
-  CheckInactive;
   FQueue.MaxCount:=AValue;
 end;
 
@@ -725,229 +533,160 @@ begin
   Result:=FQueue.MaxCount;
 end;
 
-procedure TSimpleIPCServer.StartComm;
+
+function TSimpleIPCServer.GetStringMessage: String;
 begin
-  if Assigned(FIPCComm) then
-    FreeAndNil(FIPCComm);
-  FIPCComm := CommClass.Create(Self);
-  FIPCComm.StartServer;
+  Result:=TStringStream(FMsgData).DataString;
 end;
 
-procedure TSimpleIPCServer.StopComm;
+
+procedure TSimpleIPCServer.StartServer(Threaded : Boolean = False);
 begin
-  if Assigned(FIPCComm) then
-  begin
-    FIPCComm.StopServer;
-    FreeAndNil(FIPCComm);
+  if Not Assigned(FIPCComm) then
+    begin
+    If (FServerID='') then
+      FServerID:=ApplicationName;
+    FIPCComm:=CommClass.Create(Self);
+    FIPCComm.StartServer;
+    end;
+  FActive:=True;
+  If Threaded then
+    StartThread;
+end;
+
+Type
+
+  { TServerThread }
+
+  TServerThread = Class(TThread)
+  private
+    FServer: TSimpleIPCServer;
+    FThreadTimeout: Integer;
+  Public
+    Constructor Create(AServer : TSimpleIPCServer; ATimeout : integer);
+    procedure Execute; override;
+    Property Server : TSimpleIPCServer Read FServer;
+    Property ThreadTimeout : Integer Read FThreadTimeout;
   end;
+
+{ TServerThread }
+
+constructor TServerThread.Create(AServer: TSimpleIPCServer; ATimeout: integer);
+begin
+  FServer:=AServer;
+  FThreadTimeout:=ATimeOut;
+  Inherited Create(False);
 end;
 
-function TSimpleIPCServer.StartThread: Boolean;
+procedure TServerThread.Execute;
 begin
-  FThreadError := '';
-  FQueueLock := SyncObjs.TCriticalSection.Create;
-  FQueueAddEvent := SyncObjs.TSimpleEvent.Create;
-  FThreadReadyEvent := SyncObjs.TSimpleEvent.Create;
-  FThread := TIPCServerThread.Create(Self);
-  FThread.Start;
-  Result := WaitForReady;
+  While Not Terminated do
+    FServer.PeekMessage(ThreadTimeout,False);
+end;
+
+procedure TSimpleIPCServer.StartThread;
+
+begin
+  InitCriticalSection(FLock);
+  FThread:=TServerThread.Create(Self,ThreadTimeOut);
 end;
 
 procedure TSimpleIPCServer.StopThread;
+
 begin
   if Assigned(FThread) then
-  begin
+    begin
     FThread.Terminate;
     FThread.WaitFor;
     FreeAndNil(FThread);
-  end;
-  if Assigned(FThreadReadyEvent) then
-    FreeAndNil(FThreadReadyEvent);
-  if Assigned(FQueueAddEvent) then
-    FreeAndNil(FQueueAddEvent);
-  if Assigned(FQueueLock) then
-    FreeAndNil(FQueueLock);
-end;
-
-function TSimpleIPCServer.WaitForReady(Timeout: Integer = -1): Boolean;
-begin
-  if FThreadReadyEvent.WaitFor(IPCTimeoutToEventTimeout(Timeout)) = wrSignaled then
-    Result := FThreadExecuting
-  else
-    Result := False;
-end;
-
-procedure TSimpleIPCServer.StartServer;
-begin
-  StartServer(FThreaded);
-end;
-
-procedure TSimpleIPCServer.StartServer(AThreaded: Boolean);
-begin
-  CheckInactive;
-  FActive := True;
-  try
-    PrepareServerID;
-    FThreaded := AThreaded;
-    if FThreaded then
-    begin
-      if not StartThread then
-        raise EIPCError.Create(SErrThreadFailure);
-    end
-    else
-      StartComm;
-  except
-    FActive := False;
-    raise;
-  end;
+    DoneCriticalSection(FLock);
+    end;
 end;
 
 procedure TSimpleIPCServer.StopServer;
 begin
   StopThread;
-  StopComm;
+  If Assigned(FIPCComm) then
+    begin
+    FIPCComm.StopServer;
+    FreeAndNil(FIPCComm);
+    end;
   FQueue.Clear;
-  FActive := False;
+  FActive:=False;
 end;
 
-function TSimpleIPCServer.ProcessMessage(Timeout: Integer): Boolean;
-begin
-  FBusy := True;
-  try
-    // Check for new messages (may push several messages to the queue)
-    Result := FIPCComm.PeekMessage(IPCTimeoutSanitized(Timeout));
-    // Push new message to the queue (explicitly)
-    if Result then
-      FIPCComm.ReadMessage;
-  finally
-    FBusy := False;
-  end;
-end;
-
-// Timeout values:
+// TimeOut values:
 //   >  0  -- Number of milliseconds to wait
 //   =  0  -- return immediately
 //   = -1  -- wait infinitely
 //   < -1  -- wait infinitely (force to -1)
-function TSimpleIPCServer.PeekMessage(Timeout: Integer; DoReadMessage: Boolean): Boolean;
+function TSimpleIPCServer.PeekMessage(TimeOut: Integer; DoReadMessage: Boolean): Boolean;
 begin
   CheckActive;
-
-  if Threaded then
-  begin
-    // Check if have messages in the queue
-    FQueueLock.Acquire;
-    try
-      Result:=FQueue.Count>0;
-      // Reset queue add event
-      if not Result then
-        FQueueAddEvent.ResetEvent;
-    finally
-      FQueueLock.Release;
+  Result:=Queue.Count>0;
+  If Not Result then
+    begin
+    if TimeOut < -1 then
+      TimeOut := -1;
+    FBusy:=True;
+    Try
+      Result:=FIPCComm.PeekMessage(Timeout);
+    Finally
+      FBusy:=False;
     end;
-    // Wait for queue add event
-    if not Result and (Timeout <> 0) then
-      Result := FQueueAddEvent.WaitFor(IPCTimeoutToEventTimeout(Timeout)) = wrSignaled;
-  end
-  else
-  begin
-    // Check if have messages in the queue
-    Result:=FQueue.Count>0;
-    // If queue is empty, process new messages via IPC driver
-    if not Result then
-      Result := ProcessMessage(Timeout);
-  end;
-
-  // Read message if available (be aware of a race condition in threaded mode)
+    end;
   If Result then
     If DoReadMessage then
-      ReadMessage;
-end;
-
-function TSimpleIPCServer.ReadMessage: Boolean;
-begin
-  // Pop a message from the queue
-  Result := PopMessage;
-  if Result then
-    DoOnMessage;
+      Readmessage;
 end;
 
 function TSimpleIPCServer.PopMessage: Boolean;
-begin
-  if Threaded then
-    FQueueLock.Acquire;
-  try
-    if Assigned(FMessage) then
-      FreeAndNil(FMessage);
-    FMessage := FQueue.Pop;
-    Result := Assigned(FMessage);
-  finally
-    if Threaded then
-      FQueueLock.Release;
-  end;
-end;
 
-procedure TSimpleIPCServer.PushMessage(Msg: TIPCServerMsg);
 var
-  PushFailed: Boolean;
+  MsgItem: TIPCServerMsg;
+  DoLock : Boolean;
+
 begin
-  if Threaded then
-    FQueueLock.Acquire;
+  DoLock:=Assigned(FThread);
+  if DoLock then
+    EnterCriticalsection(Flock);
   try
-    PushFailed := False;
-    try
-      // Queue.Push may throw an exception, e.g. if message queue is full.
-      FQueue.Push(Msg);
-    except
-      PushFailed := True;
-    end;
-    // Notify a waiting PeekMessage in threaded mode
-    if Threaded and not PushFailed then
-      FQueueAddEvent.SetEvent;
+    MsgItem:=FQueue.Pop;
   finally
-    if Threaded then
-      FQueueLock.Release;
+    LeaveCriticalsection(FLock);
   end;
-
-  if PushFailed then
-    // Handler must free the Msg, because it is not owned by anybody.
-    DoOnMessageError(Msg)
-  else
-    DoOnMessageQueued;
+  Result:=Assigned(MsgItem);
+  if Result then
+    try
+      FMsgType := MsgItem.MsgType;
+      MsgItem.Stream.Position := 0;
+      FMsgData.Size := 0;
+      FMsgData.CopyFrom(MsgItem.Stream, MsgItem.Stream.Size);
+    finally
+      MsgItem.Free;
+    end;
 end;
 
-function TSimpleIPCServer.GetMsgType: TMessageType;
-begin
-  // Access to the message is not locked by design!
-  if Assigned(FMessage) then
-    Result := FMessage.MsgType
-  else
-    Result := mtUnknown;
-end;
+procedure TSimpleIPCServer.ReadMessage;
 
-function TSimpleIPCServer.GetMsgData: TStream;
 begin
-  // Access to the message is not locked by design!
-  if Assigned(FMessage) then
-    Result := FMessage.Stream
-  else
-    Result := nil;
+  CheckActive;
+  FBusy:=True;
+  Try
+    if (FQueue.Count=0) then
+      // Readmessage pushes a message to the queue
+      FIPCComm.ReadMessage;
+    if PopMessage then
+      If Assigned(FOnMessage) then
+        FOnMessage(Self);
+  Finally
+    FBusy:=False;
+  end;
 end;
 
 procedure TSimpleIPCServer.GetMessageData(Stream: TStream);
 begin
-  // Access to the message is not locked by design!
-  if Assigned(FMessage) then
-    Stream.CopyFrom(FMessage.Stream, 0);
-end;
-
-function TSimpleIPCServer.GetStringMessage: String;
-begin
-  // Access to the message is not locked by design!
-  if Assigned(FMessage) then
-    Result := FMessage.StringMessage
-  else
-    Result := '';
+  Stream.CopyFrom(FMsgData,0);
 end;
 
 procedure TSimpleIPCServer.Activate;
@@ -960,86 +699,61 @@ begin
   StopServer;
 end;
 
-procedure TSimpleIPCServer.DoOnMessage;
-begin
-  if Assigned(FOnMessage) then
-  begin
-    if FSynchronizeEvents and Assigned(FThread) then
-      TThread.Synchronize(FThread, @InternalDoOnMessage)
-    else
-      InternalDoOnMessage;
-  end;
-end;
 
-procedure TSimpleIPCServer.InternalDoOnMessage;
-begin
-  if Assigned(FOnMessage) then
-    FOnMessage(Self);
-end;
+procedure TSimpleIPCServer.DoMessageQueued;
 
-procedure TSimpleIPCServer.DoOnMessageQueued;
-begin
-  if Assigned(FOnMessageQueued) then
-  begin
-    if FSynchronizeEvents and Assigned(FThread) then
-      TThread.Synchronize(FThread, @InternalDoOnMessageQueued)
-    else
-      InternalDoOnMessageQueued;
-  end;
-end;
-
-procedure TSimpleIPCServer.InternalDoOnMessageQueued;
 begin
   if Assigned(FOnMessageQueued) then
     FOnMessageQueued(Self);
 end;
 
-procedure TSimpleIPCServer.DoOnMessageError(Msg: TIPCServerMsg);
+procedure TSimpleIPCServer.DoMessageError;
 begin
   try
-    if Assigned(FOnMessageError) then
-    begin
-      // Temp message (class instance variable) is used to pass
-      // a parameter to a synchronized thread method.
-      FTempMessage := Msg;
-      if FSynchronizeEvents and Assigned(FThread) then
-        TThread.Synchronize(FThread, @InternalDoOnMessageError)
-      else
-        InternalDoOnMessageError;
-    end;
+    if Assigned(FOnMessageQueued) then
+      FOnMessageError(Self,FErrMsg);
   finally
-    // Must free the message because it is not owned by anybody.
-    FTempMessage := nil;
-    FreeAndNil(Msg);
+    FreeAndNil(FErrMsg)
   end;
 end;
 
-procedure TSimpleIPCServer.InternalDoOnMessageError;
-begin
-  if Assigned(FOnMessageError) then
-    FOnMessageError(Self, FTempMessage);
-end;
+procedure TSimpleIPCServer.PushMessage(Msg: TIPCServerMsg);
 
-procedure TSimpleIPCServer.DoOnThreadError;
+Var
+  DoLock : Boolean;
+
 begin
-  if Assigned(FOnThreadError) then
-  begin
-    if FSynchronizeEvents and Assigned(FThread) then
-      TThread.Synchronize(FThread, @InternalDoOnThreadError)
+  try
+    DoLock:=Assigned(FThread);
+    If DoLock then
+      EnterCriticalsection(FLock);
+    try
+      Queue.Push(Msg);
+    finally
+      If DoLock then
+        LeaveCriticalsection(FLock);
+    end;
+    if DoLock then
+      TThread.Synchronize(FThread,@DoMessageQueued)
     else
-      InternalDoOnThreadError;
+      DoMessageQueued;
+  except
+    On E : Exception do
+      FErrMsg:=Msg;
   end;
+  if Assigned(FErrMsg) then
+    if DoLock then
+      TThread.Synchronize(FThread,@DoMessageError)
+    else
+      DoMessageQueued;
+
 end;
 
-procedure TSimpleIPCServer.InternalDoOnThreadError;
-begin
-  if Assigned(FOnThreadError) then
-    FOnThreadError(Self);
-end;
 
-{$ENDREGION}
 
-{$REGION 'TSimpleIPCClient'}
+{ ---------------------------------------------------------------------
+    TSimpleIPCClient
+  ---------------------------------------------------------------------}
 
 procedure TSimpleIPCClient.SetServerInstance(const AValue: String);
 begin
@@ -1061,7 +775,7 @@ begin
   inherited Create(AOwner);
 end;
 
-destructor TSimpleIPCClient.Destroy;
+destructor TSimpleIPCClient.destroy;
 begin
   Active:=False;
   Inherited;
@@ -1070,8 +784,7 @@ end;
 procedure TSimpleIPCClient.Connect;
 begin
   If Not assigned(FIPCComm) then
-  begin
-    PrepareServerID;
+    begin
     FIPCComm:=CommClass.Create(Self);
     Try
       FIPCComm.Connect;
@@ -1080,7 +793,7 @@ begin
       Raise;
     end;  
     FActive:=True;
-  end;
+    end;
 end;
 
 procedure TSimpleIPCClient.Disconnect;
@@ -1095,24 +808,21 @@ begin
 end;
 
 function TSimpleIPCClient.ServerRunning: Boolean;
-var
-  TempComm: TIPCClientComm;
+
 begin
   If Assigned(FIPCComm) then
     Result:=FIPCComm.ServerRunning
   else
-  begin
-    PrepareServerID;
-    TempComm := CommClass.Create(Self);
-    Try
-      Result := TempComm.ServerRunning;
-    finally
-      TempComm.Free;
-    end;
-  end;
+    With CommClass.Create(Self) do
+      Try
+        Result:=ServerRunning;
+      finally
+        Free;
+      end;
 end;
 
 procedure TSimpleIPCClient.SendMessage(MsgType : TMessageType; Stream: TStream);
+
 begin
   CheckActive;
   FBusy:=True;
@@ -1128,7 +838,8 @@ begin
   SendStringMessage(mtString,Msg);
 end;
 
-procedure TSimpleIPCClient.SendStringMessage(MsgType: TMessageType; const Msg: String);
+procedure TSimpleIPCClient.SendStringMessage(MsgType: TMessageType; const Msg: String
+  );
 Var
   S : TStringStream;
 begin
@@ -1152,14 +863,11 @@ begin
   SendStringMessage(MsgType, Format(Msg,Args));
 end;
 
-{$ENDREGION}
-
 {$IFDEF OSNEEDIPCINITDONE}
 initialization
   IPCInit;
 finalization
   IPCDone;
-{$ENDIF}
-
+{$ENDIF}  
 end.
 

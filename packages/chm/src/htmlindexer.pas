@@ -216,10 +216,6 @@ procedure TIndexedWordList.CBFountText(Text: string);
 begin
   if Length(Text) < 1 then
     Exit;
-
-  if (not FInTitle) and (not FInBody) then
-    Exit;
-
   EatWords(Text, FInTitle and not FInBody);
 end;
 
@@ -282,7 +278,7 @@ begin
     WordName := Copy(WordStart, 0, (WordPtr-WordStart));
     try
     WordIndex := addgetword(wordname,istitle); // Self.Words[WordName, IsTitle];
-    except on e:exception do writeln('Error: ', wordname); end;
+    except on e:exception do writeln(wordname); end;
     WordIndex.DocumentTopic[FTopicIndex].AddWordIndex(FWordCount);
     InWord := False;
     //if IsNumberWord then WriteLn('Following is NUMBER WORD: "', (WordStart[0]),'"'); ;
@@ -501,7 +497,7 @@ end;
 
 function TIndexDocument.getindexentries:integer;
 begin
- result:=flastentry;
+ result:=flastentry-1; 
 end;
 
 end.

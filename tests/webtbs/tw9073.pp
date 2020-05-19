@@ -1,4 +1,3 @@
-{%skiptarget=$nothread }
 { %opt=-CN }
 
 { the -CN is to generated null pointer load checks for AIX,

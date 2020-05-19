@@ -785,7 +785,7 @@ var
   B : TDrawBuffer;
   C : Word;
   FillSize : Word;
-  PercentDone : PtrInt;
+  PercentDone : LongInt;
   S : String[4];
 begin
   { fill entire view }

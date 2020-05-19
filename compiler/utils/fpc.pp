@@ -90,7 +90,7 @@ program fpc;
          ppcbin:=extrapath+ppcbin;
          findexe:=true;
        end
-      else if (path<>'') and FileExists(path+ppcbin) then
+      else if FileExists(path+ppcbin) then
        begin
          ppcbin:=path+ppcbin;
          findexe:=true;
@@ -143,18 +143,10 @@ program fpc;
      ppcbin:='ppcarm';
      processorname:='arm';
 {$endif arm}
-{$ifdef aarch64}
-     ppcbin:='ppca64';
-     processorname:='aarch64';
-{$endif aarch64}
 {$ifdef sparc}
      ppcbin:='ppcsparc';
      processorname:='sparc';
 {$endif sparc}
-{$ifdef sparc64}
-     ppcbin:='ppcsparc64';
-     processorname:='sparc64';
-{$endif sparc64}
 {$ifdef x86_64}
      ppcbin:='ppcx64';
      processorname:='x86_64';
@@ -194,16 +186,7 @@ program fpc;
                        { report the full name of the ppcbin }
                        if versionstr<>'' then
                          ppcbin:=ppcbin+'-'+versionstr;
-                       if not findexe(ppcbin) then
-                         begin
-                           if cpusuffix<>'' Then
-                             begin
-                               ppcbin:='ppc'+cpusuffix;
-                               if versionstr<>'' then
-                                 ppcbin:=ppcbin+'-'+versionstr;
-                               findexe(ppcbin);
-                             end;
-                         end;
+                       findexe(ppcbin);
                        writeln(ppcbin);
                        halt(0);
                      end
@@ -219,18 +202,10 @@ program fpc;
                      else
                        if processorstr <> processorname then
                          begin
-                           if processorstr='aarch64' then
-                             cpusuffix:='a64'
-                           else if processorstr='arm' then
+                           if processorstr='arm' then
                              cpusuffix:='arm'
-                           else if processorstr='avr' then
-                             cpusuffix:='avr'
                            else if processorstr='i386' then
                              cpusuffix:='386'
-                           else if processorstr='i8086' then
-                             cpusuffix:='8086'
-                           else if processorstr='jvm' then
-                             cpusuffix:='jvm'
                            else if processorstr='m68k' then
                              cpusuffix:='68k'
                            else if processorstr='mips' then
@@ -243,10 +218,14 @@ program fpc;
                              cpusuffix:='ppc64'
                            else if processorstr='sparc' then
                              cpusuffix:='sparc'
-                           else if processorstr='sparc64' then
-                             cpusuffix:='sparc64'
                            else if processorstr='x86_64' then
                              cpusuffix:='x64'
+                           else if processorstr='jvm' then
+                             cpusuffix:='jvm'
+                           else if processorstr='i8086' then
+                             cpusuffix:='8086'
+                           else if processorstr='avr' then
+                             cpusuffix:='avr'
                            else
                              error('Illegal processor type "'+processorstr+'"');
 

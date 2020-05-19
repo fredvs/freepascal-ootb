@@ -89,10 +89,8 @@ Type
     FOptions: TJSONRPCDispatchOptions;
     FRequest: TRequest;
     FResponse: TResponse;
-    FResponseContentType: String;
     procedure SetDispatcher(const AValue: TCustomJSONRPCDispatcher);
   Protected
-    Function GetResponseContentType : String;
     Function CreateDispatcher : TCustomJSONRPCDispatcher; virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation);override;
     Property Dispatcher :  TCustomJSONRPCDispatcher Read FDispatcher Write SetDispatcher;
@@ -104,19 +102,14 @@ Type
     Property Request: TRequest Read FRequest;
     // Access to response
     Property Response: TResponse Read FResponse;
-    // Response Content-Type. If left empty, application/json is used.
-    Property ResponseContentType : String Read FResponseContentType Write FResponseContentType;
   end;
 
   { TJSONRPCDataModule }
-
-  { TJSONRPCModule }
 
   TJSONRPCModule = Class(TCustomJSONRPCModule)
   Published
     Property Dispatcher;
     Property DispatchOptions;
-    Property ResponseContentType;
   end;
 
 implementation
@@ -124,9 +117,6 @@ implementation
 {$ifdef debugjsonrpc}
 uses dbugintf;
 {$endif}
-
-Const
-  SApplicationJSON = 'application/json';
 
 { TCustomJSONRPCContentProducer }
 
@@ -143,7 +133,7 @@ Var
   Disp : TCustomJSONRPCDispatcher;
   P : TJSONParser;
   Req,res : TJSONData;
-  R : TJSONStringType;
+  R : String;
 
 begin
   Disp:=Self.GetDispatcher;
@@ -221,13 +211,6 @@ begin
     FDispatcher.FreeNotification(Self);
 end;
 
-function TCustomJSONRPCModule.GetResponseContentType: String;
-begin
-  Result:=FResponseContentType;
-  if Result='' then
-    Result:=SApplicationJSON;
-end;
-
 function TCustomJSONRPCModule.CreateDispatcher: TCustomJSONRPCDispatcher;
 
 Var
@@ -262,7 +245,6 @@ procedure TCustomJSONRPCModule.HandleRequest(ARequest: TRequest;
 Var
   Disp : TCustomJSONRPCDispatcher;
   res : TJSONData;
-  R : TJSONStringType;
 
 begin
   If (Dispatcher=Nil) then
@@ -272,16 +254,10 @@ begin
   try
     If Assigned(Res) then
       begin
-      AResponse.FreeContentStream:=True;
-      AResponse.ContentStream:=TMemoryStream.Create;
-      R:=Res.AsJSON;
-      if Length(R)>0 then
-        AResponse.ContentStream.WriteBuffer(R[1],Length(R));
-      AResponse.ContentLength:=AResponse.ContentStream.Size;
-      R:=''; // Free up mem
-      AResponse.ContentType:=GetResponseContentType;
+      AResponse.Content:=Res.AsJSON;
+      AResponse.ContentLength:=Length(AResponse.Content);
       end;
-    AResponse.SendResponse;
+  AResponse.SendResponse;
   finally
     Res.Free;
   end;

@@ -7,17 +7,14 @@ interface
 uses Classes,pkgdownload,pkgoptions,fprepos;
 
 Type
-
-  { TWGetDownloader }
-
   TWGetDownloader = Class(TBaseDownloader)
   Private
     FWGet : String;
   Protected
     Constructor Create(AOwner: TComponent); override;
-    function WGetDownload(Const URL : String; Dest : TStream): Boolean; virtual;
-    function FTPDownload(Const URL : String; Dest : TStream): Boolean; override;
-    function HTTPDownload(Const URL : String; Dest : TStream): Boolean; override;
+    Procedure WGetDownload(Const URL : String; Dest : TStream); virtual;
+    Procedure FTPDownload(Const URL : String; Dest : TStream); override;
+    Procedure HTTPDownload(Const URL : String; Dest : TStream); override;
  Public
     Property WGet : String Read FWGet Write FWGet;
  end;
@@ -37,14 +34,13 @@ begin
 end;
 
 
-function TWGetDownloader.WGetDownload(Const URL: String; Dest: TStream): Boolean;
+Procedure TWGetDownloader.WGetDownload(Const URL : String; Dest : TStream);
 
 Var
   Buffer : Array[0..4096] of byte;
   Count : Integer;
 
 begin
-  Result := False;
   With TProcess.Create(Self) do
     try
       CommandLine:=WGet+' -q --output-document=- '+url;
@@ -57,24 +53,22 @@ begin
           Dest.WriteBuffer(Buffer,Count);
         end;
       If (ExitStatus<>0) then
-        Error(SErrDownloadFailed,['WGET',URL,Format('exit status %d',[ExitStatus])])
-      else
-        Result := True;
+        Error(SErrDownloadFailed,['WGET',URL,Format('exit status %d',[ExitStatus])]);
     finally
       Free;
     end;
 end;
 
-function TWGetDownloader.FTPDownload(Const URL: String; Dest: TStream): Boolean;
+Procedure TWGetDownloader.FTPDownload(Const URL : String; Dest : TStream);
 
 begin
-  Result := WGetDownload(URL,Dest);
+  WGetDownload(URL,Dest);
 end;
 
-function TWGetDownloader.HTTPDownload(Const URL: String; Dest: TStream): Boolean;
+Procedure TWGetDownloader.HTTPDownload(Const URL : String; Dest : TStream);
 
 begin
-  Result := WGetDownload(URL,Dest);
+  WGetDownload(URL,Dest);
 end;
 
 initialization

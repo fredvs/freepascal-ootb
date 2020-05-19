@@ -16,16 +16,14 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'Marco van de Voort';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
     P.Email := '';
     P.Description := 'Expression parser with support for fast evaluation';
     P.NeedLibC:= false;
-    P.OSes:=P.OSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes:=P.OSes-[embedded,msdos];
 
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');

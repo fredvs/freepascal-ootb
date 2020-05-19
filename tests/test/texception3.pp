@@ -600,7 +600,7 @@ procedure test119;
   end;
 
 var
-  mem : sizeuint;
+  mem : sizeint;
 begin
    writeln('Testing exception handling');
    

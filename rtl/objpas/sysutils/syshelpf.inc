@@ -1,25 +1,25 @@
 Class Function TFLOATHELPER.IsNan(const AValue: FLOATTYPE): Boolean; overload; inline; static;
 
 begin
-  Result:=TFloatRec(AValue).SpecialType=fsNan;
+  Result:=AValue=Nan;
 end;
 
 Class Function TFLOATHELPER.IsInfinity(const AValue: FLOATTYPE): Boolean; overload; inline; static;
 
 begin
-  Result:=TFloatRec(AValue).SpecialType in [fsInf,fsNinf];
+  Result:=(AValue=PositiveInfinity) or (AValue=NegativeInfinity);
 end;
 
 Class Function TFLOATHELPER.IsNegativeInfinity(const AValue: FLOATTYPE): Boolean; overload; inline; static;
 
 begin
-  Result:=TFloatRec(AValue).SpecialType=fsNinf;
+  Result:=AValue=NegativeInfinity;
 end;
 
 Class Function TFLOATHELPER.IsPositiveInfinity(const AValue: FLOATTYPE): Boolean; overload; inline; static;
 
 begin
-  Result:=TFloatRec(AValue).SpecialType=fsInf;
+  Result:=(AValue=PositiveInfinity);
 end;
 
 Class Function TFLOATHELPER.Parse(const AString: string): FLOATTYPE; overload; inline; static;
@@ -151,13 +151,24 @@ end;
 Procedure TFLOATHELPER.BuildUp(const ASignFlag: Boolean; const AMantissa: QWord; const AExponent: Integer);
 
 begin
-  TFloatRec(Self).BuildUp(ASignFlag, AMantissa, AExponent);
+  Self := 0.0;
+  SetS(ASignFlag);
+  SetE(AExponent + $3FF);
+  SetF(AMantissa and $000FFFFFFFFFFFFF);
 end;
 
 Function TFLOATHELPER.Exponent: Integer;
 
+var
+  F,E : QWord;
 begin
-  Result:=TFloatRec(Self).Exponent;
+  Result:=0; // Zero, inf, Nan
+  E:=GetE;
+  F:=GetF;
+  if (0<E) and (E<$77FF) then
+    Result:=E-$3FF
+  else if (E=0) and (F<>0) then
+    Result:=-1022
 end;
 
 Function TFLOATHELPER.Fraction: Extended;
@@ -169,31 +180,31 @@ end;
 Function TFLOATHELPER.IsInfinity: Boolean; overload; inline;
 
 begin
-  Result:=TFloatRec(Self).SpecialType in [fsInf,fsNinf];
+  Result:=(Self=PositiveInfinity) or (Self=NegativeInfinity);
 end;
 
 Function TFLOATHELPER.IsNan: Boolean; overload; inline;
 
 begin
-  Result:=TFloatRec(Self).SpecialType=fsNan;
+  Result:=(Self=Nan);
 end;
 
 Function TFLOATHELPER.IsNegativeInfinity: Boolean; overload; inline;
 
 begin
-  Result:=TFloatRec(Self).SpecialType=fsNinf;
+  Result:=(Self=NegativeInfinity);
 end;
 
 Function TFLOATHELPER.IsPositiveInfinity: Boolean; overload; inline;
 
 begin
-  Result:=TFloatRec(Self).SpecialType=fsInf;
+  Result:=(Self=PositiveInfinity);
 end;
 
 Function TFLOATHELPER.Mantissa: QWord;
 
 begin
-  Result:=TFLoatRec(Self).Mantissa(True);
+  Result:=TFLoatRec(Self).Mantissa;
 end;
 
 Function TFLOATHELPER.SpecialType: TFloatSpecial;

@@ -39,8 +39,6 @@ type
     procedure ReadAt(oper: tppcoperand);
     procedure ReadSym(oper: tppcoperand);
     procedure ConvertCalljmp(instr: tppcinstruction);
-    function is_targetdirective(const s: string): boolean; override;
-    procedure HandleTargetDirective; override;
   end;
 
 implementation
@@ -49,16 +47,16 @@ uses
   { helpers }
   cutils,
   { global }
-  globtype, globals, verbose,
+  globtype, verbose,
   systems,
   { aasm }
   cpubase, aasmbase, aasmtai,aasmdata, aasmcpu,
   { symtable }
-  symconst, symsym, symdef,
+  symconst, symsym,
   { parser }
   procinfo,
   rabase, rautils,
-  cgbase, cgobj, cgppc, paramgr
+  cgbase, cgobj, cgppc
   ;
 
 procedure tppcattreader.ReadSym(oper: tppcoperand);
@@ -245,7 +243,7 @@ begin
               if (relsym<>'') then
                 begin
                   if (oper.opr.typ = OPR_REFERENCE) then
-                    oper.opr.ref.relsymbol:=current_asmdata.RefAsmSymbol(relsym,asmsymtyp)
+                    oper.opr.ref.relsymbol:=current_asmdata.RefAsmSymbol(relsym)
                   else
                     begin
                       Message(asmr_e_invalid_reference_syntax);
@@ -327,7 +325,6 @@ var
     if not (actasmtoken in [AS_DOT, AS_PLUS, AS_MINUS]) then
       exit;
     l := 0;
-    mangledname := '';
     hasdot := (actasmtoken = AS_DOT);
     if hasdot then
     begin
@@ -349,8 +346,11 @@ var
           { don't allow direct access to fields of parameters, because that
             will generate buggy code. Allow it only for explicit typecasting }
           if hasdot and
-            (not oper.hastype) then
-            checklocalsubscript(oper.opr.localsym);
+            (not oper.hastype) and
+            (tabstractvarsym(oper.opr.localsym).owner.symtabletype =
+              parasymtable) and
+            (current_procinfo.procdef.proccalloption <> pocall_register) then
+            Message(asmr_e_cannot_access_field_directly_for_parameters);
           inc(oper.opr.localsymofs, l)
         end;
       OPR_CONSTANT:
@@ -359,7 +359,7 @@ var
             if (oper.opr.val<>0) then
               Message(asmr_e_wrong_sym_type);
             oper.opr.typ:=OPR_SYMBOL;
-            oper.opr.symbol:=current_asmdata.DefineAsmSymbol(mangledname,AB_EXTERNAL,AT_FUNCTION,voidcodepointertype);
+            oper.opr.symbol:=current_asmdata.DefineAsmSymbol(mangledname,AB_EXTERNAL,AT_FUNCTION);
           end
         else
           inc(oper.opr.val,l);
@@ -763,53 +763,15 @@ begin
     if (instr.Operands[1].opr.ref.base<>NR_NO) or
       (instr.Operands[1].opr.ref.index<>NR_NO) then
       Message(asmr_e_syn_operand);
-    if use_dotted_functions and
+    if (target_info.system in systems_dotted_function_names) and
        assigned(instr.Operands[1].opr.ref.symbol) then
-      instr.Operands[1].opr.ref.symbol:=current_asmdata.DefineAsmSymbol('.'+instr.Operands[1].opr.ref.symbol.name,instr.Operands[1].opr.ref.symbol.bind,AT_FUNCTION,voidcodepointertype);
+      instr.Operands[1].opr.ref.symbol:=current_asmdata.DefineAsmSymbol('.'+instr.Operands[1].opr.ref.symbol.name,instr.Operands[1].opr.ref.symbol.bind,AT_FUNCTION);
   end;
-  if use_dotted_functions and
+  if (target_info.system in systems_dotted_function_names) and
      (instr.Operands[1].opr.typ = OPR_SYMBOL) and
      (instr.Operands[1].opr.symbol.typ=AT_FUNCTION) then
-    instr.Operands[1].opr.symbol:=current_asmdata.DefineAsmSymbol('.'+instr.Operands[1].opr.symbol.name,instr.Operands[1].opr.symbol.bind,AT_FUNCTION,voidcodepointertype);
+    instr.Operands[1].opr.symbol:=current_asmdata.DefineAsmSymbol('.'+instr.Operands[1].opr.symbol.name,instr.Operands[1].opr.symbol.bind,AT_FUNCTION);
 end;
-
-function tppcattreader.is_targetdirective(const s: string): boolean;
-  begin
-    if (target_info.abi=abi_powerpc_elfv2) and
-       (s='.localentry') then
-      result:=true
-    else
-      result:=inherited;
-  end;
-
-procedure tppcattreader.HandleTargetDirective;
-  var
-    symname,
-    symval  : String;
-    val     : aint;
-    symtyp  : TAsmsymtype;
-  begin
-    if (target_info.abi=abi_powerpc_elfv2) and
-       (actasmpattern='.localentry') then
-      begin
-        { .localentry funcname, .-funcname }
-        consume(AS_TARGET_DIRECTIVE);
-        BuildConstSymbolExpression(true,false,false, val,symname,symtyp);
-        Consume(AS_COMMA);
-        { we need a '.', but these are parsed as identifiers -> if the current
-          pattern is different from a '.' try to consume AS_DOT so we'll get
-          the correct error message, otherwise consume this '.' identifier }
-        if actasmpattern<>'.' then
-          Consume(AS_DOT)
-        else
-          Consume(AS_ID);
-        Consume(AS_MINUS);
-        BuildConstSymbolExpression(true,false,false, val,symval,symtyp);
-        curList.concat(tai_symbolpair.create(spk_localentry,symname,symval));
-      end
-    else
-      inherited;
-  end;
 
 procedure tppcattreader.handleopcode;
 var

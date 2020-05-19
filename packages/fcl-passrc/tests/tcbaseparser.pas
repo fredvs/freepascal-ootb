@@ -62,17 +62,16 @@ Type
     Procedure Add(Const Lines : array of String);
     Procedure StartParsing;
     Procedure ParseDeclarations;
-    Procedure ParseModule; virtual;
+    Procedure ParseModule;
     procedure ResetParser;
     Procedure CheckHint(AHint : TPasMemberHint);
     Function AssertExpression(Const Msg: String; AExpr : TPasExpr; aKind : TPasExprKind; AClass : TClass) : TPasExpr;
     Function AssertExpression(Const Msg: String; AExpr : TPasExpr; aKind : TPasExprKind; AValue : String) : TPrimitiveExpr;
-    Function AssertExpression(Const Msg: String; AExpr : TPasExpr; OpCode : TExprOpCode) : TBinaryExpr;
     Procedure AssertExportSymbol(Const Msg: String; AIndex : Integer; AName,AExportName : String; AExportIndex : Integer = -1);
     Procedure AssertEquals(Const Msg : String; AExpected, AActual: TPasExprKind); overload;
     Procedure AssertEquals(Const Msg : String; AExpected, AActual: TLoopType); overload;
     Procedure AssertEquals(Const Msg : String; AExpected, AActual: TPasObjKind); overload;
-    Procedure AssertEquals(Const Msg : String; AExpected, AActual: TExprOpCode); overload;
+    Procedure AssertEquals(Const Msg : String; AExpected, AActual: TexprOpcode); overload;
     Procedure AssertEquals(Const Msg : String; AExpected, AActual: TPasMemberHint); overload;
     Procedure AssertEquals(Const Msg : String; AExpected, AActual: TCallingConvention); overload;
     Procedure AssertEquals(Const Msg : String; AExpected, AActual: TArgumentAccess); overload;
@@ -407,7 +406,6 @@ function TTestEngine.CreateElement(AClass: TPTreeElement; const AName: String;
 begin
   //writeln('TTestEngine.CreateElement ',AName,' ',AClass.ClassName);
   Result := AClass.Create(AName, AParent);
-  {$IFDEF CheckPasTreeRefCount}Result.RefIds.Add('CreateElement');{$ENDIF}
   Result.Visibility := AVisibility;
   Result.SourceFilename := ASourceFilename;
   Result.SourceLinenumber := ASourceLinenumber;
@@ -459,7 +457,6 @@ begin
   FResolver:=TStreamResolver.Create;
   FResolver.OwnsStreams:=True;
   FScanner:=TPascalScanner.Create(FResolver);
-  FScanner.CurrentBoolSwitches:=FScanner.CurrentBoolSwitches+[bsHints,bsNotes,bsWarnings];
   CreateEngine(FEngine);
   FParser:=TTestPasParser.Create(FScanner,FResolver,FEngine);
   FSource:=TStringList.Create;
@@ -486,7 +483,8 @@ begin
   {$IFDEF VerbosePasResolverMem}
   writeln('TTestParser.CleanupParser FModule');
   {$ENDIF}
-  ReleaseAndNil(TPasElement(FModule){$IFDEF CheckPasTreeRefCount},'CreateElement'{$ENDIF});
+  if Assigned(FModule) then
+    ReleaseAndNil(TPasElement(FModule));
   {$IFDEF VerbosePasResolverMem}
   writeln('TTestParser.CleanupParser FSource');
   {$ENDIF}
@@ -713,13 +711,6 @@ begin
   AssertEquals(Msg+': Primitive expression value',AValue,TPrimitiveExpr(AExpr).Value);
 end;
 
-function TTestParser.AssertExpression(const Msg: String; AExpr: TPasExpr;
-  OpCode: TExprOpCode): TBinaryExpr;
-begin
-  Result:=AssertExpression(Msg,AExpr,pekBinary,TBinaryExpr) as TBinaryExpr;
-  AssertEquals(Msg+': Binary opcode',OpCode,TBinaryExpr(AExpr).OpCode);
-end;
-
 procedure TTestParser.AssertExportSymbol(const Msg: String; AIndex: Integer;
   AName, AExportName: String; AExportIndex: Integer);
 
@@ -774,7 +765,7 @@ begin
 end;
 
 procedure TTestParser.AssertEquals(const Msg: String; AExpected,
-  AActual: TExprOpCode);
+  AActual: TexprOpcode);
 begin
   AssertEquals(Msg,GetEnumName(TypeInfo(TexprOpcode),Ord(AExpected)),
                    GetEnumName(TypeInfo(TexprOpcode),Ord(AActual)));

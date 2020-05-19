@@ -36,8 +36,7 @@ type
   TIBCursor = Class(TSQLCursor)
     protected
     Status               : array [0..19] of ISC_STATUS;
-    TransactionHandle    : pointer;
-    StatementHandle      : pointer;
+    Statement            : pointer;
     SQLDA                : PXSQLDA;
     in_SQLDA             : PXSQLDA;
     ParamBinding         : array of integer;
@@ -56,13 +55,12 @@ type
   TIBConnection = class (TSQLConnection)
   private
     FCheckTransactionParams: Boolean;
-    FDatabaseHandle        : pointer;
+    FSQLDatabaseHandle     : pointer;
     FStatus                : array [0..19] of ISC_STATUS;
     FDatabaseInfo          : TDatabaseInfo;
     FDialect               : integer;
     FBlobSegmentSize       : word; //required for backward compatibilty; not used
-    FUseConnectionCharSetIfNone: Boolean;
-    FWireCompression       : Boolean;
+
     procedure ConnectFB;
 
     procedure AllocSQLDA(var aSQLDA : PXSQLDA;Count : integer);
@@ -77,7 +75,7 @@ type
 
     // conversion methods
     procedure TranslateFldType(SQLType, SQLSubType, SQLLen, SQLScale : integer;
-      out TrType : TFieldType; out TrLen, TrPrec : word);
+      var TrType : TFieldType; var TrLen : word);
     procedure GetDateTime(CurrBuff, Buffer : pointer; AType : integer);
     procedure SetDateTime(CurrBuff: pointer; PTime : TDateTime; AType : integer);
     procedure GetFloat(CurrBuff, Buffer : pointer; Size : Byte);
@@ -101,7 +99,7 @@ type
     procedure UnPrepareStatement(cursor : TSQLCursor); override;
     procedure FreeFldBuffers(cursor : TSQLCursor); override;
     procedure Execute(cursor: TSQLCursor;atransaction:tSQLtransaction; AParams : TParams); override;
-    procedure AddFieldDefs(cursor: TSQLCursor;FieldDefs : TFieldDefs); override;
+    procedure AddFieldDefs(cursor: TSQLCursor;FieldDefs : TfieldDefs); override;
     function Fetch(cursor : TSQLCursor) : boolean; override;
     function LoadField(cursor : TSQLCursor;FieldDef : TfieldDef;buffer : pointer; out CreateBlob : boolean) : boolean; override;
     function GetTransactionHandle(trans : TSQLHandle): pointer; override;
@@ -132,9 +130,6 @@ type
     property LoginPrompt;
     property Params;
     property OnLogin;
-    Property Port stored false;
-    Property UseConnectionCharSetIfNone : Boolean Read FUseConnectionCharSetIfNone Write FUseConnectionCharSetIfNone;
-    property WireCompression: Boolean read FWireCompression write FWireCompression default False;
   end;
   
   { TIBConnectionDef }
@@ -189,10 +184,9 @@ constructor TIBConnection.Create(AOwner : TComponent);
 
 begin
   inherited;
-  FConnOptions := FConnOptions + [sqSupportParams, sqEscapeRepeat, sqSupportReturning, sqSequences];
+  FConnOptions := FConnOptions + [sqSupportParams, sqEscapeRepeat, sqSupportReturning];
   FBlobSegmentSize := 65535; //Shows we're using the maximum segment size
   FDialect := INVALID_DATA;
-  FWireCompression := False;
   ResetDatabaseInfo;
 end;
 
@@ -272,7 +266,7 @@ function TIBConnection.StartDBTransaction(trans: TSQLHandle; AParams: string
 
 Var
   DBHandle:pointer;
-  I : integer;
+  I,T :integer;
   S :string;
   tpbv,version : ansichar;
   prVal :String;
@@ -372,7 +366,7 @@ begin
 
   ConnectFB;
 
-  if isc_drop_database(@FStatus[0], @FDatabaseHandle) <> 0 then
+  if isc_drop_database(@FStatus[0], @FSQLDatabaseHandle) <> 0 then
     CheckError('DropDB', FStatus);
 
 {$IfDef LinkDynamically}
@@ -396,15 +390,13 @@ begin
   ASQLTransactionHandle := nil;
 
   CreateSQL := 'CREATE DATABASE ';
-  if HostName <> '' then
-    CreateSQL := CreateSQL + ''''+ HostName+':'+DatabaseName + ''''
-  else
-    CreateSQL := CreateSQL + '''' + DatabaseName + '''';
+  if HostName <> '' then CreateSQL := CreateSQL + ''''+ HostName+':'+DatabaseName + ''''
+    else CreateSQL := CreateSQL + '''' + DatabaseName + '''';
   if UserName <> '' then
     CreateSQL := CreateSQL + ' USER ''' + Username + '''';
   if Password <> '' then
     CreateSQL := CreateSQL + ' PASSWORD ''' + Password + '''';
-  pagesize := Params.Values['PAGE_SIZE'];
+  pagesize := params.Values['PAGE_SIZE'];
   if pagesize <> '' then
     CreateSQL := CreateSQL + ' PAGE_SIZE '+pagesize;
   if CharSet <> '' then
@@ -437,11 +429,11 @@ begin
   if not Connected then
   begin
     ResetDatabaseInfo;
-    FDatabaseHandle := nil;
+    FSQLDatabaseHandle := nil;
     Exit;
   end;
 
-  if isc_detach_database(@FStatus[0], @FDatabaseHandle) <> 0 then
+  if isc_detach_database(@FStatus[0], @FSQLDatabaseHandle) <> 0 then
     CheckError('Close', FStatus);
 {$IfDef LinkDynamically}
   ReleaseIBase60;
@@ -504,7 +496,7 @@ begin
     ReqBuf[1] := isc_info_version;
     ReqBuf[2] := isc_info_db_sql_dialect;
     ReqBuf[3] := isc_info_end;
-    if isc_database_info(@FStatus[0], @FDatabaseHandle, Length(ReqBuf),
+    if isc_database_info(@FStatus[0], @FSQLDatabaseHandle, Length(ReqBuf),
       pchar(@ReqBuf[0]), SizeOf(ResBuf), pchar(@ResBuf[0])) <> 0 then
         CheckError('CacheServerInfo', FStatus);
     x := 0;
@@ -613,14 +605,9 @@ end;
 
 
 procedure TIBConnection.ConnectFB;
-const
-  isc_dpb_config = 87;
-  CStr_WireCompression = 'WireCompression=true';
 var
   ADatabaseName: String;
   DPB: string;
-  HN : String;
-  
 begin
   DPB := chr(isc_dpb_version1);
   if (UserName <> '') then
@@ -633,22 +620,13 @@ begin
      DPB := DPB + chr(isc_dpb_sql_role_name) + chr(Length(Role)) + Role;
   if Length(CharSet) > 0 then
     DPB := DPB + Chr(isc_dpb_lc_ctype) + Chr(Length(CharSet)) + CharSet;
-  if WireCompression or (SameText(Params.values['WireCompression'],'true')) then
-    DPB := DPB + Chr(isc_dpb_config) + Chr(Length(CStr_WireCompression)) +
-           CStr_WireCompression;
 
-  FDatabaseHandle := nil;
-  HN:=HostName;
-  if HN <> '' then 
-    begin
-    if Port<>0 then
-      HN:=HN+'/'+IntToStr(Port);
-    ADatabaseName := HN+':'+DatabaseName
-    end
-  else 
-    ADatabaseName := DatabaseName;
+  FSQLDatabaseHandle := nil;
+  if HostName <> '' then ADatabaseName := HostName+':'+DatabaseName
+    else ADatabaseName := DatabaseName;
   if isc_attach_database(@FStatus[0], Length(ADatabaseName), @ADatabaseName[1],
-    @FDatabaseHandle, Length(DPB), @DPB[1]) <> 0 then
+    @FSQLDatabaseHandle,
+         Length(DPB), @DPB[1]) <> 0 then
     CheckError('DoInternalConnect', FStatus);
 end;
 
@@ -684,25 +662,17 @@ begin
 end;
 
 procedure TIBConnection.TranslateFldType(SQLType, SQLSubType, SQLLen, SQLScale : integer;
-           out TrType : TFieldType; out TrLen, TrPrec : word);
+           var TrType : TFieldType; var TrLen : word);
 begin
   TrLen := 0;
-  TrPrec := 0;
   if SQLScale < 0 then
-  begin
+    begin
     TrLen := abs(SQLScale);
     if (TrLen <= MaxBCDScale) then //Note: NUMERIC(18,3) or (17,2) must be mapped to ftFmtBCD, but we do not know Precision
       TrType := ftBCD
     else
       TrType := ftFMTBcd;
-    case (SQLType and not 1) of
-      SQL_SHORT : TrPrec := 4;
-      SQL_LONG  : TrPrec := 9;
-      SQL_DOUBLE,
-      SQL_INT64 : TrPrec := 18;
-      else        TrPrec := SQLLen;
-    end;
-  end
+    end
   else case (SQLType and not 1) of
     SQL_VARYING :
       begin
@@ -757,7 +727,7 @@ var curs : TIBCursor;
 begin
   curs := TIBCursor.create;
   curs.sqlda := nil;
-  curs.StatementHandle := nil;
+  curs.statement := nil;
   curs.FPrepared := False;
   AllocSQLDA(curs.SQLDA,0);
   result := curs;
@@ -782,7 +752,8 @@ end;
 
 procedure TIBConnection.PrepareStatement(cursor: TSQLCursor;ATransaction : TSQLTransaction;buf : string; AParams : TParams);
 
-var DatabaseHandle : pointer;
+var dh    : pointer;
+    tr    : pointer;
     x     : Smallint;
     info_request   : string;
     resbuf         : array[0..7] of byte;
@@ -792,26 +763,23 @@ var DatabaseHandle : pointer;
 begin
   with cursor as TIBcursor do
     begin
-    DatabaseHandle := GetHandle;
-    TransactionHandle := aTransaction.Handle;
-
-    if isc_dsql_allocate_statement(@Status[0], @DatabaseHandle, @StatementHandle) <> 0 then
+    dh := GetHandle;
+    if isc_dsql_allocate_statement(@Status[0], @dh, @Statement) <> 0 then
       CheckError('PrepareStatement', Status);
-
+    tr := aTransaction.Handle;
+    
     if assigned(AParams) and (AParams.count > 0) then
       begin
       buf := AParams.ParseSQL(buf,false,sqEscapeSlash in ConnOptions, sqEscapeRepeat in ConnOptions,psInterbase,paramBinding);
       if LogEvent(detActualSQL) then
         Log(detActualSQL,Buf);
       end;
-
-    if isc_dsql_prepare(@Status[0], @TransactionHandle, @StatementHandle, 0, @Buf[1], Dialect, nil) <> 0 then
+    if isc_dsql_prepare(@Status[0], @tr, @Statement, 0, @Buf[1], Dialect, nil) <> 0 then
       CheckError('PrepareStatement', Status);
-
     if assigned(AParams) and (AParams.count > 0) then
       begin
       AllocSQLDA(in_SQLDA,Length(ParamBinding));
-      if isc_dsql_describe_bind(@Status[0], @StatementHandle, 1, in_SQLDA) <> 0 then
+      if isc_dsql_describe_bind(@Status[0], @Statement, 1, in_SQLDA) <> 0 then
         CheckError('PrepareStatement', Status);
       if in_SQLDA^.SQLD > in_SQLDA^.SQLN then
         DatabaseError(SParameterCountIncorrect,self);
@@ -837,7 +805,7 @@ begin
 
     // Get the statement type from firebird/interbase
     info_request := chr(isc_info_sql_stmt_type);
-    if isc_dsql_sql_info(@Status[0],@StatementHandle,Length(info_request), @info_request[1],sizeof(resbuf),@resbuf) <> 0 then
+    if isc_dsql_sql_info(@Status[0],@Statement,Length(info_request), @info_request[1],sizeof(resbuf),@resbuf) <> 0 then
       CheckError('PrepareStatement', Status);
     assert(resbuf[0]=isc_info_sql_stmt_type);
     BlockSize:=isc_vax_integer(@resbuf[1],2);
@@ -857,12 +825,12 @@ begin
 
     if FSelectable then
       begin
-      if isc_dsql_describe(@Status[0], @StatementHandle, 1, SQLDA) <> 0 then
+      if isc_dsql_describe(@Status[0], @Statement, 1, SQLDA) <> 0 then
         CheckError('PrepareSelect', Status);
       if SQLDA^.SQLD > SQLDA^.SQLN then
         begin
         AllocSQLDA(SQLDA,SQLDA^.SQLD);
-        if isc_dsql_describe(@Status[0], @StatementHandle, 1, SQLDA) <> 0 then
+        if isc_dsql_describe(@Status[0], @Statement, 1, SQLDA) <> 0 then
           CheckError('PrepareSelect', Status);
         end;
       FSelectable := SQLDA^.SQLD > 0;
@@ -886,11 +854,11 @@ procedure TIBConnection.UnPrepareStatement(cursor : TSQLCursor);
 
 begin
   with cursor as TIBcursor do
-    if assigned(StatementHandle) Then
+    if assigned(Statement) Then
       begin
-        if isc_dsql_free_statement(@Status[0], @StatementHandle, DSQL_Drop) <> 0 then
+        if isc_dsql_free_statement(@Status[0], @Statement, DSQL_Drop) <> 0 then
           CheckError('FreeStatement', Status);
-        StatementHandle := nil;
+        Statement := nil;
         FPrepared := False;
       end;
 end;
@@ -943,10 +911,10 @@ begin
 end;
 
 procedure TIBConnection.Execute(cursor: TSQLCursor;atransaction:tSQLtransaction; AParams : TParams);
-var TransactionHandle : pointer;
+var tr : pointer;
     out_SQLDA : PXSQLDA;
 begin
-  TransactionHandle := aTransaction.Handle;
+  tr := aTransaction.Handle;
   if Assigned(APArams) and (AParams.count > 0) then SetParameters(cursor, atransaction, AParams);
   if LogEvent(detParamValue) then
     LogParams(AParams);
@@ -956,34 +924,18 @@ begin
       out_SQLDA := SQLDA
     else
       out_SQLDA := nil;
-    if isc_dsql_execute2(@Status[0], @TransactionHandle, @StatementHandle, 1, in_SQLDA, out_SQLDA) <> 0 then
+    if isc_dsql_execute2(@Status[0], @tr, @Statement, 1, in_SQLDA, out_SQLDA) <> 0 then
       CheckError('Execute', Status);
   end;
 end;
 
 
-procedure TIBConnection.AddFieldDefs(cursor: TSQLCursor;FieldDefs : TFieldDefs);
-const
-  CS_NONE=0;
-  CS_BINARY=1;
+procedure TIBConnection.AddFieldDefs(cursor: TSQLCursor;FieldDefs : TfieldDefs);
 var
-  i         : integer;
-  PSQLVar   : PXSQLVAR;
-  TransLen,
-  TransPrec : word;
+  x         : integer;
+  TransLen  : word;
   TransType : TFieldType;
-
-  function GetBlobCharset(TableName,ColumnName: Pointer): smallint;
-  var TransactionHandle: pointer;
-      BlobDesc: TISC_BLOB_DESC;
-      Global: array[0..31] of AnsiChar;
-  begin
-    TransactionHandle := TIBCursor(cursor).TransactionHandle;
-    if isc_blob_lookup_desc(@FStatus[0], @FDatabaseHandle, @TransactionHandle,
-         TableName, ColumnName, @BlobDesc, @Global) <> 0 then
-      CheckError('Blob Charset', FStatus);
-    Result := BlobDesc.blob_desc_charset;
-  end;
+  FD        : TFieldDef;
 
 begin
   {$push}
@@ -991,21 +943,23 @@ begin
   with cursor as TIBCursor do
     begin
     setlength(FieldBinding,SQLDA^.SQLD);
-    for i := 0 to SQLDA^.SQLD - 1 do
+    for x := 0 to SQLDA^.SQLD - 1 do
       begin
-      PSQLVar := @SQLDA^.SQLVar[i];
-      TranslateFldType(PSQLVar^.SQLType, PSQLVar^.sqlsubtype, PSQLVar^.SQLLen, PSQLVar^.SQLScale,
-        TransType, TransLen, TransPrec);
+      TranslateFldType(SQLDA^.SQLVar[x].SQLType, SQLDA^.SQLVar[x].sqlsubtype, SQLDA^.SQLVar[x].SQLLen, SQLDA^.SQLVar[x].SQLScale,
+        TransType, TransLen);
 
-      // [var]char or blob column character set NONE or OCTETS overrides connection charset
-      if (((TransType in [ftString, ftFixedChar]) and (PSQLVar^.sqlsubtype and $FF in [CS_NONE,CS_BINARY])) and not UseConnectionCharSetIfNone)
-         or
-         ((TransType = ftMemo) and (PSQLVar^.relname_length>0) and (PSQLVar^.sqlname_length>0) and (GetBlobCharset(@PSQLVar^.relname,@PSQLVar^.sqlname) in [CS_NONE,CS_BINARY])) then
-        FieldDefs.Add(PSQLVar^.AliasName, TransType, TransLen, TransPrec, (PSQLVar^.sqltype and 1)=0, False, i+1, CP_NONE)
-      else
-        AddFieldDef(FieldDefs, i+1, PSQLVar^.AliasName, TransType, TransLen, TransPrec, True, (PSQLVar^.sqltype and 1)=0, False);
-
-      FieldBinding[i] := i;
+      FD := FieldDefs.Add(FieldDefs.MakeNameUnique(SQLDA^.SQLVar[x].AliasName), TransType,
+         TransLen, (SQLDA^.SQLVar[x].sqltype and 1)=0, (x + 1));
+      if TransType in [ftBCD, ftFmtBCD] then
+        case (SQLDA^.SQLVar[x].sqltype and not 1) of
+          SQL_SHORT : FD.precision := 4;
+          SQL_LONG  : FD.precision := 9;
+          SQL_DOUBLE,
+          SQL_INT64 : FD.precision := 18;
+          else FD.precision := SQLDA^.SQLVar[x].SQLLen;
+        end;
+//      FD.DisplayName := SQLDA^.SQLVar[x].AliasName;
+      FieldBinding[FD.FieldNo-1] := x;
       end;
     end;
   {$pop}
@@ -1013,7 +967,7 @@ end;
 
 function TIBConnection.GetHandle: pointer;
 begin
-  Result := FDatabaseHandle;
+  Result := FSQLDatabaseHandle;
 end;
 
 function TIBConnection.Fetch(cursor : TSQLCursor) : boolean;
@@ -1033,7 +987,7 @@ begin
         SQLDA^.SQLD := 0; //hack: mark after first fetch
       end
     else
-      retcode := isc_dsql_fetch(@Status[0], @StatementHandle, 1, SQLDA);
+      retcode := isc_dsql_fetch(@Status[0], @Statement, 1, SQLDA);
     if (retcode <> 0) and (retcode <> 100) then
       CheckError('Fetch', Status);
   end;
@@ -1055,36 +1009,34 @@ end;
 
 procedure TIBConnection.SetParameters(cursor : TSQLCursor; aTransation : TSQLTransaction; AParams : TParams);
 
-var
-  // This should be a pointer, because the ORIGINAL variables must be modified.
-  VSQLVar  : PXSQLVAR;
-  AParam   : TParam;
-  s        : rawbytestring;
-  i        : integer;
+var ParNr,SQLVarNr : integer;
+    s               : string;
+    i               : integer;
+    si              : smallint;
+    li              : LargeInt;
+    currbuff        : pchar;
+    w               : word;
 
-  procedure SetBlobParam;
-  var
     TransactionHandle : pointer;
-    BlobId            : ISC_QUAD;
-    BlobHandle        : Isc_blob_Handle;
+    blobId            : ISC_QUAD;
+    blobHandle        : Isc_blob_Handle;
     BlobSize,
     BlobBytesWritten  : longint;
+    
+  procedure SetBlobParam;
+
   begin
     {$push}
     {$R-}
     with cursor as TIBCursor do
       begin
       TransactionHandle := aTransation.Handle;
-      BlobHandle := FB_API_NULLHANDLE;
-      if isc_create_blob(@FStatus[0], @FDatabaseHandle, @TransactionHandle, @BlobHandle, @BlobId) <> 0 then
+      blobhandle := FB_API_NULLHANDLE;
+      if isc_create_blob(@FStatus[0], @FSQLDatabaseHandle, @TransactionHandle, @blobHandle, @blobId) <> 0 then
        CheckError('TIBConnection.CreateBlobStream', FStatus);
 
-      if VSQLVar^.sqlsubtype = isc_blob_text then
-        s := GetAsString(AParam)
-      else
-        s := AParam.AsString; // to avoid unwanted conversions keep it synchronized with TBlobField.GetAsVariant
-                              // best would be use AsBytes, but for now let it as is
-      BlobSize := Length(s);
+      s := AParams[ParNr].AsString;
+      BlobSize := length(s);
 
       BlobBytesWritten := 0;
       i := 0;
@@ -1093,36 +1045,39 @@ var
       // We ignore BlobSegmentSize property.
       while BlobBytesWritten < (BlobSize-MAXBLOBSEGMENTSIZE) do
         begin
-        isc_put_segment(@FStatus[0], @BlobHandle, MAXBLOBSEGMENTSIZE, @s[(i*MAXBLOBSEGMENTSIZE)+1]);
+        isc_put_segment(@FStatus[0], @blobHandle, MAXBLOBSEGMENTSIZE, @s[(i*MAXBLOBSEGMENTSIZE)+1]);
         inc(BlobBytesWritten,MAXBLOBSEGMENTSIZE);
         inc(i);
         end;
       if BlobBytesWritten <> BlobSize then
-        isc_put_segment(@FStatus[0], @BlobHandle, BlobSize-BlobBytesWritten, @s[(i*MAXBLOBSEGMENTSIZE)+1]);
+        isc_put_segment(@FStatus[0], @blobHandle, BlobSize-BlobBytesWritten, @s[(i*MAXBLOBSEGMENTSIZE)+1]);
 
-      if isc_close_blob(@FStatus[0], @BlobHandle) <> 0 then
+      if isc_close_blob(@FStatus[0], @blobHandle) <> 0 then
         CheckError('TIBConnection.CreateBlobStream isc_close_blob', FStatus);
-
-      Move(BlobId, VSQLVar^.SQLData^, VSQLVar^.SQLLen);
+      Move(blobId, in_sqlda^.SQLvar[SQLVarNr].SQLData^, in_SQLDA^.SQLVar[SQLVarNr].SQLLen);
       end;
-    {$pop}
+      {$pop}
   end;
 
-var
-  SQLVarNr : integer;
-  si       : smallint;
-  li       : LargeInt;
-  CurrBuff : pchar;
-  w        : word;
+Const
+  DateF = 'yyyy-mm-dd';
+  TimeF = 'hh:nn:ss';
+  DateTimeF = DateF+' '+TimeF;
 
+var
+  // This should be a pointer, because the ORIGINAL variables must
+  // be modified.
+  VSQLVar: ^XSQLVAR;
+  P: TParam;
+  ft : TFieldType;
 begin
   {$push}
   {$R-}
   with cursor as TIBCursor do for SQLVarNr := 0 to High(ParamBinding){AParams.count-1} do
     begin
-    AParam := AParams[ParamBinding[SQLVarNr]];
+    ParNr := ParamBinding[SQLVarNr];
     VSQLVar := @in_sqlda^.SQLvar[SQLVarNr];
-    if AParam.IsNull then
+    if AParams[ParNr].IsNull then
       VSQLVar^.SQLInd^ := -1
     else
       begin
@@ -1132,47 +1087,50 @@ begin
         SQL_SHORT, SQL_BOOLEAN_INTERBASE :
           begin
             if VSQLVar^.sqlscale = 0 then
-              si := AParam.AsSmallint
+              si := AParams[ParNr].AsSmallint
             else
-              si := Round(AParam.AsCurrency * IntPower10(-VSQLVar^.sqlscale));
+              si := Round(AParams[ParNr].AsCurrency * IntPower10(-VSQLVar^.sqlscale));
             i := si;
             Move(i, VSQLVar^.SQLData^, VSQLVar^.SQLLen);
           end;
         SQL_LONG :
           begin
             if VSQLVar^.sqlscale = 0 then
-              i := AParam.AsInteger
+              i := AParams[ParNr].AsInteger
             else
-              i := Round(AParam.AsFloat * IntPower10(-VSQLVar^.sqlscale)); //*any number of digits
+              i := Round(AParams[ParNr].AsFloat * IntPower10(-VSQLVar^.sqlscale)); //*any number of digits
             Move(i, VSQLVar^.SQLData^, VSQLVar^.SQLLen);
           end;
         SQL_INT64:
           begin
             if VSQLVar^.sqlscale = 0 then
-              li := AParam.AsLargeInt
-            else if AParam.DataType = ftFMTBcd then
-              li := AParam.AsFMTBCD * IntPower10(-VSQLVar^.sqlscale)
+              li := AParams[ParNr].AsLargeInt
+            else if AParams[ParNr].DataType = ftFMTBcd then
+              li := AParams[ParNr].AsFMTBCD * IntPower10(-VSQLVar^.sqlscale)
             else
-              li := Round(AParam.AsCurrency * IntPower10(-VSQLVar^.sqlscale));
+              li := Round(AParams[ParNr].AsCurrency * IntPower10(-VSQLVar^.sqlscale));
             Move(li, VSQLVar^.SQLData^, VSQLVar^.SQLLen);
           end;
         SQL_DOUBLE, SQL_FLOAT:
-          SetFloat(VSQLVar^.SQLData, AParam.AsFloat, VSQLVar^.SQLLen);
+          SetFloat(VSQLVar^.SQLData, AParams[ParNr].AsFloat, VSQLVar^.SQLLen);
         SQL_BLOB :
           SetBlobParam;
         SQL_VARYING, SQL_TEXT :
           begin
-          Case AParam.DataType of
-            ftDate :
-              s := FormatDateTime('yyyy-mm-dd', AParam.AsDateTime);
-            ftTime :
-              s := FormatDateTime('hh":"nn":"ss', AParam.AsDateTime);
-            ftDateTime,
-            ftTimeStamp :
-              s := FormatDateTime('yyyy-mm-dd hh":"nn":"ss', AParam.AsDateTime);
-            else
-              s := GetAsString(AParam);
-          end;
+          P:=AParams[ParNr];
+          ft:=P.DataType;
+          if Not (ft in [ftDate,ftTime,ftDateTime,ftTimeStamp]) then
+            S:=P.AsString
+          else
+            begin
+            Case ft of
+              ftDate : S:=DateF;
+              ftTime : S:=TimeF;
+              ftDateTime,
+              ftTimeStamp : S:=DateTimeF;
+            end;
+            S:=FormatDateTime(S,P.AsDateTime);
+            end;
           w := length(s); // a word is enough, since the max-length of a string in interbase is 32k
           if ((VSQLVar^.SQLType and not 1) = SQL_VARYING) then
             begin
@@ -1180,7 +1138,7 @@ begin
             ReAllocMem(VSQLVar^.SQLData, VSQLVar^.SQLLen+2);
             CurrBuff := VSQLVar^.SQLData;
             move(w,CurrBuff^,sizeof(w));
-            inc(CurrBuff,sizeof(w));
+            inc(CurrBuff,2);
             end
           else
             begin
@@ -1194,18 +1152,18 @@ begin
           Move(s[1], CurrBuff^, w);
           end;
         SQL_TYPE_DATE, SQL_TYPE_TIME, SQL_TIMESTAMP :
-          SetDateTime(VSQLVar^.SQLData, AParam.AsDateTime, VSQLVar^.SQLType);
+          SetDateTime(VSQLVar^.SQLData, AParams[ParNr].AsDateTime, VSQLVar^.SQLType);
         SQL_BOOLEAN_FIREBIRD:
-          PByte(VSQLVar^.SQLData)^ := Byte(AParam.AsBoolean);
+          PByte(VSQLVar^.SQLData)^ := Byte(AParams[ParNr].AsBoolean);
       else
-        DatabaseErrorFmt(SUnsupportedParameter,[FieldTypeNames[AParam.DataType]],self);
+        DatabaseErrorFmt(SUnsupportedParameter,[Fieldtypenames[AParams[ParNr].DataType]],self);
       end {case}
       end;
     end;
-  {$pop}
+{$pop}
 end;
 
-function TIBConnection.LoadField(cursor : TSQLCursor; FieldDef : TFieldDef; buffer : pointer; out CreateBlob : boolean) : boolean;
+function TIBConnection.LoadField(cursor : TSQLCursor;FieldDef : TfieldDef;buffer : pointer; out CreateBlob : boolean) : boolean;
 
 var
   VSQLVar    : PXSQLVAR;
@@ -1442,13 +1400,6 @@ begin
       {$ELSE}
       PISC_TIMESTAMP(CurrBuff)^.timestamp_date := Trunc(PTime) + IBDateOffset;
       PISC_TIMESTAMP(CurrBuff)^.timestamp_time := Round(abs(Frac(PTime)) * IBTimeFractionsPerDay);
-      if PISC_TIMESTAMP(CurrBuff)^.timestamp_time = IBTimeFractionsPerDay then
-        begin
-        // If PTime is for example 0.99999999999999667, the time-portion of the
-        // TDateTime is rounded into a whole day. Firebird does not accept that.
-        inc(PISC_TIMESTAMP(CurrBuff)^.timestamp_date);
-        PISC_TIMESTAMP(CurrBuff)^.timestamp_time := 0;
-        end;
       {$ENDIF}
       end
   else
@@ -1676,7 +1627,7 @@ begin
   TransactionHandle := Atransaction.Handle;
   blobHandle := FB_API_NULLHANDLE;
 
-  if isc_open_blob(@FStatus[0], @FDatabaseHandle, @TransactionHandle, @blobHandle, blobId) <> 0 then
+  if isc_open_blob(@FStatus[0], @FSQLDatabaseHandle, @TransactionHandle, @blobHandle, blobId) <> 0 then
     CheckError('TIBConnection.CreateBlobStream', FStatus);
 
   //For performance, read as much as we can, regardless of any segment size set in database.
@@ -1719,10 +1670,10 @@ begin
   InsertedRows:=-1;
 
   if assigned(cursor) then with cursor as TIBCursor do
-   if assigned(StatementHandle) then
+   if assigned(statement) then
     begin
     info_request := chr(isc_info_sql_records);
-    if isc_dsql_sql_info(@Status[0], @StatementHandle, Length(info_request), @info_request[1],sizeof(resbuf),@resbuf) <> 0 then
+    if isc_dsql_sql_info(@Status[0],@Statement,Length(info_request), @info_request[1],sizeof(resbuf),@resbuf) <> 0 then
       CheckError('RowsAffected', Status);
 
     i := 0;

@@ -43,8 +43,7 @@ implementation
   uses
     sysutils,cutils,
     globtype,globals,cpuinfo,
-    aasmbase,aasmdata,aasmtai,
-    symdef;
+    aasmbase,aasmdata,aasmtai;
 
 
   class procedure ti8086nodeutils.InsertMemorySizes;
@@ -65,7 +64,7 @@ implementation
     begin
       maybe_new_object_file(current_asmdata.asmlists[al_globals]);
       new_section(current_asmdata.asmlists[al_globals],sec_stack,'__stack', 16);
-      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___stack', AT_DATA, stacksize, carraydef.getreusable(u8inttype,stacksize)));
+      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___stack', AT_DATA, stacksize));
       { HACK: since tai_datablock's size parameter is aint, which cannot be
         larger than 32767 on i8086, but we'd like to support stack size of
         up to 64kb, we may need to use several tai_datablocks to reserve
@@ -75,11 +74,11 @@ implementation
       while stacksizeleft>0 do
         begin
           stackblock:=min(stacksizeleft,high(aint));
-          current_asmdata.asmlists[al_globals].concat(tai_datablock.Create('___stackblock'+IntToStr(i),stackblock,carraydef.getreusable(u8inttype,stackblock)));
+          current_asmdata.asmlists[al_globals].concat(tai_datablock.Create('___stackblock'+IntToStr(i),stackblock));
           dec(stacksizeleft,stackblock);
           inc(i);
         end;
-      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___stacktop',AT_DATA,0,voidtype));
+      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___stacktop',AT_DATA,0));
     end;
 
 
@@ -90,7 +89,7 @@ implementation
     begin
       maybe_new_object_file(current_asmdata.asmlists[al_globals]);
       new_section(current_asmdata.asmlists[al_globals],sec_heap,'__heap', 16);
-      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___heap', AT_DATA, heapsize,carraydef.getreusable(u8inttype,heapsize)));
+      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___heap', AT_DATA, heapsize));
       { HACK: since tai_datablock's size parameter is aint, which cannot be
         larger than 32767 on i8086, but we'd like to support heap size of
         up to 640kb, we may need to use several tai_datablocks to reserve
@@ -100,11 +99,11 @@ implementation
       while heapsizeleft>0 do
         begin
           heapblock:=min(heapsizeleft,high(aint));
-          current_asmdata.asmlists[al_globals].concat(tai_datablock.Create('___heapblock'+IntToStr(i),heapblock,carraydef.getreusable(u8inttype,heapblock)));
+          current_asmdata.asmlists[al_globals].concat(tai_datablock.Create('___heapblock'+IntToStr(i),heapblock));
           dec(heapsizeleft,heapblock);
           inc(i);
         end;
-      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___heaptop',AT_DATA,0,voidtype));
+      current_asmdata.asmlists[al_globals].concat(tai_symbol.Createname_global('___heaptop',AT_DATA,0));
     end;
 
 
@@ -118,7 +117,7 @@ implementation
 
       maybe_new_object_file(current_asmdata.asmlists[al_globals]);
       new_section(current_asmdata.asmlists[al_globals],sec_data,'__fpc_stackplusmaxheap_in_para',sizeof(pint));
-      current_asmdata.asmlists[al_globals].concat(Tai_symbol.Createname_global('__fpc_stackplusmaxheap_in_para',AT_DATA,4,u32inttype));
+      current_asmdata.asmlists[al_globals].concat(Tai_symbol.Createname_global('__fpc_stackplusmaxheap_in_para',AT_DATA,4));
       current_asmdata.asmlists[al_globals].concat(Tai_const.Create_16bit(min($1000,stacksize_para+maxheapsize_para)));
     end;
 

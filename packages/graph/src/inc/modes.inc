@@ -31,11 +31,9 @@
      4096: driver := D12bit;
      32768: driver := D15bit;
      65536: driver := D16bit;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-     65536*256: driver := D24bit;
 {    not yet supported
+     65536*256: driver := D24bit;
      65536*65536: driver := D32bit;}
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
      else
        begin
          driver := maxsmallint;

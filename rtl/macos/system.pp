@@ -16,16 +16,8 @@ unit System;
 
 interface
 
-{$DEFINE FPC_ANSI_TEXTFILEREC}
-
 { include system-independent routine headers }
 {$I systemh.inc}
-
-{$if defined(cpum68k) and defined(fpusoft)}
-{$define fpc_softfpu_interface}
-{$i softfpu.pp}
-{$undef fpc_softfpu_interface}
-{$endif defined(cpum68k) and defined(fpusoft)}
 
 const
  LineEnding = #13;
@@ -191,28 +183,6 @@ Perhaps handle readonly filesystems, as in sysunix.inc
 
 }
 
-{$if defined(cpum68k) and defined(fpusoft)}
-
-{$define fpc_softfpu_implementation}
-{$define softfpu_compiler_mul32to64}
-{$define softfpu_inline}
-{$i softfpu.pp}
-{$undef fpc_softfpu_implementation}
-
-{ we get these functions and types from the softfpu code }
-{$define FPC_SYSTEM_HAS_float64}
-{$define FPC_SYSTEM_HAS_float32}
-{$define FPC_SYSTEM_HAS_flag}
-{$define FPC_SYSTEM_HAS_extractFloat64Frac0}
-{$define FPC_SYSTEM_HAS_extractFloat64Frac1}
-{$define FPC_SYSTEM_HAS_extractFloat64Exp}
-{$define FPC_SYSTEM_HAS_extractFloat64Sign}
-{$define FPC_SYSTEM_HAS_ExtractFloat32Frac}
-{$define FPC_SYSTEM_HAS_extractFloat32Exp}
-{$define FPC_SYSTEM_HAS_extractFloat32Sign}
-{$endif defined(cpum68k) and defined(fpusoft)}
-
-
 {******** include system independent routines **********}
 {$I system.inc}
 
@@ -324,14 +294,6 @@ begin
   FindSysFolder:= err;
 end;
 
-{$ifdef CPUM68K}
-{$WARNING FIXME: Dummy TrapAvailable!}
-function TrapAvailable(_trap: Word): Boolean;
-begin
-  TrapAvailable:=false;
-end;
-{$endif CPUM68K}
-
 procedure InvestigateSystem;
 
   {$IFDEF CPUM68K}
@@ -387,9 +349,7 @@ begin
           macosSystemVersion := 0;
         end;
 
-      {$WARNING FIXME: MacJmp}
-      //macosHasSysDebugger := (LongintPtr(MacJmp)^ <> 0);
-      macosHasSysDebugger := false;
+      macosHasSysDebugger := (LongintPtr(MacJmp)^ <> 0);
 
       macosHasCFM := false;
       macosHasAppleEvents := false;
@@ -405,11 +365,10 @@ begin
       if (macosHasScriptMgr) then
         macosNrOfScriptsInstalled := GetEnvirons(smEnabled);
       {$ELSE}
-      {$WARNING FIXME: GetScriptManagerVariable and smEnabled}
-      //if (macosHasScriptMgr) then
-      //  macosNrOfScriptsInstalled := GetScriptManagerVariable(smEnabled);  {Gamla rutinnamnet var GetEnvirons.}
+      if (macosHasScriptMgr) then
+        macosNrOfScriptsInstalled := GetScriptManagerVariable(smEnabled);  {Gamla rutinnamnet var GetEnvirons.}
       {$ENDIF}
-      {$ENDIF CPUM68K}
+      {$ENDIF}
     end
   else
     begin

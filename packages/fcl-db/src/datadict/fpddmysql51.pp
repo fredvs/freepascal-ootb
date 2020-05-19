@@ -13,7 +13,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-unit FPDDMySQL51;
+unit fpddmysql51;
 
 {$mode objfpc}{$H+}
 

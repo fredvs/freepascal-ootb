@@ -26,7 +26,7 @@ unit nx64cnv;
 interface
 
     uses
-      node,defutil,pass_1,
+      node,ncgcnv,defutil,defcmp,pass_1,
       nx86cnv;
 
     type
@@ -59,13 +59,14 @@ interface
 implementation
 
     uses
-      verbose,globals,globtype,
+      verbose,systems,globals,globtype,
       aasmbase,aasmtai,aasmdata,aasmcpu,
       symconst,symdef,
-      cgbase,cga,
-      ncnv,
+      cgbase,cga,procinfo,pass_2,
+      ncon,ncal,ncnv,
       cpubase,
-      cgutils,cgobj,hlcgobj,cgx86;
+      cgutils,cgobj,hlcgobj,cgx86,ncgutil,
+      tgobj;
 
 
     function tx8664typeconvnode.first_int_to_real : tnode;
@@ -109,7 +110,7 @@ implementation
                      we load bits 0..62 and then check bit 63:
                      if it is 1 then we add $80000000 000000000
                      as double                                  }
-                   current_asmdata.getglobaldatalabel(l1);
+                   current_asmdata.getdatalabel(l1);
                    current_asmdata.getjumplabel(l2);
 
                    { Get sign bit }
@@ -137,7 +138,7 @@ implementation
                    cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NC,l2);
                    new_section(current_asmdata.asmlists[al_typedconsts],sec_rodata_norel,l1.name,const_align(sizeof(pint)));
                    current_asmdata.asmlists[al_typedconsts].concat(Tai_label.Create(l1));
-                   reference_reset_symbol(href,l1,0,4,[]);
+                   reference_reset_symbol(href,l1,0,4);
                    { simplify for PIC }
                    tcgx86(cg).make_simple_ref(current_asmdata.CurrAsmList,href);
 

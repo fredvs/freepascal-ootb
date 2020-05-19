@@ -26,7 +26,7 @@ unit nx86cnv;
 interface
 
     uses
-      node,ncgcnv,defutil;
+      node,ncgcnv,defutil,defcmp;
 
     type
        tx86typeconvnode = class(tcgtypeconvnode)
@@ -58,14 +58,13 @@ interface
 implementation
 
    uses
-      verbose,globals,globtype,
+      verbose,systems,globals,globtype,
       aasmbase,aasmtai,aasmdata,aasmcpu,
       symconst,symdef,
-      cgbase,cga,pass_1,pass_2,
-      cpuinfo,
-      ncnv,
-      cpubase,
-      cgutils,cgobj,hlcgobj,cgx86,
+      cgbase,cga,procinfo,pass_1,pass_2,
+      ncon,ncal,ncnv,
+      cpubase,cpuinfo,
+      cgutils,cgobj,hlcgobj,cgx86,ncgutil,
       tgobj;
 
 
@@ -93,9 +92,13 @@ implementation
         i         : integer;
 {$endif not cpu64bitalu}
         resflags  : tresflags;
-        hlabel    : tasmlabel;
+        hlabel,oldTrueLabel,oldFalseLabel : tasmlabel;
         newsize   : tcgsize;
       begin
+         oldTrueLabel:=current_procinfo.CurrTrueLabel;
+         oldFalseLabel:=current_procinfo.CurrFalseLabel;
+         current_asmdata.getjumplabel(current_procinfo.CurrTrueLabel);
+         current_asmdata.getjumplabel(current_procinfo.CurrFalseLabel);
          secondpass(left);
          if codegenerror then
           exit;
@@ -112,6 +115,8 @@ implementation
                 hlcg.location_force_reg(current_asmdata.CurrAsmList,location,left.resultdef,resultdef,true)
               else
                 location.size:=newsize;
+              current_procinfo.CurrTrueLabel:=oldTrueLabel;
+              current_procinfo.CurrFalseLabel:=oldFalseLabel;
               exit;
            end;
 
@@ -163,13 +168,13 @@ implementation
                  begin
                    hregister:=cg.getintregister(current_asmdata.CurrAsmList,OS_16);
                    cg.a_load_reg_reg(current_asmdata.CurrAsmList,OS_16,OS_16,left.location.register64.reglo,hregister);
-                   cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,cg.GetNextReg(left.location.register64.reglo),hregister);
+                   cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,GetNextReg(left.location.register64.reglo),hregister);
                    cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,left.location.register64.reghi,hregister);
-                   cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,cg.GetNextReg(left.location.register64.reghi),hregister);
+                   cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,GetNextReg(left.location.register64.reghi),hregister);
                  end
                 else
                   if left.location.size in [OS_32,OS_S32] then
-                    cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,left.location.register,cg.GetNextReg(left.location.register))
+                    cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,OS_16,left.location.register,GetNextReg(left.location.register))
                 else
 {$endif}
                   cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_OR,left.location.size,left.location.register,left.location.register);
@@ -179,13 +184,13 @@ implementation
                 location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
                 location.register:=cg.getintregister(current_asmdata.CurrAsmList,location.size);
                 current_asmdata.getjumplabel(hlabel);
-                cg.a_label(current_asmdata.CurrAsmList,left.location.truelabel);
+                cg.a_label(current_asmdata.CurrAsmList,current_procinfo.CurrTrueLabel);
                 if not(is_cbool(resultdef)) then
                   cg.a_load_const_reg(current_asmdata.CurrAsmList,location.size,1,location.register)
                 else
                   cg.a_load_const_reg(current_asmdata.CurrAsmList,location.size,-1,location.register);
                 cg.a_jmp_always(current_asmdata.CurrAsmList,hlabel);
-                cg.a_label(current_asmdata.CurrAsmList,left.location.falselabel);
+                cg.a_label(current_asmdata.CurrAsmList,current_procinfo.CurrFalseLabel);
                 cg.a_load_const_reg(current_asmdata.CurrAsmList,location.size,0,location.register);
                 cg.a_label(current_asmdata.CurrAsmList,hlabel);
               end;
@@ -221,6 +226,8 @@ implementation
                    cg.a_op_reg_reg(current_asmdata.CurrAsmList,OP_NEG,location.size,location.register,location.register);
                end
            end;
+         current_procinfo.CurrTrueLabel:=oldTrueLabel;
+         current_procinfo.CurrFalseLabel:=oldFalseLabel;
        end;
 
 
@@ -332,13 +339,13 @@ implementation
     {$elseif defined(cpu32bitalu)}
                     emit_const_reg(A_BT,S_L,31,left.location.register64.reghi);
     {$elseif defined(cpu16bitalu)}
-                    emit_const_reg(A_BT,S_W,15,cg.GetNextReg(left.location.register64.reghi));
+                    emit_const_reg(A_BT,S_W,15,GetNextReg(left.location.register64.reghi));
     {$endif}
                   end
                 else
                   begin
     {$ifdef i8086}
-                    emit_const_reg(A_TEST,S_W,aint($8000),cg.GetNextReg(left.location.register64.reghi));
+                    emit_const_reg(A_TEST,S_W,aint($8000),GetNextReg(left.location.register64.reghi));
     {$else i8086}
                     internalerror(2013052510);
     {$endif i8086}
@@ -385,7 +392,7 @@ implementation
                      if it is 1 then we add 2**64 as float.
                      Since 2**64 can be represented exactly, use a single-precision
                      constant to save space. }
-                   current_asmdata.getglobaldatalabel(l1);
+                   current_asmdata.getdatalabel(l1);
                    current_asmdata.getjumplabel(l2);
     
                    if not(signtested) then
@@ -425,7 +432,7 @@ implementation
                    current_asmdata.asmlists[al_typedconsts].concat(Tai_label.Create(l1));
                    { I got this constant from a test program (FK) }
                    current_asmdata.asmlists[al_typedconsts].concat(Tai_const.Create_32bit($5f800000));
-                   reference_reset_symbol(href,l1,0,4,[]);
+                   reference_reset_symbol(href,l1,0,4);
                    tcgx86(cg).make_simple_ref(current_asmdata.CurrAsmList,href);
                    current_asmdata.CurrAsmList.concat(Taicpu.Op_ref(A_FADD,S_FS,href));
                    cg.a_label(current_asmdata.CurrAsmList,l2);

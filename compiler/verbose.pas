@@ -91,7 +91,7 @@ interface
     procedure GenerateError;
     procedure Internalerror(i:longint);{$ifndef VER2_6}noreturn;{$endif VER2_6}
     procedure Comment(l:longint;s:ansistring);
-    function  MessageStr(w:longint):TMsgStr;
+    function  MessagePchar(w:longint):pchar;
     procedure Message(w:longint;onqueue:tmsgqueueevent=nil);
     procedure Message1(w:longint;const s1:TMsgStr;onqueue:tmsgqueueevent=nil);
     procedure Message2(w:longint;const s1,s2:TMsgStr;onqueue:tmsgqueueevent=nil);
@@ -404,7 +404,7 @@ implementation
         { reload the internal messages if not already loaded }
 {$ifndef EXTERN_MSG}
         if not msg^.msgintern then
-         msg^.LoadIntern(@msgtxt,msgtxtsize,msgtxt_codepage);
+         msg^.LoadIntern(@msgtxt,msgtxtsize);
 {$endif}
         if not msg^.LoadExtern(fn) then
          begin
@@ -412,7 +412,7 @@ implementation
            writeln('Fatal: Cannot find error message file.');
            halt(3);
 {$else}
-           msg^.LoadIntern(@msgtxt,msgtxtsize,msgtxt_codepage);
+           msg^.LoadIntern(@msgtxt,msgtxtsize);
 {$endif}
          end;
         { reload the prefixes using the new messages }
@@ -438,7 +438,7 @@ implementation
 
     Procedure UpdateStatus;
       var
-        module : tmodule;
+        module : tmodulebase;
       begin
       { fix status }
         status.currentline:=current_filepos.line;
@@ -451,11 +451,9 @@ implementation
             begin
               { update status record }
               status.currentmodule:=module.modulename^;
-              status.currentsourceppufilename:=module.ppufilename;
               status.currentmodulestate:=ModuleStateStr[module.state];
               status.currentsource:=module.sourcefiles.get_file_name(current_filepos.fileindex);
               status.currentsourcepath:=module.sourcefiles.get_file_path(current_filepos.fileindex);
-              status.sources_avail:=module.sources_avail;
               { if currentsourcepath is relative, make it absolute }
               if not path_absolute(status.currentsourcepath) then
                 status.currentsourcepath:=GetCurrentDir+status.currentsourcepath;
@@ -756,10 +754,10 @@ implementation
       end;
 
 
-    function  MessageStr(w:longint):TMsgStr;
+    function  MessagePchar(w:longint):pchar;
       begin
         MaybeLoadMessageFile;
-        MessageStr:=msg^.Get(w,[]);
+        MessagePchar:=msg^.GetPchar(w)
       end;
 
 
@@ -987,7 +985,7 @@ implementation
            halt(3);
          end;
 {$ifndef EXTERN_MSG}
-        msg^.LoadIntern(@msgtxt,msgtxtsize,msgtxt_codepage);
+        msg^.LoadIntern(@msgtxt,msgtxtsize);
 {$else EXTERN_MSG}
         LoadMsgFile(exepath+'errore.msg');
 {$endif EXTERN_MSG}
@@ -1000,7 +998,6 @@ implementation
         lastfileidx:=-1;
         lastmoduleidx:=-1;
         status.currentmodule:='';
-        status.currentsourceppufilename:='';
         status.currentsource:='';
         status.currentsourcepath:='';
         { Register internalerrorproc for cutils/cclasses }

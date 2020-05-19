@@ -1,7 +1,5 @@
 { %cpu=x86_64 }
 
-{$codealign varmin=16}
-
 uses
   cpu,sysutils;
 

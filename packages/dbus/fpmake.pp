@@ -16,7 +16,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
 
     P.Author := 'Library: Red Hat, header: Unknown (but probably Sebastian Guenther)';
     P.License := 'Library: GPL2 or later, header: LGPL with modification, ';
@@ -49,8 +49,6 @@ begin
           AddInclude('dbus-threads.inc');
           AddInclude('dbus-misc.inc');
         end;
-    T:=P.Targets.AddUnit('dbuscomp.pp');
-    T.Dependencies.AddUnit('dbus');
 
     P.ExamplePath.Add('examples');
     T:=P.Targets.AddExampleProgram('busexample.pp');

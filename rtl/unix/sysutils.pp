@@ -83,9 +83,6 @@ procedure UnhookSignal(RtlSigNum: Integer; OnlyIfHooked: Boolean = True);
 implementation
 
 Uses
-{$ifdef android}
-  dl,
-{$endif android}
   {$ifdef FPC_USE_LIBC}initc{$ELSE}Syscall{$ENDIF}, Baseunix, unixutil;
 
 type
@@ -127,13 +124,12 @@ function InternalInquireSignal(RtlSigNum: Integer; out act: SigActionRec; fromin
             if not frominit then
               begin
                 { check whether the installed signal handler is still ours }
-{$if not defined(aix) and (not defined(linux) or not defined(cpupowerpc64) or (defined(_call_elf) and (_call_elf = 2)))}
+{$if not defined(aix) and (not defined(linux) or not defined(cpupowerpc64))}
                 if (pointer(act.sa_handler)=pointer(@defaultsighandler)) then
 {$else}
-                { on aix and linux/ppc64 (ELFv1), procedure addresses are
-                  actually descriptors -> check whether the code addresses
-                  inside the descriptors match, rather than the descriptors
-                  themselves }
+                { on aix and linux/ppc64, procedure addresses are actually
+                  descriptors -> check whether the code addresses inside the
+                  descriptors match, rather than the descriptors themselves }
                 if (ppointer(act.sa_handler)^=ppointer(@defaultsighandler)^) then
 {$endif}
                   result:=ssHooked
@@ -150,7 +146,7 @@ function InternalInquireSignal(RtlSigNum: Integer; out act: SigActionRec; fromin
                 { program -> signals have been hooked by system init code }
                 if (byte(RtlSigNum) in [RTL_SIGFPE,RTL_SIGSEGV,RTL_SIGILL,RTL_SIGBUS]) then
                   begin
-{$if not defined(aix) and (not defined(linux) or not defined(cpupowerpc64) or (defined(_call_elf) and (_call_elf = 2)))}
+{$if not defined(aix) and (not defined(linux) or not defined(cpupowerpc64))}
                     if (pointer(act.sa_handler)=pointer(@defaultsighandler)) then
 {$else}
                     if (ppointer(act.sa_handler)^=ppointer(@defaultsighandler)^) then
@@ -244,6 +240,7 @@ procedure UnhookSignal(RtlSigNum: Integer; OnlyIfHooked: Boolean = True);
   var
     act: SigActionRec;
     lowsig, highsig, i: Integer;
+    state: TSignalState;
   begin
     if not signalinfoinited then
       initsignalinfo;
@@ -274,7 +271,7 @@ procedure UnhookSignal(RtlSigNum: Integer; OnlyIfHooked: Boolean = True);
                 fillchar(act,sizeof(act),0);
                 pointer(act.sa_handler):=pointer(SIG_DFL);
               end;
-            if (fpsigaction(rtlsig2ossig[i],@act,nil)=0) then
+            if (fpsigaction(rtlsig2ossig[RtlSigNum],@act,nil)=0) then
               siginfo[i].hooked:=false;
           end;
       end;
@@ -286,8 +283,6 @@ procedure UnhookSignal(RtlSigNum: Integer; OnlyIfHooked: Boolean = True);
 {$DEFINE FPC_FEXPAND_GETENVPCHAR} { GetEnv result is a PChar }
 
 { Include platform independent implementation part }
-
-{$define executeprocuni}
 {$i sysutils.inc}
 
 { Include SysCreateGUID function }
@@ -405,9 +400,10 @@ begin
         fmShareCompat,
         fmShareExclusive:
           lockop:=LOCK_EX or LOCK_NB;
-        fmShareDenyWrite,
-        fmShareDenyNone:
+        fmShareDenyWrite:
           lockop:=LOCK_SH or LOCK_NB;
+        fmShareDenyNone:
+          exit;
         else
           begin
             { fmShareDenyRead does not exit under *nix, only shared access
@@ -444,17 +440,11 @@ begin
 end;
 
 
-Function FileOpenNoLocking (Const FileName : RawbyteString; Mode : Integer) : Longint;
-
-  Function IsHandleDirectory(Handle : Longint) : boolean;
-  Var Info : Stat;
-  begin
-    Result := (fpFStat(Handle, Info)<0) or fpS_ISDIR(info.st_mode);
-  end;
+Function FileOpen (Const FileName : RawbyteString; Mode : Integer) : Longint;
 
 Var
   SystemFileName: RawByteString;
-  fd,LinuxFlags : longint;
+  LinuxFlags : longint;
 begin
   LinuxFlags:=0;
   case (Mode and (fmOpenRead or fmOpenWrite or fmOpenReadWrite)) of
@@ -465,25 +455,9 @@ begin
 
   SystemFileName:=ToSingleByteFileSystemEncodedFileName(FileName);
   repeat
-    fd:=fpOpen (pointer(SystemFileName),LinuxFlags);
-  until (fd<>-1) or (fpgeterrno<>ESysEINTR);
+    FileOpen:=fpOpen (pointer(SystemFileName),LinuxFlags);
+  until (FileOpen<>-1) or (fpgeterrno<>ESysEINTR);
 
-  { Do not allow to open directories with FileOpen.
-    This would cause weird behavior of TFileStream.Size, 
-    TMemoryStream.LoadFromFile etc. }
-  if (fd<>-1) and IsHandleDirectory(fd) then
-    begin
-    fpClose(fd);
-    fd:=feInvalidHandle;
-    end;
-  FileOpenNoLocking:=fd;  
-end;
-
-
-Function FileOpen (Const FileName : RawbyteString; Mode : Integer) : Longint;
-
-begin
-  FileOpen:=FileOpenNoLocking(FileName, Mode);
   FileOpen:=DoFileLocking(FileOpen, Mode);
 end;
 
@@ -517,25 +491,8 @@ end;
 
 Function FileCreate (Const FileName : RawByteString; ShareMode : Longint; Rights:LongInt ) : Longint;
 
-Var
-  fd: Longint;
 begin
-  { if the file already exists and we can't open it using the requested
-    ShareMode (e.g. exclusive sharing), exit immediately so that we don't
-    first empty the file and then check whether we can lock this new file
-    (which we can by definition) }
-  fd:=FileOpenNoLocking(FileName,ShareMode);
-  { the file exists, check whether our locking request is compatible }
-  if fd>=0 then
-    begin
-      Result:=DoFileLocking(fd,ShareMode);
-      FileClose(fd);
-     { Can't lock -> abort }
-      if Result<0 then
-        exit;
-    end;
-  { now create the file }
-  Result:=FileCreate(FileName,Rights);
+  Result:=FileCreate( FileName, Rights );
   Result:=DoFileLocking(Result,ShareMode);
 end;
 
@@ -609,6 +566,25 @@ begin
 end;
 
 
+Function FileExists (Const FileName : RawByteString) : Boolean;
+var
+  SystemFileName: RawByteString;
+begin
+  SystemFileName:=ToSingleByteFileSystemEncodedFileName(FileName);
+  // Don't use stat. It fails on files >2 GB.
+  // Access obeys the same access rules, so the result should be the same.
+  FileExists:=fpAccess(pointer(SystemFileName),F_OK)=0;
+end;
+
+Function DirectoryExists (Const Directory : RawByteString) : Boolean;
+Var
+  Info : Stat;
+  SystemFileName: RawByteString;
+begin
+  SystemFileName:=ToSingleByteFileSystemEncodedFileName(Directory);
+  DirectoryExists:=(fpstat(pointer(SystemFileName),Info)>=0) and fpS_ISDIR(Info.st_mode);
+end;
+
 Function LinuxToWinAttr (const FN : RawByteString; Const Info : Stat) : Longint;
 Var
   LinkInfo : Stat;
@@ -636,92 +612,93 @@ begin
 end;
 
 
-function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
-var
-  Info : Stat;
-  SystemFileName: RawByteString;
-begin
-  SystemFileName:=ToSingleByteFileSystemEncodedFileName(FileName);
-  if (fplstat(SystemFileName,Info)>=0) and fpS_ISLNK(Info.st_mode) then begin
-    FillByte(SymLinkRec, SizeOf(SymLinkRec), 0);
-    SymLinkRec.TargetName:=fpreadlink(SystemFileName);
-    if fpstat(pointer(SystemFileName), Info) < 0 then
-      raise EDirectoryNotFoundException.Create(SysErrorMessage(GetLastOSError));
-    SymLinkRec.Attr := LinuxToWinAttr(SystemFileName, Info);
-    SymLinkRec.Size := Info.st_size;
-    SymLinkRec.Mode := Info.st_mode;
-    Result:=True;
-  end else
-    Result:=False;
-end;
-
-
-Function FileExists (Const FileName : RawByteString; FollowLink : Boolean) : Boolean;
-var
-  Info : Stat;
-  SystemFileName: RawByteString;
-  isdir: Boolean;
-begin
-  // Do not call fpAccess with an empty name. (Valgrind will complain)
-  if Filename='' then
-    Exit(False);
-  SystemFileName:=ToSingleByteFileSystemEncodedFileName(FileName);
-  // Don't use stat. It fails on files >2 GB.
-  // Access obeys the same access rules, so the result should be the same.
-  FileExists:=fpAccess(pointer(SystemFileName),F_OK)=0;
-  { we need to ensure however that we aren't dealing with a directory }
-  isdir:=False;
-  if FileExists then begin
-    if (fpstat(pointer(SystemFileName),Info)>=0) and fpS_ISDIR(Info.st_mode) then begin
-      FileExists:=False;
-      isdir:=True;
-    end;
-  end;
-  { if we shall not follow the link we only need to check for a symlink if the
-    target file itself should not exist }
-  if not FileExists and not isdir and not FollowLink then
-    FileExists:=(fplstat(pointer(SystemFileName),Info)>=0) and fpS_ISLNK(Info.st_mode);
-end;
-
-Function DirectoryExists (Const Directory : RawByteString; FollowLink : Boolean) : Boolean;
-Var
-  Info : Stat;
-  SystemFileName: RawByteString;
-  exists: Boolean;
-begin
-  SystemFileName:=ToSingleByteFileSystemEncodedFileName(Directory);
-  exists:=fpstat(pointer(SystemFileName),Info)>=0;
-  DirectoryExists:=exists and fpS_ISDIR(Info.st_mode);
-  { if we shall not follow the link we only need to check for a symlink if the
-    target directory itself should not exist }
-  if not exists and not FollowLink then
-    DirectoryExists:=(fplstat(pointer(SystemFileName),Info)>=0) and fpS_ISLNK(Info.st_mode);
-end;
-
-
-{ assumes that pattern and name have the same code page }
 Function FNMatch(const Pattern,Name:string):Boolean;
 Var
   LenPat,LenName : longint;
 
+  { assumes that pattern and name have the same code page }
   function NameUtf8CodePointLen(index: longint): longint;
     var
-      MaxLookAhead: longint;
+      bytes: longint;
+      firstzerobit: byte;
     begin
-      MaxLookAhead:=LenName-Index+1;
-      { abs so that in case of an invalid sequence, we count this as one
-        codepoint }
-      NameUtf8CodePointLen:=abs(Utf8CodePointLen(pansichar(@Name[index]),MaxLookAhead,true));
-      { if the sequence was incomplete, use the incomplete sequence as
-        codepoint }
-      if NameUtf8CodePointLen=0 then
-        NameUtf8CodePointLen:=MaxLookAhead;
+      { see https://en.wikipedia.org/wiki/UTF-8#Description for details }
+      Result:=1;
+      { multiple byte UTF-8 code point? }
+      if Name[index]>#127 then
+        begin
+          { bsr searches for the leftmost 1 bit. We are interested in the
+            leftmost 0 bit, so first invert the value
+          }
+          firstzerobit:=BsrByte(not(byte(Name[index])));
+          { if there is no zero bit or the first zero bit is the rightmost bit
+            (bit 0), this is an invalid UTF-8 byte ($ff cannot appear in an
+            UTF-8-encoded string, and in the worst case bit 1 has to be zero)
+          }
+          if (firstzerobit=0) or (firstzerobit=255)  then
+            exit;
+          { the number of bytes belonging to this code point is
+            7-(pos first 0-bit). Subtract 1 since we're already at the first
+            byte. All subsequent bytes of the same sequence must have their
+            highest bit set and the next one unset. We stop when we detect an
+            invalid sequence.
+          }
+          bytes:=6-firstzerobit;
+          while (index+Result<=LenName) and
+                (bytes>0) and
+                ((ord(Name[index+Result]) and %10000000) = %10000000) do
+            begin
+              inc(Result);
+              dec(bytes);
+            end;
+          { stopped because of invalid sequence -> exit }
+          if bytes<>0 then
+            exit;
+        end;
+      { combining diacritics?
+          1) U+0300 - U+036F in UTF-8 = %11001100 10000000 - %11001101 10101111
+          2) U+1DC0 - U+1DFF in UTF-8 = %11100001 10110111 10000000 - %11100001 10110111 10111111
+          3) U+20D0 - U+20FF in UTF-8 = %11100010 10000011 10010000 - %11100010 10000011 10111111
+          4) U+FE20 - U+FE2F in UTF-8 = %11101111 10111000 10100000 - %11101111 10111000 10101111
+      }
+      repeat
+        bytes:=Result;
+        if (index+Result+1<=LenName) then
+          begin
+               { case 1) }
+            if ((ord(Name[index+Result]) and %11001100 = %11001100)) and
+                (ord(Name[index+Result+1]) >= %10000000) and
+                (ord(Name[index+Result+1]) <= %10101111) then
+              inc(Result,2)
+                { case 2), 3), 4) }
+            else if (index+Result+2<=LenName) and
+               (ord(Name[index+Result])>=%11100001) then
+              begin
+                   { case 2) }
+                if ((ord(Name[index+Result])=%11100001) and
+                    (ord(Name[index+Result+1])=%10110111) and
+                    (ord(Name[index+Result+2])>=%10000000)) or
+                   { case 3) }
+                   ((ord(Name[index+Result])=%11100010) and
+                    (ord(Name[index+Result+1])=%10000011) and
+                    (ord(Name[index+Result+2])>=%10010000)) or
+                   { case 4) }
+                   ((ord(Name[index+Result])=%11101111) and
+                    (ord(Name[index+Result+1])=%10111000) and
+                    (ord(Name[index+Result+2])>=%10100000) and
+                    (ord(Name[index+Result+2])<=%10101111)) then
+                  inc(Result,3);
+              end;
+          end;
+      until bytes=Result;
     end;
 
     procedure GoToLastByteOfUtf8CodePoint(var j: longint);
-      begin
-        inc(j,NameUtf8CodePointLen(j)-1);
-      end;
+    begin
+      { Take one less, because we have to stop at the last byte of the sequence.
+      }
+      inc(j,NameUtf8CodePointLen(j)-1);
+    end;
 
   { input:
       i: current position in pattern (start of utf-8 code point)
@@ -1172,7 +1149,7 @@ var
   fs : tstatfs;
 Begin
   if ((Drive in [Low(FixDriveStr)..High(FixDriveStr)]) and (not (fixdrivestr[Drive]=nil)) and (fpstatfs(StrPas(fixdrivestr[drive]),@fs)<>-1)) or
-     ((Drive in [Low(DriveStr)..High(DriveStr)]) and (not (drivestr[Drive]=nil)) and (fpstatfs(StrPas(drivestr[drive]),@fs)<>-1)) then
+     ((Drive <= High(drivestr)) and (not (drivestr[Drive]=nil)) and (fpstatfs(StrPas(drivestr[drive]),@fs)<>-1)) then
    Diskfree:=int64(fs.bavail)*int64(fs.bsize)
   else
    Diskfree:=-1;
@@ -1185,7 +1162,7 @@ var
   fs : tstatfs;
 Begin
   if ((Drive in [Low(FixDriveStr)..High(FixDriveStr)]) and (not (fixdrivestr[Drive]=nil)) and (fpstatfs(StrPas(fixdrivestr[drive]),@fs)<>-1)) or
-     ((Drive in [Low(DriveStr)..High(DriveStr)]) and (not (drivestr[Drive]=nil)) and (fpstatfs(StrPas(drivestr[drive]),@fs)<>-1)) then
+     ((drive <= High(drivestr)) and (not (drivestr[Drive]=nil)) and (fpstatfs(StrPas(drivestr[drive]),@fs)<>-1)) then
    DiskSize:=int64(fs.blocks)*int64(fs.bsize)
   else
    DiskSize:=-1;
@@ -1363,12 +1340,11 @@ begin
 end;
 
 
-function ExecuteProcess(Const Path: RawByteString; Const ComLine: RawByteString;Flags:TExecuteFlags=[]):integer;
+function ExecuteProcess(Const Path: AnsiString; Const ComLine: AnsiString;Flags:TExecuteFlags=[]):integer;
 var
   pid    : longint;
   e      : EOSError;
-  CommandLine: RawByteString;
-  LPath  : RawByteString;
+  CommandLine: AnsiString;
   cmdline2 : ppchar;
 
 Begin
@@ -1379,24 +1355,19 @@ Begin
 
    // Only place we still parse
    cmdline2:=nil;
-   LPath:=Path;
-   UniqueString(LPath);
-   SetCodePage(LPath,DefaultFileSystemCodePage,true);
    if Comline<>'' Then
      begin
        CommandLine:=ComLine;
-
        { Make an unique copy because stringtoppchar modifies the
-         string, and force conversion to intended fscp }
+         string }
        UniqueString(CommandLine);
-       SetCodePage(CommandLine,DefaultFileSystemCodePage,true);
        cmdline2:=StringtoPPChar(CommandLine,1);
-       cmdline2^:=pchar(pointer(LPath));
+       cmdline2^:=pchar(pointer(Path));
      end
    else
      begin
        getmem(cmdline2,2*sizeof(pchar));
-       cmdline2^:=pchar(LPath);
+       cmdline2^:=pchar(Path);
        cmdline2[1]:=nil;
      end;
 
@@ -1408,14 +1379,14 @@ Begin
   if pid=0 then
    begin
    {The child does the actual exec, and then exits}
-      fpexecv(pchar(pointer(LPath)),Cmdline2);
+      fpexecv(pchar(pointer(Path)),Cmdline2);
      { If the execve fails, we return an exitvalue of 127, to let it be known}
      fpExit(127);
    end
   else
    if pid=-1 then         {Fork failed}
     begin
-      e:=EOSError.CreateFmt(SExecuteProcessFailed,[LPath,-1]);
+      e:=EOSError.CreateFmt(SExecuteProcessFailed,[Path,-1]);
       e.ErrorCode:=-1;
       raise e;
     end;
@@ -1428,17 +1399,18 @@ Begin
 
   if (result<0) or (result=127) then
     begin
-    E:=EOSError.CreateFmt(SExecuteProcessFailed,[LPath,result]);
+    E:=EOSError.CreateFmt(SExecuteProcessFailed,[Path,result]);
     E.ErrorCode:=result;
     Raise E;
     end;
 End;
 
-function ExecuteProcess(Const Path: RawByteString; Const ComLine: Array Of RawByteString;Flags:TExecuteFlags=[]):integer;
+function ExecuteProcess(Const Path: AnsiString; Const ComLine: Array Of AnsiString;Flags:TExecuteFlags=[]):integer;
 
 var
   pid    : longint;
-  e      : EOSError;
+  e : EOSError;
+
 Begin
   pid:=fpFork;
   if pid=0 then
@@ -1494,54 +1466,9 @@ end;
     Application config files
   ---------------------------------------------------------------------}
 
-{$ifdef android}
-
-var
-  _HomeDir: string;
-  _HasPackageDataDir: boolean;
 
 Function GetHomeDir : String;
-var
-  h: longint;
-  i: longint;
-begin
-  Result:=_HomeDir;
-  if Result <> '' then
-    exit;
-  if IsLibrary then
-    begin
-      // For shared library get the package name of a host Java application
-      h:=FileOpen('/proc/self/cmdline', fmOpenRead or fmShareDenyNone);
-      if h >= 0 then
-        begin
-          SetLength(Result, MAX_PATH);
-          SetLength(Result, FileRead(h, Result[1], Length(Result)));
-          SetLength(Result, strlen(PChar(Result)));
-          FileClose(h);
-          Result:='/data/data/' + Result;
-          _HasPackageDataDir:=DirectoryExists(Result);
-          if _HasPackageDataDir then
-            begin
-              Result:=Result + '/files/';
-              ForceDirectories(Result);
-            end
-          else
-            Result:='';  // No package
-        end;
-    end;
-  if Result = '' then
-    Result:='/data/local/tmp/';
-  _HomeDir:=Result;
-end;
 
-Function XdgConfigHome : String;
-begin
-  Result:=GetHomeDir;
-end;
-
-{$else}
-
-Function GetHomeDir : String;
 begin
   Result:=GetEnvironmentVariable('HOME');
   If (Result<>'') then
@@ -1560,8 +1487,6 @@ begin
     Result:=IncludeTrailingPathDelimiter(Result);
 end;
 
-{$endif android}
-
 Function GetAppConfigDir(Global : Boolean) : String;
 
 begin
@@ -1569,10 +1494,6 @@ begin
     Result:=IncludeTrailingPathDelimiter(SysConfigDir)
   else
     Result:=IncludeTrailingPathDelimiter(XdgConfigHome);
-{$ifdef android}
-  if _HasPackageDataDir then
-    exit;
-{$endif android}
   if VendorName<>'' then
     Result:=IncludeTrailingPathDelimiter(Result+VendorName);
   Result:=IncludeTrailingPathDelimiter(Result+ApplicationName);
@@ -1585,13 +1506,6 @@ begin
     Result:=IncludeTrailingPathDelimiter(SysConfigDir)
   else
     Result:=IncludeTrailingPathDelimiter(XdgConfigHome);
-{$ifdef android}
-  if _HasPackageDataDir then
-    begin
-      Result:=Result+'config'+ConfigExtension;
-      exit;
-    end;
-{$endif android}
   if SubDir then
     begin
       if VendorName<>'' then
@@ -1614,18 +1528,20 @@ begin
     Result:=OnGetTempDir(Global)
   else
     begin
-{$ifdef android}
-      Result:=GetHomeDir + 'tmp';
-      ForceDirectories(Result);
-{$else}
-      Result:=GetEnvironmentVariable('TEMP');
-      If (Result='') Then
-        Result:=GetEnvironmentVariable('TMP');
-      If (Result='') Then
-        Result:=GetEnvironmentVariable('TMPDIR');
-      if (Result='') then
-        Result:='/tmp/'; // fallback.
-{$endif android}
+    Result:=GetEnvironmentVariable('TEMP');
+    If (Result='') Then
+      Result:=GetEnvironmentVariable('TMP');
+    If (Result='') Then
+      Result:=GetEnvironmentVariable('TMPDIR');
+    if (Result='') then
+      begin
+      // fallback.
+      {$ifdef android}
+        Result:='/data/local/tmp/';
+      {$else}
+        Result:='/tmp/';
+      {$endif android}
+      end;
     end;
   if (Result<>'') then
     Result:=IncludeTrailingPathDelimiter(Result);
@@ -1643,11 +1559,7 @@ Function GetUserDir : String;
 begin
   If (TheUserDir='') then
     begin
-{$ifdef android}
-    TheUserDir:=GetHomeDir;
-{$else}
-    TheUserDir:=GetEnvironmentVariable('HOME');
-{$endif android}
+    TheUserDir:=GetEnvironmentVariable('HOME'); 
     if (TheUserDir<>'') then
       TheUserDir:=IncludeTrailingPathDelimiter(TheUserDir)
     else
@@ -1669,23 +1581,6 @@ begin
  Result := -Tzseconds div 60; 
 end;
 
-{$ifdef android}
-
-procedure InitAndroid;
-var
-  dlinfo: dl_info;
-  s: string;
-begin
-  FillChar(dlinfo, sizeof(dlinfo), 0);
-  dladdr(@InitAndroid, @dlinfo);
-  s:=dlinfo.dli_fname;
-  if s <> '' then
-    SetDefaultSysLogTag(ExtractFileName(s));
-end;
-
-{$endif android}
-
-
 {****************************************************************************
                               Initialization code
 ****************************************************************************}
@@ -1695,12 +1590,8 @@ Initialization
   InitInternational;    { Initialize internationalization settings }
   SysConfigDir:='/etc'; { Initialize system config dir }
   OnBeep:=@SysBeep;
-{$ifdef android}
-  InitAndroid;
-{$endif android}
-
+  
 Finalization
   FreeDriveStr;
-  FreeTerminateProcs;
   DoneExceptions;
 end.

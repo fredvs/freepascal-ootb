@@ -39,7 +39,7 @@ type
 implementation
 
 const
-  WhiteSpace = ' '#9#10#13;
+  WhiteSpace = ' '#8#10#13;
 
 constructor TFPReaderXPM.create;
 begin

@@ -22,7 +22,7 @@ Uses SysUtils,Classes,PtoPu,CustApp, bufstream;
 
 ResourceString
   Version   = 'Version 1.2';
-  ATitle     = 'PToP';
+  Title     = 'PToP';
   Copyright = 'Copyright (c) 1999-2005 by the Free Pascal Development Team';
   SErrNoInputOutput = 'No input and output file given';
   
@@ -125,6 +125,8 @@ Procedure TPToP.DoRun;
 Var
   F,InS,OutS,cfgS : TSTream;
   PPrinter : TPrettyPrinter;
+  P : String;
+  i : longint;
 
 begin
   ProcessOpts;
@@ -183,7 +185,6 @@ end;
 begin
   With TPToP.Create(Nil) do
     Try
-      Title:= ATitle;
       StopOnException:=True;
       Initialize;
       Run;

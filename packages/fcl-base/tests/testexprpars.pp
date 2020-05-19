@@ -506,7 +506,6 @@ type
     procedure DoEchoBoolean(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
     procedure DoEchoDate(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
     procedure DoEchoFloat(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
-    procedure DoEchoCurrency(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
     procedure DoEchoInteger(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
     procedure DoEchoString(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
     procedure DoGetDate(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
@@ -519,7 +518,6 @@ type
     Procedure AssertOperand(N : TFPExprNode; OperandClass : TClass);
     Procedure AssertResultType(RT : TResultType);
     Procedure AssertResult(F : TExprFloat);
-    Procedure AssertCurrencyResult(C : Currency);
     Procedure AssertResult(I : Int64);
     Procedure AssertResult(S : String);
     Procedure AssertResult(B : Boolean);
@@ -532,7 +530,6 @@ type
   private
   Published
     Procedure TestCreate;
-    Procedure TestNumberValues;
     Procedure TestSimpleNodeFloat;
     procedure TestSimpleNodeInteger;
     procedure TestSimpleNodeBooleanTrue;
@@ -732,10 +729,9 @@ type
     FTest33 : TFPExprIdentifierDef;
     procedure DoGetBooleanVar(var Res: TFPExpressionResult; ConstRef AName: ShortString);
     procedure DoGetBooleanVarWrong(var Res: TFPExpressionResult; ConstRef AName: ShortString);
-    procedure TestAccess(Skip: TResultType);
-    procedure TestAccess(Skip: TResultTypes);
-  Protected
     procedure DoTestVariable33;
+    procedure TestAccess(Skip: TResultType);
+  Protected
     procedure AddVariabletwice;
     procedure UnknownVariable;
     Procedure ReadWrongType;
@@ -778,19 +774,13 @@ type
     procedure TestVariable32;
     procedure TestVariable33;
     procedure TestVariable34;
-    procedure TestVariable35;
-    procedure TestVariable36;
   end;
 
   { TTestParserFunctions }
+
   TTestParserFunctions = Class(TTestExpressionParser)
   private
     FAccessAs : TResultType;
-    procedure ExprAveOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
-    procedure ExprMaxOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
-    procedure ExprMinOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
-    procedure ExprStdDevOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
-    procedure ExprSumOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
     Procedure TryRead;
     procedure TryWrite;
   Published
@@ -823,19 +813,7 @@ type
     procedure TestFunction27;
     procedure TestFunction28;
     procedure TestFunction29;
-    procedure TestFunction30;
-    procedure TestFunction31;
-    procedure TestFunction32;
-    procedure TestFunction33;
-    procedure TestVarArgs1;
-    procedure TestVarArgs2;
-    procedure TestVarArgs3;
-    procedure TestVarArgs4;
-    procedure TestVarArgs5;
   end;
-
-
-
 
   { TAggregateNode }
 
@@ -872,7 +850,6 @@ type
     Procedure TestCountAggregate;
     Procedure TestSumAggregate;
     Procedure TestSumAggregate2;
-    Procedure TestSumAggregate3;
     Procedure TestAvgAggregate;
     Procedure TestAvgAggregate2;
     Procedure TestAvgAggregate3;
@@ -893,11 +870,8 @@ type
     procedure TestVariable4;
     procedure TestVariable5;
     procedure TestVariable6;
-    procedure TestVariable7;
     procedure TestFunction1;
     procedure TestFunction2;
-    procedure TestDelete;
-    procedure TestRemove;
   end;
 
   TTestBuiltins = Class(TTestExpressionParser)
@@ -920,7 +894,6 @@ type
     procedure AssertDateTimeExpression(Const AExpression : String; Const AResult : TDateTime);
     procedure AssertAggregateExpression(Const AExpression : String; AResult : Int64; AUpdateCount : integer);
     procedure AssertAggregateExpression(Const AExpression : String; AResult : TExprFloat; AUpdateCount : integer);
-    procedure AssertAggregateCurrExpression(Const AExpression : String; AResult : Currency; AUpdateCount : integer);
   Published
     procedure TestRegister;
     Procedure TestVariablepi;
@@ -988,8 +961,6 @@ type
     Procedure TestFunctionstrtodatetime;
     Procedure TestFunctionstrtodatetimedef;
     Procedure TestFunctionAggregateSum;
-    Procedure TestFunctionAggregateSumFloat;
-    Procedure TestFunctionAggregateSumCurrency;
     Procedure TestFunctionAggregateCount;
     Procedure TestFunctionAggregateAvg;
     Procedure TestFunctionAggregateMin;
@@ -1032,7 +1003,6 @@ begin
   Case Result.ResultType of
     rtInteger : Result.ResInteger:=FVarValue;
     rtFloat : Result.ResFloat:=FVarValue / 2;
-    rtCurrency : Result.ResCurrency:=FVarValue / 2;
   end;
 end;
 
@@ -1192,40 +1162,6 @@ begin
   end;
 end;
 
-procedure TTestParserAggregate.TestSumAggregate3;
-Var
-  C : TAggregateSum;
-  V : TFPExprVariable;
-  I : Integer;
-  R : TFPExpressionResult;
-  A : TExprArgumentArray;
-
-begin
-  FFunction.ResultType:=rtCurrency;
-  FFunction.ParameterTypes:='F';
-  FFunction.Name:='SUM';
-  FFunction2.ResultType:=rtCurrency;
-  C:=Nil;
-  V:=TFPExprVariable.CreateIdentifier(FFunction2);
-  try
-    SetLength(A,1);
-    A[0]:=V;
-    C:=TAggregateSum.CreateFunction(FFunction,A);
-    C.Check;
-    C.InitAggregate;
-    For I:=1 to 10 do
-      begin
-      FVarValue:=I;
-      C.UpdateAggregate;
-      end;
-    C.GetNodeValue(R);
-    AssertEquals('Correct type',rtCurrency,R.ResultType);
-    AssertEquals('Correct value',55/2,R.ResCurrency,0.1);
-  finally
-    C.Free;
-  end;
-end;
-
 procedure TTestParserAggregate.TestAvgAggregate;
 
 Var
@@ -1300,6 +1236,7 @@ procedure TTestParserAggregate.TestAvgAggregate3;
 Var
   C : TAggregateAvg;
   V : TFPExprVariable;
+  I : Integer;
   R : TFPExpressionResult;
   A : TExprArgumentArray;
 
@@ -1383,19 +1320,10 @@ procedure TTestExpressionScanner.TestTokens;
 
 Const
   TestStrings : Array[TTokenType] of String
-  (*
-  TTokenType = (ttPlus, ttMinus, ttLessThan, ttLargerThan, ttEqual, ttDiv,
-                ttMod, ttMul, ttLeft, ttRight, ttLessThanEqual,
-                ttLargerThanEqual, ttunequal, ttNumber, ttString, ttIdentifier,
-                ttComma, ttAnd, ttOr, ttXor, ttTrue, ttFalse, ttNot, ttif,
-                ttCase, ttPower, ttEOF); // keep ttEOF last
-
-  *)
     = ('+','-','<','>','=','/',
-       'mod','*','(',')','<=',
-       '>=', '<>','1','''abc''','abc',
-       ',','and', 'or','xor','true','false','not',
-       'if','case','^','');
+       '*','(',')','<=','>=',
+       '<>','1','''abc''','abc',',','and',
+       'or','xor','true','false','not','if','case','^','');
 
 var
   t : TTokenType;
@@ -1420,22 +1348,16 @@ end;
 
 procedure TTestExpressionScanner.TestNumber;
 begin
-  TestString('123',ttNumber);
-  TestString('$FF',ttNumber);
-  TestString('&77',ttNumber);
-  TestString('%11111111',ttNumber);
+  {TestString('123',ttNumber);
   TestString('123.4',ttNumber);
   TestString('123.E4',ttNumber);
   TestString('1.E4',ttNumber);
   TestString('1e-2',ttNumber);
-  DoInValidNumber('$GG');
-  DoInvalidNumber('&88');
-  DoInvalidNumber('%22');
   DoInvalidNumber('1..1');
+}
   DoInvalidNumber('1.E--1');
 //  DoInvalidNumber('.E-1');
 end;
-
 
 procedure TTestExpressionScanner.TestInvalidCharacter;
 begin
@@ -1627,7 +1549,6 @@ begin
   AssertEquals('Correct result',2.34,FN.ConstValue.ResFloat);
   AssertEquals('Correct result',2.34,FN.NodeValue.ResFloat);
   Val(FN.AsString,F,C);
-  AssertEquals('Correct conversion',0,C);
   AssertEquals('AsString ok',2.34,F,0.001);
 end;
 
@@ -2891,12 +2812,6 @@ begin
   AssertEquals('Correct float result',F,FP.Evaluate.ResFloat);
 end;
 
-procedure TTestExpressionParser.AssertCurrencyResult(C: Currency);
-begin
-  AssertEquals('Correct currency result',C,FP.ExprNode.NodeValue.ResCurrency);
-  AssertEquals('Correct currency result',C,FP.Evaluate.ResCurrency);
-end;
-
 procedure TTestExpressionParser.AssertResult(I: Int64);
 begin
   AssertEquals('Correct integer result',I,FP.ExprNode.NodeValue.ResInteger);
@@ -2926,60 +2841,6 @@ begin
   AssertEquals('Expression is empty','',FP.Expression);
   AssertNotNull('Identifiers assigned',FP.Identifiers);
   AssertEquals('No identifiers',0,FP.Identifiers.Count);
-end;
-
-procedure TTestParserExpressions.TestNumberValues;
-
-  Procedure DoTest(E :  String; V : integer);
-
-  var
-    res: TFPExpressionResult;
-
-  begin
-    FP.Expression:=E;
-    res := FP.Evaluate;
-    AssertTrue('Expression '+E+': Result is a number', Res.ResultType in [rtInteger,rtFloat]);
-    AssertTrue('Expression '+E+': Correct value', ArgToFloat(res)=V);
-  end;
-
-
-begin
-  // Decimal numbers
-     DoTest('1', 1);
-     DoTest('1E2', 100);
-     DoTest('1.0/1E-2', 100);
-  // DoTest('200%', 2);
-     WriteLn;
-     // Hex numbers
-     DoTest('$0001', 1);
-     DoTest('-$01', -1);
-     DoTest('$A', 10);
-     DoTest('$FF', 255);
-     DoTest('$fe', 254);
-     DoTest('$FFFF', $FFFF);
-     DoTest('1E2', 100);
-     DoTest('$E', 14);
-     DoTest('$D+1E2', 113);
-     DoTest('$0A-$0B', -1);
-     // Hex and variables
-     FP.Identifiers.AddVariable('a', rtInteger, '1');
-     FP.Identifiers.AddVariable('b', rtInteger, '$B');
-     DoTest('a', 1);
-     DoTest('b', $B);
-     DoTest('$A+a', 11);
-     DoTest('$B-b', 0);
-     WriteLn;
-     // Octal numbers
-     DoTest('&10', 8);
-     DoTest('&10+10', 18);
-     // Mixed hex and octal expression
-     DoTest('&10-$0008', 0);
-     WriteLn;
-     // Binary numbers
-     DoTest('%1', 1);
-     DoTest('%11', 3);
-     DoTest('%1000', 8);
-
 end;
 
 
@@ -4482,7 +4343,7 @@ begin
   AssertEquals('One variable added',1,FP.Identifiers.Count);
   AssertSame('Result equals variable added',I,FP.Identifiers[0]);
   AssertEquals('Variable has correct resulttype',rtDateTime,I.ResultType);
-  AssertEquals('Variable has correct value',FormatDateTime('yyyy-mm-dd hh:nn:ss',D),I.Value);
+  AssertEquals('Variable has correct value',FormatDateTime('cccc',D),I.Value);
 end;
 
 procedure TTestParserVariables.AddVariabletwice;
@@ -4508,7 +4369,6 @@ begin
     rtString   : res.ResString:=FP.Identifiers[0].AsString;
     rtInteger  : Res.ResInteger:=FP.Identifiers[0].AsInteger;
     rtFloat    : Res.ResFloat:=FP.Identifiers[0].AsFloat;
-    rtCurrency : Res.ResCurrency:=FP.Identifiers[0].AsCurrency;
     rtDateTime : Res.ResDateTime:=FP.Identifiers[0].AsDateTime;
   end;
 end;
@@ -4525,7 +4385,6 @@ begin
     rtString   : FP.Identifiers[0].AsString:=res.ResString;
     rtInteger  : FP.Identifiers[0].AsInteger:=Res.ResInteger;
     rtFloat    : FP.Identifiers[0].AsFloat:=Res.ResFloat;
-    rtCurrency : FP.Identifiers[0].AsCurrency:=Res.ResCurrency;
     rtDateTime : FP.Identifiers[0].AsDateTime:=Res.ResDateTime;
   end;
 end;
@@ -4611,11 +4470,13 @@ Var
 begin
   D:=Now;
   I:=FP.Identifiers.AddDateTimeVariable('a',D);
-  AssertNotNull('Addvariable returns result',I);
   AssertException('Cannot add same name twice',EExprParser,@AddVariabletwice);
 end;
 
 procedure TTestParserVariables.TestVariable8;
+
+Var
+  I : TFPExprIdentifierDef;
 
 begin
   FP.Identifiers.AddIntegerVariable('a',123);
@@ -4633,7 +4494,6 @@ Var
 
 begin
   I:=FP.Identifiers.AddIntegerVariable('a',123);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='a';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPExprVariable, FP.ExprNode);
@@ -4648,7 +4508,6 @@ Var
 
 begin
   I:=FP.Identifiers.AddStringVariable('a','a123');
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='a';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPExprVariable, FP.ExprNode);
@@ -4663,27 +4522,11 @@ Var
 
 begin
   I:=FP.Identifiers.AddFloatVariable('a',1.23);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='a';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPExprVariable, FP.ExprNode);
   AssertResultType(rtFloat);
   AssertResult(1.23);
-end;
-
-procedure TTestParserVariables.TestVariable36;
-
-Var
-  I : TFPExprIdentifierDef;
-
-begin
-  I:=FP.Identifiers.AddCurrencyVariable('a',1.23);
-  AssertNotNull('Addvariable returns result',I);
-  FP.Expression:='a';
-  AssertNotNull('Have result node',FP.ExprNode);
-  AssertNodeType('Constant expression',TFPExprVariable, FP.ExprNode);
-  AssertResultType(rtCurrency);
-  AssertCurrencyResult(1.23);
 end;
 
 procedure TTestParserVariables.TestVariable12;
@@ -4693,7 +4536,6 @@ Var
 
 begin
   I:=FP.Identifiers.AddBooleanVariable('a',True);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='a';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPExprVariable, FP.ExprNode);
@@ -4710,7 +4552,6 @@ Var
 begin
   D:=Date;
   I:=FP.Identifiers.AddDateTimeVariable('a',D);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='a';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPExprVariable, FP.ExprNode);
@@ -4737,7 +4578,6 @@ Var
 
 begin
   I:=FP.Identifiers.AddIntegerVariable('a',1);
-  AssertNotNull('Addvariable returns result',I);
   FP.BuildHashList;
   S:=FP.IdentifierByName('A');
   AssertSame('Identifier found',I,S);
@@ -4750,7 +4590,6 @@ Var
 
 begin
   I:=FP.Identifiers.AddIntegerVariable('a',1);
-  AssertNotNull('Addvariable returns result',I);
   FP.BuildHashList;
   S:=FP.IdentifierByName('B');
   AssertNull('Identifier not found',S);
@@ -4759,11 +4598,10 @@ end;
 procedure TTestParserVariables.TestVariable17;
 
 Var
-  I : TFPExprIdentifierDef;
+  I,S : TFPExprIdentifierDef;
 
 begin
   I:=FP.Identifiers.AddIntegerVariable('a',1);
-  AssertNotNull('Addvariable returns result',I);
   FP.BuildHashList;
   AssertException('Identifier not found',EExprParser,@unknownvariable);
 end;
@@ -4775,7 +4613,6 @@ Var
 
 begin
   I:=FP.Identifiers.AddIntegerVariable('a',1);
-  AssertNotNull('Addvariable returns result',I);
   S:=FP.Identifiers.FindIdentifier('B');
   AssertNull('Identifier not found',S);
 end;
@@ -4804,24 +4641,18 @@ end;
 
 procedure TTestParserVariables.TestAccess(Skip : TResultType);
 
-begin
-  TestAccess([Skip]);
-end;
-
-procedure TTestParserVariables.TestAccess(Skip : TResultTypes);
-
 Var
   rt : TResultType;
 
 begin
   For rt:=Low(TResultType) to High(TResultType) do
-    if Not (rt in skip) then
+    if rt<>skip then
       begin
       FasWrongType:=rt;
       AssertException('Acces as '+ResultTypeName(rt),EExprParser,@ReadWrongtype);
       end;
   For rt:=Low(TResultType) to High(TResultType) do
-    if Not (rt in skip) then
+    if rt<>skip then
       begin
       FasWrongType:=rt;
       AssertException('Acces as '+ResultTypeName(rt),EExprParser,@WriteWrongtype);
@@ -4831,20 +4662,13 @@ end;
 procedure TTestParserVariables.TestVariable21;
 begin
   FP.IDentifiers.AddIntegerVariable('a',1);
-  TestAccess([rtInteger]);
+  TestAccess(rtInteger);
 end;
 
 procedure TTestParserVariables.TestVariable22;
 begin
   FP.IDentifiers.AddFloatVariable('a',1.0);
-  TestAccess([rtFloat]);
-end;
-
-procedure TTestParserVariables.TestVariable35;
-
-begin
-  FP.IDentifiers.AddCurrencyVariable('a',1.0);
-  TestAccess([rtCurrency]);
+  TestAccess(rtFloat);
 end;
 
 procedure TTestParserVariables.TestVariable23;
@@ -4992,7 +4816,6 @@ Var
 
 begin
   B:=FTest33.AsBoolean;
-  AssertTrue(B in [true,False])
 end;
 
 procedure TTestParserVariables.TestVariable33;
@@ -5054,12 +4877,6 @@ begin
   Result.resFloat:=Args[0].resFloat;
 end;
 
-Procedure EchoCurrency(Var Result : TFPExpressionResult; Const Args : TExprParameterArray);
-
-begin
-  Result.resCurrency:=Args[0].resCurrency;
-end;
-
 Procedure EchoString(Var Result : TFPExpressionResult; Const Args : TExprParameterArray);
 
 begin
@@ -5088,12 +4905,6 @@ Procedure TTestExpressionParser.DoEchoFloat(Var Result : TFPExpressionResult; Co
 
 begin
   Result.resFloat:=Args[0].resFloat;
-end;
-
-Procedure TTestExpressionParser.DoEchoCurrency(Var Result : TFPExpressionResult; Const Args : TExprParameterArray);
-
-begin
-  Result.resCurrency:=Args[0].resCurrency;
 end;
 
 Procedure TTestExpressionParser.DoEchoString(Var Result : TFPExpressionResult; Const Args : TExprParameterArray);
@@ -5130,7 +4941,6 @@ begin
     rtString   : res.ResString:=FP.Identifiers[0].AsString;
     rtInteger  : Res.ResInteger:=FP.Identifiers[0].AsInteger;
     rtFloat    : Res.ResFloat:=FP.Identifiers[0].AsFloat;
-    rtCurrency : Res.ResCurrency:=FP.Identifiers[0].AsCurrency;
     rtDateTime : Res.ResDateTime:=FP.Identifiers[0].AsDateTime;
   end;
 end;
@@ -5141,14 +4951,12 @@ Var
   Res : TFPExpressioNResult;
 
 begin
-  Res:=Default(TFPExpressioNResult);
   AssertEquals('Only one identifier',1,FP.Identifiers.Count);
   Case FAccessAs of
     rtBoolean  : FP.Identifiers[0].AsBoolean:=res.ResBoolean;
     rtString   : FP.Identifiers[0].AsString:=res.ResString;
     rtInteger  : FP.Identifiers[0].AsInteger:=Res.ResInteger;
     rtFloat    : FP.Identifiers[0].AsFloat:=Res.ResFloat;
-    rtCurrency : FP.Identifiers[0].AsCurrency:=Res.ResCurrency;
     rtDateTime : FP.Identifiers[0].AsDateTime:=Res.ResDateTime;
   end;
 end;
@@ -5241,24 +5049,6 @@ begin
   AssertException('No write access',EExprParser,@TryWrite);
 end;
 
-procedure TTestParserFunctions.TestFunction30;
-
-Var
-  I : TFPExprIdentifierDef;
-
-begin
-  I:=FP.Identifiers.AddFunction('EchoCurrency','C','C',@EchoCurrency);
-  AssertEquals('List is dirty',True,FP.Dirty);
-  AssertNotNull('Addvariable returns result',I);
-  AssertEquals('One variable added',1,FP.Identifiers.Count);
-  AssertSame('Result equals variable added',I,FP.Identifiers[0]);
-  AssertEquals('Function has correct resulttype',rtCurrency,I.ResultType);
-  AssertSame('Function has correct address',Pointer(@EchoCurrency),Pointer(I.OnGetFunctionValueCallBack));
-  FaccessAs:=rtCurrency;
-  AssertException('No read access',EExprParser,@TryRead);
-  AssertException('No write access',EExprParser,@TryWrite);
-end;
-
 procedure TTestParserFunctions.TestFunction6;
 
 Var
@@ -5337,21 +5127,6 @@ begin
 //  AssertSame('Function has correct address',Pointer(@EchoFloat),Pointer(I.OnGetFunctionValueCallBack));
 end;
 
-procedure TTestParserFunctions.TestFunction31;
-
-Var
-  I : TFPExprIdentifierDef;
-
-begin
-  I:=FP.Identifiers.AddFunction('EchoCurrency','C','C',@DoEchoCurrency);
-  AssertEquals('List is dirty',True,FP.Dirty);
-  AssertNotNull('Addvariable returns result',I);
-  AssertEquals('One variable added',1,FP.Identifiers.Count);
-  AssertSame('Result equals variable added',I,FP.Identifiers[0]);
-  AssertEquals('Function has correct resulttype',rtCurrency,I.ResultType);
-//  AssertSame('Function has correct address',Pointer(@EchoFloat),Pointer(I.OnGetFunctionValueCallBack));
-end;
-
 procedure TTestParserFunctions.TestFunction11;
 
 Var
@@ -5376,7 +5151,6 @@ Var
 begin
   D:=Date;
   I:=FP.Identifiers.AddFunction('Date','D','',@GetDate);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='Date';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
@@ -5393,9 +5167,7 @@ Var
 begin
   D:=Date;
   I:=FP.Identifiers.AddDateTimeVariable('a',D);
-  AssertNotNull('Addvariable returns result',I);
   I:=FP.Identifiers.AddFunction('EchoDate','D','D',@EchoDate);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='EchoDate(a)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
@@ -5406,10 +5178,11 @@ end;
 procedure TTestParserFunctions.TestFunction14;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoInteger','I','I',@EchoInteger);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='EchoInteger(13)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
@@ -5420,10 +5193,11 @@ end;
 procedure TTestParserFunctions.TestFunction15;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoBoolean','B','B',@EchoBoolean);
-  AssertNotNull('Addvariable returns result',I);
   FP.Expression:='EchoBoolean(True)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
@@ -5434,10 +5208,11 @@ end;
 procedure TTestParserFunctions.TestFunction16;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoFloat','F','F',@EchoFloat);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoFloat(1.234)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
@@ -5445,146 +5220,14 @@ begin
   AssertResult(1.234);
 end;
 
-procedure TTestParserFunctions.TestFunction32;
-
-Var
-  I : TFPExprIdentifierDef;
-
-begin
-  // Note there will be an implicit conversion float-> currency as the const will be a float
-  I:=FP.Identifiers.AddFunction('EchoCurrency','C','C',@EchoCurrency);
-  AssertNotNull('Have identifier',I);
-  FP.Expression:='EchoCurrency(1.234)';
-  AssertNotNull('Have result node',FP.ExprNode);
-  AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
-  AssertResultType(rtCurrency);
-  AssertCurrencyResult(1.234);
-end;
-
-procedure TTestParserFunctions.TestFunction33;
-Var
-  I : TFPExprIdentifierDef;
-
-begin
-  // Note there will be no conversion
-  I:=FP.Identifiers.AddCurrencyVariable('a',1.234);
-  AssertNotNull('Have identifier',I);
-  I:=FP.Identifiers.AddFunction('EchoCurrency','C','C',@EchoCurrency);
-  AssertNotNull('Have identifier',I);
-  FP.Expression:='EchoCurrency(a)';
-  AssertNotNull('Have result node',FP.ExprNode);
-  AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
-  AssertResultType(rtCurrency);
-  AssertCurrencyResult(1.234);
-end;
-
-procedure TTestParserFunctions.ExprMaxOf(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
-var
-  mx: Double;
-  arg: TFPExpressionResult;
-begin
-  mx := -MaxDouble;
-  for arg in Args do
-    mx := math.Max(mx, ArgToFloat(arg));
-  result.ResFloat:= mx;
-end;
-
-procedure TTestParserFunctions.ExprMinOf(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
-var
-  mn: Double;
-  arg: TFPExpressionResult;
-begin
-  mn := MaxDouble;
-  for arg in Args do
-    mn := math.Min(mn, ArgToFloat(arg));
-  result.ResFloat:= mn;
-end;
-
-procedure TTestParserFunctions.ExprSumOf(var Result: TFPExpressionResult; Const Args: TExprParameterArray);
-var
-  sum: Double;
-  arg: TFPExpressionResult;
-begin
-  sum := 0;
-  for arg in Args do
-    sum := sum + ArgToFloat(arg);
-  Result.ResFloat := sum;
-end;
-
-procedure TTestParserFunctions.ExprAveOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
-var
-  sum: Double;
-  arg: TFPExpressionResult;
-begin
-  if Length(Args) = 0 then
-    raise EExprParser.Create('At least 1 value needed for calculation of average');
-  sum := 0;
-  for arg in Args do
-    sum := sum + ArgToFloat(arg);
-  Result.ResFloat := sum / Length(Args);
-end;
-
-procedure TTestParserFunctions.ExprStdDevOf(var Result: TFPExpressionResult; const Args: TExprParameterArray);
-var
-  sum, ave: Double;
-  arg: TFPExpressionResult;
-begin
-  if Length(Args) < 2 then
-    raise EExprParser.Create('At least 2 values needed for calculation of standard deviation');
-  sum := 0;
-  for arg in Args do
-    sum := sum + ArgToFloat(arg);
-  ave := sum / Length(Args);
-  sum := 0;
-  for arg in Args do
-    sum := sum + sqr(ArgToFloat(arg) - ave);
-  Result.ResFloat := sqrt(sum / (Length(Args) - 1));
-end;
-
-procedure TTestParserFunctions.TestVarArgs1;
-begin
- // FP.BuiltIns := [bcMath];
-  FP.Identifiers.AddFunction('MaxOf', 'F', 'F+', @ExprMaxOf);
-  FP.Expression := 'MaxOf(-1,2,3,4.1)';
-  AssertEquals('Result',4.1,FP.Evaluate.ResFloat,0.1);
-end;
-
-procedure TTestParserFunctions.TestVarArgs2;
-begin
-  FP.Identifiers.AddFunction('MinOf', 'F', 'F+', @ExprMinOf);
-  FP.Expression := 'MinOf(-1,2,3,4.1)';
-  AssertEquals('Result',-1,FP.Evaluate.ResFloat,0.1);
-end;
-
-procedure TTestParserFunctions.TestVarArgs3;
-begin
-  FP.Identifiers.AddFunction('SumOf', 'F', 'F+', @ExprSumOf);
-  FP.Expression := 'SumOf(-1,2,3,4.1)';
-  AssertEquals('Result',8.1,FP.Evaluate.ResFloat,0.1);
-end;
-
-procedure TTestParserFunctions.TestVarArgs4;
-begin
-  FP.Identifiers.AddFunction('AveOf', 'F', 'F+', @ExprAveOf);
-  FP.Expression := 'AveOf(-1,2,3,4.1)';
-  AssertEquals('Result',2.025,FP.Evaluate.ResFloat,0.001);
-end;
-
-procedure TTestParserFunctions.TestVarArgs5;
-begin
-  FP.Identifiers.AddFunction('StdDevOf', 'F', 'F+', @ExprStdDevOf);
-  FP.Expression := 'StdDevOf(-1,2,3,4.1)';
-  AssertEquals('Result',2.191,FP.Evaluate.ResFloat,0.001);
-end;
-
 procedure TTestParserFunctions.TestFunction17;
-
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoString','S','S',@EchoString);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoString(''Aloha'')';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionCallBack, FP.ExprNode);
@@ -5602,9 +5245,7 @@ Var
 begin
   D:=Date;
   I:=FP.Identifiers.AddDateTimeVariable('a',D);
-  AssertNotNull('Have identifier',I);
   I:=FP.Identifiers.AddFunction('EchoDate','D','D',@DoEchoDate);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoDate(a)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionEventHandler, FP.ExprNode);
@@ -5615,10 +5256,11 @@ end;
 procedure TTestParserFunctions.TestFunction19;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoInteger','I','I',@DoEchoInteger);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoInteger(13)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionEventHandler, FP.ExprNode);
@@ -5629,10 +5271,11 @@ end;
 procedure TTestParserFunctions.TestFunction20;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoBoolean','B','B',@DoEchoBoolean);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoBoolean(True)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionEventHandler, FP.ExprNode);
@@ -5643,10 +5286,11 @@ end;
 procedure TTestParserFunctions.TestFunction21;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoFloat','F','F',@DoEchoFloat);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoFloat(1.234)';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionEventHandler, FP.ExprNode);
@@ -5657,10 +5301,11 @@ end;
 procedure TTestParserFunctions.TestFunction22;
 Var
   I : TFPExprIdentifierDef;
+  D : TDateTime;
 
 begin
+  D:=Date;
   I:=FP.Identifiers.AddFunction('EchoString','S','S',@DoEchoString);
-  AssertNotNull('Have identifier',I);
   FP.Expression:='EchoString(''Aloha'')';
   AssertNotNull('Have result node',FP.ExprNode);
   AssertNodeType('Constant expression',TFPFunctionEventHandler, FP.ExprNode);
@@ -5677,7 +5322,6 @@ Var
 begin
   D:=Date;
   I:=FP.Identifiers.AddFunction('Date','D','',@DoGetDate);
-  AssertNotNull('Have identifier',I);
   AssertEquals('List is dirty',True,FP.Dirty);
   AssertNotNull('Addvariable returns result',I);
   AssertEquals('One variable added',1,FP.Identifiers.Count);
@@ -5697,8 +5341,8 @@ Var
 
 begin
   I:=FP.Identifiers.AddFunction('AddInteger','I','II',@DoAddInteger);
-  AssertNotNull('Have identifier',I);
   AssertEquals('List is dirty',True,FP.Dirty);
+  AssertNotNull('Addvariable returns result',I);
   AssertEquals('One variable added',1,FP.Identifiers.Count);
   AssertSame('Result equals variable added',I,FP.Identifiers[0]);
   AssertEquals('Function has correct resulttype',rtInteger,I.ResultType);
@@ -5717,7 +5361,7 @@ Var
 begin
   I:=FP.Identifiers.AddFunction('Delete','S','SII',@DoDeleteString);
   AssertEquals('List is dirty',True,FP.Dirty);
-  AssertNotNull('Have identifier',I);
+  AssertNotNull('Addvariable returns result',I);
   AssertEquals('One variable added',1,FP.Identifiers.Count);
   AssertSame('Result equals variable added',I,FP.Identifiers[0]);
   AssertEquals('Function has correct resulttype',rtString,I.ResultType);
@@ -5793,7 +5437,6 @@ Var
 begin
   // Test type mismatch
   I:=FP.Identifiers.AddFunction('AddInteger','I','II',@DoAddInteger);
-  AssertNotNull('Addvariable returns result',I);
   TestParser('AddInteger(3 and 2,''s'')');
 end;
 
@@ -5876,21 +5519,6 @@ begin
   AssertEquals('Variable has correct value',FloatToStr(1.23),I.Value);
 end;
 
-procedure TTestBuiltinsManager.TestVariable7;
-
-Var
-  I : TFPBuiltinExprIdentifierDef;
-
-begin
-  I:=FM.AddCurrencyVariable(bcUser,'a',1.23);
-  AssertNotNull('Addvariable returns result',I);
-  AssertEquals('One variable added',1,FM.IdentifierCount);
-  AssertSame('Result equals variable added',I,FM.Identifiers[0]);
-  AssertEquals('Variable has correct category',ord(bcUser),Ord(I.Category));
-  AssertEquals('Variable has correct resulttype',rtCurrency,I.ResultType);
-  AssertEquals('Variable has correct value',CurrToStr(1.23),I.Value);
-end;
-
 procedure TTestBuiltinsManager.TestVariable5;
 
 Var
@@ -5919,7 +5547,7 @@ begin
   AssertSame('Result equals variable added',I,FM.Identifiers[0]);
   AssertEquals('Variable has correct category',ord(bcUser),Ord(I.Category));
   AssertEquals('Variable has correct resulttype',rtDateTime,I.ResultType);
-  AssertEquals('Variable has correct value',FormatDateTime('yyyy-mm-dd hh:nn:ss',D),I.Value);
+  AssertEquals('Variable has correct value',FormatDateTime('cccc',D),I.Value);
 end;
 
 procedure TTestBuiltinsManager.TestFunction1;
@@ -5956,34 +5584,6 @@ begin
   AssertEquals('Found no such identifier',-1,ind);
   I2:=FM.FindIdentifier('NoNoNo');
   AssertNull('FindIdentifier returns no result',I2);
-end;
-
-procedure TTestBuiltinsManager.TestDelete;
-
-begin
-  FM.AddFunction(bcUser,'EchoDate','D','D',@EchoDate);
-  FM.AddFunction(bcUser,'EchoDate2','D','D',@EchoDate);
-  FM.AddFunction(bcUser,'EchoDate3','D','D',@EchoDate);
-  AssertEquals('Count before',3,FM.IdentifierCount);
-  FM.Delete(2);
-  AssertEquals('Count after',2,FM.IdentifierCount);
-  AssertEquals('No more',-1,FM.IndexOfIdentifier('EchoDate3'));
-  AssertEquals('Left 1',0,FM.IndexOfIdentifier('EchoDate'));
-  AssertEquals('Left 2',1,FM.IndexOfIdentifier('EchoDate2'));
-end;
-
-procedure TTestBuiltinsManager.TestRemove;
-begin
-  FM.AddFunction(bcUser,'EchoDate','D','D',@EchoDate);
-  FM.AddFunction(bcUser,'EchoDate2','D','D',@EchoDate);
-  FM.AddFunction(bcUser,'EchoDate3','D','D',@EchoDate);
-  AssertEquals('Count before',3,FM.IdentifierCount);
-  AssertEquals('Result ',1,FM.Remove('EchoDate2'));
-  AssertEquals('Count after',2,FM.IdentifierCount);
-  AssertEquals('No more',-1,FM.IndexOfIdentifier('EchoDate2'));
-  AssertEquals('Left 1',0,FM.IndexOfIdentifier('EchoDate'));
-  AssertEquals('Left 2',1,FM.IndexOfIdentifier('EchoDate3'));
-  AssertEquals('Result ',-1,FM.Remove('Nono'));
 end;
 
 { TTestBuiltins }
@@ -6116,25 +5716,11 @@ begin
   AssertResult(AResult);
 end;
 
-procedure TTestBuiltins.AssertAggregateCurrExpression(Const AExpression : String; AResult : Currency; AUpdateCount : integer);
-
-begin
-  FP.BuiltIns:=AllBuiltIns;
-  SetExpression(AExpression);
-  AssertEquals('Has aggregate',True,FP.ExprNode.HasAggregate);
-  FP.InitAggregate;
-  While AUpdateCount>0 do
-    begin
-    FP.UpdateAggregate;
-    Dec(AUpdateCount);
-    end;
-  AssertCurrencyResult(AResult);
-end;
-
 procedure TTestBuiltins.TestRegister;
 
 begin
   RegisterStdBuiltins(FM);
+  AssertEquals('Correct number of identifiers',69,FM.IdentifierCount);
   Assertvariable('pi',rtFloat);
   AssertFunction('cos','F','F',bcMath);
   AssertFunction('sin','F','F',bcMath);
@@ -6175,6 +5761,7 @@ begin
   AssertFunction('shortmonthname','S','I',bcDateTime);
   AssertFunction('longdayname','S','I',bcDateTime);
   AssertFunction('longmonthname','S','I',bcDateTime);
+  AssertFunction('formatdatetime','S','SD',bcDateTime);
   AssertFunction('shl','I','II',bcBoolean);
   AssertFunction('shr','I','II',bcBoolean);
   AssertFunction('IFS','S','BSS',bcBoolean);
@@ -6198,14 +5785,11 @@ begin
   AssertFunction('strtotimedef','D','SD',bcConversion);
   AssertFunction('strtodatetime','D','S',bcConversion);
   AssertFunction('strtodatetimedef','D','SD',bcConversion);
-  AssertFunction('formatfloat','S','SF',bcConversion);
-  AssertFunction('formatdatetime','S','SD',bcConversion);
   AssertFunction('sum','F','F',bcAggregate);
   AssertFunction('count','I','',bcAggregate);
   AssertFunction('avg','F','F',bcAggregate);
   AssertFunction('min','F','F',bcAggregate);
   AssertFunction('max','F','F',bcAggregate);
-  AssertEquals('Correct number of identifiers',70,FM.IdentifierCount);
 end;
 
 procedure TTestBuiltins.TestVariablepi;
@@ -6659,19 +6243,7 @@ end;
 procedure TTestBuiltins.TestFunctionAggregateSum;
 begin
   FP.Identifiers.AddIntegerVariable('S',2);
-  AssertAggregateExpression('sum(S)',10,5);
-end;
-
-procedure TTestBuiltins.TestFunctionAggregateSumFloat;
-begin
-  FP.Identifiers.AddFloatVariable('S',2.0);
   AssertAggregateExpression('sum(S)',10.0,5);
-end;
-
-procedure TTestBuiltins.TestFunctionAggregateSumCurrency;
-begin
-  FP.Identifiers.AddCurrencyVariable('S',2.0);
-  AssertAggregateCurrExpression('sum(S)',Currency(10.0),5);
 end;
 
 procedure TTestBuiltins.TestFunctionAggregateCount;
@@ -6880,7 +6452,6 @@ Var
   I : Integer;
 
 begin
-  Result:=Default(TExprArgumentArray);
   SetLength(Result,High(Args)-Low(Args)+1);
   For I:=Low(Args) to High(Args) do
     Result[I]:=Args[i].VObject as TFPExprNode;
@@ -7154,7 +6725,7 @@ end;
 
 initialization
 
-  RegisterTests('ExprPars',[TTestExpressionScanner, TTestDestroyNode,
+  RegisterTests([TTestExpressionScanner, TTestDestroyNode,
                  TTestConstExprNode,TTestNegateExprNode,
                  TTestBinaryAndNode,TTestBinaryOrNode,TTestBinaryXOrNode,
                  TTestNotNode,TTestEqualNode,TTestUnEqualNode,

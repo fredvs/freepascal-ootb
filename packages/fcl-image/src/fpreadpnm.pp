@@ -48,32 +48,14 @@ type
 
 implementation
 
-const
-  WhiteSpaces=[#9,#10,#13,#32];
-  {Whitespace (TABs, CRs, LFs, blanks) are separators in the PNM Headers}
-
-{ The magic number at the beginning of a pnm file is 'P1', 'P2', ..., 'P7'
-  followed by a WhiteSpace character }
 function TFPReaderPNM.InternalCheck(Stream:TStream):boolean;
-var
-  hdr: array[0..2] of char;
-  oldPos: Int64;
-  n: Integer;
+
 begin
-  Result:=False;
-  if Stream = nil then
-    exit;
-  oldPos := Stream.Position;
-  try
-    n := SizeOf(hdr);
-    Result:=(Stream.Read(hdr[0], n) = n)
-            and (hdr[0] = 'P') 
-            and (hdr[1] in ['1'..'7']) 
-            and (hdr[2] in WhiteSpaces);
-  finally
-    Stream.Position := oldPos;
-  end;
+  InternalCheck:=True;
 end;
+
+const
+  WhiteSpaces=[#9,#10,#13,#32]; {Whitespace (TABs, CRs, LFs, blanks) are separators in the PNM Headers}
 
 function DropWhiteSpaces(Stream : TStream) :Char;
 
@@ -113,7 +95,6 @@ Var
   C : Char;
 
 begin
-  C:=#0;
   Stream.ReadBuffer(C,1);
   If (C<>'P') then
     Raise Exception.Create('Not a valid PNM image.');
@@ -158,7 +139,7 @@ begin
   Case FBitmapType of
     5,6 : FScanLineSize:=(FBitPP div 8) * FWidth;
   else  
-    FScanLineSize:=FBitPP*((FWidth+7) shr 3);
+    FScanLineSize:=FBitPP*((FWidth+7)shr 3);
   end;
   GetMem(FScanLine,FScanLineSize);
   try
@@ -166,7 +147,6 @@ begin
       begin
       ReadScanLine(Row,Stream);
       WriteScanLine(Row,Img);
-//      Writeln(Stream.Position,' ',Stream.Size);
       end;
   finally
     FreeMem(FScanLine);
@@ -214,8 +194,7 @@ begin
           Inc(P)
           end;
         end;
-    4,5,6 :
-       Stream.ReadBuffer(FScanLine^,FScanLineSize);
+    4,5,6 : Stream.ReadBuffer(FScanLine^,FScanLineSize);
     end;
 end;
 
@@ -225,7 +204,7 @@ procedure TFPReaderPNM.WriteScanLine(Row : Integer; Img : TFPCustomImage);
 Var
   C : TFPColor;
   L : Cardinal;
-  Scale: Int64;
+  Scale: Cardinal;
 
   function ScaleByte(B: Byte):Word;
   begin
@@ -238,7 +217,7 @@ Var
   function ScaleWord(W: Word):Word;
   begin
     if FMaxVal = 65535 then
-      Result := BEtoN(W)
+      Result := W
     else { Mimic the above with multiplications }
       Result := Int64(W*(FMaxVal+1) + W) * 65535 div Scale;
   end;

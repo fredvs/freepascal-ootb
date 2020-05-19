@@ -39,12 +39,6 @@ interface
 uses
   Classes, SysUtils,comobj,activex,windows;
 
-// Style of input ref parameters:
-Type
-    TParamInputRefType = (ParamInputVar,               // old delphi [in] becomes VAR,  Default
-                          ParamInputConstRef,          // (old) FPC    [in] becomes CONSTREF
-                          ParamInputConstRefDelphi);   // XE3+ style  CONST [Ref]
-
 {
 Reads type information from 'FileName' and converts it in a freepascal binding unit. The
 contents of the unit is returned as the function result.
@@ -58,12 +52,12 @@ To load a different type of library resource, append an integer index to 'FileNa
 
 Example:  C:\WINDOWS\system32\msvbvm60.dll\3
 }
-
 function ImportTypelib(FileName: WideString;var sUnitName:string;var slDependencies:TStringList;
-  bActiveX,bPackage,bRemoveStructTag:boolean;var sPackageSource,sPackageRegUnitSource:String;inreftype :TParamInputRefType  = ParamInputVar):string;
+  bActiveX,bPackage,bRemoveStructTag:boolean;var sPackageSource,sPackageRegUnitSource:String):string;
 
 
 Type
+
   { TTypeLibImporter }
 
   TTypeLibImporter = Class(TComponent)
@@ -71,7 +65,6 @@ Type
     FActiveX: Boolean;
     FAppendVersionNumber: Boolean;
     FCreatePackage: Boolean;
-    FInParamRefStyle : TParamInputRefType;
     FDependencies: TStringList;
     FRemoveStructTag: Boolean;
     FUnitSource: TStringList;
@@ -164,8 +157,6 @@ Type
     Property RemoveStructTag : Boolean read FRemoveStructTag write SetRemoveStructTag Default False;
     // Set automatically by OutputFileName or by Execute
     Property UnitName : string Read FUnitname Write SetUnitName;
-    // generate constref for [in] parameters instead of delphi compatible VAR, mantis 30764
-    Property InParamRefStyle  : TParamInputRefType read fInParamRefStyle write FInParamRefStyle;
   end;
 
 
@@ -175,7 +166,7 @@ Resourcestring
   SErrInvalidUnitName = 'Invalid unit name : %s';
 
 function ImportTypelib(FileName: WideString;var sUnitName:string;var slDependencies:TStringList;
-  bActiveX,bPackage,bRemoveStructTag:boolean;var sPackageSource,sPackageRegUnitSource:String;inreftype :TParamInputRefType  = ParamInputVar):string;
+  bActiveX,bPackage,bRemoveStructTag:boolean;var sPackageSource,sPackageRegUnitSource:String):string;
 var i:integer;
 begin
   With TTypeLibImporter.Create(Nil) do
@@ -184,13 +175,11 @@ begin
       ActiveX:=bActiveX;
       CreatePackage:=bPackage;
       RemoveStructTag:=bRemoveStructTag;
-      InParamRefStyle :=inreftype;
       Execute;
       Result:=UnitSource.Text;
       sUnitname:=UnitName;
       sPackageSource:=FPackageSource.Text;
       sPackageRegUnitSource:=FPackageRegUnitSource.Text;
-
       if Assigned(slDependencies) then
         begin  //add new dependencies
         for i:=0 to Dependencies.Count-1 do
@@ -654,12 +643,7 @@ begin
             case FD^.lprgelemdescParam[k].paramdesc.wParamFlags and (PARAMFLAG_FIN or PARAMFLAG_FOUT) of
             PARAMFLAG_FIN or PARAMFLAG_FOUT:sPar:='var ';
             PARAMFLAG_FOUT:sPar:='out ';
-            PARAMFLAG_NONE,
-            PARAMFLAG_FIN: case FInParamRefStyle of
-                              ParamInputVar             : sPar:='var '; //constref in safecall? TBD
-                              ParamInputConstRef        : sPar:='constref ';
-                              ParamInputConstRefDelphi  : sPar:='const [ref] ';
-                              end;
+            PARAMFLAG_FIN:sPar:='var '; //constref in safecall? TBD
             end;
           if not MakeValidId(GetName(k+1),sVarName) then
             AddToHeader('//  Warning: renamed parameter ''%s'' in %s.%s to ''%s''',[GetName(k+1),iname,sMethodName,sVarName],True);

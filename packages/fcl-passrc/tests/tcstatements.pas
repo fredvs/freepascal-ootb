@@ -20,7 +20,7 @@ Type
     FStatement: TPasImplBlock;
     FVariables : TStrings;
     procedure DoTestCallOtherFormat;
-    procedure TestCallFormat(FN: String; AddPrecision: Boolean; AddSecondParam: boolean = false);
+    procedure TestCallFormat(FN: String; Two: Boolean);
   Protected
     Procedure SetUp; override;
     Procedure TearDown; override;
@@ -44,7 +44,6 @@ Type
     Procedure TestAssignmentMinus;
     Procedure TestAssignmentMul;
     Procedure TestAssignmentDivision;
-    Procedure TestAssignmentMissingSemicolonError;
     Procedure TestCall;
     Procedure TestCallComment;
     Procedure TestCallQualified;
@@ -53,8 +52,6 @@ Type
     Procedure TestCallOneArg;
     procedure TestCallWriteFormat1;
     procedure TestCallWriteFormat2;
-    procedure TestCallWriteFormat3;
-    procedure TestCallWriteFormat4;
     procedure TestCallWritelnFormat1;
     procedure TestCallWritelnFormat2;
     procedure TestCallStrFormat1;
@@ -119,12 +116,12 @@ Type
     Procedure TestAsmBlockWithEndLabel;
     Procedure TestAsmBlockInIfThen;
     Procedure TestGotoInIfThen;
-    procedure TestAssignToAddress;
-    procedure TestFinalizationNoSemicolon;
-    procedure TestMacroComment;
-    Procedure TestPlatformIdentifier;
-    Procedure TestPlatformIdentifier2;
-    Procedure TestArgumentNameOn;
+    procedure AssignToAddress;
+    procedure FinalizationNoSemicolon;
+    procedure MacroComment;
+    Procedure PLatformIdentifier;
+    Procedure PLatformIdentifier2;
+    Procedure Onidentifier;
   end;
 
 
@@ -356,12 +353,6 @@ begin
   AssertExpression('Left side is variable',A.Left,pekIdent,'a');
 end;
 
-procedure TTestStatementParser.TestAssignmentMissingSemicolonError;
-begin
-  DeclareVar('integer');
-  ExpectParserError('Semicolon expected, but "a" found',['a:=1','a:=2']);
-end;
-
 procedure TTestStatementParser.TestCall;
 
 Var
@@ -463,35 +454,16 @@ begin
   AssertExpression('Parameter is constant',P.Params[0],pekNumber,'1');
 end;
 
-procedure TTestStatementParser.TestCallFormat(FN: String;
-  AddPrecision: Boolean; AddSecondParam: boolean);
-var
-  P : TParamsExpr;
-
-  procedure CheckParam(Index: integer; const aParamName: string);
-  begin
-    AssertExpression('Parameter['+IntToStr(Index)+'] is identifier',P.Params[Index],pekIdent,aParamName);
-    AssertExpression('Parameter['+IntToStr(Index)+'] has formatting constant 1' ,P.Params[Index].format1,pekNumber,'3');
-    if AddPrecision then
-      AssertExpression('Parameter['+IntToStr(Index)+'] has formatting constant 2',P.Params[Index].format2,pekNumber,'2');
-  end;
+procedure TTestStatementParser.TestCallFormat(FN : String; Two : Boolean);
 
 Var
   S : TPasImplSimple;
+  P : TParamsExpr;
   N : String;
-  ArgCnt: Integer;
 begin
   N:=fn+'(a:3';
-  if AddPrecision then
+  if Two then
     N:=N+':2';
-  ArgCnt:=1;
-  if AddSecondParam then
-    begin
-    ArgCnt:=2;
-    N:=N+',b:3';
-    if AddPrecision then
-      N:=N+':2';
-    end;
   N:=N+');';
   TestStatement(N);
   AssertEquals('1 statement',1,PasProgram.InitializationSection.Elements.Count);
@@ -500,58 +472,50 @@ begin
   AssertExpression('Doit call',S.Expr,pekFuncParams,TParamsExpr);
   P:=S.Expr as TParamsExpr;
   AssertExpression('Correct function call name',P.Value,pekIdent,FN);
-  AssertEquals(IntToStr(ArgCnt)+' param',ArgCnt,Length(P.Params));
-  CheckParam(0,'a');
-  if AddSecondParam then
-    CheckParam(1,'b');
+  AssertEquals('One param',1,Length(P.Params));
+  AssertExpression('Parameter is identifier',P.Params[0],pekIdent,'a');
+  AssertExpression('Parameter has formatting constant 1' ,P.Params[0].format1,pekNumber,'3');
+  if Two then
+    AssertExpression('Parameter has formatting constant 2',P.Params[0].format2,pekNumber,'2');
 end;
 
 procedure TTestStatementParser.TestCallWriteFormat1;
 
 begin
-  TestCallFormat('write',False);
+  TestCalLFormat('write',False);
 end;
 
 procedure TTestStatementParser.TestCallWriteFormat2;
 
 begin
-  TestCallFormat('write',True);
-end;
-
-procedure TTestStatementParser.TestCallWriteFormat3;
-begin
-  TestCallFormat('write',false,true);
-end;
-
-procedure TTestStatementParser.TestCallWriteFormat4;
-begin
-  TestCallFormat('write',true,true);
+  TestCalLFormat('write',True);
 end;
 
 procedure TTestStatementParser.TestCallWritelnFormat1;
 begin
-  TestCallFormat('writeln',False);
+  TestCalLFormat('writeln',False);
+
 end;
 
 procedure TTestStatementParser.TestCallWritelnFormat2;
 begin
-  TestCallFormat('writeln',True);
+  TestCalLFormat('writeln',True);
 end;
 
 procedure TTestStatementParser.TestCallStrFormat1;
 begin
-  TestCallFormat('str',False);
+  TestCalLFormat('str',False);
 end;
 
 procedure TTestStatementParser.TestCallStrFormat2;
 begin
-  TestCallFormat('str',True);
+  TestCalLFormat('str',True);
 end;
 
 procedure TTestStatementParser.DoTestCallOtherFormat;
 
 begin
-  TestCallFormat('nono',False);
+  TestCalLFormat('nono',False);
 end;
 
 procedure TTestStatementParser.TestCallOtherFormat;
@@ -1738,14 +1702,14 @@ begin
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestAssignToAddress;
+Procedure TTestStatementParser.AssignToAddress;
 
 begin
   AddStatements(['@Proc:=Nil']);
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestFinalizationNoSemicolon;
+procedure TTestStatementParser.FinalizationNoSemicolon;
 begin
   Source.Add('unit afile;');
   Source.Add('{$mode objfpc}');
@@ -1754,11 +1718,11 @@ begin
   Source.Add('initialization');
   Source.Add('  writeln(''qqq'')');
   Source.Add('finalization');
-  Source.Add('  write(''rrr'')');
+  Source.Add('  writeln(''qqq'')');
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestMacroComment;
+procedure TTestStatementParser.MacroComment;
 begin
   AddStatements(['{$MACRO ON}',
   '{$DEFINE func := //}',
@@ -1769,19 +1733,19 @@ begin
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestPlatformIdentifier;
+procedure TTestStatementParser.PLatformIdentifier;
 begin
   AddStatements(['write(platform);']);
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestPlatformIdentifier2;
+procedure TTestStatementParser.PLatformIdentifier2;
 begin
   AddStatements(['write(libs+platform);']);
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestArgumentNameOn;
+procedure TTestStatementParser.Onidentifier;
 begin
   Source.Add('function TryOn(const on: boolean): boolean;');
   Source.Add('  begin');
@@ -1791,12 +1755,10 @@ begin
   ParseModule;
 end;
 
-procedure TTestStatementParser.TestGotoInIfThen;
+Procedure TTestStatementParser.TestGotoInIfThen;
 
 begin
-  AddStatements([
-  '{$goto on}',
-  'if expr then',
+  AddStatements(['if expr then',
   '  dosomething',
   '   else if expr2 then',
   '    goto try_qword',

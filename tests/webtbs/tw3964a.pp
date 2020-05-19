@@ -1,6 +1,6 @@
 { %norun }
 { %needlibrary }
-{ %target=linux,haiku }
+{ %target=linux }
 {$mode objfpc}
 library tw3964a;
 

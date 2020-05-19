@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Dependencies.Add('fcl-base');
     P.Author := 'Sebastian Guenther';
     P.License := 'LGPL with modification, ';
@@ -25,9 +25,7 @@ begin
     P.Email := '';
     P.Description := 'Pascal parsing parts of Free Component Libraries (FCL), FPC''s OOP library.';
     P.NeedLibC:= false;
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes:=AllOSes-[embedded,msdos];
 
     P.SourcePath.Add('src');
 
@@ -36,7 +34,6 @@ begin
     T:=P.Targets.AddUnit('pscanner.pp');
     T.ResourceStrings := True;
     T:=P.Targets.AddUnit('pparser.pp');
-      T.ResourceStrings:=true;
       with T.Dependencies do
         begin
           AddUnit('pastree');

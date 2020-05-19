@@ -13,8 +13,6 @@ if [ $# = 0 ]; then
   echo 'samplecfg fpcdir confdir'
   echo 'fpcdir = Path where FPC is installed'
   echo 'confdir = Path to /etc'
-  echo 'Example :'
-  echo 'samplecfg /usr/local/lib/fpc/3.0.2'
   exit 1
 fi
 if [ "$2" ]; then
@@ -44,13 +42,11 @@ if [ -w "$sysdir" ] ; then
   fppkgfile="$sysdir"/fppkg.cfg
   defaultfile="$sysdir"/fppkg/default
   compilerconfigdir="-d CompilerConfigDir=$sysdir/fppkg"
-  fppkgconfdir=$sysdir/fppkg/conf.d
 else
   echo No write premission in $sysdir.
   fpccfgfile="$HOME"/.fpc.cfg
   fppkgfile="$HOME"/.config/fppkg.cfg
   defaultfile="$HOME"/.fppkg/config/default
-  fppkgconfdir="$HOME"/.fppkg/config/conf.d
 fi
 #
 
@@ -74,8 +70,7 @@ fi
 # set right path to FPC with $fpcversion
 FPCPATH=`dirname "$1"`/\$fpcversion
 # set right prefix to FPC
-FPCGLOBALPATH=`dirname "$1"`
-FPCGLOBALPREFIX="$FPCGLOBALPATH"/../../
+FPCGLOBALPREFIX=`dirname "$1"`/../../
 
 # Write (.)fpc.cfg
 echo Writing sample configuration file to $fpccfgfile
@@ -98,13 +93,8 @@ fi
 
 # Write fppkg.cfg
 echo Writing sample configuration file to $fppkgfile
-${FPCMKCFGBIN} -p -3 -d "GlobalPrefix=$FPCGLOBALPREFIX" -d "GlobalPath=$FPCGLOBALPATH/{CompilerVersion}/" $compilerconfigdir -o $fppkgfile
+${FPCMKCFGBIN} -p -3 $compilerconfigdir -o $fppkgfile
 
 # Write default
 echo Writing sample configuration file to $defaultfile
 ${FPCMKCFGBIN} -p -4 -d "GlobalPrefix=$FPCGLOBALPREFIX" -d "FpcBin=$FPCBIN" -o $defaultfile
-
-# Create (empty) directory for fppkg-configuration files for extensions
-if ! [ -d "$fppkgconfdir" ] ; then
-  mkdir "$fppkgconfdir"
-fi

@@ -48,7 +48,6 @@ interface
        tjvmstringconstnode = class(tstringconstnode)
           function pass_1: tnode; override;
           procedure pass_generate_code;override;
-          class function emptydynstrnil: boolean; override;
        end;
 
        tjvmsetconsttype = (
@@ -247,11 +246,6 @@ implementation
         thlcgjvm(hlcg).a_load_stack_reg(current_asmdata.CurrAsmList,resultdef,location.register);
       end;
 
-    class function tjvmstringconstnode.emptydynstrnil: boolean;
-      begin
-        result:=false;
-      end;
-
 
     {*****************************************************************************
                                TJVMSETCONSTNODE
@@ -397,7 +391,7 @@ implementation
                 begin
                   result:=buildbitset;
                 end;
-              inserttypeconv_explicit(result,cpointerdef.getreusable(resultdef));
+              inserttypeconv_explicit(result,getpointerdef(resultdef));
               result:=cderefnode.create(result);
             end;
           else
@@ -457,7 +451,7 @@ implementation
         current_module.localsymtable.insert(csym);
         { generate assignment of the constant to the typed constant symbol }
         ssym:=jvm_add_typed_const_initializer(csym);
-        result:=current_asmdata.RefAsmSymbol(ssym.mangledname,AT_DATA);
+        result:=current_asmdata.RefAsmSymbol(ssym.mangledname);
       end;
 
 

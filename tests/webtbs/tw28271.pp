@@ -1,4 +1,3 @@
-{%skiptarget=$nothread }
 { %OPT=-gh }
 
 program tw28271;

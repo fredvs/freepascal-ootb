@@ -1,4 +1,4 @@
-{ %target=win32,win64,linux,android,haiku}
+{ %target=win32,win64,linux,android}
 { %needlibrary }
 { %delfiles=tw7838a }
 

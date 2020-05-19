@@ -26,10 +26,10 @@ unit nx64mat;
 interface
 
     uses
-      node,nmat,nx86mat;
+      node,nmat,ncgmat,nx86mat;
 
     type
-      tx8664shlshrnode = class(tx86shlshrnode)
+      tx8664shlshrnode = class(tshlshrnode)
          procedure pass_generate_code;override;
       end;
 
@@ -42,11 +42,14 @@ interface
 implementation
 
     uses
-      globtype,constexp,
-      aasmdata,defutil,
-      pass_2,
+      globtype,systems,constexp,
+      cutils,verbose,globals,
+      symconst,symdef,aasmbase,aasmtai,aasmdata,defutil,
+      pass_1,pass_2,
       ncon,
-      cgbase,cgutils,cgobj,hlcgobj;
+      cpubase,cpuinfo,
+      cgbase,cgutils,cga,cgobj,hlcgobj,cgx86,
+      ncgutil;
 
 
 {*****************************************************************************

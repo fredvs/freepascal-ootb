@@ -1,5 +1,4 @@
 { %target=win32,win64 }
-{ %skiptarget=$nosharedlibb }
 { %needlibrary }
 { %norun }
 { %neededafter }

@@ -17,11 +17,10 @@ type
   _TMachOSymbolTable_ = class(TMachOSymbolTable)
   protected
     function AddSymbol(aName : string; sect : byte; addr : longword;
-      glob, undef : boolean) : integer; override;
+      glob : boolean) : integer; override;
   protected
   public
     procedure WriteToStream(aStream : TStream); override;
-    procedure SetSymbolOffset(symbolnum : integer; offset: longword); override;
   end;
 
   _TMachOSubWriter_ = class(TAbstractMachOSubWriter)
@@ -35,6 +34,7 @@ type
     procedure AllocateSpaceForLoadCommands(aStream : TStream); override;
 
     procedure FixLoadCommands(aStream : TStream; aResources : TResources); override;
+    procedure FixResHeader(aStream : TStream); override;
   public
     constructor Create(aParent : TMachOResourceWriter; const aMachineType
       : TMachOMachineType; const aSubMachineType: TMachoSubMachineType;
@@ -44,17 +44,13 @@ type
 { _TMachOSymbolTable_ }
 
 function _TMachOSymbolTable_.AddSymbol(aName: string; sect: byte; addr: longword;
-  glob, undef: boolean): integer;
+  glob: boolean): integer;
 var p : _PNlist_;
 begin
   p:=GetMem(sizeof(_TNlist_));
   p^.strx:=fStringTable.Add(aName);
-  if not undef then
-    p^._type:=N_SECT
-  else
-    p^._type:=N_UNDF;
-  if glob then
-    p^._type:=p^._type or N_EXT;
+  p^._type:=N_SECT;
+  if glob then p^._type:=p^._type or N_EXT;
   p^.desc:=0;
   p^.sect:=sect;
   p^.value:=addr;
@@ -65,20 +61,10 @@ end;
 procedure _TMachOSymbolTable_.WriteToStream(aStream: TStream);
 var nlist : _TNlist_;
     i : integer;
-    sawglobal: boolean;
 begin
-  { first write local symbols, then global ones, as ilocalsym is hardcoded to
-    be index 0. Can't reorder here because we may already have used symbol
-    numbers to generate relocations -> give an error if a global symbol
-    comes before any local symbols }
-  sawglobal:=false;
   for i:=0 to fList.Count-1 do
   begin
     nlist:=_PNlist_(fList[i])^;
-    if (nlist._type and N_EXT)<>0 then
-      sawglobal:=true
-    else if sawglobal then
-      raise EMachOResourceWriterSymbolTableWrongOrderException.Create('');
     if fOppositeEndianess then
     begin
       nlist.strx:=SwapEndian(nlist.strx);
@@ -87,14 +73,6 @@ begin
     end;
     aStream.WriteBuffer(nlist,sizeof(nlist));
   end;
-end;
-
-procedure _TMachOSymbolTable_.SetSymbolOffset(symbolnum: integer; offset: longword);
-var
-  p : _PNlist_;
-begin
-  p:=_PNlist_(flist[symbolnum]);
-  p^.value:=offset;
 end;
 
 { _TMachOSubWriter_ }
@@ -131,13 +109,8 @@ begin
   hdr.count:=aResources.Count;
   hdr.usedhandles:=0;
   hdr.handles:=0;
-  { the first pointer (rootptr at offset 0) goes to the root node, which comes
-    right after the header (the addend has been set to sizeof(hdr) -> add the
-    address of the fpc.resources section to it via a relocations}
-  fRelocations.Add(0,ffpcresourcessym);
-  { the last pointer (handles at offset sizeof(fields before it)) goes to the
-    fpc.reshandles section }
-  fRelocations.Add(sizeof(hdr.rootptr)+sizeof(hdr.count)+sizeof(hdr.usedhandles),ffpcreshandlessym);
+  fRelocations.Add(0,1);
+  fRelocations.Add(sizeof(hdr.rootptr)+sizeof(hdr.count)+sizeof(hdr.usedhandles),2);
   if fOppositeEndianess then
   begin
     hdr.rootptr:=SwapEndian(hdr.rootptr);
@@ -151,7 +124,6 @@ end;
 
 procedure _TMachOSubWriter_.WriteNodeInfos(aStream: TStream);
 begin
-  { offset inside the object }
   fCurOfs:=sizeof(_TResHdr_);
   WriteNodeInfo(aStream,fRoot);
   WriteSubNodes(aStream,fRoot);
@@ -166,7 +138,7 @@ begin
   else
   begin
     infonode.nameid:=fResStrTable.StartOfs+aNode.NameRVA;
-    fRelocations.Add(fCurOfs,ffpcresourcessym);
+    fRelocations.Add(fCurOfs,1);
   end;
   infonode.ncount:=aNode.NamedCount;
   if aNode.IsLeaf then
@@ -182,7 +154,7 @@ begin
   end;
   fRelocations.Add(
     fCurOfs+sizeof(infonode.nameid)+sizeof(infonode.ncount)+
-    sizeof(infonode.idcountsize),ffpcresourcessym);
+    sizeof(infonode.idcountsize),1);
   if fOppositeEndianess then
   begin
     infonode.nameid:=SwapEndian(infonode.nameid);
@@ -199,7 +171,7 @@ var buf : pbyte;
 begin
   fHeader.sizeofcmds:=
     //segment+res section+bss section
-    sizeof(_TSegmentCommand_)+sizeof(_TSection_)*3+
+    sizeof(_TSegmentCommand_)+sizeof(_TSection_)*2+
     //symbol table and dynamic symbol table commands
     sizeof(TSymtabCommand)+sizeof(TDySymtabCommand)+
     //common header of the three commands
@@ -218,35 +190,21 @@ var ldcommand : TLoadCommand;
     segcommand : _TSegmentCommand_;
     symcommand : TSymtabCommand;
     dysymcommand : TDySymtabCommand;
-    ressection,bsssection,textsection : _TSection_;
+    ressection,bsssection : _TSection_;
 begin
   ldcommand.cmd:=fSegType;
-  ldcommand.cmdsize:=sizeof(TLoadCommand)+sizeof(segcommand)+sizeof(ressection)*3;
+  ldcommand.cmdsize:=sizeof(TLoadCommand)+sizeof(segcommand)+sizeof(ressection)*2;
 
   FillByte(segcommand.name[0],16,0);
   segcommand.vmaddr:=0;
   segcommand.vmsize:=fDataCurOfs+sizeof(_ptrtype_)*aResources.Count;
   segcommand.fileoff:=fSectionStart;
   segcommand.filesize:=fDataCurOfs;
-  segcommand.maxprot:=VM_PROT_READ or VM_PROT_WRITE or VM_PROT_EXECUTE;
-  segcommand.initprot:=VM_PROT_READ or VM_PROT_WRITE or VM_PROT_EXECUTE;
-  segcommand.nsects:=3;
+  segcommand.maxprot:=VM_PROT_READ or VM_PROT_WRITE;
+  segcommand.initprot:=VM_PROT_READ or VM_PROT_WRITE;
+  segcommand.nsects:=2;
   segcommand.flags:=0;
 
-  fillbyte(textsection,sizeof(textsection),0);
-  textsection.sectname:='__text';
-  textsection.segname:='__TEXT';
-  textsection.addr:=0;
-  textsection.size:=0;
-  textsection.offset:=segcommand.fileoff;
-  textsection.align:=0;
-  textsection.reloff:=0;
-  textsection.nreloc:=0;
-  textsection.flags:=S_ATTR_PURE_INSTRUCTIONS;
-  textsection.reserved1:=0;
-  textsection.reserved2:=0;
-
-  fillbyte(ressection,sizeof(ressection),0);
   ressection.sectname:=RsrcSectName;
   ressection.segname:=DataSegName;
   ressection.addr:=0;
@@ -259,7 +217,6 @@ begin
   ressection.reserved1:=0;
   ressection.reserved2:=0;
 
-  fillbyte(bsssection,sizeof(bsssection),0);
   bsssection.sectname:=HandlesSectName;
   bsssection.segname:=DataSegName;
   bsssection.addr:=fDataCurOfs;
@@ -286,14 +243,12 @@ begin
     segcommand.nsects:=SwapEndian(segcommand.nsects);
     segcommand.flags:=SwapEndian(segcommand.flags);
 
-    SwapSection(textsection);
     SwapSection(ressection);
     SwapSection(bsssection);
   end;
 
   aStream.WriteBuffer(ldcommand,sizeof(ldcommand));
   aStream.WriteBuffer(segcommand,sizeof(segcommand));
-  aStream.WriteBuffer(textsection,sizeof(textsection));
   aStream.WriteBuffer(ressection,sizeof(ressection));
   aStream.WriteBuffer(bsssection,sizeof(bsssection));
 
@@ -303,7 +258,7 @@ begin
   symcommand.symoff:=fSymbolTable.StartOfs;
   symcommand.nsyms:=fSymbolTable.Count;
   symcommand.stroff:=fMachOStringTable.StartOfs;
-  symcommand.strsize:=NextAligned(4,fMachOStringTable.Size);
+  symcommand.strsize:=NextAligned(fDataAlignment,fMachOStringTable.Size);
 
   if fOppositeEndianess then
   begin
@@ -368,6 +323,17 @@ begin
 
   aStream.WriteBuffer(ldcommand,sizeof(ldcommand));
   aStream.WriteBuffer(dysymcommand,sizeof(dysymcommand));
+end;
+
+procedure _TMachOSubWriter_.FixResHeader(aStream : TStream);
+var hdr : _TResHdr_;
+begin
+  hdr.handles:=fDataCurOfs;
+  if fOppositeEndianess then
+    hdr.handles:=SwapEndian(hdr.handles);
+  aStream.Seek(sizeof(hdr.rootptr)+sizeof(hdr.count)+sizeof(hdr.usedhandles),
+    soFromCurrent);
+  aStream.WriteBuffer(hdr.handles,sizeof(hdr.handles));
 end;
 
 constructor _TMachOSubWriter_.Create(aParent : TMachOResourceWriter;

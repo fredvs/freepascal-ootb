@@ -27,12 +27,8 @@ Begin
    f:=@dummy;
    if f()<>25 then
      Wrong('f() does not call dummy !!');
-{$if sizeof(Codepointer)=sizeof(pointer) }
-   if pointer(@f)=codepointer(@dummy) then
+   if pointer(@f)=pointer(@dummy) then
      Wrong('@f returns value of f !');
-{$else}
-   Writeln('address of variable and functions of different size');
-{$endif}
    if longint(f)=longint(@f) then
      Wrong('longint(@f)=longint(f) !!!!');
    if f<>@dummy then

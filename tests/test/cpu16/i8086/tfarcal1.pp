@@ -15,7 +15,6 @@
   {$endif}
   {$ifdef FPC_MM_HUGE}
     {$define TEST_ENABLED}
-    {$define NEED_POP_DS}
   {$endif}
 {$ELSE FPC}
   {$define TEST_ENABLED}
@@ -34,12 +33,12 @@ var
   SavedSP: Word;
   Bug: Boolean;
 
-procedure CheckBug(i : byte);
+procedure CheckBug;
 begin
   if Bug then
   begin
     Writeln('FAIL!!!');
-    halt(i);
+    halt(1);
   end
   else
     Writeln('OK');
@@ -47,31 +46,14 @@ end;
 
 procedure farretproc; assembler;
 asm
-  { Huge mode generates:
-    push  ds
-    mov   ax,TFARCAL1_DATA
-    mov   ds,ax
-    sequence }
-{$ifdef NEED_POP_DS}
-    pop ds
-{$endif def NEED_POP_DS}
   { hardcode it with db, because the compiler could generate a near ret, due
     to some bug }
-  db $CB  { RETF }
-end;
-
-procedure farretproc2; assembler; {$ifdef FPC} nostackframe;{$endif FPC}
-asm
-  { hardcode it with db, because the compiler could generate a near ret, due
-    to some bug }
-  { For huge mode, the sequence described above
-    is not generated here }
   db $CB  { RETF }
 end;
 
 procedure testfarcall;
 label
-  NoBug1, NoBug2;
+  NoBug;
 begin
   Write('Testing call farretproc...');
   asm
@@ -88,39 +70,15 @@ begin
 
     xor ax, ax
     cmp SavedSP, sp
-    je NoBug1
+    je NoBug
     mov sp, SavedSP  { restore the broken SP }
     inc ax
-NoBug1:
+NoBug:
     mov Bug, al
     pop bx  { pop the saved CS }
     sti
   end;
-  CheckBug(1);
-  Write('Testing call farretproc2 with nostackframe modifier ...');
-  asm
-    cli
-
-    { in case of a near call, the retf will pop this word and we'll detect the
-      bug without crashing }
-    push cs
-
-    mov SavedSP, sp
-
-    { this should emit a far call }
-    call farretproc2
-
-    xor ax, ax
-    cmp SavedSP, sp
-    je NoBug2
-    mov sp, SavedSP  { restore the broken SP }
-    inc ax
-NoBug2:
-    mov Bug, al
-    pop bx  { pop the saved CS }
-    sti
-  end;
-  CheckBug(2);
+  CheckBug;
 end;
 
 begin

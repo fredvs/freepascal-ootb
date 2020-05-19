@@ -1,6 +1,6 @@
 #
 #   This file is part of the Free Pascal Compiler
-#   Copyright (c) 1999-2018 by the Free Pascal Development team
+#   Copyright (c) 1999-2008 by the Free Pascal Development team
 #
 #   Hebrew (CP1255) language file for Free Pascal Compiler
 #   Contributed by Ido Kanner <idokan at gmail.com> and Dotan Kamber <kamberd at yahoo.com>
@@ -13,9 +13,6 @@
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-
-# CodePage 1255
-
 #
 # The constants are build in the following order:
 # <part>_<type>_<txtidentifier>
@@ -2407,7 +2404,7 @@ option_confict_asm_debug=11041_W_סוג הפלט של המאסף שנבחר "$1" אינו יכול ליצור מי
 #
 option_logo=11023_[
 Free Pascal Compiler version $FPCFULLVERSION [$FPCDATE] for $FPCCPU
-Copyright (c) 1993-2020 by Florian Klaempfl and others
+Copyright (c) 1993-2015 by Florian Klaempfl and others
 ]
 
 #
@@ -2582,10 +2579,6 @@ S*2Aas_אסוף עם GNU AS
 **2Rdefault_השתמש במאסף ברירת מחדל
 3*2Ratt_קרא סגנון מקשר של AT&T
 3*2Rintel_קרא סגנון מקשר של Intel
-4*2Ratt_קרא סגנון מקשר של AT&T
-4*2Rintel_קרא סגנון מקשר של Intel
-8*2Ratt_קרא סגנון מקשר של AT&T
-8*2Rintel_קרא סגנון מקשר של Intel
 6*2RMOT_קרא סגנון מקשר של Motorola
 **1S<x>_אפשרויות תחביר:
 **2S2_זהה ל -Mobjfpc
@@ -2622,6 +2615,7 @@ S*2Aas_אסוף עם GNU AS
 3*2Tnetwlibc_Novell Netware Module (libc)
 3*2Topenbsd_OpenBSD
 3*2Tos2_OS/2 / eComStation
+3*2Tsunos_SunOS/Solaris
 3*2Twatcom_Watcom תואם הרחבת DOS
 3*2Twdosx_WDOSX הרחבת DOS
 3*2Twin32_Windows 32 סיביות

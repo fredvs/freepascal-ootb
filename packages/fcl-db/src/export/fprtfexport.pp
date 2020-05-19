@@ -50,10 +50,10 @@ Type
     FTH : String; // Table header row
     FTN : String; // Tabular environment name (for closing)
     function GetRTFFormatsettings: TRTFExportFormatSettings;
-    function MakeCell(S: UTF8String; LineBefore, LineAfter: Boolean): string;
+    function MakeCell(S: String; LineBefore, LineAfter: Boolean): string;
     procedure SetRTFFormatSettings(const AValue: TRTFExportFormatSettings);
   Protected
-    function EscapeRTF(S: UTF8String): String;
+    function EscapeRTF(S: String): String;
     procedure OutputRow(const ARow: String); virtual;
     procedure OutputTableEnd; virtual;
     procedure OutputTableStart; virtual;
@@ -108,27 +108,29 @@ begin
 end;
 
 { TCustomRTFExporter }
-function TCustomRTFExporter.EscapeRTF(S: UTF8String): String;
+function TCustomRTFExporter.EscapeRTF(S: String): String;
 
-Const
-  NeedEscape : TSysCharSet = ['{', '}', '\'];
-
-var
-  SS : UnicodeString;
-  Ch : UnicodeChar;
+Var
+  I,J,L : Integer;
+  P : Pchar;
 
 begin
-  SS:=UTF8Decode(S);
+  I:=1;
+  J:=1;
   Result:='';
-  For Ch in SS do
+  L:=Length(S);
+  P:=PChar(S);
+  While I<=L do
     begin
-    if CharInSet(Ch, NeedEscape) then
-      Result:=Result+'\';
-    if Ord(Ch)>255 then
-      Result:=Result+'\u'+IntToStr(Ord(Ch))+'?'
-    else
-      Result:=Result+Utf8Encode(Ch);
+    if (P^ in ['\','{','}']) then
+      begin
+      Result:=Result+Copy(S,J,I-J)+'\'+P^;
+      J:=I+1;
+      end;
+    Inc(I);
+    Inc(P);
     end;
+  Result:=Result+Copy(S,J,I-1);
 end;
 
 function TCustomRTFExporter.GetRTFFormatsettings: TRTFExportFormatSettings;
@@ -273,7 +275,7 @@ begin
   inherited DoDataRowStart;
 end;
 
-Function TCustomRTFExporter.MakeCell(S : UTF8String; LineBefore,LineAfter : Boolean) : string;
+Function TCustomRTFExporter.MakeCell(S : String; LineBefore,LineAfter : Boolean) : string;
 
 begin
   Result:='\pard\intbl '+EscapeRTF(S)+'\cell';

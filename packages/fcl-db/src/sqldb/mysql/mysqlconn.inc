@@ -16,7 +16,7 @@
 interface
 
 uses
-  Classes, SysUtils,bufdataset,sqldb,db,ctypes,fmtbcd,
+  Classes, SysUtils,bufdataset,sqldb,db,ctypes,
 {$IFDEF mysql57}
   mysql57dyn;
 {$ELSE}
@@ -73,7 +73,7 @@ Const
 
   MariaDBVersion =
 {$IFDEF mysql57}
-    '10.';
+    '10.1';
 {$ELSE}
 {$IFDEF mysql56}   // MariaDB 10.0 is compatible with MySQL 5.6
     '10.';
@@ -110,38 +110,23 @@ Type
     FHostInfo: String;
     FServerInfo: String;
     FMySQL : PMySQL;
-{$IFDEF MYSQL50_UP}
-    FConnectionCharsetInfo: MY_CHARSET_INFO;
-{$ENDIF}
     function GetClientInfo: string;
     function GetServerStatus: String;
     procedure ConnectMySQL(var HMySQL: PMySQL);
     procedure ExecuteDirectMySQL(const query : string);
-    function InternalStrToBCD(C: pchar; Len: integer): tBCD;
-    function InternalStrToCurrency(C: pchar; Len: integer): Currency;
-    function InternalStrToDate(C: pchar; Len: integer): TDateTime;
-    function InternalStrToDateTime(C: pchar; Len: integer): TDateTime;
-    function InternalStrToFloat(C: pchar; Len: integer): Extended;
-    function InternalStrToInt(C: pchar; Len: integer): integer;
-    function InternalStrToInt64(C: pchar; Len: integer): Int64;
-    function InternalStrToTime(C: pchar; Len: integer): TDateTime;
-    function StrToMSecs(C: pchar; Len: integer): Word;
-{$IFDEF MYSQL40}
-    function InternalStrToTimeStamp(C: pchar; Len: integer): TDateTime;
-{$ENDIF}
+    function EscapeString(const Str : string) : string;
   protected
     Procedure ConnectToServer; virtual;
     Procedure SelectDatabase; virtual;
     function MySQLDataType(AField: PMYSQL_FIELD; var NewType: TFieldType; var NewSize: Integer): Boolean;
     function MySQLWriteData(AField: PMYSQL_FIELD; FieldDef: TFieldDef; Source, Dest: PChar; Len: integer; out CreateBlob : boolean): Boolean;
-    function EscapeString(const Str : string) : string;
 
     // SQLConnection methods
     procedure DoInternalConnect; override;
     procedure DoInternalDisconnect; override;
     function GetHandle : pointer; override;
-    function GetConnectionCharSet: string; override;
 
+    function GetAsSQLText(Field : TField) : string; overload; override;
     function GetAsSQLText(Param : TParam) : string; overload; override;
 
     Function AllocateCursorHandle : TSQLCursor; override;
@@ -257,7 +242,8 @@ implementation
 uses
   dbconst,
   StrUtils,
-  DateUtils;
+  DateUtils,
+  FmtBCD;
 
 const
   Mysql_Option_Names : array[mysql_option] of string = ('MYSQL_OPT_CONNECT_TIMEOUT','MYSQL_OPT_COMPRESS',
@@ -426,17 +412,26 @@ begin
         MySQLError(HMySQL,SErrExecuting,Self);
 end;
 
+function TConnectionName.GetAsSQLText(Field : TField) : string;
+
+begin
+  if (not assigned(Field)) or Field.IsNull then
+    Result := 'Null'
+  else if Field.DataType = ftString then
+    Result := '''' + EscapeString(Field.AsString) + ''''
+  else
+    Result := inherited GetAsSqlText(Field);
+end;
+
 function TConnectionName.GetAsSQLText(Param: TParam) : string;
 
 begin
   if (not assigned(Param)) or Param.IsNull then
     Result := 'Null'
-  else if Param.DataType in [ftString,ftFixedChar,ftMemo] then
-    Result := '''' + EscapeString(GetAsString(Param)) + ''''
-  else if Param.DataType in [ftBlob,ftBytes,ftVarBytes] then
+  else if Param.DataType in [ftString,ftFixedChar,ftBlob,ftMemo,ftBytes,ftVarBytes] then
     Result := '''' + EscapeString(Param.AsString) + ''''
   else
-    Result := inherited GetAsSQLText(Param);
+    Result := inherited GetAsSqlText(Param);
 end;
 
 
@@ -445,11 +440,7 @@ begin
   ConnectMySQL(FMySQL);
   FServerInfo := strpas(mysql_get_server_info(FMYSQL));
   FHostInfo := strpas(mysql_get_host_info(FMYSQL));
-{$IFDEF MYSQL50_UP}
-  mysql_get_character_set_info(FMYSQL, @FConnectionCharsetInfo);
-{$ENDIF}
 end;
-
 
 Procedure TConnectionName.SelectDatabase;
 begin
@@ -534,11 +525,6 @@ end;
 function TConnectionName.GetHandle: pointer;
 begin
   Result:=FMySQL;
-end;
-
-function TConnectionName.GetConnectionCharSet: string;
-begin
-  Result:=StrPas(mysql_character_set_name(FMySQL));
 end;
 
 Function TConnectionName.AllocateCursorHandle: TSQLCursor;
@@ -632,7 +618,6 @@ Var
   i : integer;
   ParamNames,ParamValues : array of string;
   Res: PMYSQL_RES;
-  Status : Integer;
 
 begin
   C:=Cursor as TCursorName;
@@ -694,28 +679,13 @@ begin
           C.FRes:=Res;
           C.FSelectable:=True;
           end;
-        Status:=mysql_next_result(FMySQL);
-        if (Status>0) then
-          begin
-          if not ForcedClose then
-            MySQLError(FMySQL, SErrGettingResult, Self)
-          else
-            begin
-            C.RowsAffected:=0;
-            C.FSelectable:= False;
-            C.FRes:=nil;
-            break;
-            end;
-          end;
-      until (Status<>0);
+      until mysql_next_result(FMySQL)<>0;
       end;
     end;
 end;
 
 function TConnectionName.MySQLDataType(AField: PMYSQL_FIELD; var NewType: TFieldType; var NewSize: Integer): Boolean;
-var
-  ASize: culong;
-  ADecimals: cuint;
+var ASize, ADecimals: integer;
 begin
   Result := True;
   ASize := AField^.length;
@@ -778,18 +748,13 @@ begin
       else
         NewType := ftString;
 {$IFDEF MYSQL50_UP}
-      if AField^.charsetnr = 63 then begin //BINARY vs. CHAR, VARBINARY vs. VARCHAR
+      if AField^.charsetnr = 63 then //BINARY vs. CHAR, VARBINARY vs. VARCHAR
         if NewType = ftFixedChar then
           NewType := ftBytes
         else
           NewType := ftVarBytes;
-        NewSize := ASize;
-      end
-      else
-        NewSize := ASize div FConnectionCharsetInfo.mbmaxlen;
-{$ELSE}
-      NewSize := ASize;
 {$ENDIF}
+      NewSize := ASize;
       end;
     FIELD_TYPE_TINY_BLOB..FIELD_TYPE_BLOB:
       begin
@@ -816,7 +781,7 @@ procedure TConnectionName.AddFieldDefs(cursor: TSQLCursor;
 
 var
   C : TCursorName;
-  I, FC: Integer;
+  I, TF, FC: Integer;
   field: PMYSQL_FIELD;
   DFT: TFieldType;
   DFS: Integer;
@@ -833,18 +798,19 @@ begin
   FC:=mysql_num_fields(C.FRes);
   SetLength(c.MapDSRowToMSQLRow,FC);
 
-  For I := 0 to FC-1 do
+  TF := 1;
+  For I:= 0 to FC-1 do
     begin
     field := mysql_fetch_field_direct(C.FRES, I);
 //    Writeln('MySQL: creating fielddef ',I+1);
 
     if MySQLDataType(field, DFT, DFS) then
       begin
-      AddFieldDef(FieldDefs, I+1, field^.name, DFT, DFS, -1,
-                    False,
+      FieldDefs.Add(FieldDefs.MakeNameUnique(field^.name), DFT, DFS,
                     (field^.flags and (AUTO_INCREMENT_FLAG or NOT_NULL_FLAG {$IFDEF MYSQL50_UP}or NO_DEFAULT_VALUE_FLAG{$ENDIF})) = (NOT_NULL_FLAG {$IFDEF MYSQL50_UP}or NO_DEFAULT_VALUE_FLAG{$ENDIF}),
-                    False);
-      c.MapDSRowToMSQLRow[I] := I;
+                    TF);
+      c.MapDSRowToMSQLRow[TF-1] := I;
+      inc(TF);
       end
     end;
 //  Writeln('MySQL: Finished adding fielddefs');
@@ -907,105 +873,77 @@ begin
   ABlobBuf^.BlobBuffer^.Size := len;
 end;
 
-function TConnectionName.InternalStrToInt(C: pchar; Len: integer): integer;
-
-Var
-  S : String;
-
+function InternalStrToInt(const S: string): integer;
 begin
-  Result := 0;
-  if (Len=0) or (C=Nil) then
-    exit;
-  SetString(S,C,Len);
-  Result:=StrToInt(S);
+  if S = '' then
+    Result := 0
+  else
+    Result := StrToInt(S);
 end;
 
-function TConnectionName.InternalStrToInt64(C: pchar; Len: integer): Int64;
-
-Var
-  S : String;
-
-begin
-  Result := 0;
-  if (Len=0) or (C=Nil) then
-    exit;
-  SetString(S,C,Len);
-  Result:=StrToInt64(S);
-end;
-
-function TConnectionName.InternalStrToFloat(C: pchar; Len: integer): Extended;
+function InternalStrToFloat(const S: string): Extended;
 
 var
+  I: Integer;
   Tmp: string;
 
 begin
-  SetString(Tmp, C, Len);
-  if Tmp='' then
-    Exit(0);
-  Result := StrToFloat(Tmp, FSQLFormatSettings);
+  Tmp := '';
+  for I := 1 to Length(S) do
+    begin
+    if not (S[I] in ['0'..'9', '+', '-', 'E', 'e']) then
+      Tmp := Tmp + FormatSettings.DecimalSeparator
+    else
+      Tmp := Tmp + S[I];
+    end;
+  Result := StrToFloat(Tmp);
 end;
 
-function TConnectionName.InternalStrToCurrency(C: pchar; Len: integer): Currency;
+function InternalStrToCurrency(const S: string): Currency;
 
 var
+  I: Integer;
   Tmp: string;
 
 begin
-  SetString(Tmp, C, Len);
-  if Tmp='' then
-    Exit(0);
-  Result := StrToCurr(Tmp, FSQLFormatSettings);
+  Tmp := '';
+  for I := 1 to Length(S) do
+    begin
+    if not (S[I] in ['0'..'9', '+', '-', 'E', 'e']) then
+      Tmp := Tmp + FormatSettings.DecimalSeparator
+    else
+      Tmp := Tmp + S[I];
+    end;
+  Result := StrToCurr(Tmp);
 end;
 
-function TConnectionName.InternalStrToBCD(C: pchar; Len: integer): tBCD;
-
-var
-  Tmp: string;
-
-begin
-  SetString(Tmp, C, Len);
-  if Tmp='' then
-    Exit(0);
-  Result := StrToBCD(Tmp, FSQLFormatSettings);
-end;
-
-function TConnectionName.InternalStrToDate(C: pchar; Len: integer): TDateTime;
+function InternalStrToDate(const S: string): TDateTime;
 
 var
   EY, EM, ED: Word;
 
 begin
-  if Len=0 then
-    Exit(0);
-  if Len<10 then
-    raise EConvertError.Create('Invalid date string');
-  EY := InternalStrToInt(C,4);
-  EM := InternalStrToInt(C+5,2);
-  ED := InternalStrToInt(C+8,2);
+  EY := StrToInt(Copy(S,1,4));
+  EM := StrToInt(Copy(S,6,2));
+  ED := StrToInt(Copy(S,9,2));
   if (EY = 0) or (EM = 0) or (ED = 0) then
     Result:=0
   else
     Result:=EncodeDate(EY, EM, ED);
 end;
 
-function TConnectionName.StrToMSecs(C: pchar; Len: integer): Word;
-{$IFDEF MYSQL56_UP}
-var I: Integer;
+function StrToMSecs(const S: string): Word;
+var C: char;
     d, MSecs: double;
-{$ENDIF}
 begin
 {$IFDEF MYSQL56_UP}
   // datetime(n), where n is fractional seconds precision (between 0 and 6)
   MSecs := 0;
   d := 100;
-  for I := 1 to Len do
+  for C in S do
     begin
-    case C^ of
-      '0'..'9': MSecs := MSecs + (ord(C^)-ord('0'))*d;
-      #0: break;
-    end;
+    MSecs := MSecs + (ord(C)-ord('0'))*d;
     d := d / 10;
-    Inc(C);
     end;
   Result := Round(MSecs);
 {$ELSE}
@@ -1013,27 +951,20 @@ begin
 {$ENDIF}
 end;
 
-function TConnectionName.InternalStrToDateTime(C: pchar; Len: integer): TDateTime;
+function InternalStrToDateTime(const S: string): TDateTime;
 
 var
   EY, EM, ED: Word;
   EH, EN, ES, EMS: Word;
 
 begin
-  if Len=0 then
-    Exit(0);
-  if Len<19 then
-    raise EConvertError.Create('Invalid datetime string');
-  EY := InternalStrToInt(C,4);
-  EM := InternalStrToInt(C+5,2);
-  ED := InternalStrToInt(C+8,2);
-  EH := InternalStrToInt(C+11, 2);
-  EN := InternalStrToInt(C+14, 2);
-  ES := InternalStrToInt(C+17, 2);
-  if Len>20 then
-    EMS := StrToMSecs(C+20, Len-20)
-  else
-    EMS := 0;
+  EY := StrToInt(Copy(S, 1, 4));
+  EM := StrToInt(Copy(S, 6, 2));
+  ED := StrToInt(Copy(S, 9, 2));
+  EH := StrToInt(Copy(S, 12, 2));
+  EN := StrToInt(Copy(S, 15, 2));
+  ES := StrToInt(Copy(S, 18, 2));
+  EMS:= StrToMSecs(Copy(S, 21, 6));
   if (EY = 0) or (EM = 0) or (ED = 0) then
     Result := 0
   else
@@ -1041,63 +972,51 @@ begin
   Result := ComposeDateTime(Result, EncodeTime(EH, EN, ES, EMS));
 end;
 
-function TConnectionName.InternalStrToTime(C: pchar; Len: integer): TDateTime;
+function InternalStrToTime(const S: string): TDateTime;
 
 var
   EH, EM, ES, EMS: Word;
-  M: PChar;
-  I: Integer;
+  p: integer;
 
 begin
-  if Len=0 then
-    Exit(0);
-  if Len<8 then
-    raise EConvertError.Create('Invalid time string');
-  //hours can be 2 or 3 digits
-  M:=C;
-  for I := 1 to Len do
-  begin
-    if M^=':' then
-      break;
-    Inc(M);
-  end;
-  if M^<>':' then
-    raise EConvertError.Create('Invalid time string');
-  EH := InternalStrToInt(C, NativeInt(M-C));
-  EM := InternalStrToInt(M+1, 2);
-  ES := InternalStrToInt(M+4, 2);
-  if Len>NativeInt(M-C)+7 then
-    EMS := StrToMSecs(M+7, Len-(NativeInt(M-C)+7))
-  else
-    EMS := 0;
+  p := 1;
+  EH := StrToInt(ExtractSubstr(S, p, [':'])); //hours can be 2 or 3 digits
+  EM := StrToInt(ExtractSubstr(S, p, [':']));
+  ES := StrToInt(ExtractSubstr(S, p, ['.']));
+  EMS:= StrToMSecs(Copy(S, p, 6));
   Result := EncodeTimeInterval(EH, EM, ES, EMS);
 end;
 
-{$IFDEF mysql40}
-function TConnectionName.InternalStrToTimeStamp(C: pchar; Len: integer): TDateTime;
+function InternalStrToTimeStamp(const S: string): TDateTime;
 
 var
   EY, EM, ED: Word;
-  EH, EN, ES: Word;
+  EH, EN, ES, EMS: Word;
 
 begin
-  if Len=0 then
-    Exit(0);
-  if Len<14 then
-    raise EConvertError.Create('Invalid timestamp string');
-  EY := InternalStrToInt(C, 4);
-  EM := InternalStrToInt(C+4, 2));
-  ED := InternalStrToInt(C+6, 2));
-  EH := InternalStrToInt(C+8, 2));
-  EN := InternalStrToInt(C+10, 2));
-  ES := InternalStrToInt(C+12, 2));
+{$IFNDEF mysql40}
+  EY := StrToInt(Copy(S, 1, 4));
+  EM := StrToInt(Copy(S, 6, 2));
+  ED := StrToInt(Copy(S, 9, 2));
+  EH := StrToInt(Copy(S, 12, 2));
+  EN := StrToInt(Copy(S, 15, 2));
+  ES := StrToInt(Copy(S, 18, 2));
+  EMS:= StrToMSecs(Copy(S, 21, 6));
+{$ELSE}
+  EY := StrToInt(Copy(S, 1, 4));
+  EM := StrToInt(Copy(S, 5, 2));
+  ED := StrToInt(Copy(S, 7, 2));
+  EH := StrToInt(Copy(S, 9, 2));
+  EN := StrToInt(Copy(S, 11, 2));
+  ES := StrToInt(Copy(S, 13, 2));
+  EMS:= 0;
+{$ENDIF}
   if (EY = 0) or (EM = 0) or (ED = 0) then
     Result := 0
   else
     Result := EncodeDate(EY, EM, ED);
-  Result := ComposeDateTime(Result, EncodeTime(EH, EN, ES, 0));
+  Result := Result + EncodeTime(EH, EN, ES, EMS);
 end;
-{$ENDIF}
 
 function TConnectionName.MySQLWriteData(AField: PMYSQL_FIELD; FieldDef: TFieldDef; Source, Dest: PChar; Len: integer; out CreateBlob : boolean): Boolean;
 
@@ -1110,27 +1029,32 @@ var
   VC: Currency;
   VD: TDateTime;
   VB: TBCD;
+  Src : String;
 
 begin
   Result := False;
   CreateBlob := False;
   if Source = Nil then // If the pointer is NULL, the field is NULL
     exit;
+  SetString(Src, Source, Len);
+
+  if Len > FieldDef.Size then
+    Len := FieldDef.Size;
 
   case FieldDef.DataType of
     ftSmallint:
       begin
-      VS := InternalStrToInt(Source, Len);
+      VS := InternalStrToInt(Src);
       Move(VS, Dest^, SizeOf(Smallint));
       end;
     ftWord:
       begin
-      VW := InternalStrToInt(Source, Len);
+      VW := InternalStrToInt(Src);
       Move(VW, Dest^, SizeOf(Word));
       end;
     ftInteger, ftAutoInc:
       begin
-      VI := InternalStrToInt(Source, Len);
+      VI := InternalStrToInt(Src);
       Move(VI, Dest^, SizeOf(Integer));
       end;
     ftLargeInt:
@@ -1144,63 +1068,71 @@ begin
         end
       else
       {$ENDIF}
-      VL := InternalStrToInt64(Source, Len);
+      if Src <> '' then
+        VL := StrToInt64(Src)
+      else
+        VL := 0;
       Move(VL, Dest^, SizeOf(LargeInt));
       end;
     ftFloat:
       begin
-      VF := InternalStrToFloat(Source, Len);
+      if Src <> '' then
+        VF := InternalStrToFloat(Src)
+      else
+        VF := 0;
       Move(VF, Dest^, SizeOf(Double));
       end;
     ftBCD:
       begin
-      VC := InternalStrToCurrency(Source, Len);
+      VC := InternalStrToCurrency(Src);
       Move(VC, Dest^, SizeOf(Currency));
       end;
     ftFmtBCD:
       begin
-      VB := InternalStrToBCD(Source, Len);
+      VB := StrToBCD(Src, FSQLFormatSettings);
       Move(VB, Dest^, SizeOf(TBCD));
       end;
     ftDate:
       begin
-      VD := InternalStrToDate(Source, Len);
+      if Src <> '' then
+        VD := InternalStrToDate(Src)
+      else
+        VD := 0;
       Move(VD, Dest^, SizeOf(TDateTime));
       end;
     ftTime:
       begin
-      VD := InternalStrToTime(Source, Len);
+      if Src <> '' then
+        VD := InternalStrToTime(Src)
+      else
+        VD := 0;
       Move(VD, Dest^, SizeOf(TDateTime));
       end;
     ftDateTime:
       begin
-      {$IFDEF mysql40}
-      if AField^.ftype = FIELD_TYPE_TIMESTAMP then
-        VD := InternalStrToTimeStamp(Source, Len)
+      if Src <> '' then
+        if AField^.ftype = FIELD_TYPE_TIMESTAMP then
+          VD := InternalStrToTimeStamp(Src)
+        else
+          VD := InternalStrToDateTime(Src)
       else
-      {$ENDIF}
-        VD := InternalStrToDateTime(Source, Len);
+        VD := 0;
       Move(VD, Dest^, SizeOf(TDateTime));
       end;
     ftString, ftFixedChar:
       // String-fields which can contain more then dsMaxStringSize characters
       // are mapped to ftBlob fields, while their mysql-datatype is FIELD_TYPE_BLOB
       begin
-      if Len > FieldDef.Size*FieldDef.CharSize then Len := FieldDef.Size*FieldDef.CharSize;
       Move(Source^, Dest^, Len);
       (Dest+Len)^ := #0;
       end;
     ftVarBytes:
       begin
-      if Len > FieldDef.Size then Len := FieldDef.Size;
       PWord(Dest)^ := Len;
       Move(Source^, (Dest+sizeof(Word))^, Len);
       end;
     ftBytes:
-      begin
-      if Len > FieldDef.Size then Len := FieldDef.Size;
       Move(Source^, Dest^, Len);
-      end;
     ftBlob, ftMemo:
       CreateBlob := True;
   end;
@@ -1215,34 +1147,31 @@ begin
   if not assigned(Transaction) then
     DatabaseError(SErrConnTransactionnSet);
 
-  qry := TSQLQuery.Create(nil);
-  qry.Transaction := Transaction;
-  qry.Database := Self;
-  try
-    with qry do
+  qry := tsqlquery.Create(nil);
+  qry.transaction := Transaction;
+  qry.database := Self;
+  with qry do
+    begin
+    ParseSQL := False;
+    sql.clear;
+    sql.add('show index from ' +  TableName);
+    open;
+    end;
+  while not qry.eof do with IndexDefs.AddIndexDef do
+    begin
+    Name := trim(qry.fieldbyname('Key_name').asstring);
+    Fields := trim(qry.fieldbyname('Column_name').asstring);
+    If Name = 'PRIMARY' then options := options + [ixPrimary];
+    If qry.fieldbyname('Non_unique').asinteger = 0 then options := options + [ixUnique];
+    qry.next;
+    while (name = trim(qry.fieldbyname('Key_name').asstring)) and (not qry.eof) do
       begin
-      ParseSQL := False;
-      SQL.Clear;
-      SQL.Add('show index from ' +  TableName);
-      Open;
+      Fields := Fields + ';' + trim(qry.fieldbyname('Column_name').asstring);
+      qry.next;
       end;
-    while not qry.Eof do with IndexDefs.AddIndexDef do
-      begin
-      Name := trim(qry.FieldByName('Key_name').AsString);
-      Fields := trim(qry.FieldByName('Column_name').AsString);
-      If Name = 'PRIMARY' then Options := Options + [ixPrimary];
-      If qry.FieldByName('Non_unique').AsInteger = 0 then Options := Options + [ixUnique];
-      qry.Next;
-      while (Name = trim(qry.FieldByName('Key_name').AsString)) and (not qry.Eof) do
-        begin
-        Fields := Fields + ';' + trim(qry.FieldByName('Column_name').AsString);
-        qry.Next;
-        end;
-      end;
-    qry.Close;
-  finally
-    qry.Free;
-  end;
+    end;
+  qry.close;
+  qry.free;
 end;
 
 function TConnectionName.RowsAffected(cursor: TSQLCursor): TRowsCount;

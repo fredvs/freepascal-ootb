@@ -44,21 +44,15 @@ function AttemptSemaphore(SigSem: PSignalSemaphore): LongWord; syscall AOS_ExecB
 function CreateMsgPort: PMsgPort; syscall AOS_ExecBase 111;
 procedure DeleteMsgPort(Port: PMsgPort); syscall AOS_ExecBase 112;
 procedure ObtainSemaphoreShared(SigSem: PSignalSemaphore); syscall AOS_ExecBase 113;
-function AllocVec(ByteSize: DWord; Requirements: DWord): Pointer; syscall AOS_ExecBase 114;
-procedure FreeVec(MemoryBlock: Pointer); syscall AOS_ExecBase 115;
 function CreatePool(requirements: Cardinal; puddleSize: Cardinal; threshSize: Cardinal): Pointer; syscall LocalExecBase 116;
 procedure DeletePool(poolHeader: Pointer); syscall LocalExecBase 117;
 function AllocPooled(poolHeader: Pointer; memSize: Cardinal): Pointer; syscall LocalExecBase 118;
 function FreePooled(poolHeader: Pointer; memory: Pointer; memSize: Cardinal): Pointer; syscall LocalExecBase 119;
 procedure StackSwap(NewStack: PStackSwapStruct); syscall AOS_ExecBase 122;
-function NewStackSwap(NewStack: PStackSwapStruct; Function_: Pointer; Args: PStackSwapArgs): Pointer; syscall AOS_ExecBase 134;
 procedure RawPutChar(c: Char); syscall AOS_ExecBase 86;
 
 //function RawDoFmt(const formatString : pCHAR;const dataStream : POINTER; putChProc : tPROCEDURE; putChData : POINTER): pointer;
 function RawDoFmt(const formatString : pCHAR;const dataStream : POINTER; putChProc : POINTER; putChData : POINTER): pointer; syscall LocalExecBase 87;
-
-// Debugbase
-function DecodeLocation(Addr1: Pointer; Tags: Pointer): Integer; syscall SysDebugBase 7;
 
 function GetLibAdress(Base: Pointer; Offset: LongInt): Pointer; inline;
 begin
@@ -67,7 +61,7 @@ begin
     RawDoFmt('FPC_FILE_DEBUG: Error! Illegal library access with not opened library: %d !'+#10,@Offset,pointer(1),nil);
     Debugln('Illegal library access with not opened library');
     Halt(1);
-  end;
+  end;  
   GetLibAdress := Pointer((Base -(Offset * SizeOf(Pointer)))^);
 end;
 

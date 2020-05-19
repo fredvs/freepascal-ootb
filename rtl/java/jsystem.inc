@@ -23,14 +23,58 @@ type
   ObjpasInt = LongInt;
 {$endif CPU16}
 
+{ The RTTI is implemented through a series of constants : }
+
+Const
+   // please update tkManagedTypes below if you add new
+   // values
+   tkUnknown        = 0;
+   tkInteger        = 1;
+   tkChar           = 2;
+   tkEnumeration    = 3;
+   tkFloat          = 4;
+   tkSet            = 5;
+   tkMethod         = 6;
+   tkSString        = 7;
+   tkString         = tkSString;
+   tkLString        = 8;
+   tkAString        = 9;
+   tkWString        = 10;
+   tkVariant        = 11;
+   tkArray          = 12;
+   tkRecord         = 13;
+   tkInterface      = 14;
+   tkClass          = 15;
+   tkObject         = 16;
+   tkWChar          = 17;
+   tkBool           = 18;
+   tkInt64          = 19;
+   tkQWord          = 20;
+   tkDynArray       = 21;
+   tkInterfaceCorba = 22;
+   tkProcVar        = 23;
+   tkUString        = 24;
+   tkHelper         = 26;
+   tkFile           = 27;
+   tkClassRef       = 28;
+   tkPointer        = 29;
+
+  // all potentially managed types
+  tkManagedTypes   = [tkAstring,tkWstring,tkUstring,tkArray,
+                     tkObject,tkRecord,tkDynArray,tkInterface,tkVariant];
+
 {****************************************************************************
                                 Local types
 ****************************************************************************}
 
 {$ifdef FPC_HAS_FEATURE_EXITCODE}
-  {$if High(errorcode)<>maxExitCode}
+  {$ifdef FPC_OBJFPC_EXTENDED_IF}
+    {$if High(errorcode)<>maxExitCode}
+      {$define FPC_LIMITED_EXITCODE}
+    {$endif}
+  {$else}
     {$define FPC_LIMITED_EXITCODE}
-  {$endif}
+  {$endif FPC_OBJFPC_EXTENDED_IF}
 {$endif FPC_HAS_FEATURE_EXITCODE}
 
 Procedure HandleError (Errno : Longint); external name 'fpc_handleerror';
@@ -409,20 +453,6 @@ function aligntoptr(p : pointer) : pointer;inline;
 
 {$i aliases.inc}
 
-{****************************************************************************
-                  Run-Time Type Information (RTTI) declarations
-****************************************************************************}
-
-(*
-type
-  PTypeKind = ^TTypeKind;
-*)
-
-const
-  // all potentially managed types
-  tkManagedTypes   = [tkAstring,tkWstring,tkUstring,tkArray,
-                     tkObject,tkRecord,tkDynArray,tkInterface,tkVariant];
-
 {*****************************************************************************
                         Dynamic Array support
 *****************************************************************************}
@@ -740,7 +770,7 @@ end;
 
 procedure fpc_threaderror; [public,alias:'FPC_THREADERROR'];
 begin
-  HandleErrorAddrFrameInd(236{RuntimeErrorExitCodes[reThreadError]},get_pc_addr,get_frame);
+  HandleErrorAddrFrameInd(6,get_pc_addr,get_frame);
 end;
 
 
@@ -849,10 +879,10 @@ type
   PInitFinalTable = ^TInitFinalTable;
 
 
-{$ifndef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$ifndef FPC_HAS_INDIRECT_MAIN_INFORMATION}
 var
   InitFinalTable : TInitFinalTable;external name 'INITFINAL';
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$endif FPC_HAS_INDIRECT_MAIN_INFORMATION}
 
 
 procedure fpc_InitializeUnits;[public,alias:'FPC_INITIALIZEUNITS']; compilerproc;
@@ -864,17 +894,17 @@ var
 begin
   { call cpu/fpu initialisation routine }
   fpc_cpuinit;
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$ifdef FPC_HAS_INDIRECT_MAIN_INFORMATION}
 {$ifdef DEBUG}
   pt := PInitFinalTable(EntryInformation.InitFinalTable);
 {$endif}
   with PInitFinalTable(EntryInformation.InitFinalTable)^ do
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$else FPC_HAS_INDIRECT_MAIN_INFORMATION}
 {$ifdef DEBUG}
   pt := @InitFinalTable;
 {$endif}
   with InitFinalTable do
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$endif FPC_HAS_INDIRECT_MAIN_INFORMATION}
    begin
      for i:=1 to TableCount do
       begin
@@ -890,7 +920,7 @@ end;
 
 procedure internal_initializeunits; external name 'FPC_INITIALIZEUNITS';
 
-procedure fpc_LibInitializeUnits;[public,alias:'FPC_LIBINITIALIZEUNITS'];compilerproc;
+procedure fpc_LibInitializeUnits;[public,alias:'FPC_LIBINITIALIZEUNITS'];
 begin
 {$ifdef FPC_HAS_FEATURE_DYNLIBS}
   IsLibrary:=true;
@@ -903,11 +933,11 @@ end;
 
 procedure FinalizeUnits;[public,alias:'FPC_FINALIZEUNITS'];
 begin
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$ifdef FPC_HAS_INDIRECT_MAIN_INFORMATION}
   with PInitFinalTable(EntryInformation.InitFinalTable)^ do
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$else FPC_HAS_INDIRECT_MAIN_INFORMATION}
   with InitFinalTable do
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+{$endif FPC_HAS_INDIRECT_MAIN_INFORMATION}
    begin
      while (InitCount>0) do
       begin
@@ -1032,13 +1062,11 @@ Begin
 End;
 
 
-Procedure fpc_do_exit;[Public,Alias:'FPC_DO_EXIT']; compilerproc;
+Procedure do_exit;[Public,Alias:'FPC_DO_EXIT'];
 begin
   InternalExit;
   System_exit;
 end;
-
-procedure internal_do_exit; external name 'fpc_do_exit';
 
 
 Procedure lib_exit;[Public,Alias:'FPC_LIB_EXIT'];
@@ -1057,7 +1085,7 @@ Begin
 {$endif FPC_LIMITED_EXITCODE}
     ExitCode:=ErrNum;
 {$endif FPC_HAS_FEATURE_EXITCODE}
-  internal_do_exit;
+  Do_Exit;
 end;
 
 (*

@@ -1,4 +1,4 @@
-{ %target=win32,win64,wince,darwin,linux,freebsd,solaris,beos,aix,android,haiku }
+{ %target=win32,win64,wince,darwin,linux,freebsd,solaris,beos,aix,android }
 { %needlibrary }
 { %delfiles=tw16949a }
 

@@ -19,20 +19,17 @@ unit machotypes;
 
 interface
 
-{$packrecords c}
-
 type
-  TMachOMachineType = (mmtpowerpc, mmtpowerpc64, mmti386, mmtx86_64, mmtarm, mmtarm64);
+  TMachOMachineType = (mmtpowerpc, mmtpowerpc64, mmti386, mmtx86_64, mmtarm);
   TMachOSubMachineTypePowerPC = (msmppc_all);
   TMachOSubMachineTypePowerPC64 = (msmppc64_all);
   TMachOSubMachineType386 = (msm386_all);
   TMachOSubMachineTypex64 = (msmx64_all);
   TMachOSubMachineTypeArm = (msmarm_all,msmarm_v4t,msmarm_v6,msmarm_v5tej,msmarm_xscale,msmarm_v7);
-  TMachOSubMachineTypeAarch64 = (msmaarch64_all);
   TSegSectName = array[0..15] of char;
 
 type
-  TMachHdr = record
+  TMachHdr = packed record
     magic : longword;
     cputype : longint;
     cpusubtype : longint;
@@ -42,14 +39,14 @@ type
     flags : longword;
   end;
 
-  TLoadCommand = record
+  TLoadCommand = packed record
     cmd : longword;
     cmdsize : longword;
   end;
 
   //note: all commands don't include first two longwords
 
-  TSegmentCommand32 = record
+  TSegmentCommand32 = packed record
     name     : TSegSectName;
     vmaddr   : longword;
     vmsize   : longword;
@@ -61,7 +58,7 @@ type
     flags    : longword;
   end;
 
-  TSegmentCommand64 = record
+  TSegmentCommand64 = packed record
     name     : TSegSectName;
     vmaddr   : qword;
     vmsize   : qword;
@@ -73,7 +70,7 @@ type
     flags    : longword;
   end;
   
-  TSection32 = record
+  TSection32 = packed record
     sectname : TSegSectName;
     segname  : TSegSectName;
     addr : longword;
@@ -87,7 +84,7 @@ type
     reserved2 : longword;
   end;
 
-  TSection64 = record
+  TSection64 = packed record
     sectname : TSegSectName;
     segname  : TSegSectName;
     addr : qword;
@@ -102,14 +99,14 @@ type
     reserved3 : longword;
   end;
 
-  TSymtabCommand = record
+  TSymtabCommand = packed record
     symoff : longword;
     nsyms : longword;
     stroff : longword;
     strsize : longword;
   end;
   
-  TDySymtabCommand = record
+  TDySymtabCommand = packed record
     ilocalsym : longword;
     nlocalsym : longword;
     iextdefsym : longword;
@@ -130,7 +127,7 @@ type
     nlocrel : longword;
   end;
   
-  TNList32 = record
+  TNList32 = packed record
     strx : longword;
     _type : byte;
     sect : byte;
@@ -139,7 +136,7 @@ type
   end;
   PNList32 = ^TNList32;
   
-  TNList64 = record
+  TNList64 = packed record
     strx : longword;
     _type : byte;
     sect : byte;
@@ -148,7 +145,7 @@ type
   end;
   PNList64 = ^TNList64;
 
-  TRelocationInfo = record
+  TRelocationInfo = packed record
     address : longword;
     flags : longword;
   end;

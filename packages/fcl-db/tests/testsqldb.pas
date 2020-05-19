@@ -72,8 +72,6 @@ type
     procedure TestUseImplicitTransaction;
     procedure TestUseExplicitTransaction;
     procedure TestExplicitConnect;
-    procedure TestGetStatementInfo;
-    procedure TestGetNextValue;
   end;
 
   { TTestTSQLScript }
@@ -839,55 +837,6 @@ begin
   SQLDBConnector.Query.SQL.Text:='select * from FPDEV';
   AssertException('toExplicitStart raises exception on implicit start',EDatabaseError,@TryOpen)
 end;
-
-procedure TTestTSQLConnection.TestGetStatementInfo;
-var StmtInfo: TSQLStatementInfo;
-begin
-  // single table
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM tab1');
-  AssertEquals('StatementType', ord(stSELECT), ord(StmtInfo.StatementType));
-  AssertEquals('TableName', 'tab1', StmtInfo.TableName);
-  AssertEquals('Updateable', True, StmtInfo.Updateable);
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM tab2 WHERE col1=1');
-  AssertEquals('TableName', 'tab2', StmtInfo.TableName);
-  AssertEquals('Updateable', True, StmtInfo.Updateable);
-  // single table with schema
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM dbo.tab2 WHERE col1=1');
-  AssertEquals('TableName', 'dbo.tab2', StmtInfo.TableName);
-  AssertEquals('Updateable', True, StmtInfo.Updateable);
-  // single table with quoted schema
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM "dbo".tab2 WHERE col1=1');
-  AssertEquals('TableName', '"dbo".tab2', StmtInfo.TableName);
-  AssertEquals('Updateable', True, StmtInfo.Updateable);
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM "dbo"."tab2" WHERE col1=1');
-  AssertEquals('TableName', '"dbo"."tab2"', StmtInfo.TableName);
-  AssertEquals('Updateable', True, StmtInfo.Updateable);
-  // multiple tables
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM tab3,tab4 WHERE col1=1');
-  AssertEquals('TableName', '', StmtInfo.TableName);
-  AssertEquals('Updateable', False, StmtInfo.Updateable);
-  // function
-  StmtInfo := SQLDBConnector.Connection.GetStatementInfo('SELECT * FROM dbo.fn1(1)');
-  AssertEquals('TableName', '', StmtInfo.TableName);
-  AssertEquals('Updateable', False, StmtInfo.Updateable);
-end;
-
-procedure TTestTSQLConnection.TestGetNextValue;
-begin
-  if not (sqSequences in SQLDBConnector.Connection.ConnOptions) then
-    Ignore('Connector '+SQLDBConnector.Connection.ClassName+' does not support sequences');
-  if SQLServerType=ssSQLite then
-    begin
-    SQLDBConnector.TryDropIfExist('me');
-    SQLDBConnector.ExecuteDirect('create table me (a integer primary key autoincrement,b int)');
-    SQLDBConnector.ExecuteDirect('insert into me (b) values (1)');// Will create table sqlite_sequence if it didn't exist yet
-    SQLDBConnector.ExecuteDirect('drop table me');
-    end;
-  SQLDBConnector.TryDropSequence('me');
-  SQLDBConnector.TryCreateSequence('me');
-  AssertTrue('Get value',SQLDBConnector.Connection.GetNextValue('me',1)>0);
-end;
-
 
 { TTestTSQLScript }
 

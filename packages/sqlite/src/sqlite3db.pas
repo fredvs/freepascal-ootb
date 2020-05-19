@@ -6,7 +6,7 @@ O. Rinaudo - 2005 - orinaudo@gmail.com
 G. Marcou  - 2007 - g.marcou@chimie.u-strasbg.fr
 *************************************************************}
 
-unit SQLite3DB;
+unit SQLite3db;
 
 interface
 

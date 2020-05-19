@@ -1,87 +1,103 @@
-{ Parsed from AppKit.framework NSTextField.h }
-
+{ Parsed from Appkit.framework NSTextField.h }
 
 {$ifdef TYPES}
-type
-  NSTextFieldPtr = ^NSTextField;
-  NSTextFieldDelegateProtocolPtr = ^NSTextFieldDelegateProtocol;
+{$ifndef NSTEXTFIELD_PAS_T}
+{$define NSTEXTFIELD_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSTEXTFIELD_PAS_R}
+{$define NSTEXTFIELD_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSTEXTFIELD_PAS_F}
+{$define NSTEXTFIELD_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSTEXTFIELD_PAS_S}
+{$define NSTEXTFIELD_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSTextFieldDelegateProtocol = objcprotocol;
+  NSTextField = objcclass;
+  NSTextFieldPointer = ^NSTextField;
+  NSTextFieldPtr = NSTextFieldPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSTEXTFIELD_PAS_C}
+{$define NSTEXTFIELD_PAS_C}
 
-type
-  NSTextField = objcclass external (NSControl, NSUserInterfaceValidationsProtocol, NSAccessibilityNavigableStaticTextProtocol)
+{ NSTextField }
+  NSTextField = objcclass external (NSControl, NSUserInterfaceValidationsProtocol)
   private
     _delegate: id;
     _errorAction: SEL;
-    {$if defined(__LP64__)}
-    _maxLayoutWidth: CGFloat;
-    {$endif}
+    
   public
-    procedure setPlaceholderString(newValue: NSString); message 'setPlaceholderString:';
-    function placeholderString: NSString; message 'placeholderString';
-    procedure setPlaceholderAttributedString(newValue: NSAttributedString); message 'setPlaceholderAttributedString:';
-    function placeholderAttributedString: NSAttributedString; message 'placeholderAttributedString';
-    procedure setBackgroundColor(newValue: NSColor); message 'setBackgroundColor:';
+    procedure setBackgroundColor(color: NSColor); message 'setBackgroundColor:';
     function backgroundColor: NSColor; message 'backgroundColor';
-    procedure setDrawsBackground(newValue: ObjCBOOL); message 'setDrawsBackground:';
-    function drawsBackground: ObjCBOOL; message 'drawsBackground';
-    procedure setTextColor(newValue: NSColor); message 'setTextColor:';
+    procedure setDrawsBackground(flag: Boolean); message 'setDrawsBackground:';
+    function drawsBackground: Boolean; message 'drawsBackground';
+    procedure setTextColor(color: NSColor); message 'setTextColor:';
     function textColor: NSColor; message 'textColor';
-    procedure setBordered(newValue: ObjCBOOL); message 'setBordered:';
-    function isBordered: ObjCBOOL; message 'isBordered';
-    procedure setBezeled(newValue: ObjCBOOL); message 'setBezeled:';
-    function isBezeled: ObjCBOOL; message 'isBezeled';
-    procedure setEditable(newValue: ObjCBOOL); message 'setEditable:';
-    function isEditable: ObjCBOOL; message 'isEditable';
-    procedure setSelectable(newValue: ObjCBOOL); message 'setSelectable:';
-    function isSelectable: ObjCBOOL; message 'isSelectable';
-    procedure selectText (sender: id); message 'selectText:';
-    procedure setDelegate(newValue: NSTextFieldDelegateProtocol); message 'setDelegate:';
+    function isBordered: Boolean; message 'isBordered';
+    procedure setBordered(flag: Boolean); message 'setBordered:';
+    function isBezeled: Boolean; message 'isBezeled';
+    procedure setBezeled(flag: Boolean); message 'setBezeled:';
+    function isEditable: Boolean; message 'isEditable';
+    procedure setEditable(flag: Boolean); message 'setEditable:';
+    function isSelectable: Boolean; message 'isSelectable';
+    procedure setSelectable(flag: Boolean); message 'setSelectable:';
+    procedure selectText(sender: id); message 'selectText:';
     function delegate: NSTextFieldDelegateProtocol; message 'delegate';
-    function textShouldBeginEditing (textObject: NSText): ObjCBOOL; message 'textShouldBeginEditing:';
-    function textShouldEndEditing (textObject: NSText): ObjCBOOL; message 'textShouldEndEditing:';
-    procedure textDidBeginEditing (notification: NSNotification); message 'textDidBeginEditing:';
-    procedure textDidEndEditing (notification: NSNotification); message 'textDidEndEditing:';
-    procedure textDidChange (notification: NSNotification); message 'textDidChange:';
-    function acceptsFirstResponder: ObjCBOOL; message 'acceptsFirstResponder';
-    procedure setBezelStyle(newValue: NSTextFieldBezelStyle); message 'setBezelStyle:';
+    procedure setDelegate(anObject: NSTextFieldDelegateProtocol); message 'setDelegate:';
+    function textShouldBeginEditing(textObject: NSText): Boolean; message 'textShouldBeginEditing:';
+    function textShouldEndEditing(textObject: NSText): Boolean; message 'textShouldEndEditing:';
+    procedure textDidBeginEditing(notification: NSNotification); message 'textDidBeginEditing:';
+    procedure textDidEndEditing(notification: NSNotification); message 'textDidEndEditing:';
+    procedure textDidChange(notification: NSNotification); message 'textDidChange:';
+    function acceptsFirstResponder: Boolean; message 'acceptsFirstResponder';
+    procedure setBezelStyle(style: NSTextFieldBezelStyle); message 'setBezelStyle:';
     function bezelStyle: NSTextFieldBezelStyle; message 'bezelStyle';
-    procedure setPreferredMaxLayoutWidth(newValue: CGFloat); message 'setPreferredMaxLayoutWidth:';
-    function preferredMaxLayoutWidth: CGFloat; message 'preferredMaxLayoutWidth';
 
-    { Adopted protocols }
-    function validateUserInterfaceItem (anItem: NSValidatedUserInterfaceItemProtocol): ObjCBOOL; message 'validateUserInterfaceItem:';
-    function accessibilityStringForRange (range: NSRange): NSString; message 'accessibilityStringForRange:';
-    function accessibilityLineForIndex (index: NSInteger): NSInteger; message 'accessibilityLineForIndex:';
-    function accessibilityRangeForLine (lineNumber: NSInteger): NSRange; message 'accessibilityRangeForLine:';
-    function accessibilityFrameForRange (range: NSRange): NSRect; message 'accessibilityFrameForRange:';
-    function accessibilityValue: NSString; message 'accessibilityValue';
-
+    { Adopted Protocols }
+    function validateUserInterfaceItem(anItem: NSValidatedUserInterfaceItemProtocol): Boolean;
   end;
 
-
-type
-  NSTextFieldAttributedStringMethods = objccategory external (NSTextField)
-    procedure setAllowsEditingTextAttributes(newValue: ObjCBOOL); message 'setAllowsEditingTextAttributes:';
-    function allowsEditingTextAttributes: ObjCBOOL; message 'allowsEditingTextAttributes';
-    procedure setImportsGraphics(newValue: ObjCBOOL); message 'setImportsGraphics:';
-    function importsGraphics: ObjCBOOL; message 'importsGraphics';
+{ NSKeyboardUI_NSTextFieldCategory }
+  NSKeyboardUI_NSTextFieldCategory = objccategory external name 'NSKeyboardUI' (NSTextField)
+    procedure setTitleWithMnemonic(stringWithAmpersand: NSString); message 'setTitleWithMnemonic:';
   end;
+
+{ NSTextFieldAttributedStringMethodsCategory }
+  NSTextFieldAttributedStringMethodsCategory = objccategory external (NSTextField)
+    function allowsEditingTextAttributes: Boolean; message 'allowsEditingTextAttributes';
+    procedure setAllowsEditingTextAttributes(flag: Boolean); message 'setAllowsEditingTextAttributes:';
+    function importsGraphics: Boolean; message 'importsGraphics';
+    procedure setImportsGraphics(flag: Boolean); message 'setImportsGraphics:';
+  end;
+
 {$endif}
-
+{$endif}
 {$ifdef PROTOCOLS}
-
-type
-  NSTextFieldDelegateProtocol = objcprotocol external name 'NSTextFieldDelegate' (NSControlTextEditingDelegateProtocol)
+{$ifndef NSTEXTFIELD_PAS_P}
+{$define NSTEXTFIELD_PAS_P}
+  
+{ NSTextFieldDelegate Protocol }
+  NSTextFieldDelegateProtocol = objcprotocol external name 'NSTextFieldDelegate'
   end;
 {$endif}
-
-{$ifdef CLASSES}
-
-type
-  NSTextField_NSDeprecated = objccategory external name 'NSDeprecated' (NSTextField)
-    procedure setTitleWithMnemonic (stringWithAmpersand: NSString); message 'setTitleWithMnemonic:'; deprecated 'in 10_0, 10_8';
-  end;
 {$endif}
-

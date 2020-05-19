@@ -89,8 +89,7 @@ TYPE
    TFlock   = flock;
    pFlock   = ^flock;
 
-   TFDSetEl = culong; 
-   TFDSet    = array[0..wordsinfdset-1] of TFDSetEl;
+   TFDSet    = array[0..wordsinfdset-1] of culong;
    pFDSet    = ^TFDSet;
 
    timezone = record

@@ -48,19 +48,8 @@ implementation
 {$DEFINE FPC_FEXPAND_UNC} (* UNC paths are supported *)
 {$DEFINE FPC_FEXPAND_DRIVES} (* Full paths begin with drive specification *)
 
-{$DEFINE executeprocuni} (* Only 1 byte version of ExecuteProcess is provided by the OS *)
-
 { Include platform independent implementation part }
 {$i sysutils.inc}
-
-type
-  PFarChar=^Char;far;
-  PPFarChar=^PFarChar;
-var
-  dos_env_count:smallint;external name '__dos_env_count';
-
-{ This is implemented inside system unit }
-function envp:PPFarChar;external name '__fpc_envp';
 
 
 {****************************************************************************
@@ -121,7 +110,7 @@ begin
     end;
   Regs.Ds := Seg(PChar(FileName)^);
   Regs.cx := $20;                          { Attributes }
-  MsDos(Regs);
+  Intr($21, Regs);
   if (Regs.Flags and fCarry) <> 0 then
     result := Regs.Ax
   else
@@ -179,7 +168,7 @@ begin
      regs.ds:=Seg(Buffer);
      regs.bx:=Handle;
      regs.ax:=$3f00;
-     MsDos(regs);
+     Intr($21,regs);
      if (regs.flags and fCarry) <> 0 then
       begin
         Result:=-1;
@@ -215,7 +204,7 @@ begin
      regs.ds:=Seg(Buffer);
      regs.bx:=Handle;
      regs.ax:=$4000;
-     MsDos(regs);
+     Intr($21,regs);
      if (regs.flags and fCarry) <> 0 then
       begin
         Result:=-1;
@@ -240,7 +229,7 @@ begin
   Regs.dx := Lo(FOffset);
   Regs.cx := Hi(FOffset);
   Regs.bx := Handle;
-  MsDos(Regs);
+  Intr($21, Regs);
   if Regs.Flags and fCarry <> 0 then
      result := -1
   else begin
@@ -265,7 +254,7 @@ begin
    exit;
   Regs.ax := $3e00;
   Regs.bx := Handle;
-  MsDos(Regs);
+  Intr($21, Regs);
 end;
 
 
@@ -283,7 +272,7 @@ begin
     Regs.ds := 0{tb_segment};
     Regs.bx := Handle;
     Regs.ax:=$4000;
-    MsDos(Regs);
+    Intr($21, Regs);
     FileTruncate:=(regs.flags and fCarry)=0;
    end;
 end;
@@ -303,13 +292,7 @@ begin
 end;
 
 
-function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
-begin
-  Result := False;
-end;
-
-
-function FileExists (const FileName: RawByteString; FollowLink : Boolean): boolean;
+function FileExists (const FileName: RawByteString): boolean;
 var
   L: longint;
 begin
@@ -324,7 +307,7 @@ begin
 end;
 
 
-Function DirectoryExists (Const Directory : RawByteString; FollowLink : Boolean) : Boolean;
+Function DirectoryExists (Const Directory : RawByteString) : Boolean;
 Var
   Dir : RawByteString;
   drive : byte;
@@ -430,7 +413,7 @@ begin
   //!! for win95 an alternative function is available.
   Regs.bx := Handle;
   Regs.ax := $5700;
-  MsDos(Regs);
+  Intr($21, Regs);
   if Regs.Flags and fCarry <> 0 then
    result := -1
   else
@@ -449,7 +432,7 @@ begin
   Regs.ax := $5701;
   Regs.cx := Lo(Age);
   Regs.dx := Hi(Age);
-  MsDos(Regs);
+  Intr($21, Regs);
   if Regs.Flags and fCarry <> 0 then
    result := -Regs.Ax
   else
@@ -470,7 +453,7 @@ begin
    end
   else
    Regs.Ax := $4300;
-  MsDos(Regs);
+  Intr($21, Regs);
   if Regs.Flags and fCarry <> 0 then
     result := -1
   else
@@ -492,7 +475,7 @@ begin
   else
     Regs.Ax := $4301;
   Regs.Cx := Attr;
-  MsDos(Regs);
+  Intr($21, Regs);
   if Regs.Flags and fCarry <> 0 then
    result := -Regs.Ax
   else
@@ -512,7 +495,7 @@ begin
     Regs.ax := $4100;
   Regs.si := 0;
   Regs.cx := 0;
-  MsDos(Regs);
+  Intr($21, Regs);
   result := (Regs.Flags and fCarry = 0);
 end;
 
@@ -531,7 +514,7 @@ begin
   else
     Regs.ax := $5600;
   Regs.cx := $ff;
-  MsDos(Regs);
+  Intr($21, Regs);
   result := (Regs.Flags and fCarry = 0);
 end;
 
@@ -577,7 +560,9 @@ VAR S    : String;
   end;
 
 BEGIN
- if LFNSupport then
+ { TODO: implement }
+ runerror(304);
+(* if LFNSupport then
   begin
    S:='C:\'#0;
    if Drive=0 then
@@ -590,17 +575,20 @@ BEGIN
     S[1]:=chr(Drive+64);
    Rec.Strucversion:=0;
    Rec.RetSize := 0;
-   regs.dx:=Ofs(S[1]);
-   regs.ds:=Seg(S[1]);
-   regs.di:=Ofs(Rec);
-   regs.es:=Seg(Rec);
+   dosmemput(tb_segment,tb_offset,Rec,SIZEOF(ExtendedFat32FreeSpaceRec));
+   dosmemput(tb_segment,tb_offset+Sizeof(ExtendedFat32FreeSpaceRec)+1,S[1],4);
+   regs.dx:=tb_offset+Sizeof(ExtendedFat32FreeSpaceRec)+1;
+   regs.ds:=tb_segment;
+   regs.di:=tb_offset;
+   regs.es:=tb_segment;
    regs.cx:=Sizeof(ExtendedFat32FreeSpaceRec);
    regs.ax:=$7303;
    msdos(regs);
    if (regs.flags and fcarry) = 0 then {No error clausule in int except cf}
     begin
-     if Rec.RetSize = 0 then (* Error - "FAT32" function not supported! *)
-      OldDosDiskData
+     copyfromdos(rec,Sizeof(ExtendedFat32FreeSpaceRec));
+     if Rec.RetSize = 0 then *)(* Error - "FAT32" function not supported! *)
+(*      OldDosDiskData
      else
       if Free then
        Do_DiskData:=int64(rec.AvailAllocUnits)*rec.SecPerClus*rec.BytePerSec
@@ -611,7 +599,7 @@ BEGIN
     OldDosDiskData;
   end
  else
-  OldDosDiskData;
+  OldDosDiskData;*)
 end;
 
 
@@ -636,13 +624,13 @@ var
   Regs: Registers;
 begin
   Regs.ah := $2C;
-  MsDos(Regs);
+  Intr($21, Regs);
   SystemTime.Hour := Regs.Ch;
   SystemTime.Minute := Regs.Cl;
   SystemTime.Second := Regs.Dh;
   SystemTime.MilliSecond := Regs.Dl*10;
   Regs.ah := $2A;
-  MsDos(Regs);
+  Intr($21, Regs);
   SystemTime.Year := Regs.Cx;
   SystemTime.Month := Regs.Dh;
   SystemTime.Day := Regs.Dl;
@@ -702,7 +690,7 @@ begin
   Regs.ES := {transfer_buffer div 16}Seg(CountryInfo);
   Regs.DI := {transfer_buffer and 15}Ofs(CountryInfo);
   Regs.CX := SizeOf(TCountryInfo);
-  MsDos(Regs);
+  Intr($21, Regs);
 {  DosMemGet(transfer_buffer div 16,
             transfer_buffer and 15,
             CountryInfo, Regs.CX );}
@@ -710,8 +698,6 @@ end;
 
 
 procedure InitAnsi;
-type
-  PFarChar = ^char; far;
 var
   CountryInfo: TCountryInfo; i: integer;
 begin
@@ -744,9 +730,10 @@ begin
     and Offset:Segment word record (PM) }
     {  get the uppercase table from dosmemory  }
     GetExtendedCountryInfo(2, $FFFF, $FFFF, CountryInfo);
+    { TODO: implement }
+//    DosMemGet(CountryInfo.UpperCaseTable shr 16, 2 + CountryInfo.UpperCaseTable and 65535, UpperCaseTable[128], 128);
     for i := 128 to 255 do
        begin
-       UpperCaseTable[i] := PFarChar(CountryInfo.UpperCaseTable)[i+(2-128)];
        if UpperCaseTable[i] <> chr(i) then
           LowerCaseTable[ord(UpperCaseTable[i])] := chr(i);
        end;
@@ -770,92 +757,29 @@ end;
                               Os utils
 ****************************************************************************}
 
-{$if defined(FPC_MM_TINY) or defined(FPC_MM_SMALL) or defined(FPC_MM_MEDIUM)}
-{ environment handling for near data memory models }
-
-function far_strpas(p: pfarchar): string;
-begin
-  Result:='';
-  if p<>nil then
-    while p^<>#0 do
-      begin
-        Result:=Result+p^;
-        Inc(p);
-      end;
-end;
-
-Function small_FPCGetEnvVarFromP(EP : PPFarChar; EnvVar : String) : String;
-var
-  hp         : ppfarchar;
-  lenvvar,hs : string;
-  eqpos      : smallint;
-begin
-  lenvvar:=upcase(envvar);
-  hp:=EP;
-  Result:='';
-  If (hp<>Nil) then
-    while assigned(hp^) do
-     begin
-       hs:=far_strpas(hp^);
-       eqpos:=pos('=',hs);
-       if upcase(copy(hs,1,eqpos-1))=lenvvar then
-        begin
-          Result:=copy(hs,eqpos+1,length(hs)-eqpos);
-          exit;
-        end;
-       inc(hp);
-     end;
-end;
-
-Function small_FPCGetEnvStrFromP(EP : PPFarChar; Index : SmallInt) : String;
-begin
-  Result:='';
-  while assigned(EP^) and (Index>1) do
-    begin
-      dec(Index);
-      inc(EP);
-    end;
-  if Assigned(EP^) then
-    Result:=far_strpas(EP^);
-end;
-
 Function GetEnvironmentVariable(Const EnvVar : String) : String;
-begin
-  Result:=small_FPCGetEnvVarFromP(envp,EnvVar);
-end;
 
-Function GetEnvironmentVariableCount : Integer;
-begin
-  Result:=dos_env_count;
-end;
-
-Function GetEnvironmentString(Index : Integer) : {$ifdef FPC_RTL_UNICODE}UnicodeString{$else}AnsiString{$endif};
-begin
-  Result:=small_FPCGetEnvStrFromP(Envp,Index);
-end;
-{$else}
-{ environment handling for far data memory models }
-Function GetEnvironmentVariable(Const EnvVar : String) : String;
 begin
   Result:=FPCGetEnvVarFromP(envp,EnvVar);
 end;
 
 Function GetEnvironmentVariableCount : Integer;
+
 begin
-  Result:=dos_env_count;
+  Result:=FPCCountEnvVar(EnvP);
 end;
 
 Function GetEnvironmentString(Index : Integer) : {$ifdef FPC_RTL_UNICODE}UnicodeString{$else}AnsiString{$endif};
+
 begin
   Result:=FPCGetEnvStrFromP(Envp,Index);
 end;
-{$endif}
 
 
-function ExecuteProcess(Const Path: RawByteString; Const ComLine: RawByteString;Flags:TExecuteFlags=[]):integer;
+function ExecuteProcess(Const Path: AnsiString; Const ComLine: AnsiString;Flags:TExecuteFlags=[]):integer;
 var
   e : EOSError;
-  CommandLine: RawByteString;
+  CommandLine: AnsiString;
 
 begin
   dos.exec_ansistring(path,comline);
@@ -874,11 +798,11 @@ begin
 end;
 
 
-function ExecuteProcess (const Path: RawByteString;
-                                  const ComLine: array of RawByteString;Flags:TExecuteFlags=[]): integer;
+function ExecuteProcess (const Path: AnsiString;
+                                  const ComLine: array of AnsiString;Flags:TExecuteFlags=[]): integer;
 
 var
-  CommandLine: RawByteString;
+  CommandLine: AnsiString;
   I: integer;
 
 begin
@@ -906,14 +830,14 @@ begin
    because it should be supported in all DOS versions. Not precise at all,
    though - the smallest step is 10 ms even in the best case. *)
   R.AH := $2C;
-  MsDos(R);
+  Intr($21, R);
   T0 := R.CH * 3600000 + R.CL * 60000 + R.DH * 1000 + R.DL * 10;
   T2 := T0 + MilliSeconds;
   DayOver := T2 > (24 * 3600000);
   repeat
     Intr ($28, R);
 (*    R.AH := $2C; - should be preserved. *)
-    MsDos(R);
+    Intr($21, R);
     T1 := R.CH * 3600000 + R.CL * 60000 + R.DH * 1000 + R.DL * 10;
     if DayOver and (T1 < T0) then
      Inc (T1, 24 * 3600000);
@@ -929,6 +853,5 @@ Initialization
   InitInternational;    { Initialize internationalization settings }
   OnBeep:=@SysBeep;
 Finalization
-  FreeTerminateProcs;
   DoneExceptions;
 end.

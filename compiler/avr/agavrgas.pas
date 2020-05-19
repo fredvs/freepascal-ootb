@@ -29,9 +29,9 @@ unit agavrgas;
   interface
 
     uses
-       globtype,systems,
+       globtype,
        aasmtai,aasmdata,
-       assemble,aggas,
+       aggas,
        cpubase;
 
     type
@@ -39,7 +39,7 @@ unit agavrgas;
       { TAVRGNUAssembler }
 
       TAVRGNUAssembler=class(TGNUassembler)
-        constructor CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean); override;
+        constructor create(smart: boolean); override;
        function MakeCmdLine: TCmdStr; override;
       end;
 
@@ -52,6 +52,8 @@ unit agavrgas;
 
     uses
        cutils,globals,verbose,
+       systems,
+       assemble,
        aasmbase,aasmcpu,
        itcpugas,
        cpuinfo,
@@ -61,9 +63,9 @@ unit agavrgas;
 {                         GNU Arm Assembler writer                           }
 {****************************************************************************}
 
-    constructor TAVRGNUAssembler.CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean);
+    constructor TAVRGNUAssembler.create(smart: boolean);
       begin
-        inherited;
+        inherited create(smart);
         InstrWriter := TAVRInstrWriter.create(self);
       end;
 
@@ -74,9 +76,6 @@ unit agavrgas;
 
 
     Procedure TAVRInstrWriter.WriteInstruction(hp : tai);
-
-      var
-        op: TAsmOp;
 
       function getreferencestring(var ref : treference) : string;
         var
@@ -107,45 +106,34 @@ unit agavrgas;
                     NR_R30:
                       s:=s+'Z';
                     else
-                      s:=s+gas_regname(base);
+                      s:=gas_regname(base);
                   end;
                   if addressmode=AM_POSTINCREMENT then
-                    s:=s+'+'
-                  else if addressmode = AM_UNCHANGED then
-                    begin
-                      if (offset>0) or ((offset=0) and (op in [A_LDD,A_STD])) then
-                        s:=s+'+'+tostr(offset)
-                      else if offset<0 then
-                        s:=s+tostr(offset);
-                    end;
+                    s:=s+'+';
+
+                  if offset>0 then
+                    s:=s+'+'+tostr(offset)
+                  else if offset<0 then
+                    s:=s+tostr(offset)
                 end
               else if assigned(symbol) or (offset<>0) then
                 begin
                   if assigned(symbol) then
                     s:=ReplaceForbiddenAsmSymbolChars(symbol.name);
 
-                  if s='' then
-                    s:=tostr(offset)
-                  else if offset<0 then
+                  if offset<0 then
                     s:=s+tostr(offset)
                   else if offset>0 then
                     s:=s+'+'+tostr(offset);
                   case refaddr of
                     addr_hi8:
                       s:='hi8('+s+')';
-                    addr_hi8_gs:
-                      s:='hi8(gs('+s+'))';
                     addr_lo8:
                       s:='lo8('+s+')';
-                    addr_lo8_gs:
-                      s:='lo8(gs('+s+'))';
                     else
                       s:='('+s+')';
                   end;
-                end
-              { reference to address 0? }
-              else if not(assigned(symbol)) and (offset=0) then
-                s:='(0)';
+                end;
             end;
           getreferencestring:=s;
         end;
@@ -167,8 +155,9 @@ unit agavrgas;
                 begin
                   hs:=ReplaceForbiddenAsmSymbolChars(o.ref^.symbol.name);
                   if o.ref^.offset>0 then
-                    hs:=hs+'+'+tostr(o.ref^.offset)
-                  else if o.ref^.offset<0 then
+                   hs:=hs+'+'+tostr(o.ref^.offset)
+                  else
+                   if o.ref^.offset<0 then
                     hs:=hs+tostr(o.ref^.offset);
                   getopstr:=hs;
                 end
@@ -179,10 +168,10 @@ unit agavrgas;
           end;
         end;
 
-    var
-      s: string;
-      i: byte;
-      sep: string[3];
+    var op: TAsmOp;
+        s: string;
+        i: byte;
+        sep: string[3];
     begin
       op:=taicpu(hp).opcode;
       s:=#9+gas_op2str[op]+cond2str[taicpu(hp).condition];
@@ -195,7 +184,7 @@ unit agavrgas;
               sep:=',';
             end;
         end;
-      owner.writer.AsmWriteLn(s);
+      owner.AsmWriteLn(s);
     end;
 
 
@@ -206,7 +195,7 @@ unit agavrgas;
 
 
     const
-       as_avr_gas_info : tasminfo =
+       as_arm_gas_info : tasminfo =
           (
             id     : as_gas;
 
@@ -222,5 +211,5 @@ unit agavrgas;
 
 
 begin
-  RegisterAssembler(as_avr_gas_info,TAVRGNUAssembler);
+  RegisterAssembler(as_arm_gas_info,TAVRGNUAssembler);
 end.

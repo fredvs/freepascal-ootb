@@ -40,16 +40,17 @@ implementation
 {$ELSE}
       fksysutl,
 {$ENDIF}
-      cclasses,
-      globtype,tokens,systems,globals,verbose,switches,globstat,
-      symbase,symtable,symdef,
+      cutils,cclasses,
+      globtype,version,tokens,systems,globals,verbose,switches,globstat,
+      symbase,symtable,symdef,symsym,
       finput,fmodule,fppu,
-      aasmdata,
-      cscript,gendef,
+      aasmbase,aasmtai,aasmdata,
+      cgbase,
+      script,gendef,
       comphook,
       scanner,scandir,
-      pbase,psystem,pmodules,psub,ncgrtti,
-      cpuinfo,procinfo;
+      pbase,ptype,psystem,pmodules,psub,ncgrtti,htypechk,
+      cresstr,cpuinfo,procinfo;
 
 
     procedure initparser;
@@ -115,27 +116,15 @@ implementation
 
          { target specific stuff }
          case target_info.system of
-           system_arm_aros,
-           system_arm_palmos,
-           system_m68k_amiga,
-           system_m68k_atari,
-           system_m68k_palmos,
-           system_i386_aros,
-           system_powerpc_amiga,
-           system_powerpc_morphos,
-           system_x86_64_aros:
+           system_powerpc_amiga:
+             include(supported_calling_conventions,pocall_syscall);
+           system_powerpc_morphos:
+             include(supported_calling_conventions,pocall_syscall);
+           system_m68k_amiga:
+             include(supported_calling_conventions,pocall_syscall);
+           system_i386_aros:
              include(supported_calling_conventions,pocall_syscall);
 {$ifdef i8086}
-           system_i8086_embedded:
-             begin
-               if stacksize=0 then
-                 begin
-                   if init_settings.x86memorymodel in x86_far_data_models then
-                     stacksize:=16384
-                   else
-                     stacksize:=2048;
-                 end;
-             end;
            system_i8086_msdos:
              begin
                if stacksize=0 then
@@ -151,23 +140,6 @@ implementation
                      maxheapsize:=655360
                    else
                      maxheapsize:=65520;
-                 end;
-             end;
-           system_i8086_win16:
-             begin
-               if stacksize=0 then
-                 begin
-                   if init_settings.x86memorymodel in x86_far_data_models then
-                     stacksize:=8192
-                   else
-                     stacksize:=5120;
-                 end;
-               if heapsize=0 then
-                 begin
-                   if init_settings.x86memorymodel in x86_far_data_models then
-                     heapsize:=8192
-                   else
-                     heapsize:=4096;
                  end;
              end;
 {$endif i8086}
@@ -233,35 +205,31 @@ implementation
       var
         i : longint;
       begin
-         preprocfile:=tpreprocfile.create('pre_'+filename);
+         new(preprocfile,init('pre'));
        { initialize a module }
-         set_current_module(tppumodule.create(nil,'',filename,false));
-         macrosymtablestack:=TSymtablestack.create;
+         set_current_module(new(pmodule,init(filename,false)));
 
-         current_scanner:=tscannerfile.Create(filename);
-         current_scanner.firstfile;
-         current_module.scanner:=current_scanner;
-
-         { init macros before anything in the file is parsed.}
+         macrosymtablestack:= initialmacrosymtable;
          current_module.localmacrosymtable:= tmacrosymtable.create(false);
-         macrosymtablestack.push(initialmacrosymtable);
-         macrosymtablestack.push(current_module.localmacrosymtable);
-
-         { read the first token }
-         // current_scanner.readtoken(false);
+         current_module.localmacrosymtable.next:= initialmacrosymtable;
+         macrosymtablestack:= current_module.localmacrosymtable;
 
          main_module:=current_module;
+       { startup scanner, and save in current_module }
+         current_scanner:=new(pscannerfile,Init(filename));
+         current_module.scanner:=current_scanner;
+       { loop until EOF is found }
          repeat
-           current_scanner.readtoken(true);
-           preprocfile.AddSpace;
+           current_scanner^.readtoken(true);
+           preprocfile^.AddSpace;
            case token of
              _ID :
                begin
-                 preprocfile.Add(orgpattern);
+                 preprocfile^.Add(orgpattern);
                end;
              _REALNUMBER,
              _INTCONST :
-               preprocfile.Add(pattern);
+               preprocfile^.Add(pattern);
              _CSTRING :
                begin
                  i:=0;
@@ -274,7 +242,7 @@ implementation
                        inc(i);
                      end;
                   end;
-                 preprocfile.Add(''''+cstringpattern+'''');
+                 preprocfile^.Add(''''+cstringpattern+'''');
                end;
              _CCHAR :
                begin
@@ -290,19 +258,19 @@ implementation
                    else
                      pattern:=''''+pattern[1]+'''';
                  end;
-                 preprocfile.Add(pattern);
+                 preprocfile^.Add(pattern);
                end;
              _EOF :
                break;
              else
-               preprocfile.Add(tokeninfo^[token].str)
+               preprocfile^.Add(tokeninfo^[token].str)
            end;
          until false;
        { free scanner }
-         current_scanner.destroy;
+         dispose(current_scanner,done);
          current_scanner:=nil;
        { close }
-         preprocfile.destroy;
+         dispose(preprocfile,done);
       end;
 {$endif PREPROCWRITE}
 
@@ -339,6 +307,7 @@ implementation
          named_args_allowed:=false;
          got_addrn:=false;
          getprocvardef:=nil;
+         allow_array_constructor:=false;
 
        { show info }
          Message1(parser_i_compiling,filename);
@@ -410,14 +379,10 @@ implementation
                raise;
              on Exception do
                begin
-                 { Generate exception_raised message,
-                   but avoid multiple messages by
-                   guarding with exception_raised global variable }
-                 if not exception_raised then
-                   begin
-                     exception_raised:=true;
-                     Message(general_e_exception_raised);
-                   end;
+                 { Increase errorcounter to prevent some
+                   checks during cleanup,
+                   but use GenerateError procedure for this. }
+                 GenerateError;
                  raise;
                end;
            end;

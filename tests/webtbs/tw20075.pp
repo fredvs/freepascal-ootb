@@ -19,13 +19,13 @@ type
 
 function TTest.GetCount(TheArray: TNodeArray; Count: Integer): Integer; assembler;
 asm
-  MOV     EAX, ECX
+  MOV     EAX, EDX
 end;
 
 {$IMPLICITEXCEPTIONS OFF}
 function TTest.GetCountNoExceptions(TheArray: TNodeArray; Count: Integer): Integer; assembler;
 asm
-  MOV     EAX, ECX
+  MOV     EAX, EDX
 end;
 {$IMPLICITEXCEPTIONS ON}
 

@@ -1,4 +1,3 @@
-{
   adapted for use with Free Pascal by Florian Klaempfl
 }
 { -------------------------------------------------- }

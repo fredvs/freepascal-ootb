@@ -15,7 +15,6 @@
 unit go32;
 
 {$S-,R-,I-,Q-} {no stack check, used by DPMIEXCP !! }
-{$inline ON}
 
 interface
 
@@ -79,9 +78,9 @@ interface
 
       tdpmiversioninfo = record
         major, minor: byte;
-        flags: word;
-        cpu: byte;
-        master_pic, slave_pic: byte;
+	flags: word;
+	cpu: byte;
+	master_pic, slave_pic: byte;
       end;
 
     { this works only with real DPMI }
@@ -89,7 +88,7 @@ interface
     function free_ldt_descriptor(d : word) : boolean;
     function segment_to_descriptor(seg : word) : word;
     function get_next_selector_increment_value : word;
-    function get_segment_base_address(d : word) : dword;
+    function get_segment_base_address(d : word) : longint;
     function set_segment_base_address(d : word;s : dword) : boolean;
     function set_segment_limit(d : word;s : dword): boolean;
     function set_descriptor_access_right(d : word;w : word) : boolean;
@@ -156,7 +155,6 @@ interface
     function unlock_data(var data;size : longint) : boolean;
     function unlock_code(functionaddr : pointer;size : longint) : boolean;
 
-{$ifdef VER3_0}
     { disables and enables interrupts }
     procedure disable;
     procedure enable;
@@ -168,19 +166,6 @@ interface
     procedure outportb(port : word;data : byte);
     procedure outportw(port : word;data : word);
     procedure outportl(port : word;data : longint);
-{$else VER3_0}
-    { disables and enables interrupts }
-    procedure disable;inline;
-    procedure enable;inline;
-
-    function inportb(port : word) : byte;inline;
-    function inportw(port : word) : word;inline;
-    function inportl(port : word) : longint;inline;
-
-    procedure outportb(port : word;data : byte);inline;
-    procedure outportw(port : word;data : word);inline;
-    procedure outportl(port : word;data : longint);inline;
-{$endif VER3_0}
     function get_run_mode : word;
 
     function transfer_buffer : longint;
@@ -462,7 +447,6 @@ interface
            end ['ECX','EAX'];
       end;
 
-{$ifdef VER3_0}
     procedure outportb(port : word;data : byte);
 
       begin
@@ -522,37 +506,6 @@ interface
             movl %eax,__RESULT
          end ['EAX','EDX'];
       end;
-{$else VER3_0}
-    procedure outportb(port : word;data : byte);inline;
-      begin
-	    fpc_x86_outportb(port,data);
-      end;
-
-    procedure outportw(port : word;data : word);inline;
-      begin
-	    fpc_x86_outportw(port,data);
-      end;
-
-    procedure outportl(port : word;data : longint);inline;
-      begin
-	    fpc_x86_outportl(port,data);
-      end;
-
-    function inportb(port : word) : byte;inline;
-      begin
-	    inportb:=fpc_x86_inportb(port);
-      end;
-
-    function inportw(port : word) : word;inline;
-      begin
-	    inportw:=fpc_x86_inportw(port);
-      end;
-
-    function inportl(port : word) : longint;inline;
-      begin
-	    inportl:=fpc_x86_inportl(port);
-      end;
-{$endif VER3_0}
 
 
 
@@ -818,7 +771,7 @@ interface
          end;
       end;
 
-    function get_segment_base_address(d : word) : dword;
+    function get_segment_base_address(d : word) : longint;
 
       begin
          asm
@@ -949,24 +902,24 @@ interface
     function lock_data(var data;size : longint) : boolean;
 
       var
-         linearaddr : dword;
+         linearaddr : longint;
 
       begin
          if get_run_mode<>rm_dpmi then
            exit;
-         linearaddr:=dword(@data)+get_segment_base_address(get_ds);
+         linearaddr:=longint(@data)+get_segment_base_address(get_ds);
          lock_data:=lock_linear_region(linearaddr,size);
       end;
 
     function lock_code(functionaddr : pointer;size : longint) : boolean;
 
       var
-         linearaddr : dword;
+         linearaddr : longint;
 
       begin
          if get_run_mode<>rm_dpmi then
            exit;
-         linearaddr:=dword(functionaddr)+get_segment_base_address(get_cs);
+         linearaddr:=longint(functionaddr)+get_segment_base_address(get_cs);
          lock_code:=lock_linear_region(linearaddr,size);
       end;
 
@@ -997,22 +950,22 @@ interface
     function unlock_data(var data;size : longint) : boolean;
 
       var
-         linearaddr : dword;
+         linearaddr : longint;
       begin
          if get_run_mode<>rm_dpmi then
            exit;
-         linearaddr:=dword(@data)+get_segment_base_address(get_ds);
+         linearaddr:=longint(@data)+get_segment_base_address(get_ds);
          unlock_data:=unlock_linear_region(linearaddr,size);
       end;
 
     function unlock_code(functionaddr : pointer;size : longint) : boolean;
 
       var
-         linearaddr : dword;
+         linearaddr : longint;
       begin
          if get_run_mode<>rm_dpmi then
            exit;
-         linearaddr:=dword(functionaddr)+get_segment_base_address(get_cs);
+         linearaddr:=longint(functionaddr)+get_segment_base_address(get_cs);
          unlock_code:=unlock_linear_region(linearaddr,size);
       end;
 
@@ -1163,12 +1116,11 @@ interface
             pushf
             call test_int31
             movb %al,__RESULT
-            popl %ecx
+	    popl %ecx
             popl %ebx
          end;
       end;
 
-{$ifdef VER3_0}
     procedure disable;assembler;
 
       asm
@@ -1180,19 +1132,6 @@ interface
       asm
          sti
       end;
-{$else VER3_0}
-    procedure disable;inline;
-
-      begin
-         fpc_x86_cli;
-      end;
-
-    procedure enable;inline;
-
-      begin
-         fpc_x86_sti;
-      end;
-{$endif VER3_0}
 
 
     var
@@ -1233,8 +1172,8 @@ interface
            pushl %edx
            pushl %esi
            pushw %es
-           pushw %ds
-           popw %es
+	   pushw %ds
+	   popw %es
            movl buf,%edx
            movl handle,%esi
            movl offset,%ebx
@@ -1244,12 +1183,12 @@ interface
            pushf
            call test_int31
            movb %al,__RESULT
-           popw %es
+	   popw %es
            popl %esi
            popl %edx
            popl %ecx
            popl %ebx
-         end;
+	 end;
       end;
 
     function set_page_attributes(handle, offset, pagecount: dword; buf: pointer): boolean;
@@ -1260,8 +1199,8 @@ interface
            pushl %edx
            pushl %esi
            pushw %es
-           pushw %ds
-           popw %es
+	   pushw %ds
+	   popw %es
            movl buf,%edx
            movl handle,%esi
            movl offset,%ebx
@@ -1271,12 +1210,12 @@ interface
            pushf
            call test_int31
            movb %al,__RESULT
-           popw %es
+	   popw %es
            popl %esi
            popl %edx
            popl %ecx
            popl %ebx
-         end;
+	 end;
       end;
 
     function get_dpmi_version(var version: tdpmiversioninfo): boolean;
@@ -1287,24 +1226,24 @@ interface
            movl $0x0400,%eax
            int $0x31
            pushf
-           movw %ax,_version
-           movw %bx,_flags
-           movw %cx,_cpu
-           movw %dx,_pic
+	   movw %ax,_version
+	   movw %bx,_flags
+	   movw %cx,_cpu
+	   movw %dx,_pic
            call test_int31
            movb %al,__RESULT
-         end ['EAX','EBX','ECX','EDX'];
+	 end ['EAX','EBX','ECX','EDX'];
 
-         if get_dpmi_version then
-         begin
-           FillChar(version, SizeOf(version), 0);
-           version.major := _version shr 8;
-           version.minor := _version and $ff;
-           version.flags := _flags;
-           version.cpu := _cpu and $ff;
-           version.master_pic := _pic shr 8;
-           version.slave_pic := _pic and $ff;
-         end;
+	 if get_dpmi_version then
+	 begin
+	   FillChar(version, SizeOf(version), 0);
+	   version.major := _version shr 8;
+	   version.minor := _version and $ff;
+	   version.flags := _flags;
+	   version.cpu := _cpu and $ff;
+	   version.master_pic := _pic shr 8;
+	   version.slave_pic := _pic and $ff;
+	 end;
       end;
 
 {*****************************************************************************

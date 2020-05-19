@@ -1,5 +1,5 @@
 { %needlibrary }
-{ %target=linux,haiku }
+{ %target=linux }
 {$mode objfpc}
 
 {$linklib tw3964a}

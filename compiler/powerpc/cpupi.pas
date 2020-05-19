@@ -33,7 +33,7 @@ unit cpupi;
        procinfo,cpuinfo,psub;
 
     type
-       tcpuprocinfo = class(tcgprocinfo)
+       tppcprocinfo = class(tcgprocinfo)
           needstackframe: boolean;
 
           { offset where the frame pointer from the outer procedure is stored. }
@@ -66,7 +66,7 @@ unit cpupi;
        verbose,
        aasmcpu;
 
-    constructor tcpuprocinfo.create(aparent:tprocinfo);
+    constructor tppcprocinfo.create(aparent:tprocinfo);
 
       begin
          inherited create(aparent);
@@ -76,15 +76,14 @@ unit cpupi;
       end;
 
 
-    procedure tcpuprocinfo.set_first_temp_offset;
+    procedure tppcprocinfo.set_first_temp_offset;
       var
          ofs : aword;
       begin
         if not(po_assembler in procdef.procoptions) then
           begin
             case target_info.abi of
-              abi_powerpc_aix,
-              abi_powerpc_darwin:
+              abi_powerpc_aix:
                 ofs:=maxpushedparasize+LinkageAreaSizeAIX;
               abi_powerpc_sysv:
                 ofs:=maxpushedparasize+LinkageAreaSizeSYSV;
@@ -106,7 +105,7 @@ unit cpupi;
 
 
 (*
-    procedure tcpuprocinfo.after_pass1;
+    procedure tppcprocinfo.after_pass1;
       begin
          if not(po_assembler in procdef.procoptions) then
            begin
@@ -128,13 +127,13 @@ unit cpupi;
 *)
 
 
-    function tcpuprocinfo.uses_stack_temps: boolean;
+    function tppcprocinfo.uses_stack_temps: boolean;
       begin
         result := tg.firsttemp <> tg.lasttemp;
       end;
 
 
-    function tcpuprocinfo.calc_stackframe_size:longint;
+    function tppcprocinfo.calc_stackframe_size:longint;
       var
         low_nonvol_fpu_reg, regcounter: tsuperregister;
       begin
@@ -144,8 +143,7 @@ unit cpupi;
             first_save_int_reg := 32;
             { FIXME: has to be R_F14 instead of R_F8 for SYSV-64bit }
             case target_info.abi of
-              abi_powerpc_aix,
-              abi_powerpc_darwin:
+              abi_powerpc_aix:
                 low_nonvol_fpu_reg := RS_F14;
               abi_powerpc_sysv:
                 low_nonvol_fpu_reg := RS_F14;
@@ -170,7 +168,7 @@ unit cpupi;
               end;
             if not(pi_do_call in flags) and
                (not uses_stack_temps) and
-               (((target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) and
+               (((target_info.abi = abi_powerpc_aix) and
                  ((32-first_save_int_reg)*4+(32-first_save_fpu_reg)*8 <= 220)) or
                 ((target_info.abi = abi_powerpc_sysv) and
                  (first_save_int_reg + first_save_fpu_reg = 64))) then
@@ -194,7 +192,7 @@ unit cpupi;
       end;
 
 
-    procedure tcpuprocinfo.allocate_got_register(list: TAsmList);
+    procedure tppcprocinfo.allocate_got_register(list: TAsmList);
       begin
         if (target_info.system = system_powerpc_darwin) and
            (cs_create_pic in current_settings.moduleswitches) then
@@ -204,13 +202,13 @@ unit cpupi;
       end;
 
 
-    procedure tcpuprocinfo.postprocess_code;
+    procedure tppcprocinfo.postprocess_code;
       begin
         fixup_jmps(aktproccode);
       end;
 
 
 begin
-   cprocinfo:=tcpuprocinfo;
+   cprocinfo:=tppcprocinfo;
 end.
 

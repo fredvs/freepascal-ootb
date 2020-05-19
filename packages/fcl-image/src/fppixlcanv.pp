@@ -17,7 +17,7 @@ unit FPPixlCanv;
 
 interface
 
-uses Sysutils, classes, FPImage, FPCanvas, PixTools, ellipses;
+uses classes, FPImage, FPCanvas, PixTools, ellipses;
 
 type
 
@@ -63,7 +63,7 @@ const
   PenPatterns : array[psDash..psDashDotDot] of TPenPattern =
     ($EEEEEEEE, $AAAAAAAA, $E4E4E4E4, $EAEAEAEA);
   sErrNoImage:string = 'No brush image specified';
-  sErrNotAvailable:string = 'Not available';
+  sErrNotAvailable:string = 'Not availlable';
 
 implementation
 
@@ -74,7 +74,7 @@ const
 
 procedure NotImplemented;
 begin
-  raise ENotImplemented.Create(sErrNotAvailable);
+  raise PixelCanvasException.Create(sErrNotAvailable);
 end;
 
 constructor TFPPixelCanvas.create;

@@ -22,8 +22,6 @@
       opennames : array [0..max_files-1] of pchar;
    const
       free_closed_names : boolean = true;
-      verbose_files : boolean = true;
-
 {$endif SYSTEMDEBUG}
 
 
@@ -40,30 +38,19 @@ begin
   regs.BX:=handle;
   if handle<max_files then
     begin
+       openfiles[handle]:=false;
 {$ifdef SYSTEMDEBUG}
-       if not openfiles[handle] then
-          Writeln(stderr,'Trying to close file h=',handle,' marked as closed');
        if assigned(opennames[handle]) and free_closed_names then
          begin
-            if verbose_files then
-              Writeln(stderr,'file ',opennames[handle],' closed');
-
             sysfreememsize(opennames[handle],strlen(opennames[handle])+1);
             opennames[handle]:=nil;
          end;
 {$endif SYSTEMDEBUG}
-       openfiles[handle]:=false;
     end;
   regs.AX:=$3e00;
   MsDos(regs);
   if (regs.Flags and fCarry) <> 0 then
-   begin
-     GetInOutRes(regs.AX);
-{$ifdef SYSTEMDEBUG}
-     if verbose_files then
-       Writeln(stderr,'file close failed AX= ',regs.AX);
-{$endif SYSTEMDEBUG}
-   end;
+   GetInOutRes(regs.AX);
 end;
 
 
@@ -76,11 +63,9 @@ begin
   DoDirSeparators(p,pchangeable);
   regs.DX:=Ofs(p^);
   regs.DS:=Seg(p^);
-{$ifndef RTLLITE}
   if LFNSupport then
    regs.AX:=$7141
   else
-{$endif ndef RTLLITE}
    regs.AX:=$4100;
   regs.SI:=0;
   regs.CX:=0;
@@ -105,11 +90,9 @@ begin
   regs.DX:=Ofs(p1^);
   regs.ES:=Seg(p2^);
   regs.DI:=Ofs(p2^);
-{$ifndef RTLLITE}
   if LFNSupport then
    regs.AX:=$7156
   else
-{$endif ndef RTLLITE}
    regs.AX:=$5600;
   regs.CX:=$ff;            { attribute problem here ! }
   MsDos(regs);
@@ -270,10 +253,6 @@ var
   action : word;
   oldp : pchar;
 begin
-{$ifdef SYSTEMDEBUG}
-  if verbose_files then
-     Writeln(stderr,'do_open for file "',p,'" called');
-{$endif SYSTEMDEBUG}
 { close first if opened }
   if ((flags and $10000)=0) then
    begin
@@ -369,10 +348,6 @@ begin
       GetInOutRes(regs.AX);
       if oldp<>p then
         freemem(p);
-{$ifdef SYSTEMDEBUG}
-      if verbose_files then
-        Writeln(stderr,'MSDOS INT open for file "',p,'" failed err=',regs.AX);
-{$endif SYSTEMDEBUG}
       exit;
     end
   else
@@ -384,10 +359,6 @@ begin
         FileHandleCount:=regs.AX;
 {$endif RTLLITE}
     end;
-{$ifdef SYSTEMDEBUG}
-  if verbose_files then
-     Writeln(stderr,'MSDOS INT open for file "',p,'" returned ',regs.AX);
-{$endif SYSTEMDEBUG}
   if regs.AX<max_files then
     begin
 {$ifdef SYSTEMDEBUG}
@@ -402,8 +373,6 @@ begin
 {$ifdef SYSTEMDEBUG}
        opennames[regs.AX] := sysgetmem(strlen(p)+1);
        move(p^,opennames[regs.AX]^,strlen(p)+1);
-       if verbose_files then
-         Writeln(stderr,'file ',opennames[regs.AX],' opened');
 {$endif SYSTEMDEBUG}
     end;
 { append mode }

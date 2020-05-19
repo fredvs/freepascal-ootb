@@ -27,18 +27,14 @@ interface
 
     uses
       globtype,
-      symtype,
       cgbase,cpuinfo,cpubase,
       node,nmem,ncgmem,nx86mem,ni86mem;
 
     type
        ti8086addrnode = class(ti86addrnode)
         protected
-         procedure set_labelsym_resultdef; override;
          procedure set_absvarsym_resultdef; override;
-         procedure pass_generate_code;override;
-        public
-         get_offset_only: boolean;
+         function typecheck_non_proc(realsource: tnode; out res: tnode): boolean; override;
        end;
 
        ti8086derefnode = class(tx86derefnode)
@@ -49,7 +45,7 @@ interface
        ti8086vecnode = class(tcgvecnode)
         protected
          function first_arraydef: tnode;override;
-         procedure update_reference_reg_mul(maybe_const_reg: tregister; regsize: tdef; l: aint);override;
+         procedure update_reference_reg_mul(maybe_const_reg:tregister;l:aint);override;
        end;
 
 implementation
@@ -57,7 +53,7 @@ implementation
     uses
       systems,globals,constexp,
       cutils,verbose,
-      symbase,symconst,symdef,symtable,symsym,symx86,symcpu,
+      symbase,symconst,symdef,symtable,symtype,symsym,symx86,symcpu,
       parabase,paramgr,
       aasmtai,aasmdata,
       nld,ncon,nadd,ncal,ncnv,
@@ -69,38 +65,29 @@ implementation
                              TI8086ADDRNODE
 *****************************************************************************}
 
-    procedure ti8086addrnode.set_labelsym_resultdef;
-      begin
-        if anf_ofs in addrnodeflags then
-          resultdef:=voidnearcspointertype
-        else
-          inherited;
-      end;
-
-
     procedure ti8086addrnode.set_absvarsym_resultdef;
       begin
-        if not(anf_typedaddr in addrnodeflags) then
+        if not(nf_typedaddr in flags) then
           resultdef:=voidfarpointertype
         else
           resultdef:=tcpupointerdefclass(cpointerdef).createx86(left.resultdef,x86pt_far);
       end;
 
 
-    procedure ti8086addrnode.pass_generate_code;
+    function ti8086addrnode.typecheck_non_proc(realsource: tnode; out res: tnode): boolean;
       begin
-        if get_offset_only then
+        res:=nil;
+        if (realsource.nodetype=loadn) and
+           (tloadnode(realsource).symtableentry.typ=labelsym) then
           begin
-            secondpass(left);
-
-            location_reset(location,LOC_REGISTER,OS_16);
-            location.register:=hlcg.getaddressregister(current_asmdata.CurrAsmList,voidnearpointertype);
-            if not(left.location.loc in [LOC_REFERENCE,LOC_CREFERENCE]) then
-              internalerror(2015103001);
-            hlcg.a_loadaddr_ref_reg(current_asmdata.CurrAsmList,left.resultdef,voidnearpointertype,left.location.reference,location.register);
+            if current_settings.x86memorymodel in x86_far_code_models then
+              resultdef:=voidfarpointertype
+            else
+              resultdef:=voidnearpointertype;
+            result:=true
           end
         else
-          inherited;
+          result:=inherited;
       end;
 
 {*****************************************************************************
@@ -121,9 +108,9 @@ implementation
             { assume natural alignment, except for packed records }
             if not(resultdef.typ in [recorddef,objectdef]) or
                (tabstractrecordsymtable(tabstractrecorddef(resultdef).symtable).usefieldalignment<>1) then
-              location_reset_ref(location,LOC_REFERENCE,def_cgsize(resultdef),resultdef.alignment,[])
+              location_reset_ref(location,LOC_REFERENCE,def_cgsize(resultdef),resultdef.alignment)
             else
-              location_reset_ref(location,LOC_REFERENCE,def_cgsize(resultdef),1,[]);
+              location_reset_ref(location,LOC_REFERENCE,def_cgsize(resultdef),1);
             if not(left.location.loc in [LOC_CREGISTER,LOC_REGISTER,LOC_CREFERENCE,LOC_REFERENCE,LOC_CONSTANT]) then
               hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,left.resultdef,true);
             case left.location.loc of
@@ -132,7 +119,7 @@ implementation
                  begin
                    hlcg.maybe_change_load_node_reg(current_asmdata.CurrAsmList,left,true);
                    location.reference.base := left.location.register;
-                   location.reference.segment := cg.GetNextReg(left.location.register);
+                   location.reference.segment := GetNextReg(left.location.register);
                  end;
                LOC_CREFERENCE,
                LOC_REFERENCE:
@@ -168,14 +155,13 @@ implementation
                  internalerror(2012010601);
                pd:=tprocdef(tprocsym(sym).ProcdefList[0]);
                paraloc1.init;
-               paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
-               hlcg.a_loadaddr_ref_cgpara(current_asmdata.CurrAsmList,resultdef,location.reference,paraloc1);
+               paramanager.getintparaloc(pd,1,paraloc1);
+               hlcg.a_load_reg_cgpara(current_asmdata.CurrAsmList,resultdef,location.reference.base,paraloc1);
                paramanager.freecgpara(current_asmdata.CurrAsmList,paraloc1);
                paraloc1.done;
                hlcg.allocallcpuregisters(current_asmdata.CurrAsmList);
-               hlcg.a_call_name(current_asmdata.CurrAsmList,pd,'FPC_CHECKPOINTER',[],nil,false);
+               hlcg.a_call_name(current_asmdata.CurrAsmList,pd,'FPC_CHECKPOINTER',nil,false);
                hlcg.deallocallcpuregisters(current_asmdata.CurrAsmList);
-               system.include(current_settings.moduleswitches,cs_checkpointer_called);
              end;
           end
         else
@@ -212,7 +198,7 @@ implementation
             result:=ccallnode.createintern(procname,
               ccallparanode.create(right,
               ccallparanode.create(ttypeconvnode(left).left,nil)));
-            inserttypeconv_internal(result,tx86pointerdef(cpointerdef).getreusablex86(arraydef.elementdef,x86pt_huge));
+            inserttypeconv_internal(result,getx86pointerdef(arraydef.elementdef,x86pt_huge));
             result:=cderefnode.create(result);
 
             ttypeconvnode(left).left:=nil;
@@ -226,13 +212,13 @@ implementation
       end;
 
 
-    procedure ti8086vecnode.update_reference_reg_mul(maybe_const_reg: tregister; regsize: tdef; l: aint);
+    procedure ti8086vecnode.update_reference_reg_mul(maybe_const_reg:tregister;l:aint);
       var
         saveseg: TRegister;
       begin
         saveseg:=location.reference.segment;
         location.reference.segment:=NR_NO;
-        inherited;
+        inherited update_reference_reg_mul(maybe_const_reg,l);
         location.reference.segment:=saveseg;
       end;
 

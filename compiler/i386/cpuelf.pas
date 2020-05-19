@@ -496,7 +496,6 @@ implementation
         encodereloc:       @elf_i386_encodeReloc;
         loadreloc:         @elf_i386_loadReloc;
         loadsection:       nil;
-        encodeflags:       nil;
       );
 
     as_i386_elf32_info : tasminfo =

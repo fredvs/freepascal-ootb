@@ -44,17 +44,13 @@ Function InitDebugClient : Boolean;
 
 Const
   SendError       : String = '';
-  DefaultDebugServer = 'debugserver';
- 
+
 ResourceString
   SProcessID = 'Process %s';
   SEntering = '> Entering ';
   SExiting  = '< Exiting ';
   SSeparator = '>-=-=-=-=-=-=-=-=-=-=-=-=-=-=-<';
   SServerStartFailed = 'Failed to start debugserver. (%s)';
-
-Var
-  DebugServerExe : String = DefaultDebugServer;
 
 implementation
 
@@ -212,17 +208,11 @@ end;
 
 function StartDebugServer : Integer;
 
-Var
-  Cmd : string;
-
 begin
-  Cmd:=DebugServerExe;
-  if Cmd='' then
-    Cmd:=DefaultDebugServer;
   With TProcess.Create(Nil) do
     begin
     Try
-      CommandLine:=Cmd;
+      CommandLine:='dbugsrv';
       Execute;
       Result:=ProcessID;
     Except On E: Exception do

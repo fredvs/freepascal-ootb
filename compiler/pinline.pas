@@ -28,7 +28,8 @@ interface
     uses
       symtype,
       node,
-      globals;
+      globals,
+      cpuinfo;
 
     function new_dispose_statement(is_new:boolean) : tnode;
     function new_function : tnode;
@@ -38,25 +39,27 @@ interface
     function inline_initialize : tnode;
     function inline_finalize : tnode;
     function inline_copy : tnode;
-    function inline_insert : tnode;
-    function inline_delete : tnode;
-    function inline_concat : tnode;
 
 
 implementation
 
     uses
+       { common }
+       cutils,
        { global }
        globtype,tokens,verbose,constexp,
-       systems,compinnr,
+       systems,
        { symtable }
        symbase,symconst,symdef,symsym,symtable,defutil,
        { pass 1 }
        pass_1,htypechk,
-       ncal,nmem,ncnv,ninl,ncon,nld,nbas,ngenutil,
+       nmat,nadd,ncal,nmem,nset,ncnv,ninl,ncon,nld,nflw,nbas,nutils,ngenutil,
        { parser }
        scanner,
-       pbase,pexpr;
+       pbase,pexpr,
+       { codegen }
+       cgbase
+       ;
 
 
     function new_dispose_statement(is_new:boolean) : tnode;
@@ -80,7 +83,7 @@ implementation
         if target_info.system in systems_managed_vm then
           message(parser_e_feature_unsupported_for_vm);
         consume(_LKLAMMER);
-        p:=comp_expr([ef_accept_equal]);
+        p:=comp_expr(true,false);
         { calc return type }
         if is_new then
           begin
@@ -122,7 +125,7 @@ implementation
                  exit;
               end;
 
-            do_member_read(classh,false,sym,p2,again,[],nil);
+            do_member_read(classh,false,sym,p2,again,[]);
 
             { we need the real called method }
             do_typecheckpass(p2);
@@ -151,7 +154,7 @@ implementation
             new_dispose_statement := p2;
           end
         { constructor,destructor specified }
-        else if (([m_mac,m_iso,m_extpas]*current_settings.modeswitches)=[]) and
+        else if (([m_mac,m_iso]*current_settings.modeswitches)=[]) and
                 try_to_consume(_COMMA) then
           begin
             { extended syntax of new and dispose }
@@ -164,7 +167,7 @@ implementation
             if is_typeparam(p.resultdef) then
               begin
                  p.free;
-                 p:=factor(false,[]);
+                 p:=factor(false,false);
                  p.free;
                  consume(_RKLAMMER);
                  new_dispose_statement:=cnothingnode.create;
@@ -175,7 +178,7 @@ implementation
               begin
                  Message1(type_e_pointer_type_expected,p.resultdef.typename);
                  p.free;
-                 p:=factor(false,[]);
+                 p:=factor(false,false);
                  p.free;
                  consume(_RKLAMMER);
                  new_dispose_statement:=cerrornode.create;
@@ -186,7 +189,7 @@ implementation
               begin
                  Message(parser_e_pointer_to_class_expected);
                  p.free;
-                 new_dispose_statement:=factor(false,[]);
+                 new_dispose_statement:=factor(false,false);
                  consume_all_until(_RKLAMMER);
                  consume(_RKLAMMER);
                  exit;
@@ -196,7 +199,7 @@ implementation
             if is_class(classh) then
               begin
                  Message(parser_e_no_new_or_dispose_for_classes);
-                 new_dispose_statement:=factor(false,[]);
+                 new_dispose_statement:=factor(false,false);
                  consume_all_until(_RKLAMMER);
                  consume(_RKLAMMER);
                  exit;
@@ -235,14 +238,14 @@ implementation
                 else
                   callflag:=cnf_dispose_call;
                 if is_new then
-                  do_member_read(classh,false,sym,p2,again,[callflag],nil)
+                  do_member_read(classh,false,sym,p2,again,[callflag])
                 else
                   begin
                     if not(m_fpc in current_settings.modeswitches) then
-                      do_member_read(classh,false,sym,p2,again,[callflag],nil)
+                      do_member_read(classh,false,sym,p2,again,[callflag])
                     else
                       begin
-                        p2:=ccallnode.create(nil,tprocsym(sym),sym.owner,p2,[callflag],nil);
+                        p2:=ccallnode.create(nil,tprocsym(sym),sym.owner,p2,[callflag]);
                         { support dispose(p,done()); }
                         if try_to_consume(_LKLAMMER) then
                           begin
@@ -337,7 +340,7 @@ implementation
 
                      { create call to fpc_initialize }
                      if is_managed_type(tpointerdef(p.resultdef).pointeddef) or
-                       ((m_isolike_io in current_settings.modeswitches) and (tpointerdef(p.resultdef).pointeddef.typ=filedef)) then
+                       ((m_iso in current_settings.modeswitches) and (tpointerdef(p.resultdef).pointeddef.typ=filedef)) then
                        addstatement(newstatement,cnodeutils.initialize_data_node(cderefnode.create(ctemprefnode.create(temp)),false));
 
                      { copy the temp to the destination }
@@ -345,13 +348,13 @@ implementation
                          p,
                          ctemprefnode.create(temp)));
 
-                     if (([m_iso,m_extpas]*current_settings.modeswitches)<>[]) and (is_record(tpointerdef(p.resultdef).pointeddef)) then
+                     if (m_iso in current_settings.modeswitches) and (is_record(tpointerdef(p.resultdef).pointeddef)) then
                        begin
                          variantdesc:=trecorddef(tpointerdef(p.resultdef).pointeddef).variantrecdesc;
                          while (token=_COMMA) and assigned(variantdesc) do
                            begin
                              consume(_COMMA);
-                             p2:=factor(false,[]);
+                             p2:=factor(false,false);
                              do_typecheckpass(p2);
                              if p2.nodetype=ordconstn then
                                begin
@@ -409,6 +412,10 @@ implementation
 
     function new_function : tnode;
       var
+        newstatement : tstatementnode;
+        newblock     : tblocknode;
+        temp         : ttempcreatenode;
+        para         : tcallparanode;
         p1,p2  : tnode;
         classh : tobjectdef;
         srsym    : tsym;
@@ -418,7 +425,7 @@ implementation
         if target_info.system in systems_managed_vm then
           message(parser_e_feature_unsupported_for_vm);
         consume(_LKLAMMER);
-        p1:=factor(false,[]);
+        p1:=factor(false,false);
         if p1.nodetype<>typen then
          begin
            Message(type_e_type_id_expected);
@@ -472,7 +479,7 @@ implementation
             afterassignment:=false;
             searchsym_in_class(classh,classh,pattern,srsym,srsymtable,[ssf_search_helper]);
             consume(_ID);
-            do_member_read(classh,false,srsym,p1,again,[cnf_new_call],nil);
+            do_member_read(classh,false,srsym,p1,again,[cnf_new_call]);
             { we need to know which procedure is called }
             do_typecheckpass(p1);
             if not(
@@ -633,7 +640,7 @@ implementation
       end;
 
 
-    function inline_copy_insert_delete(nr:tinlinenumber;name:string;checkempty:boolean) : tnode;
+    function inline_copy : tnode;
       var
         paras   : tnode;
         { for easy exiting if something goes wrong }
@@ -643,38 +650,13 @@ implementation
         consume(_LKLAMMER);
         paras:=parse_paras(false,false,_RKLAMMER);
         consume(_RKLAMMER);
-        if not assigned(paras) and checkempty then
+        if not assigned(paras) then
           begin
-            CGMessage1(parser_e_wrong_parameter_size,name);
+            CGMessage1(parser_e_wrong_parameter_size,'Copy');
             exit;
           end;
         result.free;
-        result:=cinlinenode.create(nr,false,paras);
+        result:=cinlinenode.create(in_copy_x,false,paras);
       end;
-
-
-    function inline_copy: tnode;
-      begin
-        result:=inline_copy_insert_delete(in_copy_x,'Copy',true);
-      end;
-
-
-    function inline_insert: tnode;
-      begin
-        result:=inline_copy_insert_delete(in_insert_x_y_z,'Insert',false);
-      end;
-
-
-    function inline_delete: tnode;
-      begin
-        result:=inline_copy_insert_delete(in_delete_x_y_z,'Delete',false);
-      end;
-
-
-    function inline_concat: tnode;
-      begin
-        result:=inline_copy_insert_delete(in_concat_x,'Concat',false);
-      end;
-
 
 end.

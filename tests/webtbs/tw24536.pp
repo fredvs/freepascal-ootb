@@ -9,7 +9,7 @@ type
   end;
 
 var
-  Foo,Foo2: CodePointer;
+  Foo,Foo2: Pointer;
 begin
   Foo := @TMyClass.MyAbstractMethod;
   Foo2 := @TMyClass.MyAbstractMethod2;

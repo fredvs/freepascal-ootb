@@ -63,8 +63,8 @@ begin
     Result := DataSource.DataSet.FActiveRecord - (FFirstRecord + Index + FBufferCount - 1)
   else if DataSource.DataSet.FActiveRecord < FFirstRecord + Index then
     Result := DataSource.DataSet.FActiveRecord - (FFirstRecord + Index)
-  else
-    Result := 0;
+  else Result := 0;
+  
   Inc(FFirstRecord, Index + Result);
 end;
 
@@ -73,12 +73,6 @@ Procedure TDataLink.CalcRange;
 var
     aMax, aMin: integer;
 begin
-  // During loading, dataset may not be set yet.
-  If (Dataset=Nil) then
-    begin
-    FFirstRecord:=0; 
-    exit;
-    end;
   aMin:= DataSet.FActiveRecord - FBufferCount + 1;
   If aMin < 0 Then aMin:= 0;
   aMax:= Dataset.FBufferCount - FBufferCount;
@@ -559,21 +553,10 @@ begin
 end;
 
 
-Function TDataSource.IsLinkedTo(ADataset: TDataSet): Boolean;
-
-var
-  DS: TDataSource;
+Function TDataSource.IsLinkedTo(ADataSet: TDataSet): Boolean;
 
 begin
   Result:=False;
-  Repeat
-    DS:=aDataset.GetDataSource;
-    Result:=(DS=Self);
-    if Assigned(DS) then
-      aDataSet := DS.DataSet
-    else
-      aDataSet := Nil;
-  Until Result or (aDataset=Nil)
 end;
 
 
@@ -597,16 +580,6 @@ begin
     end;
 end;
 
-function TDataSource.GetLink(AIndex : Integer): TDataLink;
-begin
-  Result:=TDataLink(FDataLinks[aindex]);
-end;
-
-function TDataSource.GetLinkCount: Integer;
-begin
-  Result:=FDataLinks.Count;
-end;
-
 procedure TDatasource.RegisterDataLink(DataLink: TDataLink);
 
 begin
@@ -626,10 +599,8 @@ begin
     End;
   If ADataset<>Nil Then
     begin
-    if IsLinkedTo(aDataset) then
-      DatabaseError(SErrCircularDataSourceReferenceNotAllowed,Self);
-    FDataSet:=ADataset;
     ADataset.RegisterDatasource(Self);
+    FDataSet:=ADataset;
     ProcessEvent(deUpdateState,0);
     End;
 end;
@@ -683,7 +654,7 @@ Const
 
 Var
   NeedDataChange : Boolean;
-  FLastState : TDataSetState;
+  FLastState : TdataSetState;
 
 begin
   // Special UpdateState handling.
@@ -701,18 +672,17 @@ begin
     end
   else
     NeedDataChange:=True;
-  if (Event<>deUpdateState) and (FState=dsInactive) then
-    Exit;
   DistributeEvent(Event,Info);
   // Extra handlers
   If Not (csDestroying in ComponentState) then
     begin
     If (Event=deUpdateState) then
       DoStateChange;
-    If (Event in OnDataChangeEvents) and NeedDataChange Then
+    If (Event in OnDataChangeEvents) and
+       NeedDataChange Then
       DoDataChange(Nil);
     If (Event = deFieldChange) Then
-      DoDataChange(Pointer(Info));
+      DoDataCHange(Pointer(Info));
     If (Event=deUpdateRecord) then
       DoUpdateData;
     end;

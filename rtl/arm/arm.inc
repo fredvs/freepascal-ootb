@@ -15,12 +15,7 @@
 
  **********************************************************************}
 
-{ IMPORTANT!
-  Never use the "BLX label" instruction! Use "BL label" instead.
-  The linker will always change BL to BLX if necessary, but not vice versa (linker version dependent).
-  "BLX label" ALWAYS changes the instruction set. It changes a processor in ARM state to Thumb state,
-  or a processor in Thumb state to ARM state.
-}
+{$asmmode gas}
 
 {$ifndef FPC_SYSTEM_HAS_MOVE}
 {$define FPC_SYSTEM_FPC_MOVE}
@@ -35,7 +30,7 @@ const
 {$if not(defined(wince)) and not(defined(gba)) and not(defined(nds)) and not(defined(FPUSOFT)) and not(defined(FPULIBGCC))}
 
 {$define FPC_SYSTEM_HAS_SYSINITFPU}
-{$if not defined(darwin) and not defined(FPUVFPV2) and not defined(FPUVFPV3) and not defined(FPUVFPV4) and not defined(FPUVFPV3_D16)}
+{$if not defined(darwin) and not defined(FPUVFPV2) and not defined(FPUVFPV3) and not defined(FPUVFPV3_D16)}
 Procedure SysInitFPU;{$ifdef SYSTEMINLINE}inline;{$endif}
 begin
   { Enable FPU exceptions, but disable INEXACT, UNDERFLOW, DENORMAL }
@@ -188,14 +183,8 @@ asm
 
         tst     r1, #4
         strne   r2,[r3],#4
-{$ifdef CPUARM_HAS_ALL_MEM}
         tst     r1, #2
         strneh  r2,[r3],#2
-{$else CPUARM_HAS_ALL_MEM}
-        tst     r1, #2
-        strneb  r2,[r3],#1
-        strneb  r2,[r3],#1
-{$endif CPUARM_HAS_ALL_MEM}
         tst     r1, #1
         strneb  r2,[r3],#1
 {$ifdef CPUARM_HAS_BX}
@@ -228,10 +217,7 @@ procedure Move(const source;var dest;count:longint);[public, alias: 'FPC_MOVE'];
 procedure Move_pld(const source;var dest;count:longint);assembler;nostackframe;
 {$endif CPUARM_HAS_EDSP}
 asm
-  // pld [r0]
-  // encode this using .long so the rtl assembles also with instructions sets not supporting pld
-  .long 0xf5d0f000
-
+  pld [r0]
   // count <=0 ?
   cmp r2,#0
 {$ifdef CPUARM_HAS_BX}
@@ -251,18 +237,11 @@ asm
   tsteq r1, #3         //    (dest and 3) <> 0 then
   bne   .Lbyteloop     //   DoForwardByteCopy;
 
-  // pld   [r0,#32]
-  // encode this using .long so the rtl assembles also with instructions sets not supporting pld
-  .long 0xf5d0f020
-
+  pld   [r0,#32]
 .Ldwordloop:
   ldmia r0!, {r3, ip}
-
   // preload
-  // pld   [r0,#64]
-  // encode this using .long so the rtl assembles also with instructions sets not supporting pld
-  .long 0xf5d0f040
-
+  pld   [r0,#64]
   sub   r2,r2,#8
   cmp   r2, #8
   stmia r1!, {r3, ip}
@@ -554,7 +533,11 @@ asm
 {$endif}
   stmfd   sp!, {r1, lr}
   sub     r0, r1, #8
+{$ifdef CPUARM_HAS_BLX}
+  blx     InterLockedDecrement
+{$else}
   bl      InterLockedDecrement
+{$endif}
   // InterLockedDecrement is a nice guy and sets the z flag for us
   // if the reference count dropped to 0
   ldmnefd sp!, {r1, pc}
@@ -659,7 +642,11 @@ asm
 // lock
   {$ifdef FPC_PIC}
     push {r0,lr}
-    bl get_fpc_system_lock_ptr
+    {$ifdef CPUARM_HAS_BLX}
+      blx get_fpc_system_lock_ptr
+    {$else}
+      bl get_fpc_system_lock_ptr
+    {$endif CPUARM_HAS_BLX}
     mov r3,r0
     pop {r0,lr}
   {$else FPC_PIC}
@@ -740,7 +727,11 @@ asm
 // lock
   {$ifdef FPC_PIC}
     push {r0,lr}
-    bl get_fpc_system_lock_ptr
+    {$ifdef CPUARM_HAS_BLX}
+      blx get_fpc_system_lock_ptr
+    {$else}
+      bl get_fpc_system_lock_ptr
+    {$endif CPUARM_HAS_BLX}
     mov r3,r0
     pop {r0,lr}
   {$else FPC_PIC}
@@ -821,7 +812,11 @@ asm
 // lock
   {$ifdef FPC_PIC}
     push {r0,r1,lr}
-    bl get_fpc_system_lock_ptr
+    {$ifdef CPUARM_HAS_BLX}
+      blx get_fpc_system_lock_ptr
+    {$else}
+      bl get_fpc_system_lock_ptr
+    {$endif CPUARM_HAS_BLX}
     mov r3,r0
     pop {r0,r1,lr}
   {$else FPC_PIC}
@@ -907,7 +902,11 @@ asm
 // lock
   {$ifdef FPC_PIC}
     push {r0,r1,lr}
-    bl get_fpc_system_lock_ptr
+    {$ifdef CPUARM_HAS_BLX}
+      blx get_fpc_system_lock_ptr
+    {$else}
+      bl get_fpc_system_lock_ptr
+    {$endif CPUARM_HAS_BLX}
     mov r3,r0
     pop {r0,r1,lr}
   {$else FPC_PIC}
@@ -996,7 +995,11 @@ asm
 // lock
   {$ifdef FPC_PIC}
     push {r0,r1,r2,lr}
-    bl get_fpc_system_lock_ptr
+    {$ifdef CPUARM_HAS_BLX}
+      blx get_fpc_system_lock_ptr
+    {$else}
+      bl get_fpc_system_lock_ptr
+    {$endif CPUARM_HAS_BLX}
     mov r12,r0
     pop {r0,r1,r2,lr}
   {$else FPC_PIC}
@@ -1052,10 +1055,7 @@ begin
   in_edsp_test:=true;
   asm
     bic r0,sp,#7
-
-    // ldrd r0,r1,[r0]
-    // encode this using .long so the rtl assembles also with instructions sets not supporting pld
-    .long 0xe1c000d0
+    ldrd r0,r1,[r0]
   end;
   in_edsp_test:=false;
   if cpu_has_edsp then
@@ -1110,12 +1110,10 @@ end;
   generates a perfect 4 cycle code sequence and can be inlined.
 }
 function SwapEndian(const AValue: LongWord): LongWord;{$ifdef SYSTEMINLINE}inline;{$endif}
-var
-  Temp: LongWord;
 begin
-  Temp  := AValue xor rordword(AValue,16);
-  Temp  := Temp and $FF00FFFF;
-  Result:= (Temp shr 8) xor rordword(AValue,8);
+  Result:= AValue xor rordword(AValue,16);
+  Result:= Result and $FF00FFFF;
+  Result:= (Result shr 8) xor rordword(AValue,8);
 end;
 
 function SwapEndian(const AValue: LongInt): LongInt;{$ifdef SYSTEMINLINE}inline;{$endif}

@@ -34,8 +34,7 @@ unit i_palmos;
             system       : system_m68k_PalmOS;
             name         : 'PalmOS';
             shortname    : 'PalmOS';
-            flags        : [tf_under_development,tf_code_small,tf_static_reg_based,tf_requires_proper_alignment,
-                            tf_smartlink_library,tf_no_objectfiles_when_smartlinking];
+            flags        : [tf_code_small,tf_static_reg_based,tf_smartlink_sections];
             cpu          : cpu_m68k;
             unit_env     : 'PALMUNITS';
             extradefines : '';
@@ -62,8 +61,8 @@ unit i_palmos;
             Cprefix      : '_';
             newline      : #10;
             dirsep       : '/';
-            assem        : as_m68k_as_aout;
-            assemextern  : as_m68k_as_aout;
+            assem        : as_gas;
+            assemextern  : as_gas;
             link         : ld_none;
             linkextern   : ld_palmos;
             ar           : ar_gnu_ar;
@@ -90,7 +89,6 @@ unit i_palmos;
             stacksize    : 8192;
             stackalign   : 2;
             abi : abi_default;
-            llvmdatalayout : 'todo';
           );
 
        res_m68k_palmos_info : tresinfo =
@@ -164,7 +162,6 @@ unit i_palmos;
             stacksize    : 8192;
             stackalign   : 4;
             abi : abi_default;
-            llvmdatalayout : 'todo';
           );
 
        res_arm_palmos_info : tresinfo =

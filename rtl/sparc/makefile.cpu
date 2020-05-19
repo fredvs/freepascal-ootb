@@ -2,7 +2,7 @@
 # Here we set processor dependent include file names.
 #
 
-CPUNAMES=sparc cpuh
+CPUNAMES=sparc
 # not yet: math set
 
 CPUINCNAMES=$(addsuffix .inc,$(CPUNAMES))

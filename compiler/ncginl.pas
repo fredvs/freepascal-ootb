@@ -31,13 +31,10 @@ interface
     type
        tcginlinenode = class(tinlinenode)
           procedure pass_generate_code;override;
-          procedure pass_generate_code_cpu;virtual;
           procedure second_sizeoftypeof;virtual;
           procedure second_length;virtual;
           procedure second_predsucc;virtual;
           procedure second_incdec;virtual;
-          procedure second_AndOrXorShiftRot_assign;virtual;
-          procedure second_NegNot_assign;virtual;
           procedure second_typeinfo;virtual;
           procedure second_includeexclude;virtual;
           procedure second_pi; virtual;
@@ -55,7 +52,6 @@ interface
           procedure second_prefetch; virtual;
           procedure second_round_real; virtual;
           procedure second_trunc_real; virtual;
-          procedure second_int_real; virtual;
           procedure second_abs_long; virtual;
           procedure second_rox_sar; virtual;
           procedure second_bsfbsr; virtual;
@@ -65,19 +61,18 @@ interface
           procedure second_popcnt; virtual;
           procedure second_seg; virtual; abstract;
           procedure second_fma; virtual;
-          procedure second_frac_real; virtual;
        end;
 
 implementation
 
     uses
-      globtype,constexp,
-      verbose,globals,compinnr,
-      symconst,symtype,symdef,defutil,
-      aasmbase,aasmdata,
-      cgbase,pass_2,
-      cpubase,procinfo,
-      ncon,ncal,
+      globtype,systems,constexp,
+      cutils,verbose,globals,
+      symconst,symdef,defutil,symsym,
+      aasmbase,aasmtai,aasmdata,aasmcpu,parabase,
+      cgbase,pass_1,pass_2,
+      cpuinfo,cpubase,paramgr,procinfo,
+      nbas,ncon,ncal,ncnv,nld,ncgrtti,
       tgobj,ncgutil,
       cgutils,cgobj,hlcgobj
 {$ifndef cpu64bitalu}
@@ -126,8 +121,6 @@ implementation
               second_round_real;
             in_trunc_real:
               second_trunc_real;
-            in_int_real:
-              second_int_real;
             in_sqr_real:
               second_sqr_real;
             in_sqrt_real:
@@ -136,8 +129,6 @@ implementation
               second_ln_real;
             in_cos_real:
                second_cos_real;
-            in_frac_real:
-              second_frac_real;
             in_prefetch_var:
               second_prefetch;
             in_assigned_x:
@@ -160,7 +151,7 @@ implementation
                 secondpass(tcallparanode(left).left);
                 location:=tcallparanode(left).left.location;
                 if location.loc in [LOC_CREFERENCE,LOC_REFERENCE] then
-                  location.reference.alignment:=resultdef.alignment;
+                  location.reference.alignment:=0;
               end;
 {$ifdef SUPPORT_MMX}
             in_mmx_pcmpeqb..in_mmx_pcmpgtw:
@@ -205,28 +196,11 @@ implementation
             in_fma_extended,
             in_fma_float128:
                second_fma;
-            in_and_assign_x_y,
-            in_or_assign_x_y,
-            in_xor_assign_x_y,
-            in_sar_assign_x_y,
-            in_shl_assign_x_y,
-            in_shr_assign_x_y,
-            in_rol_assign_x_y,
-            in_ror_assign_x_y:
-               second_AndOrXorShiftRot_assign;
-            in_neg_assign_x,
-            in_not_assign_x:
-               second_NegNot_assign;
-            else
-               pass_generate_code_cpu;
+            else internalerror(9);
          end;
       end;
 
 
-    procedure tcginlinenode.pass_generate_code_cpu;
-      begin
-        Internalerror(2017110103);
-      end;
 
 {*****************************************************************************
                           SIZEOF / TYPEOF GENERIC HANDLING
@@ -234,9 +208,74 @@ implementation
 
     { second_handle_ the sizeof and typeof routines }
     procedure tcginlinenode.second_SizeOfTypeOf;
+      var
+         href,
+         hrefvmt   : treference;
+         hregister : tregister;
       begin
-        { handled in pass 1 }
-        internalerror(2015122701);
+        location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
+        { for both cases load vmt }
+        if left.nodetype=typen then
+          begin
+            hregister:=hlcg.getaddressregister(current_asmdata.CurrAsmList,voidpointertype);
+            reference_reset_symbol(href,current_asmdata.RefAsmSymbol(tobjectdef(left.resultdef).vmt_mangledname,AT_DATA),0,voidpointertype.size);
+            hlcg.a_loadaddr_ref_reg(current_asmdata.CurrAsmList,voidpointertype,voidpointertype,href,hregister);
+          end
+        else
+          begin
+            secondpass(left);
+            hregister:=hlcg.getaddressregister(current_asmdata.CurrAsmList,voidpointertype);
+
+            { handle self inside a method of a class }
+            case left.location.loc of
+              LOC_CREGISTER,
+              LOC_REGISTER :
+                begin
+                  if (left.resultdef.typ=classrefdef) or
+                     (po_staticmethod in current_procinfo.procdef.procoptions) then
+                    hlcg.a_load_reg_reg(current_asmdata.CurrAsmList,voidpointertype,voidpointertype,left.location.register,hregister)
+                  else
+                   begin
+                     { load VMT pointer }
+                     hlcg.reference_reset_base(hrefvmt,voidpointertype,left.location.register,tobjectdef(left.resultdef).vmt_offset,voidpointertype.size);
+                     hlcg.a_load_ref_reg(current_asmdata.CurrAsmList,voidpointertype,voidpointertype,hrefvmt,hregister);
+                   end
+                end;
+              LOC_REFERENCE,
+              LOC_CREFERENCE :
+                begin
+                  if is_class(left.resultdef) then
+                   begin
+                     { deref class }
+                     hlcg.a_load_ref_reg(current_asmdata.CurrAsmList,voidpointertype,voidpointertype,left.location.reference,hregister);
+                     hlcg.g_maybe_testself(current_asmdata.CurrAsmList,left.resultdef,hregister);
+                     { load VMT pointer }
+                     hlcg.reference_reset_base(hrefvmt,voidpointertype,hregister,tobjectdef(left.resultdef).vmt_offset,voidpointertype.size);
+                     hlcg.a_load_ref_reg(current_asmdata.CurrAsmList,voidpointertype,voidpointertype,hrefvmt,hregister);
+                   end
+                  else
+                   begin
+                     { load VMT pointer, but not for classrefdefs }
+                     if (left.resultdef.typ=objectdef) then
+                       begin
+                         inc(left.location.reference.offset,tobjectdef(left.resultdef).vmt_offset);
+                         left.location.reference.alignment:=newalignment(left.location.reference.alignment,tobjectdef(left.resultdef).vmt_offset);
+                       end;
+                     hlcg.a_load_ref_reg(current_asmdata.CurrAsmList,voidpointertype,voidpointertype,left.location.reference,hregister);
+                   end;
+                end;
+              else
+                internalerror(200301301);
+            end;
+          end;
+        { in sizeof load size }
+        if inlinenumber=in_sizeof_x then
+           begin
+             hlcg.reference_reset_base(href,voidpointertype,hregister,0,voidpointertype.size);
+             hregister:=cg.getintregister(current_asmdata.CurrAsmList,OS_INT);
+             cg.a_load_ref_reg(current_asmdata.CurrAsmList,OS_INT,OS_INT,href,hregister);
+           end;
+        location.register:=hregister;
      end;
 
 
@@ -248,7 +287,6 @@ implementation
       var
         lengthlab : tasmlabel;
         hregister : tregister;
-        lendef : tdef;
         href : treference;
       begin
         secondpass(left);
@@ -263,30 +301,24 @@ implementation
            hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,left.resultdef,false);
            current_asmdata.getjumplabel(lengthlab);
            hlcg.a_cmp_const_reg_label(current_asmdata.CurrAsmList,left.resultdef,OC_EQ,0,left.location.register,lengthlab);
-           { the length of a widestring is a 32 bit unsigned int. Since every
-             character occupies 2 bytes, on a 32 bit platform you can express
-             the maximum length using 31 bits. On a 64 bit platform, it may be
-             32 bits. This means that regardless of the platform, a location
-             with size OS_SINT/ossinttype can hold the length without
-             overflowing (this code returns an ossinttype value) }
-           if is_widestring(left.resultdef) then
-             lendef:=u32inttype
+           if is_widestring(left.resultdef) and (tf_winlikewidestring in target_info.flags) then
+             begin
+               hlcg.reference_reset_base(href,left.resultdef,left.location.register,-sizeof(dword),sizeof(dword));
+               hregister:=cg.makeregsize(current_asmdata.CurrAsmList,left.location.register,OS_INT);
+               cg.a_load_ref_reg(current_asmdata.CurrAsmList,OS_32,OS_INT,href,hregister);
+             end
            else
-             lendef:=ossinttype;
-           { volatility of the ansistring/widestring refers to the volatility of the
-             string pointer, not of the string data }
-           hlcg.reference_reset_base(href,left.resultdef,left.location.register,-lendef.size,ctempposinvalid,lendef.alignment,[]);
-           { if the string pointer is nil, the length is 0 -> reuse the register
-             that originally held the string pointer for the length, so that we
-             can keep the original nil/0 as length in that case }
-           hregister:=cg.makeregsize(current_asmdata.CurrAsmList,left.location.register,def_cgsize(resultdef));
-           hlcg.a_load_ref_reg(current_asmdata.CurrAsmList,lendef,resultdef,href,hregister);
+             begin
+               hlcg.reference_reset_base(href,left.resultdef,left.location.register,-sizeof(pint),sizeof(pint));
+               hregister:=cg.makeregsize(current_asmdata.CurrAsmList,left.location.register,OS_INT);
+               cg.a_load_ref_reg(current_asmdata.CurrAsmList,OS_INT,OS_INT,href,hregister);
+             end;
            if is_widestring(left.resultdef) then
-             hlcg.a_op_const_reg(current_asmdata.CurrAsmList,OP_SHR,resultdef,1,hregister);
+             cg.a_op_const_reg(current_asmdata.CurrAsmList,OP_SHR,OS_INT,1,hregister);
 
            { Dynamic arrays do not have their length attached but their maximum index }
            if is_dynamic_array(left.resultdef) then
-             hlcg.a_op_const_reg(current_asmdata.CurrAsmList,OP_ADD,resultdef,1,hregister);
+             cg.a_op_const_reg(current_asmdata.CurrAsmList,OP_ADD,OS_INT,1,hregister);
 
            cg.a_label(current_asmdata.CurrAsmList,lengthlab);
            location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
@@ -382,7 +414,7 @@ implementation
                  addvalue:=addvalue*tpointerconstnode(tcallparanode(tcallparanode(left).right).left).value
               else
                 begin
-                  hlcg.location_force_reg(current_asmdata.CurrAsmList,tcallparanode(tcallparanode(left).right).left.location,tcallparanode(tcallparanode(left).right).left.resultdef,cgsize_orddef(def_cgsize(left.resultdef)),addvalue<=1);
+                  hlcg.location_force_reg(current_asmdata.CurrAsmList,tcallparanode(tcallparanode(left).right).left.location,tcallparanode(tcallparanode(left).right).left.resultdef,left.resultdef,addvalue<=1);
                   hregister:=tcallparanode(tcallparanode(left).right).left.location.register;
 {$ifndef cpu64bitalu}
                   hregisterhi:=tcallparanode(tcallparanode(left).right).left.location.register64.reghi;
@@ -441,126 +473,6 @@ implementation
 
 
 {*****************************************************************************
-              AND/OR/XOR/SHIFT/ROTATE ASSIGN GENERIC HANDLING
-*****************************************************************************}
-      procedure tcginlinenode.second_AndOrXorShiftRot_assign;
-        const
-          andorxorop:array[in_and_assign_x_y..in_ror_assign_x_y] of TOpCG=
-            (OP_AND,OP_OR,OP_XOR,OP_SAR,OP_SHL,OP_SHR,OP_ROL,OP_ROR);
-        var
-          maskvalue : TConstExprInt;
-          maskconstant : boolean;
-{$ifndef cpu64bitalu}
-          hregisterhi,
-{$endif not cpu64bitalu}
-          hregister : tregister;
-        begin
-          { set defaults }
-          maskconstant:=true;
-          hregister:=NR_NO;
-          maskvalue:=0;
-{$ifndef cpu64bitalu}
-          hregisterhi:=NR_NO;
-{$endif not cpu64bitalu}
-
-          { first secondpass first argument, because if the second arg }
-          { is used in that expression then SSL may move it to another }
-          { register                                                   }
-          secondpass(tcallparanode(left).left);
-          { load second parameter, must be a reference }
-          secondpass(tcallparanode(tcallparanode(left).right).left);
-
-          { when constant, just get the maskvalue }
-          if is_constintnode(tcallparanode(left).left) then
-             maskvalue:=get_ordinal_value(tcallparanode(left).left)
-          else
-            begin
-              { for shift/rotate the shift count can be of different size than the shifted variable }
-              if inlinenumber in [in_sar_assign_x_y,in_shl_assign_x_y,in_shr_assign_x_y,in_rol_assign_x_y,in_ror_assign_x_y] then
-                hlcg.location_force_reg(current_asmdata.CurrAsmList,tcallparanode(left).left.location,tcallparanode(left).left.resultdef,tcallparanode(left).left.resultdef,true)
-              else
-                hlcg.location_force_reg(current_asmdata.CurrAsmList,tcallparanode(left).left.location,tcallparanode(left).left.resultdef,tcallparanode(left).right.resultdef,true);
-              hregister:=tcallparanode(left).left.location.register;
-{$ifndef cpu64bitalu}
-              hregisterhi:=tcallparanode(left).left.location.register64.reghi;
-{$endif not cpu64bitalu}
-              maskconstant:=false;
-            end;
-          { write the and/or/xor/sar/shl/shr/rol/ror instruction }
-          if maskconstant then
-            begin
-              if inlinenumber in [in_sar_assign_x_y,in_shl_assign_x_y,in_shr_assign_x_y,in_rol_assign_x_y,in_ror_assign_x_y] then
-                if def_cgsize(tcallparanode(left).right.resultdef) in [OS_64,OS_S64] then
-                  maskvalue:=maskvalue and 63
-                else
-                  maskvalue:=maskvalue and 31;
-{$ifndef cpu64bitalu}
-              if def_cgsize(tcallparanode(left).right.resultdef) in [OS_64,OS_S64] then
-                cg64.a_op64_const_loc(current_asmdata.CurrAsmList,andorxorop[inlinenumber],def_cgsize(tcallparanode(left).right.resultdef),maskvalue.svalue,tcallparanode(tcallparanode(left).right).left.location)
-              else
-{$endif not cpu64bitalu}
-                hlcg.a_op_const_loc(current_asmdata.CurrAsmList,andorxorop[inlinenumber],tcallparanode(left).right.resultdef,
-{$ifdef cpu64bitalu}
-                  aint(maskvalue.svalue),
-{$else cpu64bitalu}
-                  longint(maskvalue.svalue),  // can't use aint, because it breaks 16-bit and 8-bit CPUs
-{$endif cpu64bitalu}
-                  tcallparanode(tcallparanode(left).right).left.location);
-            end
-           else
-             begin
-{$ifndef cpu64bitalu}
-               if def_cgsize(tcallparanode(left).right.resultdef) in [OS_64,OS_S64] then
-                 cg64.a_op64_reg_loc(current_asmdata.CurrAsmList,andorxorop[inlinenumber],def_cgsize(tcallparanode(left).right.resultdef),
-                   joinreg64(hregister,hregisterhi),tcallparanode(tcallparanode(left).right).left.location)
-               else
-{$endif not cpu64bitalu}
-                 hlcg.a_op_reg_loc(current_asmdata.CurrAsmList,andorxorop[inlinenumber],tcallparanode(left).right.resultdef,
-                   hregister,tcallparanode(tcallparanode(left).right).left.location);
-             end;
-        end;
-
-
-{*****************************************************************************
-                       NEG/NOT ASSIGN GENERIC HANDLING
-*****************************************************************************}
-      procedure tcginlinenode.second_NegNot_assign;
-        const
-          negnotop:array[in_neg_assign_x..in_not_assign_x] of TOpCG=(OP_NEG,OP_NOT);
-{$ifndef cpu64bitalu}
-        var
-          NR_NO64: tregister64=(reglo:NR_NO;reghi:NR_NO);
-{$endif not cpu64bitalu}
-        begin
-          { load parameter, must be a reference }
-          secondpass(left);
-
-          location_reset(location,LOC_VOID,OS_NO);
-
-          if left.location.loc in [LOC_REGISTER,LOC_CREGISTER] then
-            begin
-{$ifndef cpu64bitalu}
-              if def_cgsize(left.resultdef) in [OS_64,OS_S64] then
-                cg64.a_op64_reg_loc(current_asmdata.CurrAsmList,negnotop[inlinenumber],def_cgsize(left.resultdef),left.location.register64,left.location)
-              else
-{$endif not cpu64bitalu}
-                hlcg.a_op_reg_loc(current_asmdata.CurrAsmList,negnotop[inlinenumber],left.resultdef,left.location.register,left.location);
-            end
-          else if left.location.loc in [LOC_REFERENCE,LOC_CREFERENCE] then
-            begin
-{$ifndef cpu64bitalu}
-              if def_cgsize(left.resultdef) in [OS_64,OS_S64] then
-                cg64.a_op64_reg_loc(current_asmdata.CurrAsmList,negnotop[inlinenumber],def_cgsize(left.resultdef),NR_NO64,left.location)
-              else
-{$endif not cpu64bitalu}
-                hlcg.a_op_reg_loc(current_asmdata.CurrAsmList,negnotop[inlinenumber],left.resultdef,NR_NO,left.location);
-            end
-          else
-            internalerror(2017040701);
-        end;
-
-
-{*****************************************************************************
                          TYPEINFO GENERIC HANDLING
 *****************************************************************************}
       procedure tcginlinenode.second_typeinfo;
@@ -593,7 +505,7 @@ implementation
           else
             begin
               hlcg.location_force_reg(current_asmdata.CurrAsmList,elepara.location,elepara.resultdef,u32inttype,true);
-              register_maybe_adjust_setbase(current_asmdata.CurrAsmList,u32inttype,elepara.location,tsetdef(setpara.resultdef).setbase);
+              register_maybe_adjust_setbase(current_asmdata.CurrAsmList,elepara.location,tsetdef(setpara.resultdef).setbase);
               hlcg.a_bit_set_reg_loc(current_asmdata.CurrAsmList,(inlinenumber=in_include_x_y),
                 u32inttype,setpara.resultdef,elepara.location.register,setpara.location);
             end;
@@ -633,11 +545,6 @@ implementation
         internalerror(20020718);
       end;
 
-    procedure tcginlinenode.second_int_real;
-      begin
-        internalerror(2016112702);
-      end;
-
     procedure tcginlinenode.second_sqr_real;
       begin
         internalerror(20020718);
@@ -666,11 +573,6 @@ implementation
 
     procedure tcginlinenode.second_prefetch;
       begin
-      end;
-
-    procedure tcginlinenode.second_frac_real;
-      begin
-        internalerror(2017052104);
       end;
 
     procedure tcginlinenode.second_abs_long;
@@ -751,7 +653,7 @@ implementation
         end
       else
         begin
-          location_reset_ref(location,LOC_REFERENCE,OS_ADDR,sizeof(pint),[]);
+          location_reset_ref(location,LOC_REFERENCE,OS_ADDR,sizeof(pint));
           location.reference.base:=frame_reg;
         end;
     end;
@@ -764,14 +666,14 @@ implementation
           begin
             location_reset(location,LOC_REGISTER,OS_ADDR);
             location.register:=cg.getaddressregister(current_asmdata.currasmlist);
-            reference_reset_base(frame_ref,NR_STACK_POINTER_REG,{current_procinfo.calc_stackframe_size}tg.lasttemp,ctempposinvalid,sizeof(pint),[]);
+            reference_reset_base(frame_ref,NR_STACK_POINTER_REG,{current_procinfo.calc_stackframe_size}tg.lasttemp,sizeof(pint));
             cg.a_load_ref_reg(current_asmdata.currasmlist,OS_ADDR,OS_ADDR,frame_ref,location.register);
           end
         else
           begin
             location_reset(location,LOC_REGISTER,OS_ADDR);
             location.register:=cg.getaddressregister(current_asmdata.currasmlist);
-            reference_reset_base(frame_ref,current_procinfo.framepointer,sizeof(pint),ctempposinvalid,sizeof(pint),[]);
+            reference_reset_base(frame_ref,current_procinfo.framepointer,sizeof(pint),sizeof(pint));
             cg.a_load_ref_reg(current_asmdata.currasmlist,OS_ADDR,OS_ADDR,frame_ref,location.register);
           end;
       end;
@@ -814,61 +716,27 @@ implementation
         hlcg.location_force_reg(current_asmdata.CurrAsmList,op1.location,op1.resultdef,resultdef,true);
 
         location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
-{$ifndef cpu64bitalu}
-        if def_cgsize(resultdef) in [OS_64,OS_S64] then
-          begin
-            location.register64.reglo:=cg.getintregister(current_asmdata.CurrAsmList,OS_32);
-            location.register64.reghi:=cg.getintregister(current_asmdata.CurrAsmList,OS_32);
-          end
-        else
-{$endif not cpu64bitalu}
-          location.register:=hlcg.getintregister(current_asmdata.CurrAsmList,resultdef);
+        location.register:=hlcg.getintregister(current_asmdata.CurrAsmList,resultdef);
 
         if assigned(op2) then
           begin
              { rotating by a constant directly coded: }
              if op2.nodetype=ordconstn then
-{$ifndef cpu64bitalu}
-               if def_cgsize(resultdef) in [OS_64,OS_S64] then
-                 cg64.a_op64_const_reg_reg(current_asmdata.CurrAsmList,op,def_cgsize(resultdef),
-                   tordconstnode(op2).value.uvalue and (resultdef.size*8-1),
-                   op1.location.register64, location.register64)
-               else
-{$endif not cpu64bitalu}
-                 hlcg.a_op_const_reg_reg(current_asmdata.CurrAsmList,op,resultdef,
-                   tordconstnode(op2).value.uvalue and (resultdef.size*8-1),
-                   op1.location.register, location.register)
+               hlcg.a_op_const_reg_reg(current_asmdata.CurrAsmList,op,resultdef,
+                 tordconstnode(op2).value.uvalue and (resultdef.size*8-1),
+                 op1.location.register, location.register)
              else
                begin
-{$ifndef cpu64bitalu}
-                 if def_cgsize(resultdef) in [OS_64,OS_S64] then
-                   begin
-                     hlcg.location_force_reg(current_asmdata.CurrAsmList,op2.location,
-                                             op2.resultdef,alusinttype,true);
-                     cg64.a_op64_reg_reg_reg(current_asmdata.CurrAsmList,op,def_cgsize(resultdef),
-                                             joinreg64(op2.location.register,NR_NO),op1.location.register64,
-                                             location.register64);
-                   end
-                 else
-{$endif not cpu64bitalu}
-                   begin
-                     hlcg.location_force_reg(current_asmdata.CurrAsmList,op2.location,
-                                             op2.resultdef,resultdef,true);
-                     hlcg.a_op_reg_reg_reg(current_asmdata.CurrAsmList,op,resultdef,
-                                           op2.location.register,op1.location.register,
-                                           location.register);
-                   end;
+                 hlcg.location_force_reg(current_asmdata.CurrAsmList,op2.location,
+                                         op2.resultdef,resultdef,true);
+                 hlcg.a_op_reg_reg_reg(current_asmdata.CurrAsmList,op,resultdef,
+                                       op2.location.register,op1.location.register,
+                                       location.register);
                end;
           end
         else
-{$ifndef cpu64bitalu}
-          if def_cgsize(resultdef) in [OS_64,OS_S64] then
-            cg64.a_op64_const_reg_reg(current_asmdata.CurrAsmList,op,def_cgsize(resultdef),1,
-                                      op1.location.register64,location.register64)
-          else
-{$endif not cpu64bitalu}
-            hlcg.a_op_const_reg_reg(current_asmdata.CurrAsmList,op,resultdef,1,
-                                    op1.location.register,location.register);
+          hlcg.a_op_const_reg_reg(current_asmdata.CurrAsmList,op,resultdef,1,
+                                  op1.location.register,location.register);
       end;
 
 
@@ -881,12 +749,16 @@ implementation
       secondpass(left);
 
       opsize:=tcgsize2unsigned[left.location.size];
-      if not(left.location.loc in [LOC_REGISTER,LOC_CREGISTER]) then
+      if opsize < OS_32 then
+        opsize:=OS_32;
+
+      if (left.location.loc <> LOC_REGISTER) or
+         (left.location.size <> opsize) then
         hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,cgsize_orddef(opsize),true);
 
-      location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
-      location.register:=cg.getintregister(current_asmdata.CurrAsmList,location.size);
-      cg.a_bit_scan_reg_reg(current_asmdata.CurrAsmList,reverse,opsize,location.size,left.location.register,location.register);
+      location_reset(location,LOC_REGISTER,opsize);
+      location.register := cg.getintregister(current_asmdata.CurrAsmList,opsize);
+      cg.a_bit_scan_reg_reg(current_asmdata.CurrAsmList,reverse,opsize,left.location.register,location.register);
     end;
 
 

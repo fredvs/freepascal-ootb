@@ -1,8 +1,15 @@
-{!
-	@file		AudioUnitCarbonView.h
- 	@framework	AudioToolbox.framework
- 	@copyright	(c) 2000-2015 Apple, Inc. All rights reserved.
-	@abstract	Deprecated interfaces for using Carbon-based views of Audio Units.
+{
+     File:       AudioUnitCarbonView.h
+ 
+     Contains:   AudioUnitCarbonView Interfaces
+ 
+     Copyright:  © 2002-2008 by Apple, Inc., all rights reserved.
+ 
+     Bugs?:      For bug reports, consult the following page on
+                 the World Wide Web:
+ 
+                     http://www.freepascal.org/bugs.html
+ 
 }
 {	  Pascal Translation:  Gorazd Krosl <gorazd_1957@yahoo.ca>, October 2009 }
 
@@ -14,7 +21,6 @@
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -61,11 +67,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -84,7 +85,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -95,7 +95,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -106,7 +105,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -123,16 +121,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -140,26 +131,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -301,9 +279,9 @@ type
 	@param		outControl
 					The Carbon control which contains the entire user interface for the view.
 }
-{$ifc not TARGET_CPU_64}
+
 function AudioUnitCarbonViewCreate( inView: AudioUnitCarbonView; inAudioUnit: AudioUnit; inWindow: WindowRef; inParentControl: ControlRef; const inLocation: Float32PointPtr; const inSize: Float32PointPtr; var outControl: ControlRef ): OSStatus; external name '_AudioUnitCarbonViewCreate';
-(* API_DEPRECATED("no longer supported", macos(10.2, 10.11)) API_UNAVAILABLE(ios, watchos, tvos) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_NA) *)
 
 {!
 	@function	AudioUnitCarbonViewSetEventListener
@@ -318,6 +296,8 @@ function AudioUnitCarbonViewCreate( inView: AudioUnitCarbonView; inAudioUnit: Au
 	@param		inUserData
 					A user data pointer passed to the callback.
 }
+//#ifndef __LP64__
+{$ifc not TARGET_CPU_64}
 function AudioUnitCarbonViewSetEventListener( inView: AudioUnitCarbonView; inCallback: AudioUnitCarbonViewEventListener; inUserData: UnivPtr ): OSStatus; external name '_AudioUnitCarbonViewSetEventListener';
 (* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_2,__MAC_10_4, __IPHONE_NA, __IPHONE_NA) *)
 {$endc}

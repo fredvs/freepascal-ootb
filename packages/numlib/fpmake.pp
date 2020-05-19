@@ -16,12 +16,10 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
-    P.OSes := AllUnixOSes+AllWindowsOSes+AllAmigaLikeOSes-[qnx];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes := AllUnixOSes+AllWindowsOSes-[qnx];
 //    P.Dependencies.Add('x11');
 
     T:=P.Targets.AddUnit('det.pas');
@@ -85,7 +83,7 @@ begin
           AddUnit('dsl');
           AddUnit('omv');
         end;
-    T:=P.Targets.AddUnit('numlib.pas', AllOSes-AllAmigaLikeOSes);
+    T:=P.Targets.AddUnit('numlib.pas');
       with T.Dependencies do
         begin
           AddInclude('direct.inc');

@@ -25,8 +25,8 @@ uses
 Type
   // tokens
   TTokenType = (ttPlus, ttMinus, ttLessThan, ttLargerThan, ttEqual, ttDiv,
-                ttMod, ttMul, ttLeft, ttRight, ttLessThanEqual,
-                ttLargerThanEqual, ttunequal, ttNumber, ttString, ttIdentifier,
+                ttMul, ttLeft, ttRight, ttLessThanEqual, ttLargerThanEqual,
+                ttunequal, ttNumber, ttString, ttIdentifier,
                 ttComma, ttAnd, ttOr, ttXor, ttTrue, ttFalse, ttNot, ttif,
                 ttCase, ttPower, ttEOF); // keep ttEOF last
 
@@ -47,8 +47,6 @@ Type
   TFPExprFunction = Class;
   TFPExprFunctionClass = Class of TFPExprFunction;
 
-  TNumberKind = (nkDecimal, nkHex, nkOctal, nkBinary);
-
   { TFPExpressionScanner }
 
   TFPExpressionScanner = Class(TObject)
@@ -64,14 +62,14 @@ Type
   protected
     procedure SetSource(const AValue: String); virtual;
     function DoIdentifier: TTokenType;
-    function DoNumber(AKind: TNumberKind): TTokenType;
+    function DoNumber: TTokenType;
     function DoDelimiter: TTokenType;
     function DoString: TTokenType;
     Function NextPos : Char; // inline;
     procedure SkipWhiteSpace; // inline;
     function IsWordDelim(C : Char) : Boolean; // inline;
     function IsDelim(C : Char) : Boolean; // inline;
-    function IsDigit(C : Char; AKind: TNumberKind) : Boolean; // inline;
+    function IsDigit(C : Char) : Boolean; // inline;
     function IsAlpha(C : Char) : Boolean; // inline;
   public
     Constructor Create;
@@ -85,7 +83,7 @@ Type
 
   EExprScanner = Class(Exception);
 
-  TResultType = (rtBoolean,rtInteger,rtFloat,rtDateTime,rtString,rtCurrency);
+  TResultType = (rtBoolean,rtInteger,rtFloat,rtDateTime,rtString);
   TResultTypes = set of TResultType;
 
   TFPExpressionResult = record
@@ -94,7 +92,6 @@ Type
       rtBoolean  : (ResBoolean  : Boolean);
       rtInteger  : (ResInteger  : Int64);
       rtFloat    : (ResFloat    : TExprFloat);
-      rtCurrency : (ResCurrency : Currency);
       rtDateTime : (ResDateTime : TDatetime);
       rtString   : ();
   end;
@@ -332,17 +329,6 @@ Type
     Procedure GetNodeValue(var Result : TFPExpressionResult); override;
   end;
 
-  { TFPModuloOperation }
-
-  TFPModuloOperation = Class(TMathOperation)
-  Public
-    Procedure Check; override;
-    Function AsString : string ; override;
-    Function NodeType : TResultType; override;
-    Procedure GetNodeValue(var Result : TFPExpressionResult); override;
-  end;
-
-
   { TFPPowerOperation }
   TFPPowerOperation = class(TMathOperation)
   public
@@ -390,16 +376,7 @@ Type
   end;
 
   { TIntToFloatNode }
-
   TIntToFloatNode = Class(TIntConvertNode)
-  Public
-    Function NodeType : TResultType;  override;
-    Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
-  end;
-
-  { TIntToCurrencyNode }
-
-  TIntToCurrencyNode = Class(TIntConvertNode)
   Public
     Function NodeType : TResultType;  override;
     Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
@@ -422,34 +399,6 @@ Type
     Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
   end;
 
-  { TFloatToCurrencyNode }
-
-  TFloatToCurrencyNode = Class(TFPConvertNode)
-  Public
-    Procedure Check; override;
-    Function NodeType : TResultType;  override;
-    Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
-  end;
-
-  { TCurrencyToDateTimeNode }
-
-  TCurrencyToDateTimeNode = Class(TFPConvertNode)
-  Public
-    Procedure Check; override;
-    Function NodeType : TResultType;  override;
-    Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
-  end;
-
-  { TCurrencyToFloatNode }
-
-  TCurrencyToFloatNode = Class(TFPConvertNode)
-  Public
-    Procedure Check; override;
-    Function NodeType : TResultType;  override;
-    Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
-  end;
-
-
   { TFPNegateOperation }
 
   TFPNegateOperation = Class(TFPUnaryOperator)
@@ -471,7 +420,6 @@ Type
     Constructor CreateDateTime(AValue : TDateTime);
     Constructor CreateFloat(AValue : TExprFloat);
     Constructor CreateBoolean(AValue : Boolean);
-    constructor CreateCurrency(AValue: Currency);
     Procedure Check; override;
     Function NodeType : TResultType;  override;
     Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
@@ -499,13 +447,11 @@ Type
     FArgumentTypes: String;
     FIDType: TIdentifierType;
     FName: ShortString;
-    FVariableArgumentCount: Boolean;
     FOnGetValue: TFPExprFunctionEvent;
     FOnGetValueCB: TFPExprFunctionCallBack;
     function GetAsBoolean: Boolean;
     function GetAsDateTime: TDateTime;
     function GetAsFloat: TExprFloat;
-    function GetAsCurrency : Currency;
     function GetAsInteger: Int64;
     function GetAsString: String;
     function GetResultType: TResultType;
@@ -514,7 +460,6 @@ Type
     procedure SetAsBoolean(const AValue: Boolean);
     procedure SetAsDateTime(const AValue: TDateTime);
     procedure SetAsFloat(const AValue: TExprFloat);
-    procedure SetAsCurrency(const AValue: Currency);
     procedure SetAsInteger(const AValue: Int64);
     procedure SetAsString(const AValue: String);
     procedure SetName(const AValue: ShortString);
@@ -529,7 +474,6 @@ Type
     Procedure Assign(Source : TPersistent); override;
     Function EventBasedVariable : Boolean; Inline;
     Property AsFloat : TExprFloat Read GetAsFloat Write SetAsFloat;
-    Property AsCurrency : Currency Read GetAsCurrency Write SetAsCurrency;
     Property AsInteger : Int64 Read GetAsInteger Write SetAsInteger;
     Property AsString : String Read GetAsString Write SetAsString;
     Property AsBoolean : Boolean Read GetAsBoolean Write SetAsBoolean;
@@ -545,7 +489,6 @@ Type
     Property OnGetFunctionValue : TFPExprFunctionEvent Read FOnGetValue Write FOnGetValue;
     Property OnGetVariableValue : TFPExprVariableEvent Read FOnGetVarValue Write FOnGetVarValue;
     Property NodeType : TFPExprFunctionClass Read FNodeType Write FNodeType;
-    property VariableArgumentCount: Boolean read FVariableArgumentCount write FVariableArgumentCount;
   end;
 
 
@@ -583,7 +526,6 @@ Type
     Function AddBooleanVariable(Const AName : ShortString; AValue : Boolean) : TFPExprIdentifierDef;
     Function AddIntegerVariable(Const AName : ShortString; AValue : Integer) : TFPExprIdentifierDef;
     Function AddFloatVariable(Const AName : ShortString; AValue : TExprFloat) : TFPExprIdentifierDef;
-    Function AddCurrencyVariable(Const AName : ShortString; AValue : Currency) : TFPExprIdentifierDef;
     Function AddStringVariable(Const AName : ShortString; AValue : String) : TFPExprIdentifierDef;
     Function AddDateTimeVariable(Const AName : ShortString; AValue : TDateTime) : TFPExprIdentifierDef;
     Function AddFunction(Const AName : ShortString; Const AResultType : Char; Const AParamTypes : String; ACallBack : TFPExprFunctionCallBack) : TFPExprIdentifierDef;
@@ -621,14 +563,10 @@ Type
     FargumentParams : TExprParameterArray;
   Protected
     Procedure CalcParams;
-    function ConvertArgument(aIndex: Integer; aNode: TFPExprNode; aType: TResultType): TFPExprNode; virtual;
   Public
     Procedure Check; override;
     Constructor CreateFunction(AID : TFPExprIdentifierDef; Const Args : TExprArgumentArray); virtual;
     Destructor Destroy; override;
-    Procedure InitAggregate; override;
-    Procedure UpdateAggregate; override;
-    Function HasAggregate : Boolean; override;
     Property ArgumentNodes : TExprArgumentArray Read FArgumentNodes;
     Property ArgumentParams : TExprParameterArray Read FArgumentParams;
     Function AsString : String; override;
@@ -639,7 +577,6 @@ Type
   TAggregateExpr = Class(TFPExprFunction)
   Protected
     FResult : TFPExpressionResult;
-  public
     Class Function IsAggregate : Boolean; override;
     Procedure GetNodeValue(var Result : TFPExpressionResult);  override;
   end;
@@ -668,7 +605,6 @@ Type
 
   TAggregateSum = Class(TAggregateExpr)
   Public
-    function ConvertArgument(aIndex: Integer; aNode: TFPExprNode; aType: TResultType): TFPExprNode; override;
     Procedure InitAggregate; override;
     Procedure UpdateAggregate; override;
   end;
@@ -726,10 +662,10 @@ Type
     FHashList : TFPHashObjectlist;
     FDirty : Boolean;
     procedure CheckEOF;
+    function ConvertNode(Todo: TFPExprNode; ToType: TResultType): TFPExprNode;
     function GetAsBoolean: Boolean;
     function GetAsDateTime: TDateTime;
     function GetAsFloat: TExprFloat;
-    function GetAsCurrency: Currency;
     function GetAsInteger: Int64;
     function GetAsString: String;
     function MatchNodes(Todo, Match: TFPExprNode): TFPExprNode;
@@ -740,8 +676,6 @@ Type
     procedure ParserError(Msg: String);
     procedure SetExpression(const AValue: String); virtual;
     Procedure CheckResultType(Const Res :TFPExpressionResult; AType : TResultType); inline;
-    Procedure CheckResultTypes(Const Res :TFPExpressionResult; ATypes : TResultTypes); inline;
-    Class function ConvertNode(Todo: TFPExprNode; ToType: TResultType): TFPExprNode;
     class Function BuiltinsManager : TExprBuiltInManager;
     Function Level1 : TFPExprNode;
     Function Level2 : TFPExprNode;
@@ -763,7 +697,7 @@ Type
     Destructor Destroy; override;
     Function IdentifierByName(const AName : ShortString) : TFPExprIdentifierDef; virtual;
     Procedure Clear;
-    Procedure EvaluateExpression(Out Result : TFPExpressionResult);
+    Procedure EvaluateExpression(Var Result : TFPExpressionResult);
     function ExtractNode(var N: TFPExprNode): Boolean;
     Function Evaluate : TFPExpressionResult;
     Function ResultType : TResultType;
@@ -771,7 +705,6 @@ Type
     Procedure InitAggregate;
     Procedure UpdateAggregate;
     Property AsFloat : TExprFloat Read GetAsFloat;
-    Property AsCurrency : Currency Read GetAsCurrency;
     Property AsInteger : Int64 Read GetAsInteger;
     Property AsString : String Read GetAsString;
     Property AsBoolean : Boolean Read GetAsBoolean;
@@ -782,7 +715,6 @@ Type
     Property Identifiers : TFPExprIdentifierDefs Read FIdentifiers Write SetIdentifiers;
     Property BuiltIns : TBuiltInCategories Read FBuiltIns Write SetBuiltIns;
   end;
-  TFPExpressionParserClass = Class of TFPExpressionParser;
 
   { TExprBuiltInManager }
 
@@ -803,14 +735,11 @@ Type
     Function AddBooleanVariable(Const ACategory : TBuiltInCategory; Const AName : ShortString; AValue : Boolean) : TFPBuiltInExprIdentifierDef;
     Function AddIntegerVariable(Const ACategory : TBuiltInCategory; Const AName : ShortString; AValue : Integer) : TFPBuiltInExprIdentifierDef;
     Function AddFloatVariable(Const ACategory : TBuiltInCategory; Const AName : ShortString; AValue : TExprFloat) : TFPBuiltInExprIdentifierDef;
-    Function AddCurrencyVariable(Const ACategory : TBuiltInCategory; Const AName : ShortString; AValue : Currency) : TFPBuiltInExprIdentifierDef;
     Function AddStringVariable(Const ACategory : TBuiltInCategory; Const AName : ShortString; AValue : String) : TFPBuiltInExprIdentifierDef;
     Function AddDateTimeVariable(Const ACategory : TBuiltInCategory; Const AName : ShortString; AValue : TDateTime) : TFPBuiltInExprIdentifierDef;
     Function AddFunction(Const ACategory : TBuiltInCategory; Const AName : ShortString; Const AResultType : Char; Const AParamTypes : String; ACallBack : TFPExprFunctionCallBack) : TFPBuiltInExprIdentifierDef;
     Function AddFunction(Const ACategory : TBuiltInCategory; Const AName : ShortString; Const AResultType : Char; Const AParamTypes : String; ACallBack : TFPExprFunctionEvent) : TFPBuiltInExprIdentifierDef;
     Function AddFunction(Const ACategory : TBuiltInCategory; Const AName : ShortString; Const AResultType : Char; Const AParamTypes : String; ANodeClass : TFPExprFunctionClass) : TFPBuiltInExprIdentifierDef;
-    Procedure Delete(AIndex: Integer);
-    Function Remove(aIdentifier : String) : Integer;
     Property IdentifierCount : Integer Read GetCount;
     Property Identifiers[AIndex : Integer] :TFPBuiltInExprIdentifierDef Read GetI;
   end;
@@ -838,22 +767,13 @@ uses typinfo;
 const
   cNull=#0;
   cSingleQuote = '''';
-  cHexIdentifier = '$';
-  cOctalIdentifier = '&';
-  cBinaryIdentifier = '%';
 
   Digits        = ['0'..'9','.'];
-  HexDigits     = ['0'..'9', 'A'..'F', 'a'..'f'];
-  OctalDigits   = ['0'..'7'];
-  BinaryDigits  = ['0', '1'];
   WhiteSpace    = [' ',#13,#10,#9];
   Operators     = ['+','-','<','>','=','/','*','^'];
   Delimiters    = Operators+[',','(',')'];
   Symbols       = ['%']+Delimiters;
   WordDelimiters = WhiteSpace + Symbols;
-
-var
-  FileFormatSettings: TFormatSettings;
 
 Resourcestring
   SBadQuotes        = 'Unterminated string';
@@ -931,7 +851,6 @@ begin
     'B' : Result:=rtBoolean;
     'I' : Result:=rtInteger;
     'F' : Result:=rtFloat;
-    'C' : Result:=rtCurrency;
   else
     RaiseParserError(SErrInvalidResultCharacter,[C]);
   end;
@@ -954,85 +873,52 @@ begin
   FreeAndNil(Builtins);
 end;
 
-{ TFloatToCurrencyNode }
-
-procedure TFloatToCurrencyNode.Check;
-begin
-  CheckNodeType(Operand,[rtFloat]);
-end;
-
-function TFloatToCurrencyNode.NodeType: TResultType;
-begin
-  Result:=rtCurrency;
-end;
-
-procedure TFloatToCurrencyNode.GetNodeValue(var Result: TFPExpressionResult);
-begin
-  Operand.GetNodeValue(Result);
-  Result.ResultType:=rtCurrency;
-  Result.ResCurrency:=Result.ResFloat;
-end;
-
-{ TIntToCurrencyNode }
-
-function TIntToCurrencyNode.NodeType: TResultType;
-begin
-  Result:=rtCurrency;
-end;
-
-procedure TIntToCurrencyNode.GetNodeValue(var Result: TFPExpressionResult);
-begin
-  Operand.GetNodeValue(Result);
-  Result.ResCurrency:=Result.ResInteger;
-  Result.ResultType:=rtCurrency;
-end;
-
-{ TFPModuloOperation }
-
-procedure TFPModuloOperation.Check;
-begin
-  CheckNodeType(Left,[rtInteger]);
-  CheckNodeType(Right,[rtInteger]);
-  inherited Check;
-end;
-
-function TFPModuloOperation.AsString: string;
-begin
-  Result:=Left.AsString+' mod '+Right.asString;
-end;
-
-function TFPModuloOperation.NodeType: TResultType;
-begin
-  Result:=rtInteger;
-end;
-
-procedure TFPModuloOperation.GetNodeValue(var Result: TFPExpressionResult);
-
-Var
-  RRes : TFPExpressionResult;
-
-begin
-  Left.GetNodeValue(Result);
-  Right.GetNodeValue(RRes);
-  Result.ResInteger:=Result.ResInteger mod RRes.ResInteger;
-  Result.ResultType:=rtInteger;
-end;
-
 { TAggregateMax }
 
 procedure TAggregateMax.InitAggregate;
 begin
   inherited InitAggregate;
   FFirst:=True;
-  FResult.ResultType:=FArgumentNodes[0].NodeType;
-  Case FResult.ResultType of
-    rtFloat : FResult.resFloat:=0.0;
-    rtCurrency : FResult.resCurrency:=0.0;
-    rtInteger : FResult.resInteger:=0;
-  end;
+  FResult.ResultType:=rtFloat;
+  FResult.resFloat:=0;
 end;
 
 procedure TAggregateMax.UpdateAggregate;
+
+Var
+  OK : Boolean;
+  N : TFPExpressionResult;
+
+begin
+  FArgumentNodes[0].GetNodeValue(N);
+  if FFirst then
+    begin
+    FFirst:=False;
+    OK:=True;
+    end
+  else
+    Case N.ResultType of
+      rtFloat: OK:=N.ResFloat>FResult.ResFloat;
+      rtinteger: OK:=N.ResInteger>FResult.ResFloat;
+    end;
+  if OK then
+    Case N.ResultType of
+      rtFloat: FResult.ResFloat:=N.ResFloat;
+      rtinteger: FResult.ResFloat:=N.ResInteger;
+    end;
+end;
+
+{ TAggregateMin }
+
+procedure TAggregateMin.InitAggregate;
+begin
+  inherited InitAggregate;
+  FFirst:=True;
+  FResult.ResultType:=rtFloat;
+  FResult.resFloat:=0;
+end;
+
+procedure TAggregateMin.UpdateAggregate;
 
 Var
   OK : Boolean;
@@ -1048,55 +934,12 @@ begin
     end
   else
     Case N.ResultType of
-      rtFloat: OK:=N.ResFloat>FResult.ResFloat;
-      rtCurrency: OK:=N.ResCurrency>FResult.ResCurrency;
-      rtinteger: OK:=N.ResInteger>FResult.ResFloat;
-    end;
-  if OK then
-    Case N.ResultType of
-      rtFloat: FResult.ResFloat:=N.ResFloat;
-      rtinteger: FResult.ResFloat:=N.ResInteger;
-      rtCurrency: FResult.ResCurrency:=N.ResCurrency;
-    end;
-end;
-
-{ TAggregateMin }
-
-procedure TAggregateMin.InitAggregate;
-begin
-  inherited InitAggregate;
-  FFirst:=True;
-  FResult.ResultType:=FArgumentNodes[0].NodeType;
-  Case FResult.ResultType of
-    rtFloat : FResult.resFloat:=0.0;
-    rtCurrency : FResult.resCurrency:=0.0;
-    rtInteger : FResult.resInteger:=0;
-  end;
-end;
-
-procedure TAggregateMin.UpdateAggregate;
-
-Var
-  OK : Boolean;
-  N : TFPExpressionResult;
-
-begin
-  FArgumentNodes[0].GetNodeValue(N);
-  if FFirst then
-    begin
-    FFirst:=False;
-    OK:=True;
-    end
-  else
-    Case N.ResultType of
       rtFloat: OK:=N.ResFloat<FResult.ResFloat;
-      rtCurrency: OK:=N.ResCurrency<FResult.ResCurrency;
       rtinteger: OK:=N.ResInteger<FResult.ResFloat;
     end;
   if OK then
     Case FResult.ResultType of
       rtFloat: FResult.ResFloat:=N.ResFloat;
-      rtCurrency: FResult.ResCurrency:=N.ResCurrency;
       rtinteger: FResult.ResFloat:=N.ResInteger;
     end;
   inherited UpdateAggregate;
@@ -1107,6 +950,7 @@ end;
 procedure TAggregateAvg.InitAggregate;
 begin
   inherited InitAggregate;
+  FCount:=0;
 end;
 
 procedure TAggregateAvg.UpdateAggregate;
@@ -1118,30 +962,15 @@ end;
 procedure TAggregateAvg.GetNodeValue(var Result: TFPExpressionResult);
 begin
   inherited GetNodeValue(Result);
-  Result.ResultType:=FResult.ResultType;
+  Result.ResultType:=rtFloat;
   if FCount=0 then
-    Case FResult.ResultType of
-      rtInteger:
-        begin
-        Result.ResultType:=rtFloat;
-        Result.ResFloat:=0.0;
-        end;
-      rtFloat:
-        Result.ResFloat:=0.0;
-      rtCurrency:
-        Result.ResCurrency:=0.0;
-    end
+    Result.ResFloat:=0
   else
     Case FResult.ResultType of
       rtInteger:
-        begin
-        Result.ResultType:=rtFloat;
         Result.ResFloat:=FResult.ResInteger/FCount;
-        end;
       rtFloat:
         Result.ResFloat:=FResult.ResFloat/FCount;
-      rtCurrency:
-        Result.ResCurrency:=FResult.ResCurrency/FCount;
     end;
 end;
 
@@ -1172,20 +1001,12 @@ end;
 
 { TAggregateSum }
 
-function TAggregateSum.ConvertArgument(aIndex: Integer; aNode: TFPExprNode; aType: TResultType): TFPExprNode;
-begin
-  if not (aNode.NodeType in [rtFloat,rtInteger,rtCurrency]) then
-    RaiseParserError(SErrInvalidArgumentType,[aIndex,ResultTypeName(aType),ResultTypeName(aNode.NodeType)]);
-  Result:=aNode;
-end;
 
 procedure TAggregateSum.InitAggregate;
-
 begin
   FResult.ResultType:=FArgumentNodes[0].NodeType;
   Case FResult.ResultType of
     rtFloat: FResult.ResFloat:=0.0;
-    rtCurrency : FResult.ResCurrency:=0.0;
     rtinteger: FResult.ResInteger:=0;
   end;
 end;
@@ -1199,7 +1020,6 @@ begin
   FArgumentNodes[0].GetNodeValue(R);
   Case FResult.ResultType of
     rtFloat: FResult.ResFloat:=FResult.ResFloat+R.ResFloat;
-    rtCurrency: FResult.ResCurrency:=FResult.ResCurrency+R.ResCurrency;
     rtinteger: FResult.ResInteger:=FResult.ResInteger+R.ResInteger;
   end;
 end;
@@ -1250,14 +1070,9 @@ begin
   Result:=C in Delimiters;
 end;
 
-function TFPExpressionScanner.IsDigit(C: Char; AKind: TNumberKind): Boolean;
+function TFPExpressionScanner.IsDigit(C: Char): Boolean;
 begin
-  case AKind of
-    nkDecimal: Result := C in Digits;
-    nkHex    : Result := C in HexDigits;
-    nkOctal  : Result := C in OctalDigits;
-    nkBinary : Result := C in BinaryDigits;
-  end;
+  Result:=C in Digits;
 end;
 
 Procedure TFPExpressionScanner.SkipWhiteSpace;
@@ -1355,21 +1170,7 @@ begin
     Result:=#0;
 end;
 
-procedure Val(const S: string; out V: TExprFloat; out Code: Integer);
-var
-  L64: Int64;
-begin
-  if (S <> '') and (S[1] in ['&', '$', '%']) then
-  begin
-    System.Val(S, L64, Code);
-    if Code = 0 then
-      V := L64
-  end
-  else
-    System.Val(S, V, Code);
-end;
-
-Function TFPExpressionScanner.DoNumber(AKind: TNumberKind) : TTokenType;
+Function TFPExpressionScanner.DoNumber : TTokenType;
 
 Var
   C : Char;
@@ -1377,38 +1178,16 @@ Var
   I : Integer;
   prevC: Char;
 
-  function ValidDigit(C: Char; AKind: TNumberKind): Boolean;
-  begin
-    Result := IsDigit(C, AKind);
-    if (not Result) then
-      case AKind of
-        nkDecimal:
-          Result := ((FToken <> '') and (UpCase(C)='E')) or
-                    ((FToken <> '') and (C in ['+','-']) and (prevC='E'));
-        nkHex:
-          Result := (C = cHexIdentifier) and (prevC = #0);
-        nkOctal:
-          Result := (C = cOctalIdentifier) and (prevC = #0);
-        nkBinary:
-          Result := (C = cBinaryIdentifier) and (prevC = #0);
-      end;
-  end;
-
 begin
   C:=CurrentChar;
   prevC := #0;
-  while (C <> cNull) do
-  begin
-    if IsWordDelim(C) then
-      case AKind of
-        nkDecimal:
-          if not (prevC in ['E','-','+']) then break;
-        nkHex, nkOctal:
-          break;
-        nkBinary:
-          if (prevC <> #0) then break;   // allow '%' as first char
-      end;
-    if not ValidDigit(C, AKind) then
+  while (not IsWordDelim(C) or (prevC in ['E','-','+'])) and (C<>cNull) do
+    begin
+    If Not ( IsDigit(C)
+             or ((FToken<>'') and (Upcase(C)='E'))
+             or ((FToken<>'') and (C in ['+','-']) and (prevC='E'))
+           )
+    then
       ScanError(Format(SErrInvalidNumberChar,[C]));
     FToken := FToken+C;
     prevC := Upcase(C);
@@ -1461,8 +1240,6 @@ begin
     Result:=ttif
   else if (S='case') then
     Result:=ttcase
-  else if (S='mod') then
-    Result:=ttMod
   else
     Result:=ttIdentifier;
 end;
@@ -1482,14 +1259,8 @@ begin
     Result:=DoDelimiter
   else if (C=cSingleQuote) then
     Result:=DoString
-  else if (C=cHexIdentifier) then
-    Result := DoNumber(nkHex)
-  else if (C=cOctalIdentifier) then
-    Result := DoNumber(nkOctal)
-  else if (C=cBinaryIdentifier) then
-    Result := DoNumber(nkBinary)
-  else if IsDigit(C, nkDecimal) then
-    Result:=DoNumber(nkDecimal)
+  else if IsDigit(C) then
+    Result:=DoNumber
   else if IsAlpha(C) or (C='"') then
     Result:=DoIdentifier
   else
@@ -1591,7 +1362,7 @@ begin
   FIdentifiers.Assign(AValue)
 end;
 
-procedure TFPExpressionParser.EvaluateExpression(Out Result: TFPExpressionResult);
+procedure TFPExpressionParser.EvaluateExpression(var Result: TFPExpressionResult);
 begin
   If (FExpression='') then
     ParserError(SErrInExpressionEmpty);
@@ -1616,25 +1387,18 @@ begin
   Raise EExprParser.Create(Msg);
 end;
 
-Class function TFPExpressionParser.ConvertNode(Todo : TFPExprNode; ToType : TResultType): TFPExprNode;
+function TFPExpressionParser.ConvertNode(Todo : TFPExprNode; ToType : TResultType): TFPExprNode;
 begin
   Result:=ToDo;
   Case ToDo.NodeType of
     rtInteger :
       Case ToType of
         rtFloat    : Result:=TIntToFloatNode.Create(Result);
-        rtCurrency : Result:=TIntToCurrencyNode.Create(Result);
         rtDateTime : Result:=TIntToDateTimeNode.Create(Result);
       end;
     rtFloat :
       Case ToType of
-        rtCurrency : Result:=TFloatToCurrencyNode.Create(Result);
         rtDateTime : Result:=TFloatToDateTimeNode.Create(Result);
-      end;
-    rtCurrency :
-      Case ToType of
-        rtFloat    : Result:=TCurrencyToFloatNode.Create(Result);
-        rtDateTime : Result:=TCurrencyToDateTimeNode.Create(Result);
       end;
   end;
 end;
@@ -1667,26 +1431,8 @@ var
 
 begin
   EvaluateExpression(Res);
-  CheckResultTypes(Res,[rtFloat,rtCurrency,rtInteger]);
-  case Res.ResultType of
-    rtInteger : Result:=Res.ResInteger;
-    rtFloat : Result:=Res.ResFloat;
-    rtCurrency : Result:=res.ResCurrency;
-  end;
-end;
-
-function TFPExpressionParser.GetAsCurrency: Currency;
-var
-  Res: TFPExpressionResult;
-
-begin
-  EvaluateExpression(Res);
-  CheckResultTypes(Res,[rtFloat,rtCurrency,rtInteger]);
-  case Res.ResultType of
-    rtInteger : Result:=Res.ResInteger;
-    rtFloat : Result:=Res.ResFloat;
-    rtCurrency : Result:=res.ResCurrency;
-  end;
+  CheckResultType(Res,rtFloat);
+  Result:=Res.ResFloat;
 end;
 
 function TFPExpressionParser.GetAsInteger: Int64;
@@ -1720,23 +1466,24 @@ end;
 function TFPExpressionParser.MatchNodes(Todo,Match : TFPExprNode): TFPExprNode;
 
 Var
-  FromType,ToType : TResultType;
+  TT,MT : TResultType;
 
 begin
   Result:=Todo;
-  FromType:=Todo.NodeType;
-  ToType:=Match.NodeType;
-  If (FromType<>ToType) then
-    Case FromType of
-    rtInteger:
-      if (ToType in [rtFloat,rtCurrency,rtDateTime]) then
-        Result:=ConvertNode(Todo,toType);
-    rtFloat:
-      if (ToType in [rtCurrency,rtDateTime]) then
-        Result:=ConvertNode(Todo,toType);
-    rtCurrency:
-      if (ToType in [rtFloat,rtDateTime]) then
-        Result:=ConvertNode(Todo,toType);
+  TT:=Todo.NodeType;
+  MT:=Match.NodeType;
+  If (TT<>MT) then
+    begin
+    if (TT=rtInteger) then
+      begin
+      if (MT in [rtFloat,rtDateTime]) then
+        Result:=ConvertNode(Todo,MT);
+      end
+    else if (TT=rtFloat) then
+      begin
+      if (MT=rtDateTime) then
+        Result:=ConvertNode(Todo,rtDateTime);
+      end;
     end;
 end;
 
@@ -1873,7 +1620,7 @@ begin
 {$ifdef debugexpr}  Writeln('Level 4 ',TokenName(TokenType),': ',CurrentToken);{$endif debugexpr}
   Result:=Level5;
   try
-    while (TokenType in [ttMul,ttDiv,ttMod]) do
+    while (TokenType in [ttMul,ttDiv]) do
       begin
       tt:=TokenType;
       GetToken;
@@ -1882,7 +1629,6 @@ begin
       Case tt of
         ttMul : Result:=TFPMultiplyOperation.Create(Result,Right);
         ttDiv : Result:=TFPDivideOperation.Create(Result,Right);
-        ttMod : Result:=TFPModuloOperation.Create(Result,Right);
       end;
       end;
   Except
@@ -1972,7 +1718,7 @@ begin
     else
       begin
       Val(CurrentToken,X,C);
-      If (C=0) then
+      If (I=0) then
         Result:=TFPConstExpression.CreateFloat(X)
       else
         ParserError(Format(SErrInvalidFloat,[CurrentToken]));
@@ -2081,12 +1827,6 @@ procedure TFPExpressionParser.CheckResultType(const Res: TFPExpressionResult;
   AType: TResultType); inline;
 begin
   If (Res.ResultType<>AType) then
-    RaiseParserError(SErrInvalidResultType,[ResultTypeName(Res.ResultType)]);
-end;
-
-procedure TFPExpressionParser.CheckResultTypes(const Res: TFPExpressionResult; ATypes: TResultTypes);
-begin
-  If Not (Res.ResultType in ATypes) then
     RaiseParserError(SErrInvalidResultType,[ResultTypeName(Res.ResultType)]);
 end;
 
@@ -2238,15 +1978,6 @@ begin
   Result.FValue.ResFloat:=AValue;
 end;
 
-function TFPExprIdentifierDefs.AddCurrencyVariable(const AName: ShortString; AValue: Currency): TFPExprIdentifierDef;
-begin
-  Result:=Add as TFPExprIdentifierDef;
-  Result.IdentifierType:=itVariable;
-  Result.Name:=AName;
-  Result.ResultType:=rtCurrency;
-  Result.FValue.ResCurrency:=AValue;
-end;
-
 function TFPExprIdentifierDefs.AddStringVariable(const AName: ShortString;
   AValue: String): TFPExprIdentifierDef;
 begin
@@ -2274,11 +2005,7 @@ begin
   Result:=Add as TFPExprIdentifierDef;
   Result.Name:=Aname;
   Result.IdentifierType:=itFunctionCallBack;
-  if (AParamTypes <> '') and (AParamTypes[Length(AParamTypes)] = '+') then begin
-    Result.ParameterTypes := Copy(AParamTypes, 1, Length(AParamTypes)-1);
-    Result.FVariableArgumentCount := true;
-  end else
-    Result.ParameterTypes := AParamTypes;
+  Result.ParameterTypes:=AParamTypes;
   Result.ResultType:=CharToResultType(AResultType);
   Result.FOnGetValueCB:=ACallBack;
 end;
@@ -2290,11 +2017,7 @@ begin
   Result:=Add as TFPExprIdentifierDef;
   Result.Name:=Aname;
   Result.IdentifierType:=itFunctionHandler;
-  if (AParamTypes <> '') and (AParamTypes[Length(AParamTypes)] = '+') then begin
-    Result.ParameterTypes := Copy(AParamTypes, 1, Length(AParamTypes)-1);
-    Result.FVariableArgumentCount := true;
-  end else
-    Result.ParameterTypes := AParamTypes;
+  Result.ParameterTypes:=AParamTypes;
   Result.ResultType:=CharToResultType(AResultType);
   Result.FOnGetValue:=ACallBack;
 end;
@@ -2306,15 +2029,10 @@ begin
   Result:=Add as TFPExprIdentifierDef;
   Result.Name:=Aname;
   Result.IdentifierType:=itFunctionNode;
-  if (AParamTypes <> '') and (AParamTypes[Length(AParamTypes)] = '+') then begin
-    Result.ParameterTypes := Copy(AParamTypes, 1, Length(AParamTypes)-1);
-    Result.FVariableArgumentCount := true;
-  end else
-    Result.ParameterTypes := AParamTypes;
+  Result.ParameterTypes:=AParamTypes;
   Result.ResultType:=CharToResultType(AResultType);
   Result.FNodeType:=ANodeClass;
 end;
-
 
 { ---------------------------------------------------------------------
   TFPExprIdentifierDef
@@ -2346,9 +2064,8 @@ begin
     Case FValue.ResultType of
       rtBoolean  : FValue.ResBoolean:=FStringValue='True';
       rtInteger  : FValue.ResInteger:=StrToInt(AValue);
-      rtFloat    : FValue.ResFloat:=StrToFloat(AValue, FileFormatSettings);
-      rtCurrency : FValue.ResFloat:=StrToCurr(AValue, FileFormatSettings);
-      rtDateTime : FValue.ResDateTime:=StrToDateTime(AValue, FileFormatSettings);
+      rtFloat    : FValue.ResFloat:=StrToFloat(AValue);
+      rtDateTime : FValue.ResDateTime:=StrToDateTime(AValue);
       rtString   : FValue.ResString:=AValue;
     end
   else
@@ -2356,7 +2073,6 @@ begin
       rtBoolean  : FValue.ResBoolean:=False;
       rtInteger  : FValue.ResInteger:=0;
       rtFloat    : FValue.ResFloat:=0.0;
-      rtCurrency : FValue.ResCurrency:=0.0;
       rtDateTime : FValue.ResDateTime:=0;
       rtString   : FValue.ResString:='';
     end
@@ -2378,10 +2094,7 @@ end;
 
 function TFPExprIdentifierDef.ArgumentCount: Integer;
 begin
-  if FVariableArgumentCount then
-    Result := -Length(FArgumentTypes)
-  else
-    Result:=Length(FArgumentTypes);
+  Result:=Length(FArgumentTypes);
 end;
 
 procedure TFPExprIdentifierDef.Assign(Source: TPersistent);
@@ -2396,7 +2109,6 @@ begin
     FStringValue:=EID.FStringValue;
     FValue:=EID.FValue;
     FArgumentTypes:=EID.FArgumentTypes;
-    FVariableArgumentCount := EID.FVariableArgumentCount;
     FIDType:=EID.FIDType;
     FName:=EID.FName;
     FOnGetValue:=EID.FOnGetValue;
@@ -2441,13 +2153,6 @@ begin
   FValue.ResFloat:=AValue;
 end;
 
-procedure TFPExprIdentifierDef.SetAsCurrency(const AValue: Currency);
-begin
-  CheckVariable;
-  CheckResultType(rtCurrency);
-  FValue.ResCurrency:=AValue;
-end;
-
 procedure TFPExprIdentifierDef.SetAsInteger(const AValue: Int64);
 begin
   CheckVariable;
@@ -2470,9 +2175,8 @@ begin
                  else
                    Result:='False';
     rtInteger  : Result:=IntToStr(FValue.ResInteger);
-    rtFloat    : Result:=FloatToStr(FValue.ResFloat, FileFormatSettings);
-    rtCurrency : Result:=CurrToStr(FValue.ResCurrency, FileFormatSettings);
-    rtDateTime : Result:=FormatDateTime('cccc',FValue.ResDateTime, FileFormatSettings);
+    rtFloat    : Result:=FloatToStr(FValue.ResFloat);
+    rtDateTime : Result:=FormatDateTime('cccc',FValue.ResDateTime);
     rtString   : Result:=FValue.ResString;
   end;
 end;
@@ -2493,7 +2197,7 @@ begin
   if RT2<>RT then
     begin
     // Automatically convert integer to float.
-    if (rt2=rtInteger) and (rt=rtFloat) then
+    if (rt2=rtInteger) and (rt=rtFLoat) then
       begin
       FValue.ResultType:=RT;
       I:=FValue.resInteger;
@@ -2527,13 +2231,6 @@ begin
   CheckResultType(rtFloat);
   CheckVariable;
   Result:=FValue.ResFloat;
-end;
-
-function TFPExprIdentifierDef.GetAsCurrency: Currency;
-begin
-  CheckResultType(rtCurrency);
-  CheckVariable;
-  Result:=FValue.ResCurrency;
 end;
 
 function TFPExprIdentifierDef.GetAsBoolean: Boolean;
@@ -2641,13 +2338,6 @@ begin
   Result.Category:=ACategory;
 end;
 
-function TExprBuiltInManager.AddCurrencyVariable(const ACategory: TBuiltInCategory; const AName: ShortString; AValue: Currency
-  ): TFPBuiltInExprIdentifierDef;
-begin
-  Result:=TFPBuiltInExprIdentifierDef(FDefs.AddCurrencyVariable(AName,AValue));
-  Result.Category:=ACategory;
-end;
-
 function TExprBuiltInManager.AddStringVariable(
   const ACategory: TBuiltInCategory; const AName: ShortString; AValue: String
   ): TFPBuiltInExprIdentifierDef;
@@ -2686,18 +2376,6 @@ function TExprBuiltInManager.AddFunction(const ACategory: TBuiltInCategory;
 begin
   Result:=TFPBuiltInExprIdentifierDef(FDefs.AddFunction(AName,AResultType,AParamTypes,ANodeClass));
   Result. Category:=ACategory;
-end;
-
-procedure TExprBuiltInManager.Delete(AIndex: Integer);
-begin
-  FDefs.Delete(AIndex);
-end;
-
-function TExprBuiltInManager.Remove(aIdentifier: String): Integer;
-begin
-  Result:=IndexOfIdentifier(aIdentifier);
-  if Result<>-1 then
-    Delete(Result);
 end;
 
 
@@ -2836,13 +2514,6 @@ begin
   FValue.ResFloat:=AValue;
 end;
 
-constructor TFPConstExpression.CreateCurrency(AValue: Currency);
-begin
-  Inherited create;
-  FValue.ResultType:=rtCurrency;
-  FValue.ResCurrency:=AValue;
-end;
-
 constructor TFPConstExpression.CreateBoolean(AValue: Boolean);
 begin
   FValue.ResultType:=rtBoolean;
@@ -2872,7 +2543,6 @@ begin
     rtDateTime : Result:=''''+FormatDateTime('cccc',FValue.resDateTime)+'''';
     rtBoolean : If FValue.ResBoolean then Result:='True' else Result:='False';
     rtFloat : Str(FValue.ResFloat,Result);
-    rtCurrency : Str(FValue.ResCurrency,Result);
   end;
 end;
 
@@ -2882,7 +2552,7 @@ end;
 procedure TFPNegateOperation.Check;
 begin
   Inherited;
-  If Not (Operand.NodeType in [rtInteger,rtFloat,rtCurrency]) then
+  If Not (Operand.NodeType in [rtInteger,rtFloat]) then
     RaiseParserError(SErrNoNegation,[ResultTypeName(Operand.NodeType),Operand.AsString])
 end;
 
@@ -2897,7 +2567,6 @@ begin
   Case Result.ResultType of
     rtInteger : Result.resInteger:=-Result.ResInteger;
     rtFloat : Result.resFloat:=-Result.ResFloat;
-    rtCurrency : Result.resCurrency:=-Result.ResCurrency;
   end;
 end;
 
@@ -3141,8 +2810,7 @@ begin
     Case RT.ResultType of
       rtBoolean  : B:=RT.ResBoolean=RV.ResBoolean;
       rtInteger  : B:=RT.ResInteger=RV.ResInteger;
-      rtFloat    : B:=RT.ResFloat=RV.ResFloat;
-      rtCurrency : B:=RT.resCurrency=RV.resCurrency;
+      rtFloat    : B:=RT.ResFloat=RV.ResFLoat;
       rtDateTime : B:=RT.ResDateTime=RV.ResDateTime;
       rtString   : B:=RT.ResString=RV.ResString;
     end;
@@ -3297,8 +2965,7 @@ begin
   Case Result.ResultType of
     rtBoolean  : Result.resBoolean:=Result.ResBoolean=RRes.ResBoolean;
     rtInteger  : Result.resBoolean:=Result.ResInteger=RRes.ResInteger;
-    rtFloat    : Result.resBoolean:=Result.ResFloat=RRes.ResFloat;
-    rtCurrency : Result.resBoolean:=Result.resCurrency=RRes.resCurrency;
+    rtFloat    : Result.resBoolean:=Result.ResFloat=RRes.ResFLoat;
     rtDateTime : Result.resBoolean:=Result.ResDateTime=RRes.ResDateTime;
     rtString   : Result.resBoolean:=Result.ResString=RRes.ResString;
   end;
@@ -3335,8 +3002,7 @@ begin
   Right.GetNodeValue(RRes);
   Case Result.ResultType of
     rtInteger  : Result.resBoolean:=Result.ResInteger<RRes.ResInteger;
-    rtFloat    : Result.resBoolean:=Result.ResFloat<RRes.ResFloat;
-    rtCurrency : Result.resBoolean:=Result.resCurrency<RRes.resCurrency;
+    rtFloat    : Result.resBoolean:=Result.ResFloat<RRes.ResFLoat;
     rtDateTime : Result.resBoolean:=Result.ResDateTime<RRes.ResDateTime;
     rtString   : Result.resBoolean:=Result.ResString<RRes.ResString;
   end;
@@ -3362,17 +3028,10 @@ begin
     rtInteger : case Right.NodeType of
                   rtInteger : Result.resBoolean:=Result.ResInteger>RRes.ResInteger;
                   rtFloat : Result.resBoolean:=Result.ResInteger>RRes.ResFloat;
-                  rtCurrency : Result.resBoolean:=Result.ResInteger>RRes.resCurrency;
                 end;
     rtFloat   : case Right.NodeType of
                   rtInteger : Result.resBoolean:=Result.ResFloat>RRes.ResInteger;
-                  rtFloat : Result.resBoolean:=Result.ResFloat>RRes.ResFloat;
-                  rtCurrency : Result.resBoolean:=Result.ResFloat>RRes.ResCurrency;
-                end;
-    rtCurrency   : case Right.NodeType of
-                  rtInteger : Result.resBoolean:=Result.ResCurrency>RRes.ResInteger;
-                  rtFloat : Result.resBoolean:=Result.ResCurrency>RRes.ResFloat;
-                  rtCurrency : Result.resBoolean:=Result.ResCurrency>RRes.ResCurrency;
+                  rtFloat : Result.resBoolean:=Result.ResFloat>RRes.ResFLoat;
                 end;
     rtDateTime : Result.resBoolean:=Result.ResDateTime>RRes.ResDateTime;
     rtString   : Result.resBoolean:=Result.ResString>RRes.ResString;
@@ -3411,7 +3070,7 @@ end;
 procedure TFPOrderingOperation.Check;
 
 Const
-  AllowedTypes =[rtInteger,rtfloat,rtCurrency,rtDateTime,rtString];
+  AllowedTypes =[rtInteger,rtfloat,rtDateTime,rtString];
 
 begin
   CheckNodeType(Left,AllowedTypes);
@@ -3424,7 +3083,7 @@ end;
 procedure TMathOperation.Check;
 
 Const
-  AllowedTypes =[rtInteger,rtfloat,rtCurrency,rtDateTime,rtString];
+  AllowedTypes =[rtInteger,rtfloat,rtDateTime,rtString];
 
 begin
   inherited Check;
@@ -3457,8 +3116,7 @@ begin
     rtInteger  : Result.ResInteger:=Result.ResInteger+RRes.ResInteger;
     rtString   : Result.ResString:=Result.ResString+RRes.ResString;
     rtDateTime : Result.ResDateTime:=Result.ResDateTime+RRes.ResDateTime;
-    rtFloat    : Result.ResFloat:=Result.ResFloat+RRes.ResFloat;
-    rtCurrency : Result.ResCurrency:=Result.ResCurrency+RRes.ResCurrency;
+    rtFloat    : Result.ResFLoat:=Result.ResFLoat+RRes.ResFLoat;
   end;
   Result.ResultType:=NodeType;
 end;
@@ -3468,7 +3126,7 @@ end;
 procedure TFPSubtractOperation.check;
 
 Const
-  AllowedTypes =[rtInteger,rtfloat,rtCurrency,rtDateTime];
+  AllowedTypes =[rtInteger,rtfloat,rtDateTime];
 
 begin
   CheckNodeType(Left,AllowedTypes);
@@ -3492,8 +3150,7 @@ begin
   case Result.ResultType of
     rtInteger  : Result.ResInteger:=Result.ResInteger-RRes.ResInteger;
     rtDateTime : Result.ResDateTime:=Result.ResDateTime-RRes.ResDateTime;
-    rtFloat    : Result.ResFloat:=Result.ResFloat-RRes.ResFloat;
-    rtCurrency : Result.resCurrency:=Result.resCurrency-RRes.ResCurrency;
+    rtFloat    : Result.ResFLoat:=Result.ResFLoat-RRes.ResFLoat;
   end;
 end;
 
@@ -3502,7 +3159,7 @@ end;
 procedure TFPMultiplyOperation.check;
 
 Const
-  AllowedTypes =[rtInteger,rtCurrency,rtfloat];
+  AllowedTypes =[rtInteger,rtfloat];
 
 begin
   CheckNodeType(Left,AllowedTypes);
@@ -3524,8 +3181,7 @@ begin
   Right.GetNodeValue(RRes);
   case Result.ResultType of
     rtInteger  : Result.ResInteger:=Result.ResInteger*RRes.ResInteger;
-    rtFloat    : Result.ResFloat:=Result.ResFloat*RRes.ResFloat;
-    rtCurrency : Result.ResCurrency:=Result.ResCurrency*RRes.ResCurrency;
+    rtFloat    : Result.ResFLoat:=Result.ResFLoat*RRes.ResFLoat;
   end;
 end;
 
@@ -3533,7 +3189,7 @@ end;
 
 procedure TFPDivideOperation.check;
 Const
-  AllowedTypes =[rtInteger,rtCurrency,rtfloat];
+  AllowedTypes =[rtInteger,rtfloat];
 
 begin
   CheckNodeType(Left,AllowedTypes);
@@ -3547,12 +3203,8 @@ begin
 end;
 
 function TFPDivideOperation.NodeType: TResultType;
-
 begin
-  if (Left.NodeType=rtCurrency) and (Right.NodeType=rtCurrency) then
-    Result:=rtCurrency
-  else
-    Result:=rtFloat;
+  Result:=rtFLoat;
 end;
 
 Procedure TFPDivideOperation.GetNodeValue(var Result : TFPExpressionResult);
@@ -3565,21 +3217,16 @@ begin
   Right.GetNodeValue(RRes);
   case Result.ResultType of
     rtInteger  : Result.ResFloat:=Result.ResInteger/RRes.ResInteger;
-    rtFloat    : Result.ResFloat:=Result.ResFloat/RRes.ResFloat;
-    rtCurrency :
-        if NodeType=rtCurrency then
-          Result.ResCurrency:=Result.ResCurrency/RRes.ResCurrency
-        else
-          Result.ResFloat:=Result.ResFloat/RRes.ResFloat;
+    rtFloat    : Result.ResFLoat:=Result.ResFLoat/RRes.ResFLoat;
   end;
-  Result.ResultType:=NodeType;
+  Result.ResultType:=rtFloat;
 end;
 
 { TFPPowerOperation }
 
 procedure TFPPowerOperation.Check;
 const
-  AllowedTypes = [rtInteger, rtCurrency, rtFloat];
+  AllowedTypes = [rtInteger, rtFloat];
 begin
   CheckNodeType(Left, AllowedTypes);
   CheckNodeType(Right, AllowedTypes);
@@ -3686,46 +3333,6 @@ begin
   Result.ResultType:=rtDateTime;
 end;
 
-{ TCurrencyToDateTimeNode }
-
-procedure TCurrencyToDateTimeNode.Check;
-begin
-  inherited Check;
-  CheckNodeType(Operand,[rtCurrency]);
-end;
-
-function TCurrencyToDateTimeNode.NodeType: TResultType;
-begin
-  Result:=rtDateTime;
-end;
-
-Procedure TCurrencyToDateTimeNode.GetNodeValue(var Result : TFPExpressionResult);
-begin
-  Operand.GetNodeValue(Result);
-  Result.ResDateTime:=Result.ResCurrency;
-  Result.ResultType:=rtDateTime;
-end;
-
-{ TCurrencyToFloatNode }
-
-procedure TCurrencyToFloatNode.Check;
-begin
-  inherited Check;
-  CheckNodeType(Operand,[rtCurrency]);
-end;
-
-function TCurrencyToFloatNode.NodeType: TResultType;
-begin
-  Result:=rtFloat;
-end;
-
-Procedure TCurrencyToFloatNode.GetNodeValue(var Result : TFPExpressionResult);
-begin
-  Operand.GetNodeValue(Result);
-  Result.ResFloat:=Result.ResCurrency;
-  Result.ResultType:=rtFloat;
-end;
-
 { TFPExprIdentifierNode }
 
 constructor TFPExprIdentifierNode.CreateIdentifier(AID: TFPExprIdentifierDef);
@@ -3775,33 +3382,6 @@ begin
     end;
 end;
 
-Function TFPExprFunction.ConvertArgument(aIndex : Integer; aNode : TFPExprNode; aType : TResultType) : TFPExprNode;
-
-Var
-  N : TFPExprNode;
-
-begin
-  // Automatically convert integers to floats for float/currency parameters
-  N:=TFPExpressionParser.ConvertNode(aNode,aType);
-  if (aNode=N) then
-    // No conversion was performed, raise error
-    RaiseParserError(SErrInvalidArgumentType,[aIndex,ResultTypeName(aType),ResultTypeName(aNode.NodeType)]);
-  Result:=N;
-end;
-
-function TFPExprFunction.HasAggregate: Boolean;
-var
-  I: Integer;
-begin
-  Result := true;
-  if IsAggregate then
-    exit;
-  For I:=0 to Length(FArgumentNodes)-1 do
-    if FArgumentNodes[I].HasAggregate then
-      exit;
-  Result := false;
-end;
-
 procedure TFPExprFunction.Check;
 
 Var
@@ -3809,22 +3389,28 @@ Var
   rtp,rta : TResultType;
 
 begin
-  If (Length(FArgumentNodes)<>FID.ArgumentCount) and not FID.VariableArgumentCount then
+  If Length(FArgumentNodes)<>FID.ArgumentCount then
     RaiseParserError(ErrInvalidArgumentCount,[FID.Name]);
   For I:=0 to Length(FArgumentNodes)-1 do
     begin
-    if (i < Length(FID.ParameterTypes)) then
-      rtp := CharToResultType(FID.ParameterTypes[i+1])
-    else if FID.VariableArgumentCount then
-      rtp := CharToResultType(FID.ParameterTypes[Length(FID.ParameterTypes)]);
+    rtp:=CharToResultType(FID.ParameterTypes[i+1]);
     rta:=FArgumentNodes[i].NodeType;
-    If (rtp<>rta) then
-      FArgumentNodes[i]:=ConvertArgument(I+1,FArgumentNodes[i],rtp);
+    If (rtp<>rta) then begin
+
+      // Automatically convert integers to floats in functions that return
+      // a float
+      if (rta = rtInteger) and (rtp = rtFloat) then begin
+        FArgumentNodes[i] := TIntToFloatNode.Create(FArgumentNodes[i]);
+        exit;
+      end;
+
+      RaiseParserError(SErrInvalidArgumentType,[I+1,ResultTypeName(rtp),ResultTypeName(rta)])
+    end;
     end;
 end;
 
-constructor TFPExprFunction.CreateFunction(AID: TFPExprIdentifierDef; const Args: TExprArgumentArray);
-
+constructor TFPExprFunction.CreateFunction(AID: TFPExprIdentifierDef;
+  const Args: TExprArgumentArray);
 begin
   Inherited CreateIdentifier(AID);
   FArgumentNodes:=Args;
@@ -3840,22 +3426,6 @@ begin
   For I:=0 to Length(FArgumentNodes)-1 do
     FreeAndNil(FArgumentNodes[I]);
   inherited Destroy;
-end;
-
-procedure TFPExprFunction.InitAggregate;
-var
-  I: Integer;
-begin
-  For I:=0 to Length(FArgumentNodes)-1 do
-    FArgumentNodes[i].InitAggregate;
-end;
-
-procedure TFPExprFunction.UpdateAggregate;
-var
-  I: Integer;
-begin
-  For I:=0 to Length(FArgumentNodes)-1 do
-    FArgumentNodes[i].UpdateAggregate;
 end;
 
 function TFPExprFunction.AsString: String;
@@ -3931,8 +3501,6 @@ function ArgToFloat(Arg: TFPExpressionResult): TExprFloat;
 begin
   if Arg.ResultType = rtInteger then
     result := Arg.resInteger
-  else if Arg.ResultType = rtCurrency then
-    result := Arg.resCurrency
   else
     result := Arg.resFloat;
 end;
@@ -4285,11 +3853,6 @@ begin
   Result.resDateTime:=StrToDateTimeDef(Args[0].resString,Args[1].resDateTime);
 end;
 
-procedure BuiltInFormatFloat(Var Result : TFPExpressionResult; Const Args : TExprParameterArray);
-begin
-  result.ResString := FormatFloat(Args[0].resString, Args[1].ResFloat);
-end;
-
 Procedure BuiltInBoolToStr(Var Result : TFPExpressionResult; Const Args : TExprParameterArray);
 
 begin
@@ -4413,6 +3976,7 @@ begin
       AddFunction(bcDateTime,'shortmonthname','S','I',@BuiltinShortMonthName);
       AddFunction(bcDateTime,'longdayname','S','I',@BuiltinLongDayName);
       AddFunction(bcDateTime,'longmonthname','S','I',@BuiltinLongMonthName);
+      AddFunction(bcDateTime,'formatdatetime','S','SD',@BuiltinFormatDateTime);
       end;
     if bcBoolean in Categories then
       begin
@@ -4444,8 +4008,6 @@ begin
       AddFunction(bcConversion,'strtotimedef','D','SD',@BuiltInStrToTimeDef);
       AddFunction(bcConversion,'strtodatetime','D','S',@BuiltInStrToDateTime);
       AddFunction(bcConversion,'strtodatetimedef','D','SD',@BuiltInStrToDateTimeDef);
-      AddFunction(bcConversion,'formatfloat','S','SF',@BuiltInFormatFloat);
-      AddFunction(bcConversion,'formatdatetime','S','SD',@BuiltinFormatDateTime);
       end;
     if bcAggregate in Categories then
       begin
@@ -4467,21 +4029,9 @@ begin
     FCategory:=(Source as TFPBuiltInExprIdentifierDef).Category;
 end;
 
-procedure InitFileFormatSettings;
-begin
-  FileFormatSettings := DefaultFormatSettings;
-  FileFormatSettings.DecimalSeparator := '.';
-  FileFormatSettings.DateSeparator := '-';
-  FileFormatSettings.TimeSeparator := ':';
-  FileFormatsettings.ShortDateFormat := 'yyyy-mm-dd';
-  FileFormatSettings.LongTimeFormat := 'hh:nn:ss';
-end;
-
 initialization
   RegisterStdBuiltins(BuiltinIdentifiers);
-  InitFileFormatSettings;
 
 finalization
   FreeBuiltins;
 end.
-

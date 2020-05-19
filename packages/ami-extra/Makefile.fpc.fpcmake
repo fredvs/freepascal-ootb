@@ -4,10 +4,10 @@
 
 [package]
 name=ami-extra
-version=3.2.0-beta
+version=3.0.5
 
 [target]
-units=amsgbox cliputils pcq
+units=cliputils
 
 [compiler]
 includedir=src

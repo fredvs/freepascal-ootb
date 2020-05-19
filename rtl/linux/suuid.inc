@@ -28,7 +28,7 @@ Var
   
 begin
   P:=@Buf;
-  fd:=FileOpen('/dev/urandom',fmOpenRead or fmShareDenyNone);
+  fd:=FileOpen('/dev/urandom',fmOpenRead);
   if (fd>=0) then
     Try
       While (NBytes>0) do
@@ -58,7 +58,7 @@ Var
   S : String;
   
 begin
-  fd:=FileOpen(KernelUUID,fmOpenRead or fmShareDenyNone);
+  fd:=FileOpen(KernelUUID,fmOpenRead);
   Result:=(Fd>=0);
   if Result then
     try
@@ -76,7 +76,7 @@ Function SysCreateGUID(out GUID : TGUID) : Integer;
 
 begin
   if not CreateKernelGUID(Guid) then
-    GetURandomBytes(GUID,SizeOf(Guid));  
+    GetRandomBytes(GUID,SizeOf(Guid));  
   Result:=0;    
 end;
 

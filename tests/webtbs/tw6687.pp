@@ -1,5 +1,5 @@
 { %cpu=i386 }
-{ %target=win32,freebsd,haiku }
+{ %target=win32,linux,freebsd }
 
 {$ifdef fpc}
 {$mode delphi}

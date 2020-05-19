@@ -1,5 +1,3 @@
-{ %skiptarget=android }
-
 { This test checks whether the 'extradefines' from compiler/system/i_*.pas   }
 { are defined before the configuration file is parsed, together with tw9450a }
 

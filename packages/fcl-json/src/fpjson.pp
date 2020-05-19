@@ -19,51 +19,26 @@ unit fpjson;
 interface
 
 uses
-  {$ifdef fpc}
   variants,
-  {$endif}
-  {$ifdef pas2js}
-  JS, RTLConsts, Types,
-  {$endif}
   SysUtils,
   classes,
   contnrs;
 
 type
+
   TJSONtype = (jtUnknown, jtNumber, jtString, jtBoolean, jtNull, jtArray, jtObject);
-  TJSONInstanceType = (
-    jitUnknown,
-    jitNumberInteger,
-    {$ifdef fpc}
-    jitNumberInt64,
-    jitNumberQWord,
-    {$endif}
-    jitNumberFloat,
-    jitString,
-    jitBoolean,
-    jitNull,
-    jitArray,
-    jitObject);
+  TJSONInstanceType = (jitUnknown, jitNumberInteger,jitNumberInt64,jitNumberQWord,jitNumberFloat,
+                       jitString, jitBoolean, jitNull, jitArray, jitObject);
   TJSONFloat = Double;
-  TJSONStringType = {$ifdef fpc}UTF8String{$else}string{$endif};
+  TJSONStringType = UTF8String;
   TJSONUnicodeStringType = Unicodestring;
-  {$ifdef fpc}
   TJSONCharType = AnsiChar;
   PJSONCharType = ^TJSONCharType;
-  TJSONVariant = variant;
-  TFPJSStream = TMemoryStream;
-  {$else}
-  TJSONCharType = char;
-  TJSONVariant = jsvalue;
-  TFPJSStream = TJSArray;
-  {$endif}
   TFormatOption = (foSingleLineArray,   // Array without CR/LF : all on one line
                    foSingleLineObject,  // Object without CR/LF : all on one line
                    foDoNotQuoteMembers, // Do not quote object member names.
                    foUseTabchar,        // Use tab characters instead of spaces.
-                   foSkipWhiteSpace,    // Do not use whitespace at all
-                   foSkipWhiteSpaceOnlyLeading   //  When foSkipWhiteSpace is active, skip whitespace for object members only before :
-                   );
+                   foSkipWhiteSpace);   // Do not use whitespace at all
   TFormatOptions = set of TFormatOption;
 
 Const
@@ -79,8 +54,7 @@ Const
 Type
   TJSONData = Class;
 
-  { TBaseJSONEnumerator }
-
+  { TMJBaseObjectEnumerator }
   TJSONEnum = Record
     Key : TJSONStringType;
     KeyNum : Integer;
@@ -94,6 +68,9 @@ Type
     property Current: TJSONEnum read GetCurrent;
   end;
 
+  { TMJObjectEnumerator }
+
+
   { TJSONData }
   
   TJSONData = class(TObject)
@@ -103,36 +80,30 @@ Type
     Class Var FCompressedJSON : Boolean;
     Class Var FElementSep : TJSONStringType;
     class procedure DetermineElementSeparators;
-    class function GetCompressedJSON: Boolean; {$ifdef fpc}static;{$endif}
-    class procedure SetCompressedJSON(AValue: Boolean); {$ifdef fpc}static;{$endif}
+    class function GetCompressedJSON: Boolean; static;
+    class procedure SetCompressedJSON(AValue: Boolean); static;
   protected
     Class Procedure DoError(Const Msg : String);
-    Class Procedure DoError(Const Fmt : String; const Args : Array of {$ifdef pas2js}jsvalue{$else}Const{$endif});
+    Class Procedure DoError(Const Fmt : String; const Args : Array of const);
     Function DoFindPath(Const APath : TJSONStringType; Out NotFound : TJSONStringType) : TJSONdata; virtual;
     function GetAsBoolean: Boolean; virtual; abstract;
     function GetAsFloat: TJSONFloat; virtual; abstract;
     function GetAsInteger: Integer; virtual; abstract;
-    {$ifdef fpc}
     function GetAsInt64: Int64; virtual; abstract;
     function GetAsQWord: QWord; virtual; abstract;
-    {$endif}
     function GetIsNull: Boolean; virtual;
     procedure SetAsBoolean(const AValue: Boolean); virtual; abstract;
     procedure SetAsFloat(const AValue: TJSONFloat); virtual; abstract;
     procedure SetAsInteger(const AValue: Integer); virtual; abstract;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); virtual; abstract;
     procedure SetAsQword(const AValue: QWord); virtual; abstract;
-    {$endif}
     function GetAsJSON: TJSONStringType; virtual; abstract;
     function GetAsString: TJSONStringType; virtual; abstract;
     procedure SetAsString(const AValue: TJSONStringType); virtual; abstract;
-    {$ifdef fpc}
     function GetAsUnicodeString: TJSONUnicodeStringType; virtual; 
     procedure SetAsUnicodeString(const AValue: TJSONUnicodeStringType); virtual;
-    {$endif}
-    function GetValue: TJSONVariant; virtual; abstract;
-    procedure SetValue(const AValue: TJSONVariant); virtual; abstract;
+    function GetValue: variant; virtual; abstract;
+    procedure SetValue(const AValue: variant); virtual; abstract;
     function GetItem(Index : Integer): TJSONData; virtual;
     procedure SetItem(Index : Integer; const AValue: TJSONData); virtual;
     Function DoFormatJSON(Options : TFormatOptions; CurrentIndent, Indent : Integer) : TJSONStringType; virtual;
@@ -143,7 +114,7 @@ Type
   public
     Constructor Create; virtual;
     Procedure Clear;  virtual; Abstract;
-    Procedure DumpJSON(S : TFPJSStream);
+    Procedure DumpJSON(S : TStream);
     // Get enumerator
     function GetEnumerator: TBaseJSONEnumerator; virtual;
     Function FindPath(Const APath : TJSONStringType) : TJSONdata;
@@ -152,31 +123,20 @@ Type
     Function FormatJSON(Options : TFormatOptions = DefaultFormat; Indentsize : Integer = DefaultIndentSize) : TJSONStringType; 
     property Count: Integer read GetCount;
     property Items[Index: Integer]: TJSONData read GetItem write SetItem;
-    property Value: TJSONVariant read GetValue write SetValue;
+    property Value: variant read GetValue write SetValue;
     Property AsString : TJSONStringType Read GetAsString Write SetAsString;
-    {$ifdef fpc}
     Property AsUnicodeString : TJSONUnicodeStringType Read GetAsUnicodeString Write SetAsUnicodeString;
-    {$endif}
     Property AsFloat : TJSONFloat Read GetAsFloat Write SetAsFloat;
     Property AsInteger : Integer Read GetAsInteger Write SetAsInteger;
-    {$ifdef fpc}
     Property AsInt64 : Int64 Read GetAsInt64 Write SetAsInt64;
     Property AsQWord : QWord Read GetAsQWord Write SetAsQword;
-    {$endif}
     Property AsBoolean : Boolean Read GetAsBoolean Write SetAsBoolean;
     Property IsNull : Boolean Read GetIsNull;
     Property AsJSON : TJSONStringType Read GetAsJSON;
   end;
 
   TJSONDataClass = Class of TJSONData;
-  TJSONNumberType = (
-    ntFloat,
-    ntInteger
-    {$ifdef fpc}
-    ,ntInt64
-    ,ntQWord
-    {$endif}
-    );
+  TJSONNumberType = (ntFloat,ntInteger,ntInt64,ntQWord);
 
   TJSONNumber = class(TJSONData)
   protected
@@ -194,22 +154,18 @@ Type
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
   public
     Constructor Create(AValue : TJSONFloat); reintroduce;
     class function NumberType : TJSONNumberType; override;
@@ -227,22 +183,18 @@ Type
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
   public
     Constructor Create(AValue : Integer); reintroduce;
     class function NumberType : TJSONNumberType; override;
@@ -251,7 +203,6 @@ Type
   end;
   TJSONIntegerNumberClass = Class of TJSONIntegerNumber;
 
-  {$ifdef fpc}
   { TJSONInt64Number }
 
   TJSONInt64Number = class(TJSONNumber)
@@ -271,8 +222,8 @@ Type
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
   public
     Constructor Create(AValue : Int64); reintroduce;
     class function NumberType : TJSONNumberType; override;
@@ -280,9 +231,7 @@ Type
     Function Clone : TJSONData; override;
   end;
   TJSONInt64NumberClass = Class of TJSONInt64Number;
-  {$endif}
 
-  {$ifdef fpc}
   { TJSONQWordNumber }
 
   TJSONQWordNumber = class(TJSONNumber)
@@ -302,8 +251,8 @@ Type
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
   public
     Constructor Create(AValue : QWord); reintroduce;
     class function NumberType : TJSONNumberType; override;
@@ -311,7 +260,7 @@ Type
     Function Clone : TJSONData; override;
   end;
   TJSONQWordNumberClass = Class of TJSONQWordNumber;
-  {$endif}
+
 
   { TJSONString }
 
@@ -319,22 +268,18 @@ Type
   Private
     FValue: TJSONStringType;
   protected
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: Variant; override;
+    procedure SetValue(const AValue: Variant); override;
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
@@ -342,37 +287,31 @@ Type
     Class var StrictEscaping : Boolean;
   public
     Constructor Create(const AValue : TJSONStringType); reintroduce;
-    {$ifdef fpc}
     Constructor Create(const AValue : TJSONUnicodeStringType); reintroduce;
-    {$endif}
     class function JSONType: TJSONType; override;
     Procedure Clear;  override;
     Function Clone : TJSONData; override;
   end;
   TJSONStringClass = Class of TJSONString;
 
-  { TJSONBoolean }
+  { TJSONboolean }
 
   TJSONBoolean = class(TJSONData)
   Private
     FValue: Boolean;
   protected
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: Variant; override;
+    procedure SetValue(const AValue: Variant); override;
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
@@ -392,23 +331,19 @@ Type
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     function GetIsNull: Boolean; override;
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
   public
     class function JSONType: TJSONType; override;
     Procedure Clear;  override;
@@ -428,63 +363,47 @@ Type
     function GetBooleans(Index : Integer): Boolean;
     function GetFloats(Index : Integer): TJSONFloat;
     function GetIntegers(Index : Integer): Integer;
-    {$ifdef fpc}
     function GetInt64s(Index : Integer): Int64;
-    {$endif}
     function GetNulls(Index : Integer): Boolean;
     function GetObjects(Index : Integer): TJSONObject;
-    {$ifdef fpc}
     function GetQWords(Index : Integer): QWord;
-    {$endif}
     function GetStrings(Index : Integer): TJSONStringType;
-    {$ifdef fpc}
     function GetUnicodeStrings(Index : Integer): TJSONUnicodeStringType;
-    {$endif}
     function GetTypes(Index : Integer): TJSONType;
     procedure SetArrays(Index : Integer; const AValue: TJSONArray);
     procedure SetBooleans(Index : Integer; const AValue: Boolean);
     procedure SetFloats(Index : Integer; const AValue: TJSONFloat);
     procedure SetIntegers(Index : Integer; const AValue: Integer);
-    {$ifdef fpc}
     procedure SetInt64s(Index : Integer; const AValue: Int64);
-    {$endif}
     procedure SetObjects(Index : Integer; const AValue: TJSONObject);
-    {$ifdef fpc}
     procedure SetQWords(Index : Integer; AValue: QWord);
-    {$endif}
     procedure SetStrings(Index : Integer; const AValue: TJSONStringType);
-    {$ifdef fpc}
     procedure SetUnicodeStrings(Index : Integer; const AValue: TJSONUnicodeStringType);
-    {$endif}
   protected
     Function DoFindPath(Const APath : TJSONStringType; Out NotFound : TJSONStringType) : TJSONdata; override;
     Procedure Converterror(From : Boolean);
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
     function GetCount: Integer; override;
     function GetItem(Index : Integer): TJSONData; override;
     procedure SetItem(Index : Integer; const AValue: TJSONData); override;
     Function DoFormatJSON(Options : TFormatOptions; CurrentIndent, Indent : Integer) : TJSONStringType; override;
   public
     Constructor Create; overload; reintroduce;
-    Constructor Create(const Elements : Array of {$ifdef pas2js}jsvalue{$else}Const{$endif}); overload;
+    Constructor Create(const Elements : Array of Const); overload;
     Destructor Destroy; override;
     class function JSONType: TJSONType; override;
     Function Clone : TJSONData; override;
@@ -496,14 +415,10 @@ Type
     Procedure Clear;  override;
     function Add(Item : TJSONData): Integer;
     function Add(I : Integer): Integer;
-    {$ifdef fpc}
     function Add(I : Int64): Int64;
     function Add(I : QWord): QWord;
-    {$endif}
     function Add(const S : String): Integer;
-    {$ifdef fpc}
     function Add(const S : UnicodeString): Integer;
-    {$endif}
     function Add: Integer;
     function Add(F : TJSONFloat): Integer;
     function Add(B : Boolean): Integer;
@@ -516,14 +431,10 @@ Type
     procedure Insert(Index: Integer);
     procedure Insert(Index: Integer; Item : TJSONData);
     procedure Insert(Index: Integer; I : Integer);
-    {$ifdef fpc}
     procedure Insert(Index: Integer; I : Int64);
     procedure Insert(Index: Integer; I : QWord);
-    {$endif}
     procedure Insert(Index: Integer; const S : String);
-    {$ifdef fpc}
     procedure Insert(Index: Integer; const S : UnicodeString);
-    {$endif}
     procedure Insert(Index: Integer; F : TJSONFloat);
     procedure Insert(Index: Integer; B : Boolean);
     procedure Insert(Index: Integer; AnArray : TJSONArray);
@@ -536,14 +447,10 @@ Type
     Property Types[Index : Integer] : TJSONType Read GetTypes;
     Property Nulls[Index : Integer] : Boolean Read GetNulls;
     Property Integers[Index : Integer] : Integer Read GetIntegers Write SetIntegers;
-    {$ifdef fpc}
     Property Int64s[Index : Integer] : Int64 Read GetInt64s Write SetInt64s;
     Property QWords[Index : Integer] : QWord Read GetQWords Write SetQWords;
-    {$endif}
     Property Strings[Index : Integer] : TJSONStringType Read GetStrings Write SetStrings;
-    {$ifdef fpc}
     Property UnicodeStrings[Index : Integer] : TJSONUnicodeStringType Read GetUnicodeStrings Write SetUnicodeStrings;
-    {$endif}
     Property Floats[Index : Integer] : TJSONFloat Read GetFloats Write SetFloats;
     Property Booleans[Index : Integer] : Boolean Read GetBooleans Write SetBooleans;
     Property Arrays[Index : Integer] : TJSONArray Read GetArrays Write SetArrays;
@@ -565,83 +472,60 @@ Type
       ObjEndSeps     : Array[Boolean] of TJSONStringType = (' }','}');
     Class var FUnquotedMemberNames: Boolean;
     Class var FObjStartSep,FObjEndSep,FElementEnd,FElementStart : TJSONStringType;
-    function DoAdd(const AName: TJSONStringType; AValue: TJSONData; FreeOnError: Boolean=True): Integer;
     Class procedure DetermineElementQuotes;
   Private
-    {$ifdef pas2js}
-    FCount: integer;
-    FHash: TJSObject;
-    FNames: TStringDynArray;
-    {$else}
     FHash : TFPHashObjectList; // Careful : Names limited to 255 chars.
-    {$endif}
     function GetArrays(const AName : String): TJSONArray;
     function GetBooleans(const AName : String): Boolean;
     function GetElements(const AName: string): TJSONData;
     function GetFloats(const AName : String): TJSONFloat;
     function GetIntegers(const AName : String): Integer;
-    {$ifdef fpc}
     function GetInt64s(const AName : String): Int64;
-    {$endif}
     function GetIsNull(const AName : String): Boolean; reintroduce;
     function GetNameOf(Index : Integer): TJSONStringType;
     function GetObjects(const AName : String): TJSONObject;
-    {$ifdef fpc}
     function GetQWords(AName : String): QWord;
-    {$endif}
     function GetStrings(const AName : String): TJSONStringType;
-    {$ifdef fpc}
     function GetUnicodeStrings(const AName : String): TJSONUnicodeStringType;
-    {$endif}
     function GetTypes(const AName : String): TJSONType;
     procedure SetArrays(const AName : String; const AValue: TJSONArray);
     procedure SetBooleans(const AName : String; const AValue: Boolean);
     procedure SetElements(const AName: string; const AValue: TJSONData);
     procedure SetFloats(const AName : String; const AValue: TJSONFloat);
     procedure SetIntegers(const AName : String; const AValue: Integer);
-    {$ifdef fpc}
     procedure SetInt64s(const AName : String; const AValue: Int64);
-    {$endif}
     procedure SetIsNull(const AName : String; const AValue: Boolean);
     procedure SetObjects(const AName : String; const AValue: TJSONObject);
-    {$ifdef fpc}
     procedure SetQWords(AName : String; AValue: QWord);
-    {$endif}
     procedure SetStrings(const AName : String; const AValue: TJSONStringType);
-    {$ifdef fpc}
     procedure SetUnicodeStrings(const AName : String; const AValue: TJSONUnicodeStringType);
-    {$endif}
-    class function GetUnquotedMemberNames: Boolean; {$ifdef fpc}static;{$endif}
-    class procedure SetUnquotedMemberNames(AValue: Boolean); {$ifdef fpc}static;{$endif}
+    class function GetUnquotedMemberNames: Boolean; static;
+    class procedure SetUnquotedMemberNames(AValue: Boolean); static;
   protected
     Function DoFindPath(Const APath : TJSONStringType; Out NotFound : TJSONStringType) : TJSONdata; override;
     Procedure Converterror(From : Boolean);
     function GetAsBoolean: Boolean; override;
     function GetAsFloat: TJSONFloat; override;
     function GetAsInteger: Integer; override;
-    {$ifdef fpc}
     function GetAsInt64: Int64; override;
     function GetAsQWord: QWord; override;
-    {$endif}
     procedure SetAsBoolean(const AValue: Boolean); override;
     procedure SetAsFloat(const AValue: TJSONFloat); override;
     procedure SetAsInteger(const AValue: Integer); override;
-    {$ifdef fpc}
     procedure SetAsInt64(const AValue: Int64); override;
     procedure SetAsQword(const AValue: QWord); override;
-    {$endif}
     function GetAsJSON: TJSONStringType; override;
     function GetAsString: TJSONStringType; override;
     procedure SetAsString(const AValue: TJSONStringType); override;
-    function GetValue: TJSONVariant; override;
-    procedure SetValue(const AValue: TJSONVariant); override;
+    function GetValue: variant; override;
+    procedure SetValue(const AValue: variant); override;
     function GetCount: Integer; override;
     function GetItem(Index : Integer): TJSONData; override;
     procedure SetItem(Index : Integer; const AValue: TJSONData); override;
     Function DoFormatJSON(Options : TFormatOptions; CurrentIndent, Indent : Integer) : TJSONStringType; override;
   public
     constructor Create; reintroduce;
-    Constructor Create(const Elements : Array of {$ifdef pas2js}jsvalue{$else}Const{$endif}); overload;
+    Constructor Create(const Elements : Array of Const); overload;
     destructor Destroy; override;
     class function JSONType: TJSONType; override;
     Class Property UnquotedMemberNames : Boolean Read GetUnquotedMemberNames Write SetUnquotedMemberNames;
@@ -659,18 +543,14 @@ Type
     function Find(const key: TJSONStringType; out AValue: TJSONString): boolean;
     function Find(const key: TJSONStringType; out AValue: TJSONBoolean): boolean;
     function Find(const key: TJSONStringType; out AValue: TJSONNumber): boolean;
-    Function Get(Const AName : String) : TJSONVariant;
+    Function Get(Const AName : String) : Variant;
     Function Get(Const AName : String; ADefault : TJSONFloat) : TJSONFloat;
     Function Get(Const AName : String; ADefault : Integer) : Integer;
-    {$ifdef fpc}
     Function Get(Const AName : String; ADefault : Int64) : Int64;
     Function Get(Const AName : String; ADefault : QWord) : QWord;
-    {$endif}
     Function Get(Const AName : String; ADefault : Boolean) : Boolean;
     Function Get(Const AName : String; ADefault : TJSONStringType) : TJSONStringType;
-    {$ifdef fpc}
     Function Get(Const AName : String; ADefault : TJSONUnicodeStringType) : TJSONUnicodeStringType;
-    {$endif}
     Function Get(Const AName : String; ADefault : TJSONArray) : TJSONArray;
     Function Get(Const AName : String; ADefault : TJSONObject) : TJSONObject;
     // Manipulate
@@ -679,23 +559,17 @@ Type
     function Add(const AName: TJSONStringType; AValue: Boolean): Integer; overload;
     function Add(const AName: TJSONStringType; AValue: TJSONFloat): Integer; overload;
     function Add(const AName, AValue: TJSONStringType): Integer; overload;
-    {$ifdef fpc}
     function Add(const AName : String; AValue: TJSONUnicodeStringType): Integer; overload;
-    {$endif}
     function Add(const AName: TJSONStringType; Avalue: Integer): Integer; overload;
-    {$ifdef fpc}
     function Add(const AName: TJSONStringType; Avalue: Int64): Integer; overload;
     function Add(const AName: TJSONStringType; Avalue: QWord): Integer; overload;
-    {$endif}
     function Add(const AName: TJSONStringType): Integer; overload;
     function Add(const AName: TJSONStringType; AValue : TJSONArray): Integer; overload;
     procedure Delete(Index : Integer);
     procedure Delete(Const AName : string);
     procedure Remove(Item : TJSONData);
-    {$ifdef fpc}
     Function Extract(Index : Integer) : TJSONData;
     Function Extract(Const AName : string) : TJSONData;
-    {$endif}
 
     // Easy access properties.
     property Names[Index : Integer] : TJSONStringType read GetNameOf;
@@ -705,14 +579,10 @@ Type
     Property Nulls[AName : String] : Boolean Read GetIsNull Write SetIsNull;
     Property Floats[AName : String] : TJSONFloat Read GetFloats Write SetFloats;
     Property Integers[AName : String] : Integer Read GetIntegers Write SetIntegers;
-    {$ifdef fpc}
     Property Int64s[AName : String] : Int64 Read GetInt64s Write SetInt64s;
     Property QWords[AName : String] : QWord Read GetQWords Write SetQWords;
-    {$endif}
     Property Strings[AName : String] : TJSONStringType Read GetStrings Write SetStrings;
-    {$ifdef fpc}
     Property UnicodeStrings[AName : String] : TJSONUnicodeStringType Read GetUnicodeStrings Write SetUnicodeStrings;
-    {$endif}
     Property Booleans[AName : String] : Boolean Read GetBooleans Write SetBooleans;
     Property Arrays[AName : String] : TJSONArray Read GetArrays Write SetArrays;
     Property Objects[AName : String] : TJSONObject Read GetObjects Write SetObjects;
@@ -721,10 +591,7 @@ Type
 
   EJSON = Class(Exception);
 
-  {$ifdef fpc}
   TJSONParserHandler = Procedure(AStream : TStream; Const AUseUTF8 : Boolean; Out Data : TJSONData);
-  TJSONStringParserHandler = Procedure(Const aJSON : TJSONStringType; Const AUseUTF8 : Boolean; Out Data : TJSONData);
-  {$endif}
 
 Function SetJSONInstanceType(AType : TJSONInstanceType; AClass : TJSONDataClass) : TJSONDataClass;
 Function GetJSONInstanceType(AType : TJSONInstanceType) : TJSONDataClass;
@@ -737,28 +604,20 @@ Function JSONTypeName(JSONType : TJSONType) : String;
 Function CreateJSON : TJSONNull;
 Function CreateJSON(Data : Boolean) : TJSONBoolean;
 Function CreateJSON(Data : Integer) : TJSONIntegerNumber;
-{$ifdef fpc}
 Function CreateJSON(Data : Int64) : TJSONInt64Number;
 Function CreateJSON(Data : QWord) : TJSONQWordNumber;
-{$endif}
 Function CreateJSON(Data : TJSONFloat) : TJSONFloatNumber;
 Function CreateJSON(const Data : TJSONStringType) : TJSONString;
-{$ifdef fpc}
 Function CreateJSON(const Data : TJSONUnicodeStringType) : TJSONString;
-{$endif}
-Function CreateJSONArray(const Data : Array of {$ifdef pas2js}jsvalue{$else}Const{$endif}) : TJSONArray;
-Function CreateJSONObject(const Data : Array of {$ifdef pas2js}jsvalue{$else}Const{$endif}) : TJSONObject;
+Function CreateJSONArray(const Data : Array of const) : TJSONArray;
+Function CreateJSONObject(const Data : Array of const) : TJSONObject;
 
 // These functions rely on a callback. If the callback is not set, they will raise an error.
 // When the jsonparser unit is included in the project, the callback is automatically set.
-{$ifdef fpc}
 Function GetJSON(Const JSON : TJSONStringType; Const UseUTF8 : Boolean = True) : TJSONData;
 Function GetJSON(Const JSON : TStream; Const UseUTF8 : Boolean = True) : TJSONData;
 Function SetJSONParserHandler(AHandler : TJSONParserHandler) : TJSONParserHandler;
-Function SetJSONStringParserHandler(AHandler : TJSONStringParserHandler) : TJSONStringParserHandler;
 Function GetJSONParserHandler : TJSONParserHandler;
-Function GetJSONStringParserHandler: TJSONStringParserHandler;
-{$endif}
 
 implementation
 
@@ -777,48 +636,24 @@ Resourcestring
   SErrCannotAddObjectTwice = 'Adding an object to an array twice is not allowed';
   SErrUnknownTypeInConstructor = 'Unknown type in JSON%s constructor: %d';
   SErrNotJSONData = 'Cannot add object of type %s to TJSON%s';
+  SErrPointerNotNil = 'Cannot add non-nil pointer to JSON%s';
   SErrOddNumber = 'TJSONObject must be constructed with name,value pairs';
   SErrNameMustBeString = 'TJSONObject constructor element name at pos %d is not a string';
   SErrNonexistentElement = 'Unknown object member: "%s"';
-  SErrDuplicateValue = 'Duplicate object member: "%s"';
   SErrPathElementNotFound = 'Path "%s" invalid: element "%s" not found.';
   SErrWrongInstanceClass = 'Cannot set instance class: %s does not descend from %s.';
-  {$ifdef fpc}
-  SErrPointerNotNil = 'Cannot add non-nil pointer to JSON%s';
   SErrNoParserHandler = 'No JSON parser handler installed. Recompile your project with the jsonparser unit included';
-  {$endif}
 
 Var
   DefaultJSONInstanceTypes :
-    Array [TJSONInstanceType] of TJSONDataClass = (
-      TJSONData,
-      TJSONIntegerNumber,
-      {$ifdef fpc}
-      TJSONInt64Number,
-      TJSONQWordNumber,
-      {$endif}
-      TJSONFloatNumber,
-      TJSONString,
-      TJSONBoolean,
-      TJSONNull,
-      TJSONArray,
-      TJSONObject);
+    Array [TJSONInstanceType] of TJSONDataClass = (TJSONData, TJSONIntegerNumber,
+    TJSONInt64Number, TJSONQWordNumber, TJSONFloatNumber, TJSONString, TJSONBoolean, TJSONNull, TJSONArray,
+    TJSONObject);
 Const
   MinJSONInstanceTypes :
-    Array [TJSONInstanceType] of TJSONDataClass = (
-      TJSONData,
-      TJSONIntegerNumber,
-      {$ifdef fpc}
-      TJSONInt64Number,
-      TJSONQWordNumber,
-      {$endif}
-      TJSONFloatNumber,
-      TJSONString,
-      TJSONBoolean,
-      TJSONNull,
-      TJSONArray,
-      TJSONObject
-      );
+    Array [TJSONInstanceType] of TJSONDataClass = (TJSONData, TJSONIntegerNumber,
+    TJSONInt64Number, TJSONQWordNumber, TJSONFloatNumber, TJSONString, TJSONBoolean, TJSONNull, TJSONArray,
+    TJSONObject);
 
 function SetJSONInstanceType(AType: TJSONInstanceType; AClass: TJSONDataClass): TJSONDataClass;
 begin
@@ -839,16 +674,18 @@ function StringToJSONString(const S: TJSONStringType; Strict : Boolean = False):
 
 Var
   I,J,L : Integer;
-  C : Char;
+  P : PJSONCharType;
+  C : AnsiChar;
 
 begin
   I:=1;
   J:=1;
   Result:='';
   L:=Length(S);
+  P:=PJSONCharType(S);
   While I<=L do
     begin
-    C:=S[I];
+    C:=AnsiChar(P^);
     if (C in ['"','/','\',#0..#31]) then
       begin
       Result:=Result+Copy(S,J,I-J);
@@ -870,6 +707,7 @@ begin
       J:=I+1;
       end;
     Inc(I);
+    Inc(P);
     end;
   Result:=Result+Copy(S,J,I-1);
 end;
@@ -877,72 +715,46 @@ end;
 function JSONStringToString(const S: TJSONStringType): TJSONStringType;
 
 Var
-  I,J,L,U1,U2 : Integer;
-  App,W : String;
-
-  Procedure MaybeAppendUnicode;
-
-  Var
-    U : String;
-
-  begin
-    if (U1<>0) then
-      begin
-      U:={$IFDEF FPC_HAS_CPSTRING}UTF8Encode(WideChar(U1)){$ELSE}widechar(U1){$ENDIF};
-      Result:=Result+U;
-      U1:=0;
-      end;
-  end;
+  I,J,L : Integer;
+  P : PJSONCharType;
+  w : String;
 
 begin
   I:=1;
   J:=1;
   L:=Length(S);
   Result:='';
-  U1:=0;
+  P:=PJSONCharType(S);
   While (I<=L) do
     begin
-    if (S[I]='\') then
+    if (P^='\') then
       begin
       Result:=Result+Copy(S,J,I-J);
-      If I<L then
+      Inc(P);
+      If (P^<>#0) then
         begin
         Inc(I);
-        App:='';
-        Case S[I] of
+        Case AnsiChar(P^) of
           '\','"','/'
-              : App:=S[I];
-          'b' : App:=#8;
-          't' : App:=#9;
-          'n' : App:=#10;
-          'f' : App:=#12;
-          'r' : App:=#13;
+              : Result:=Result+P^;
+          'b' : Result:=Result+#8;
+          't' : Result:=Result+#9;
+          'n' : Result:=Result+#10;
+          'f' : Result:=Result+#12;
+          'r' : Result:=Result+#13;
           'u' : begin
                 W:=Copy(S,I+1,4);
                 Inc(I,4);
-                u2:=StrToInt('$'+W);
-                if (U1<>0) then
-                  begin
-                  App:={$IFDEF FPC_HAS_CPSTRING}UTF8Encode({$ENDIF}WideChar(U1)+WideChar(U2){$IFDEF FPC_HAS_CPSTRING}){$ENDIF};
-                  U2:=0;
-                  end
-                else
-                  U1:=U2;
+                Inc(P,4);
+                Result:=Result+WideChar(StrToInt('$'+W));
                 end;
         end;
-        if App<>'' then
-          begin
-          MaybeAppendUnicode;
-          Result:=Result+App;
-          end;
         end;
       J:=I+1;
-      end
-    else
-      MaybeAppendUnicode;
+      end;
     Inc(I);
+    Inc(P);
     end;
-  MaybeAppendUnicode;
   Result:=Result+Copy(S,J,I-J+1);
 end;
 
@@ -966,7 +778,6 @@ begin
   Result:=TJSONIntegerNumberCLass(DefaultJSONInstanceTypes[jitNumberInteger]).Create(Data);
 end;
 
-{$ifdef fpc}
 function CreateJSON(Data: Int64): TJSONInt64Number;
 begin
   Result:=TJSONInt64NumberCLass(DefaultJSONInstanceTypes[jitNumberInt64]).Create(Data);
@@ -976,7 +787,6 @@ function CreateJSON(Data: QWord): TJSONQWordNumber;
 begin
   Result:=TJSONQWordNumberClass(DefaultJSONInstanceTypes[jitNumberQWord]).Create(Data);
 end;
-{$endif}
 
 function CreateJSON(Data: TJSONFloat): TJSONFloatNumber;
 begin
@@ -988,77 +798,44 @@ begin
   Result:=TJSONStringCLass(DefaultJSONInstanceTypes[jitString]).Create(Data);
 end;
 
-{$ifdef fpc}
 function CreateJSON(const Data: TJSONUnicodeStringType): TJSONString;
 begin
   Result:=TJSONStringCLass(DefaultJSONInstanceTypes[jitString]).Create(Data);
 end;
-{$endif}
 
-function CreateJSONArray(const Data: array of {$ifdef pas2js}jsvalue{$else}Const{$endif}): TJSONArray;
+function CreateJSONArray(const Data: array of const): TJSONArray;
 begin
   Result:=TJSONArrayCLass(DefaultJSONInstanceTypes[jitArray]).Create(Data);
 end;
 
-function CreateJSONObject(const Data: array of {$ifdef pas2js}jsvalue{$else}Const{$endif}): TJSONObject;
+function CreateJSONObject(const Data: array of const): TJSONObject;
 begin
   Result:=TJSONObjectClass(DefaultJSONInstanceTypes[jitObject]).Create(Data);
 end;
 
-{$ifdef fpc}
 Var
   JPH : TJSONParserHandler;
-  JPSH : TJSONStringParserHandler;
 
 function GetJSON(const JSON: TJSONStringType; const UseUTF8: Boolean): TJSONData;
 
 Var
   SS : TStringStream;
 begin
-  if Assigned(JPSH) then
-    JPSH(JSON,UseUTF8,Result)
-  else
-    begin
-    {$IF FPC_FULLVERSION>30300}
-    if UseUTF8 then
-      SS:=TStringStream.Create(JSON,TEncoding.UTF8)
-    else
-    {$ENDIF}
-      SS:=TStringStream.Create(JSON);
-    try
-      Result:=GetJSON(SS,UseUTF8);
-    finally
-      SS.Free;
-    end;
-    end;
+  SS:=TStringStream.Create(JSON);
+  try
+    Result:=GetJSON(SS,UseUTF8);
+  finally
+    SS.Free;
+  end;
 end;
-{$endif}
 
-{$ifdef fpc}
 function GetJSON(const JSON: TStream; const UseUTF8: Boolean): TJSONData;
-
-Var
-  S : TJSONStringType;
 
 begin
   Result:=Nil;
-  If (JPH<>Nil) then
-    JPH(JSON,UseUTF8,Result)
-  else if JPSH=Nil then
-    TJSONData.DoError(SErrNoParserHandler)
-  else
-    begin
-    Setlength(S,JSON.Size);
-    if Length(S)>0 then
-      JSON.ReadBuffer(S[1],Length(S));
-    end;
-end;
-
-
-Function SetJSONStringParserHandler(AHandler : TJSONStringParserHandler) : TJSONStringParserHandler;
-begin
-  Result:=JPSH;
-  JPSH:=AHandler;
+  If (JPH=Nil) then
+    TJSONData.DoError(SErrNoParserHandler);
+  JPH(JSON,UseUTF8,Result);
 end;
 
 function SetJSONParserHandler(AHandler: TJSONParserHandler): TJSONParserHandler;
@@ -1071,12 +848,6 @@ function GetJSONParserHandler: TJSONParserHandler;
 begin
   Result:=JPH;
 end;
-
-function GetJSONStringParserHandler: TJSONStringParserHandler;
-begin
-  Result:=JPSH;
-end;
-{$endif}
 
 Type
   { TJSONEnumerator }
@@ -1114,7 +885,6 @@ Type
     function MoveNext : Boolean; override;
   end;
 
-{$ifdef fpc}
 { TJSONQWordNumber }
 
 function TJSONQWordNumber.GetAsBoolean: Boolean;
@@ -1182,12 +952,12 @@ begin
   FValue:=StrToQWord(AValue);
 end;
 
-function TJSONQWordNumber.GetValue: TJSONVariant;
+function TJSONQWordNumber.GetValue: variant;
 begin
   Result:=FValue;
 end;
 
-procedure TJSONQWordNumber.SetValue(const AValue: TJSONVariant);
+procedure TJSONQWordNumber.SetValue(const AValue: variant);
 begin
   FValue:=AValue;
 end;
@@ -1211,9 +981,6 @@ function TJSONQWordNumber.Clone: TJSONData;
 begin
   Result:=TJSONQWordNumberClass(ClassType).Create(Self.FValue);
 end;
-{$endif}
-
-{ TJSONObjectEnumerator }
 
 constructor TJSONObjectEnumerator.Create(AData: TJSONObject);
 begin
@@ -1279,22 +1046,21 @@ end;
 
 { TJSONData }
 
-{$ifdef fpc}
 function TJSONData.GetAsUnicodeString: TJSONUnicodeStringType; 
+
 begin
   Result:=UTF8Decode(AsString);
 end;
 
 procedure TJSONData.SetAsUnicodeString(const AValue: TJSONUnicodeStringType); 
+
 begin
   AsString:=UTF8Encode(AValue);
 end;
-{$endif}
 
 function TJSONData.GetItem(Index : Integer): TJSONData;
 begin
   Result:=nil;
-  if Index>0 then ;
 end;
 
 function TJSONData.GetCount: Integer;
@@ -1307,16 +1073,13 @@ begin
   Clear;
 end;
 
-procedure TJSONData.DumpJSON(S: TFPJSStream);
+procedure TJSONData.DumpJSON(S: TStream);
 
   Procedure W(T : String);
+
   begin
-    if T='' then exit;
-    {$ifdef pas2js}
-    S.push(T);
-    {$else}
-    S.WriteBuffer(T[1],Length(T)*SizeOf(Char));
-    {$endif}
+    if (T<>'') then
+      S.WriteBuffer(T[1],Length(T)*SizeOf(Char));
   end;
 
 Var
@@ -1356,7 +1119,7 @@ begin
   end;
 end;
 
-class function TJSONData.GetCompressedJSON: Boolean; {$ifdef fpc}static;{$endif}
+class function TJSONData.GetCompressedJSON: Boolean; static;
 begin
   Result:=FCompressedJSON;
 end;
@@ -1368,7 +1131,7 @@ begin
   FElementSep:=ElementSeps[FCompressedJSON];
 end;
 
-class procedure TJSONData.SetCompressedJSON(AValue: Boolean); {$ifdef fpc}static;{$endif}
+class procedure TJSONData.SetCompressedJSON(AValue: Boolean); static;
 
 
 begin
@@ -1384,7 +1147,7 @@ begin
 end;
 
 class procedure TJSONData.DoError(const Fmt: String;
-  const Args: array of {$ifdef pas2js}jsvalue{$else}Const{$endif});
+  const Args: array of const);
 begin
   Raise EJSON.CreateFmt(Fmt,Args);
 end;
@@ -1439,8 +1202,6 @@ procedure TJSONData.SetItem(Index : Integer; const AValue:
   TJSONData);
 begin
   // Do Nothing
-  if Index>0 then ;
-  if AValue<>nil then ;
 end;
 
 function TJSONData.FormatJSON(Options: TFormatOptions; Indentsize: Integer
@@ -1455,9 +1216,6 @@ function TJSONData.DoFormatJSON(Options: TFormatOptions; CurrentIndent,
 
 begin
   Result:=AsJSON;
-  if Options=[] then ;
-  if CurrentIndent=0 then ;
-  if Indent>0 then ;
 end;
 
 { TJSONnumber }
@@ -1486,14 +1244,14 @@ begin
   Result:=TJSONStringClass(ClassType).Create(Self.FValue);
 end;
 
-function TJSONString.GetValue: TJSONVariant;
+function TJSONString.GetValue: Variant;
 begin
   Result:=FValue;
 end;
 
-procedure TJSONString.SetValue(const AValue: TJSONVariant);
+procedure TJSONString.SetValue(const AValue: Variant);
 begin
-  FValue:={$ifdef pas2js}TJSONStringType(AValue){$else}AValue{$endif};
+  FValue:=AValue;
 end;
 
 
@@ -1519,7 +1277,6 @@ begin
   Result:=StrToInt(FValue);
 end;
 
-{$ifdef fpc}
 function TJSONString.GetAsInt64: Int64;
 begin
   Result:=StrToInt64(FValue);
@@ -1529,7 +1286,6 @@ function TJSONString.GetAsQWord: QWord;
 begin
   Result:=StrToQWord(FValue);
 end;
-{$endif}
 
 procedure TJSONString.SetAsBoolean(const AValue: Boolean);
 begin
@@ -1546,7 +1302,6 @@ begin
   FValue:=IntToStr(AValue);
 end;
 
-{$ifdef fpc}
 procedure TJSONString.SetAsInt64(const AValue: Int64);
 begin
   FValue:=IntToStr(AValue);
@@ -1556,7 +1311,6 @@ procedure TJSONString.SetAsQword(const AValue: QWord);
 begin
   FValue:=IntToStr(AValue);
 end;
-{$endif}
 
 function TJSONString.GetAsJSON: TJSONStringType;
 begin
@@ -1578,17 +1332,15 @@ begin
   FValue:=AValue;
 end;
 
-{$ifdef fpc}
 constructor TJSONString.Create(const AValue: TJSONUnicodeStringType);
 begin
   FValue:=UTF8Encode(AValue);
 end;
-{$endif}
 
 { TJSONboolean }
 
 
-function TJSONBoolean.GetValue: TJSONVariant;
+function TJSONBoolean.GetValue: Variant;
 begin
   Result:=FValue;
 end;
@@ -1609,7 +1361,7 @@ begin
 end;
 
 
-procedure TJSONBoolean.SetValue(const AValue: TJSONVariant);
+procedure TJSONBoolean.SetValue(const AValue: Variant);
 begin
   FValue:=boolean(AValue);
 end;
@@ -1629,7 +1381,6 @@ begin
   Result:=Ord(FValue);
 end;
 
-{$ifdef fpc}
 function TJSONBoolean.GetAsInt64: Int64;
 begin
   Result:=Ord(FValue);
@@ -1639,7 +1390,6 @@ function TJSONBoolean.GetAsQWord: QWord;
 begin
   Result:=Ord(FValue);
 end;
-{$endif}
 
 procedure TJSONBoolean.SetAsBoolean(const AValue: Boolean);
 begin
@@ -1656,7 +1406,6 @@ begin
   FValue:=(AValue<>0)
 end;
 
-{$ifdef fpc}
 procedure TJSONBoolean.SetAsInt64(const AValue: Int64);
 begin
   FValue:=(AValue<>0)
@@ -1666,7 +1415,6 @@ procedure TJSONBoolean.SetAsQword(const AValue: QWord);
 begin
   FValue:=(AValue<>0)
 end;
-{$endif}
 
 function TJSONBoolean.GetAsJSON: TJSONStringType;
 begin
@@ -1706,22 +1454,18 @@ end;
 function TJSONNull.GetAsBoolean: Boolean;
 begin
   ConvertError(True);
-  Result:=false;
 end;
 
 function TJSONNull.GetAsFloat: TJSONFloat;
 begin
   ConvertError(True);
-  Result:=0.0;
 end;
 
 function TJSONNull.GetAsInteger: Integer;
 begin
   ConvertError(True);
-  Result:=0;
 end;
 
-{$ifdef fpc}
 function TJSONNull.GetAsInt64: Int64;
 begin
   ConvertError(True);
@@ -1731,7 +1475,6 @@ function TJSONNull.GetAsQWord: QWord;
 begin
   ConvertError(True);
 end;
-{$endif}
 
 function TJSONNull.GetIsNull: Boolean;
 begin
@@ -1741,34 +1484,27 @@ end;
 procedure TJSONNull.SetAsBoolean(const AValue: Boolean);
 begin
   ConvertError(False);
-  if AValue then ;
 end;
 
 procedure TJSONNull.SetAsFloat(const AValue: TJSONFloat);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
 procedure TJSONNull.SetAsInteger(const AValue: Integer);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
-{$ifdef fpc}
 procedure TJSONNull.SetAsInt64(const AValue: Int64);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
 procedure TJSONNull.SetAsQword(const AValue: QWord);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
-{$endif}
 
 function TJSONNull.GetAsJSON: TJSONStringType;
 begin
@@ -1778,29 +1514,22 @@ end;
 function TJSONNull.GetAsString: TJSONStringType;
 begin
   ConvertError(True);
-  Result:='';
 end;
 
 procedure TJSONNull.SetAsString(const AValue: TJSONStringType);
 begin
   ConvertError(True);
-  if AValue='' then ;
 end;
 
 
-function TJSONNull.GetValue: TJSONVariant;
+function TJSONNull.GetValue: variant;
 begin
-  Result:={$ifdef pas2js}js.Null{$else}variants.Null{$endif};
+  Result:=variants.Null;
 end;
 
-procedure TJSONNull.SetValue(const AValue: TJSONVariant);
+procedure TJSONNull.SetValue(const AValue: variant);
 begin
   ConvertError(False);
-  {$ifdef pas2js}
-  if AValue=0 then ;
-  {$else}
-  if VarType(AValue)=0 then ;
-  {$endif}
 end;
 
 class function TJSONNull.JSONType: TJSONType;
@@ -1839,7 +1568,6 @@ begin
   Result:=Round(FValue);
 end;
 
-{$ifdef fpc}
 function TJSONFloatNumber.GetAsInt64: Int64;
 begin
   Result:=Round(FValue);
@@ -1849,7 +1577,6 @@ function TJSONFloatNumber.GetAsQWord: QWord;
 begin
   Result:=Round(FValue);
 end;
-{$endif}
 
 procedure TJSONFloatNumber.SetAsBoolean(const AValue: Boolean);
 begin
@@ -1866,7 +1593,6 @@ begin
   FValue:=AValue;
 end;
 
-{$ifdef fpc}
 procedure TJSONFloatNumber.SetAsInt64(const AValue: Int64);
 begin
   FValue:=AValue;
@@ -1876,7 +1602,6 @@ procedure TJSONFloatNumber.SetAsQword(const AValue: QWord);
 begin
   FValue:=AValue;
 end;
-{$endif}
 
 function TJSONFloatNumber.GetAsJSON: TJSONStringType;
 begin
@@ -1901,14 +1626,14 @@ begin
 end;
 
 
-function TJSONFloatNumber.GetValue: TJSONVariant;
+function TJSONFloatNumber.GetValue: variant;
 begin
   Result:=FValue;
 end;
 
-procedure TJSONFloatNumber.SetValue(const AValue: TJSONVariant);
+procedure TJSONFloatNumber.SetValue(const AValue: variant);
 begin
-  FValue:={$ifdef pas2js}TJSONFloat(AValue){$else}AValue{$endif};
+  FValue:=AValue;
 end;
 
 constructor TJSONFloatNumber.Create(AValue: TJSONFloat);
@@ -1941,7 +1666,7 @@ end;
 
 function TJSONIntegerNumber.GetAsFloat: TJSONFloat;
 begin
-  Result:=FValue;
+  Result:=Ord(FValue);
 end;
 
 function TJSONIntegerNumber.GetAsInteger: Integer;
@@ -1949,7 +1674,6 @@ begin
   Result:=FValue;
 end;
 
-{$ifdef fpc}
 function TJSONIntegerNumber.GetAsInt64: Int64;
 begin
   Result:=FValue;
@@ -1959,7 +1683,6 @@ function TJSONIntegerNumber.GetAsQWord: QWord;
 begin
   result:=FValue;
 end;
-{$endif}
 
 procedure TJSONIntegerNumber.SetAsBoolean(const AValue: Boolean);
 begin
@@ -1976,7 +1699,6 @@ begin
   FValue:=AValue;
 end;
 
-{$ifdef fpc}
 procedure TJSONIntegerNumber.SetAsInt64(const AValue: Int64);
 begin
   FValue:=AValue;
@@ -1986,7 +1708,6 @@ procedure TJSONIntegerNumber.SetAsQword(const AValue: QWord);
 begin
   FValue:=AValue;
 end;
-{$endif}
 
 function TJSONIntegerNumber.GetAsJSON: TJSONStringType;
 begin
@@ -2004,14 +1725,14 @@ begin
 end;
 
 
-function TJSONIntegerNumber.GetValue: TJSONVariant;
+function TJSONIntegerNumber.GetValue: variant;
 begin
   Result:=FValue;
 end;
 
-procedure TJSONIntegerNumber.SetValue(const AValue: TJSONVariant);
+procedure TJSONIntegerNumber.SetValue(const AValue: variant);
 begin
-  FValue:={$ifdef pas2js}Integer(AValue){$else}AValue{$endif};
+  FValue:=AValue;
 end;
 
 constructor TJSONIntegerNumber.Create(AValue: Integer);
@@ -2035,7 +1756,6 @@ begin
   Result:=TJSONIntegerNumberClass(ClassType).Create(Self.FValue);
 end;
 
-{$ifdef fpc}
 { TJSONInt64Number }
 
 function TJSONInt64Number.GetAsInt64: Int64;
@@ -2103,12 +1823,12 @@ begin
   FValue:=StrToInt64(AValue);
 end;
 
-function TJSONInt64Number.GetValue: TJSONVariant;
+function TJSONInt64Number.GetValue: variant;
 begin
   Result:=FValue;
 end;
 
-procedure TJSONInt64Number.SetValue(const AValue: TJSONVariant);
+procedure TJSONInt64Number.SetValue(const AValue: variant);
 begin
   FValue:=AValue;
 end;
@@ -2133,7 +1853,6 @@ function TJSONInt64Number.Clone: TJSONData;
 begin
   Result:=TJSONInt64NumberClass(ClassType).Create(Self.FValue);
 end;
-{$endif}
 
 { TJSONArray }
 
@@ -2157,12 +1876,10 @@ begin
   Result:=Items[Index].AsInteger;
 end;
 
-{$ifdef fpc}
 function TJSONArray.GetInt64s(Index : Integer): Int64;
 begin
   Result:=Items[Index].AsInt64;
 end;
-{$endif}
 
 function TJSONArray.GetNulls(Index : Integer): Boolean;
 begin
@@ -2174,24 +1891,20 @@ begin
   Result:=Items[Index] as TJSONObject;
 end;
 
-{$ifdef fpc}
 function TJSONArray.GetQWords(Index : Integer): QWord;
 begin
   Result:=Items[Index].AsQWord;
 end;
-{$endif}
 
 function TJSONArray.GetStrings(Index : Integer): TJSONStringType;
 begin
   Result:=Items[Index].AsString;
 end;
 
-{$ifdef fpc}
 function TJSONArray.GetUnicodeStrings(Index : Integer): TJSONUnicodeStringType;
 begin
   Result:=Items[Index].AsUnicodeString;
 end;
-{$endif}
 
 function TJSONArray.GetTypes(Index : Integer): TJSONType;
 begin
@@ -2219,37 +1932,31 @@ begin
   Items[Index]:=CreateJSON(AValue);
 end;
 
-{$ifdef fpc}
 procedure TJSONArray.SetInt64s(Index : Integer; const AValue: Int64);
 begin
   Items[Index]:=CreateJSON(AValue);
 end;
-{$endif}
 
 procedure TJSONArray.SetObjects(Index : Integer; const AValue: TJSONObject);
 begin
   Items[Index]:=AValue;
 end;
 
-{$ifdef fpc}
 procedure TJSONArray.SetQWords(Index : Integer; AValue: QWord);
 begin
   Items[Index]:=CreateJSON(AValue);
 end;
-{$endif}
 
 procedure TJSONArray.SetStrings(Index : Integer; const AValue: TJSONStringType);
 begin
   Items[Index]:=CreateJSON(AValue);
 end;
 
-{$ifdef fpc}
 procedure TJSONArray.SetUnicodeStrings(Index: Integer;
   const AValue: TJSONUnicodeStringType);
 begin
   Items[Index]:=CreateJSON(AValue);
 end;
-{$endif}
 
 function TJSONArray.DoFindPath(const APath: TJSONStringType; out
   NotFound: TJSONStringType): TJSONdata;
@@ -2296,22 +2003,18 @@ end;
 function TJSONArray.GetAsBoolean: Boolean;
 begin
   ConvertError(True);
-  Result:=false;
 end;
 
 function TJSONArray.GetAsFloat: TJSONFloat;
 begin
   ConvertError(True);
-  Result:=0.0;
 end;
 
 function TJSONArray.GetAsInteger: Integer;
 begin
   ConvertError(True);
-  Result:=0;
 end;
 
-{$ifdef fpc}
 function TJSONArray.GetAsInt64: Int64;
 begin
   ConvertError(True);
@@ -2321,39 +2024,31 @@ function TJSONArray.GetAsQWord: QWord;
 begin
   ConvertError(True);
 end;
-{$endif}
 
 procedure TJSONArray.SetAsBoolean(const AValue: Boolean);
 begin
   ConvertError(False);
-  if AValue then ;
 end;
 
 procedure TJSONArray.SetAsFloat(const AValue: TJSONFloat);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
 procedure TJSONArray.SetAsInteger(const AValue: Integer);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
-{$ifdef fpc}
 procedure TJSONArray.SetAsInt64(const AValue: Int64);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
 procedure TJSONArray.SetAsQword(const AValue: QWord);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
-{$endif}
 
 {$warnings on}
 
@@ -2382,6 +2077,8 @@ begin
     end;
   Result:=Result+']';
 end;
+
+{$warnings off}
 
 Function IndentString(Options : TFormatOptions; Indent : Integer) : TJSONStringType;
 
@@ -2430,39 +2127,30 @@ begin
 end;
 
 
-{$warnings off}
 function TJSONArray.GetAsString: TJSONStringType;
 begin
   ConvertError(True);
-  Result:='';
 end;
 
 procedure TJSONArray.SetAsString(const AValue: TJSONStringType);
 begin
   ConvertError(False);
-  if AValue='' then ;
 end;
 
-function TJSONArray.GetValue: TJSONVariant;
+function TJSONArray.GetValue: variant;
 begin
   ConvertError(True);
-  Result:=0;
 end;
 
-procedure TJSONArray.SetValue(const AValue: TJSONVariant);
+procedure TJSONArray.SetValue(const AValue: variant);
 begin
   ConvertError(False);
-  {$ifdef pas2js}
-  if AValue=0 then ;
-  {$else}
-  if VarType(AValue)=0 then ;
-  {$endif}
 end;
 {$warnings on}
 
 function TJSONArray.GetCount: Integer;
 begin
-  Result:=FList.Count;
+  Result:=Flist.Count;
 end;
 
 function TJSONArray.GetItem(Index: Integer): TJSONData;
@@ -2483,44 +2171,6 @@ begin
   Flist:=TFPObjectList.Create(True);
 end;
 
-{$ifdef pas2js}
-Function VarRecToJSON(Const Element : jsvalue; const SourceType : String) : TJSONData;
-var
-  i: NativeInt;
-  VObject: TObject;
-begin
-  Result:=nil;
-  if Element=nil then
-    Result:=CreateJSON // TJSONNull
-  else if isBoolean(Element) then
-    Result:=CreateJSON(boolean(Element))
-  else if isString(Element) then
-    Result:=CreateJSON(String(Element))
-  else if isNumber(Element) then
-    begin
-    if isInteger(Element) then
-      begin
-      i:=NativeInt(Element);
-      if (i>=low(integer)) and (i<=high(integer)) then
-        Result:=CreateJSON(Integer(Element))
-      else
-        Result:=CreateJSON(TJSONFloat(Element));
-      end
-    else
-      Result:=CreateJSON(TJSONFloat(Element));
-    end
-  else if isObject(Element) and (Element is TObject) then
-    begin
-    VObject:=TObject(Element);
-    if VObject is TJSONData then
-      Result:=TJSONData(VObject)
-    else
-      TJSONData.DoError(SErrNotJSONData,[VObject.ClassName,SourceType]);
-    end
-  else
-    TJSONData.DoError(SErrUnknownTypeInConstructor,[SourceType,jsTypeOf(Element)]);
-end;
-{$else}
 Function VarRecToJSON(Const Element : TVarRec; const SourceType : String) : TJSONData;
 
 begin
@@ -2532,9 +2182,7 @@ begin
       vtChar       : Result:=CreateJSON(VChar);
       vtExtended   : Result:=CreateJSON(VExtended^);
       vtString     : Result:=CreateJSON(vString^);
-      vtAnsiString : Result:=CreateJSON(UTF8Decode(StrPas(VPChar)));
-      vtUnicodeString: Result:=CreateJSON(UnicodeString(VUnicodeString));
-      vtWideString: Result:=CreateJSON(WideString(VWideString));
+      vtAnsiString : Result:=CreateJSON(AnsiString(vAnsiString));
       vtPChar      : Result:=CreateJSON(StrPas(VPChar));
       vtPointer    : If (VPointer<>Nil) then
                        TJSONData.DoError(SErrPointerNotNil,[SourceType])
@@ -2551,9 +2199,8 @@ begin
       TJSONData.DoError(SErrUnknownTypeInConstructor,[SourceType,VType])
     end;
 end;
-{$endif}
 
-constructor TJSONArray.Create(const Elements: array of {$ifdef pas2js}jsvalue{$else}Const{$endif});
+constructor TJSONArray.Create(const Elements: array of const);
 
 Var
   I : integer;
@@ -2638,7 +2285,6 @@ begin
   Result:=Add(CreateJSON(I));
 end;
 
-{$ifdef fpc}
 function TJSONArray.Add(I: Int64): Int64;
 begin
   Result:=Add(CreateJSON(I));
@@ -2648,19 +2294,16 @@ function TJSONArray.Add(I: QWord): QWord;
 begin
   Result:=Add(CreateJSON(I));
 end;
-{$endif}
 
 function TJSONArray.Add(const S: String): Integer;
 begin
   Result:=Add(CreateJSON(S));
 end;
 
-{$ifdef fpc}
 function TJSONArray.Add(const S: UnicodeString): Integer;
 begin
   Result:=Add(CreateJSON(S));
 end;
-{$endif}
 
 function TJSONArray.Add: Integer;
 begin
@@ -2726,7 +2369,6 @@ begin
   FList.Insert(Index, CreateJSON(I));
 end;
 
-{$ifdef fpc}
 procedure TJSONArray.Insert(Index: Integer; I: Int64);
 begin
   FList.Insert(Index, CreateJSON(I));
@@ -2736,19 +2378,16 @@ procedure TJSONArray.Insert(Index: Integer; I: QWord);
 begin
   FList.Insert(Index, CreateJSON(I));
 end;
-{$endif}
 
 procedure TJSONArray.Insert(Index: Integer; const S: String);
 begin
   FList.Insert(Index, CreateJSON(S));
 end;
 
-{$ifdef fpc}
 procedure TJSONArray.Insert(Index: Integer; const S: UnicodeString);
 begin
   FList.Insert(Index, CreateJSON(S));
 end;
-{$endif}
 
 procedure TJSONArray.Insert(Index: Integer; F: TJSONFloat);
 begin
@@ -2803,16 +2442,9 @@ end;
 
 function TJSONObject.GetElements(const AName: string): TJSONData;
 begin
-  {$ifdef pas2js}
-  if FHash.hasOwnProperty('%'+AName) then
-    Result:=TJSONData(FHash['%'+AName])
-  else
-    DoError(SErrNonexistentElement,[AName]);
-  {$else}
   Result:=TJSONData(FHash.Find(AName));
   If (Result=Nil) then
     DoError(SErrNonexistentElement,[AName]);
-  {$endif}
 end;
 
 function TJSONObject.GetFloats(const AName: String): TJSONFloat;
@@ -2825,12 +2457,10 @@ begin
   Result:=GetElements(AName).AsInteger;
 end;
 
-{$ifdef fpc}
 function TJSONObject.GetInt64s(const AName: String): Int64;
 begin
   Result:=GetElements(AName).AsInt64;
 end;
-{$endif}
 
 function TJSONObject.GetIsNull(const AName: String): Boolean;
 begin
@@ -2839,15 +2469,7 @@ end;
 
 function TJSONObject.GetNameOf(Index: Integer): TJSONStringType;
 begin
-  {$ifdef pas2js}
-  if FNames=nil then
-    FNames:=TJSObject.getOwnPropertyNames(FHash);
-  if (Index<0) or (Index>=FCount) then
-    DoError(SListIndexError,[Index]);
-  Result:=copy(FNames[Index],2);
-  {$else}
   Result:=FHash.NameOfIndex(Index);
-  {$endif}
 end;
 
 function TJSONObject.GetObjects(const AName : String): TJSONObject;
@@ -2855,32 +2477,28 @@ begin
   Result:=GetElements(AName) as TJSONObject;
 end;
 
-{$ifdef fpc}
 function TJSONObject.GetQWords(AName : String): QWord;
 begin
   Result:=GetElements(AName).AsQWord;
 end;
-{$endif}
 
 function TJSONObject.GetStrings(const AName : String): TJSONStringType;
 begin
   Result:=GetElements(AName).AsString;
 end;
 
-{$ifdef fpc}
 function TJSONObject.GetUnicodeStrings(const AName: String
   ): TJSONUnicodeStringType;
 begin
   Result:=GetElements(AName).AsUnicodeString;
 end;
-{$endif}
 
 function TJSONObject.GetTypes(const AName : String): TJSONType;
 begin
   Result:=Getelements(Aname).JSONType;
 end;
 
-class function TJSONObject.GetUnquotedMemberNames: Boolean; {$ifdef fpc}static;{$endif}
+class function TJSONObject.GetUnquotedMemberNames: Boolean; static;
 begin
   Result:=FUnquotedMemberNames;
 end;
@@ -2897,14 +2515,6 @@ begin
 end;
 
 procedure TJSONObject.SetElements(const AName: string; const AValue: TJSONData);
-{$ifdef pas2js}
-begin
-  if not FHash.hasOwnProperty('%'+AName) then
-    inc(FCount);
-  FHash['%'+AName]:=AValue;
-  FNames:=nil;
-end;
-{$else}
 Var
   Index : Integer;
 
@@ -2915,7 +2525,6 @@ begin
   else
     FHash.Items[Index]:=AValue; // Will free the previous value.
 end;
-{$endif}
 
 procedure TJSONObject.SetFloats(const AName : String; const AValue: TJSONFloat);
 begin
@@ -2927,12 +2536,10 @@ begin
   SetElements(AName,CreateJSON(AVAlue));
 end;
 
-{$ifdef fpc}
 procedure TJSONObject.SetInt64s(const AName : String; const AValue: Int64);
 begin
   SetElements(AName,CreateJSON(AVAlue));
 end;
-{$endif}
 
 procedure TJSONObject.SetIsNull(const AName : String; const AValue: Boolean);
 begin
@@ -2946,25 +2553,21 @@ begin
   SetElements(AName,AValue);
 end;
 
-{$ifdef fpc}
 procedure TJSONObject.SetQWords(AName : String; AValue: QWord);
 begin
   SetElements(AName,CreateJSON(AVAlue));
 end;
-{$endif}
 
 procedure TJSONObject.SetStrings(const AName : String; const AValue: TJSONStringType);
 begin
   SetElements(AName,CreateJSON(AValue));
 end;
 
-{$ifdef fpc}
 procedure TJSONObject.SetUnicodeStrings(const AName: String;
   const AValue: TJSONUnicodeStringType);
 begin
   SetElements(AName,CreateJSON(AValue));
 end;
-{$endif}
 
 class procedure TJSONObject.DetermineElementQuotes;
 
@@ -2978,7 +2581,7 @@ begin
   FElementStart:=ElementStart[FUnquotedMemberNames]
 end;
 
-class procedure TJSONObject.SetUnquotedMemberNames(AValue: Boolean); {$ifdef fpc}static;{$endif}
+class procedure TJSONObject.SetUnquotedMemberNames(AValue: Boolean); static;
 
 begin
   if FUnquotedMemberNames=AValue then exit;
@@ -3032,22 +2635,18 @@ end;
 function TJSONObject.GetAsBoolean: Boolean;
 begin
   ConvertError(True);
-  Result:=false;
 end;
 
 function TJSONObject.GetAsFloat: TJSONFloat;
 begin
   ConvertError(True);
-  Result:=0.0;
 end;
 
 function TJSONObject.GetAsInteger: Integer;
 begin
   ConvertError(True);
-  Result:=0;
 end;
 
-{$ifdef fpc}
 function TJSONObject.GetAsInt64: Int64;
 begin
   ConvertError(True);
@@ -3057,43 +2656,36 @@ function TJSONObject.GetAsQWord: QWord;
 begin
   ConvertError(True);
 end;
-{$endif}
 
 procedure TJSONObject.SetAsBoolean(const AValue: Boolean);
 begin
   ConvertError(False);
-  if AValue then ;
 end;
 
 procedure TJSONObject.SetAsFloat(const AValue: TJSONFloat);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
 procedure TJSONObject.SetAsInteger(const AValue: Integer);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
-{$ifdef fpc}
 procedure TJSONObject.SetAsInt64(const AValue: Int64);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
 
 procedure TJSONObject.SetAsQword(const AValue: QWord);
 begin
   ConvertError(False);
-  if AValue>0 then ;
 end;
-{$endif}
 
 {$warnings on}
 
 function TJSONObject.GetAsJSON: TJSONStringType;
+
 
 Var
   I : Integer;
@@ -3125,73 +2717,51 @@ end;
 function TJSONObject.GetAsString: TJSONStringType;
 begin
   ConvertError(True);
-  Result:='';
 end;
 
 procedure TJSONObject.SetAsString(const AValue: TJSONStringType);
 begin
   ConvertError(False);
-  if AValue='' then ;
 end;
 
-function TJSONObject.GetValue: TJSONVariant;
+function TJSONObject.GetValue: variant;
 begin
   ConvertError(True);
-  Result:=0;
 end;
 
-procedure TJSONObject.SetValue(const AValue: TJSONVariant);
+procedure TJSONObject.SetValue(const AValue: variant);
 begin
   ConvertError(False);
-  {$ifdef pas2js}
-  if AValue=0 then ;
-  {$else}
-  if VarType(AValue)=0 then ;
-  {$endif}
 end;
 {$warnings on}
 
 function TJSONObject.GetCount: Integer;
 begin
-  {$ifdef pas2js}
-  Result:=FCount;
-  {$else}
   Result:=FHash.Count;
-  {$endif}
 end;
 
 function TJSONObject.GetItem(Index: Integer): TJSONData;
 begin
-  {$ifdef pas2js}
-  Result:=GetElements(GetNameOf(Index));
-  {$else}
   Result:=TJSONData(FHash.Items[Index]);
-  {$endif}
 end;
 
 procedure TJSONObject.SetItem(Index: Integer; const AValue: TJSONData);
 begin
-  {$ifdef pas2js}
-  SetElements(GetNameOf(Index),AValue);
-  {$else}
   FHash.Items[Index]:=AValue;
-  {$endif}
 end;
 
 constructor TJSONObject.Create;
 begin
-  {$ifdef pas2js}
-  FHash:=TJSObject.new;
-  {$else}
   FHash:=TFPHashObjectList.Create(True);
-  {$endif}
 end;
 
-constructor TJSONObject.Create(const Elements: array of {$ifdef pas2js}jsvalue{$else}Const{$endif});
+
+
+constructor TJSONObject.Create(const Elements: array of const);
 
 Var
   I : integer;
-  AName : TJSONUnicodeStringType;
+  AName : String;
   J : TJSONData;
 
 begin
@@ -3201,42 +2771,28 @@ begin
   I:=Low(Elements);
   While I<=High(Elements) do
     begin
-    {$ifdef pas2js}
-    if isString(Elements[I]) then
-      AName:=String(Elements[I])
-    else
-      DoError(SErrNameMustBeString,[I+1]);
-    {$else}
     With Elements[i] do
       Case VType of
-        vtChar       : AName:=TJSONUnicodeStringType(VChar);
-        vtString     : AName:=TJSONUnicodeStringType(vString^);
-        vtAnsiString : AName:=UTF8Decode(StrPas(VPChar));
-        vtPChar      : AName:=TJSONUnicodeStringType(StrPas(VPChar));
+        vtChar       : AName:=VChar;
+        vtString     : AName:=vString^;
+        vtAnsiString : AName:=(AnsiString(vAnsiString));
+        vtPChar      : AName:=StrPas(VPChar);
       else
         DoError(SErrNameMustBeString,[I+1]);
       end;
-    {$endif}
-    If (AName='') then
+    If (ANAme='') then
       DoError(SErrNameMustBeString,[I+1]);
     Inc(I);
     J:=VarRecToJSON(Elements[i],'Object');
-    {$IFDEF FPC_HAS_CPSTRING}
-    Add(UTF8Encode(AName),J);
-    {$ELSE}
     Add(AName,J);
-    {$ENDIF}
     Inc(I);
     end;
 end;
 
+
 destructor TJSONObject.Destroy;
 begin
-  {$ifdef pas2js}
-  FHash:=nil;
-  {$else}
   FreeAndNil(FHash);
-  {$endif}
   inherited Destroy;
 end;
 
@@ -3275,7 +2831,7 @@ function TJSONObject.DoFormatJSON(Options: TFormatOptions; CurrentIndent,
 Var
   i : Integer;
   S : TJSONStringType;
-  MultiLine,UseQuotes, SkipWhiteSpace,SkipWhiteSpaceOnlyLeading : Boolean;
+  MultiLine,UseQuotes, SkipWhiteSpace : Boolean;
   NSep,Sep,Ind : String;
   V : TJSONStringType;
   D : TJSONData;
@@ -3285,16 +2841,10 @@ begin
   UseQuotes:=Not (foDoNotQuoteMembers in options);
   MultiLine:=Not (foSingleLineObject in Options);
   SkipWhiteSpace:=foSkipWhiteSpace in Options;
-  SkipWhiteSpaceOnlyLeading:=foSkipWhiteSpaceOnlyLeading in Options;
   CurrentIndent:=CurrentIndent+Indent;
   Ind:=IndentString(Options, CurrentIndent);
   If SkipWhiteSpace then
-    begin
-    if SkipWhiteSpaceOnlyLeading then
-      NSep:=': '
-    else
-      NSep:=':'
-    end
+    NSep:=':'
   else
     NSep:=' : ';
   If MultiLine then
@@ -3331,21 +2881,7 @@ begin
 end;
 
 procedure TJSONObject.Iterate(Iterator: TJSONObjectIterator; Data: TObject);
-{$ifdef pas2js}
-var
-  i: Integer;
-  Cont: Boolean;
-begin
-  if FNames=nil then
-    FNames:=TJSObject.getOwnPropertyNames(FHash);
-  Cont:=True;
-  for i:=0 to length(FNames) do
-    begin
-    Iterator(copy(FNames[I],2),TJSONData(FHash[FNames[i]]),Data,Cont);
-    if not Cont then break;
-    end;
-end;
-{$else}
+
 Var
   I : Integer;
   Cont : Boolean;
@@ -3353,37 +2889,23 @@ Var
 begin
   I:=0;
   Cont:=True;
-  While (I<FHash.Count) and Cont do
+  While (I<FHash.Count) and cont do
     begin
     Iterator(Names[I],Items[i],Data,Cont);
     Inc(I);
     end;
 end;
-{$endif}
 
 function TJSONObject.IndexOf(Item: TJSONData): Integer;
 begin
-  {$ifdef pas2js}
-  if FNames=nil then
-    FNames:=TJSObject.getOwnPropertyNames(FHash);
-  for Result:=0 to length(FNames)-1 do
-    if TJSONData(FHash[FNames[Result]])=Item then exit;
-  Result:=-1;
-  {$else}
   Result:=FHash.IndexOf(Item);
-  {$endif}
 end;
 
 function TJSONObject.IndexOfName(const AName: TJSONStringType; CaseInsensitive : Boolean = False): Integer;
+
 begin
-  {$ifdef pas2js}
-  if FNames=nil then
-    FNames:=TJSObject.getOwnPropertyNames(FHash);
-  Result:=TJSArray(FNames).indexOf('%'+AName); // -1 if not found
-  {$else}
   Result:=FHash.FindIndexOf(AName);
-  {$endif}
-  if (Result<0) and CaseInsensitive then
+  if (Result=-1) and CaseInsensitive then
     begin
     Result:=Count-1;
     While (Result>=0) and (CompareText(Names[Result],AName)<>0) do
@@ -3393,113 +2915,70 @@ end;
 
 procedure TJSONObject.Clear;
 begin
-  {$ifdef pas2js}
-  FCount:=0;
-  FHash:=TJSObject.new;
-  FNames:=nil;
-  {$else}
   FHash.Clear;
-  {$endif}
-end;
-
-function TJSONObject.DoAdd(const AName: TJSONStringType; AValue: TJSONData; FreeOnError : Boolean = True): Integer;
-begin
-  if {$ifdef pas2js}FHash.hasOwnProperty('%'+AName){$else}(IndexOfName(aName)<>-1){$endif} then
-    begin
-    if FreeOnError then
-      FreeAndNil(AValue);
-    DoError(SErrDuplicateValue,[aName]);
-    end;
-  {$ifdef pas2js}
-  FHash['%'+AName]:=AValue;
-  FNames:=nil;
-  inc(FCount);
-  Result:=FCount;
-  {$else}
-  Result:=FHash.Add(AName,AValue);
-  {$endif}
 end;
 
 function TJSONObject.Add(const AName: TJSONStringType; AValue: TJSONData
   ): Integer;
 begin
-  Result:=DoAdd(aName,AValue,False);
+  Result:=FHash.Add(AName,AValue);
 end;
 
 function TJSONObject.Add(const AName: TJSONStringType; AValue: Boolean
   ): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
 
 function TJSONObject.Add(const AName: TJSONStringType; AValue: TJSONFloat): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
 
 function TJSONObject.Add(const AName, AValue: TJSONStringType): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
 
-{$ifdef fpc}
 function TJSONObject.Add(const AName: String; AValue: TJSONUnicodeStringType
   ): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
-{$endif}
 
 function TJSONObject.Add(const AName: TJSONStringType; Avalue: Integer): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
 
-{$ifdef fpc}
 function TJSONObject.Add(const AName: TJSONStringType; Avalue: Int64): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
 
 function TJSONObject.Add(const AName: TJSONStringType; Avalue: QWord): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON(AValue));
+  Result:=Add(AName,CreateJSON(AValue));
 end;
-{$endif}
 
 function TJSONObject.Add(const AName: TJSONStringType): Integer;
 begin
-  Result:=DoAdd(AName,CreateJSON);
+  Result:=Add(AName,CreateJSON);
 end;
 
 function TJSONObject.Add(const AName: TJSONStringType; AValue: TJSONArray
   ): Integer;
 begin
-  Result:=DoAdd(AName,TJSONData(AValue),False);
+  Result:=Add(AName,TJSONData(AValue));
 end;
 
 procedure TJSONObject.Delete(Index: Integer);
 begin
-  {$ifdef pas2js}
-  if (Index<0) or (Index>=FCount) then
-    DoError(SListIndexError,[Index]);
-  JSDelete(FHash,'%'+GetNameOf(Index));
-  FNames:=nil;
-  dec(FCount);
-  {$else}
   FHash.Delete(Index);
-  {$endif}
 end;
 
 procedure TJSONObject.Delete(const AName: string);
-{$ifdef pas2js}
-begin
-  if not FHash.hasOwnProperty('%'+AName) then exit;
-  JSDelete(FHash,'%'+AName);
-  FNames:=nil;
-  dec(FCount);
-end;
-{$else}
+
 Var
   I : Integer;
 
@@ -3508,28 +2987,12 @@ begin
   if (I<>-1) then
     Delete(I);
 end;
-{$endif}
 
 procedure TJSONObject.Remove(Item: TJSONData);
-{$ifdef pas2js}
-var AName: String;
-begin
-  for AName in FHash do
-    if FHash.hasOwnProperty(AName) and (FHash[AName]=Item) then
-      begin
-      JSDelete(FHash,AName);
-      FNames:=nil;
-      dec(FCount);
-      exit;
-      end;
-end;
-{$else}
 begin
   FHash.Remove(Item);
 end;
-{$endif}
 
-{$ifdef fpc}
 function TJSONObject.Extract(Index: Integer): TJSONData;
 begin
   Result:=Items[Index];
@@ -3548,17 +3011,8 @@ begin
   else
     Result:=Nil
 end;
-{$endif}
 
-function TJSONObject.Get(const AName: String): TJSONVariant;
-{$ifdef pas2js}
-begin
-  if FHash.hasOwnProperty('%'+AName) then
-    Result:=TJSONData(FHash['%'+AName]).Value
-  else
-    Result:=nil;
-end;
-{$else}
+function TJSONObject.Get(const AName: String): Variant;
 Var
   I : Integer;
 
@@ -3569,7 +3023,6 @@ begin
   else
     Result:=Null;
 end;
-{$endif}
 
 function TJSONObject.Get(const AName: String; ADefault: TJSONFloat
   ): TJSONFloat;
@@ -3599,7 +3052,6 @@ begin
     Result:=ADefault;
 end;
 
-{$ifdef fpc}
 function TJSONObject.Get(const AName: String; ADefault: Int64): Int64;
 Var
   D : TJSONData;
@@ -3623,7 +3075,6 @@ begin
   else
     Result:=ADefault;
 end;
-{$endif}
 
 function TJSONObject.Get(const AName: String; ADefault: Boolean
   ): Boolean;
@@ -3651,7 +3102,6 @@ begin
     Result:=ADefault;
 end;
 
-{$ifdef fpc}
 function TJSONObject.Get(const AName: String; ADefault: TJSONUnicodeStringType
   ): TJSONUnicodeStringType;
 Var
@@ -3664,7 +3114,6 @@ begin
   else
     Result:=ADefault;
 end;
-{$endif}
 
 function TJSONObject.Get(const AName: String; ADefault: TJSONArray
   ): TJSONArray;
@@ -3693,14 +3142,7 @@ begin
 end;
 
 function TJSONObject.Find(const AName: String): TJSONData;
-{$ifdef pas2js}
-begin
-  if FHash.hasOwnProperty('%'+AName) then
-    Result:=TJSONData(FHash['%'+AName])
-  else
-    Result:=nil;
-end;
-{$else}
+
 Var
   I : Integer;
 
@@ -3711,7 +3153,6 @@ begin
   else
     Result:=Nil;
 end;
-{$endif}
 
 function TJSONObject.Find(const AName: String; AType: TJSONType): TJSONData;
 begin
@@ -3723,7 +3164,7 @@ end;
 function TJSONObject.Find(const key: TJSONStringType; out AValue: TJSONData): boolean;
 begin
   AValue := Find(key);
-  Result := assigned(AValue);
+  result := assigned(AValue);
 end;
 
 function TJSONObject.Find(const key: TJSONStringType; out AValue: TJSONObject): boolean;
@@ -3731,9 +3172,14 @@ var
   v: TJSONData;
 begin
   v := Find(key);
-  Result := assigned(v) and (v.JSONType = jtObject);
-  if Result then
-    AValue := TJSONObject(v);
+  if assigned(v) then
+  begin
+    result := v.JSONType = jtObject;
+    if result then
+      AValue := TJSONObject(v);
+  end
+  else
+    result := false;
 end;
 
 function TJSONObject.Find(const key: TJSONStringType; out AValue: TJSONArray): boolean;
@@ -3741,9 +3187,14 @@ var
   v: TJSONData;
 begin
   v := Find(key);
-  Result := assigned(v) and (v.JSONType = jtArray);
-  if Result then
-    AValue := TJSONArray(v);
+  if assigned(v) then
+  begin
+    result := v.JSONType = jtArray;
+    if result then
+      AValue := TJSONArray(v);
+  end
+  else
+    result := false;
 end;
 
 function TJSONObject.Find(const key: TJSONStringType; out AValue: TJSONString): boolean;
@@ -3751,9 +3202,14 @@ var
   v: TJSONData;
 begin
   v := Find(key);
-  Result := assigned(v) and (v.JSONType = jtString);
-  if Result then
-    AValue := TJSONString(v);
+  if assigned(v) then
+  begin
+    result := v.JSONType = jtString;
+    if result then
+      AValue := TJSONString(v);
+  end
+  else
+    result := false;
 end;
 
 function TJSONObject.Find(const key: TJSONStringType; out AValue: TJSONBoolean): boolean;
@@ -3761,9 +3217,14 @@ var
   v: TJSONData;
 begin
   v := Find(key);
-  Result := assigned(v) and (v.JSONType = jtBoolean);
-  if Result then
-    AValue := TJSONBoolean(v);
+  if assigned(v) then
+  begin
+    result := v.JSONType = jtBoolean;
+    if result then
+      AValue := TJSONBoolean(v);
+  end
+  else
+    result := false;
 end;
 
 function TJSONObject.Find(const key: TJSONStringType; out AValue: TJSONNumber): boolean;
@@ -3771,9 +3232,14 @@ var
   v: TJSONData;
 begin
   v := Find(key);
-  Result := assigned(v) and (v.JSONType = jtNumber);
-  if Result then
-    AValue := TJSONNumber(v);
+  if assigned(v) then
+  begin
+    result := v.JSONType = jtNumber;
+    if result then
+      AValue := TJSONNumber(v);
+  end
+  else
+    result := false;
 end;
 
 initialization

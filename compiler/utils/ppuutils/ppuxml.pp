@@ -41,6 +41,7 @@ type
     procedure WriteArrayEnd(const AName: string); override;
     procedure WriteStr(const AName, AValue: string); override;
   public
+    constructor Create(var OutFile: Text); override;
     procedure Init; override;
   end;
 
@@ -159,6 +160,11 @@ begin
     WriteLn(Format('</%s>', [GetTagName(AName, 'object')]))
   else
     WriteLn(Format('</%s>', [GetTagName(Def.DefTypeName, 'object')]));
+end;
+
+constructor TPpuXmlOutput.Create(var OutFile: Text);
+begin
+  inherited Create(OutFile);
 end;
 
 procedure TPpuXmlOutput.Init;

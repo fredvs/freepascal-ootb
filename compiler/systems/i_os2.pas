@@ -100,7 +100,6 @@ unit i_os2;
             stacksize    : 256*1024;
             stackalign   : 4;
             abi          : abi_default;
-            llvmdatalayout : 'todo';
           );
 
 

@@ -41,7 +41,7 @@ type
   end;
 
   tarobjectwriter=class(tobjectwriter)
-    constructor createAr(const Aarfn:string);override;
+    constructor create(const Aarfn:string);
     destructor  destroy;override;
     function  createfile(const fn:string):boolean;override;
     procedure closefile;override;
@@ -75,14 +75,13 @@ type
     procedure ReadArchive;
   protected
     function getfilename:string;override;
-    function GetPos: longint;override;
-    function GetIsArchive: boolean; override;
   public
-    constructor createAr(const Aarfn:string;allow_nonar:boolean=false);override;
+    constructor create(const Aarfn:string;allow_nonar:boolean=false);
     destructor  destroy;override;
     function  openfile(const fn:string):boolean;override;
     procedure closefile;override;
     procedure seek(len:longint);override;
+    property isarchive: boolean read isar;
   end;
 
 
@@ -160,7 +159,7 @@ implementation
                                 TArObjectWriter
 *****************************************************************************}
 
-    constructor tarobjectwriter.createAr(const Aarfn:string);
+    constructor tarobjectwriter.create(const Aarfn:string);
       var
         time  : TSystemTime;
       begin
@@ -318,7 +317,7 @@ implementation
 *****************************************************************************}
 
 
-    constructor tarobjectreader.createAr(const Aarfn:string;allow_nonar:boolean);
+    constructor tarobjectreader.create(const Aarfn:string;allow_nonar:boolean);
       var
         magic:array[0..sizeof(armagic)-1] of char;
       begin
@@ -343,7 +342,7 @@ implementation
     destructor  tarobjectreader.destroy;
       begin
         inherited closefile;
-        ArSymbols.Free;
+        ArSymbols.destroy;
         if assigned(LFNStrs) then
           FreeMem(LFNStrs);
         inherited Destroy;
@@ -355,18 +354,6 @@ implementation
         result:=inherited getfilename;
         if CurrMemberName<>'' then
           result:=result+'('+CurrMemberName+')';
-      end;
-
-
-    function tarobjectreader.GetPos: longint;
-      begin
-        result:=inherited GetPos-CurrMemberPos;
-      end;
-
-
-    function tarobjectreader.GetIsArchive: boolean;
-      begin
-        Result:=isar;
       end;
 
 

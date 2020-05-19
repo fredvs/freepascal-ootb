@@ -23,8 +23,8 @@ procedure SortRect (var rect : TRect);
 procedure SortRect (var left,top, right,bottom : integer);
 function PointInside (const x,y:integer; bounds:TRect) : boolean;
 
-Function CheckRectClipping (ClipRect:TRect; var Rect:Trect) : Boolean;
-Function CheckRectClipping (ClipRect:TRect; var x1,y1, x2,y2 : integer) : Boolean;
+procedure CheckRectClipping (ClipRect:TRect; var Rect:Trect);
+procedure CheckRectClipping (ClipRect:TRect; var x1,y1, x2,y2 : integer);
 procedure CheckLineClipping (ClipRect:TRect; var x1,y1, x2,y2 : integer);
 
 implementation
@@ -60,14 +60,13 @@ begin
               (y >= bottom) and (y <= top);
 end;
 
-Function CheckRectClipping (ClipRect:TRect; var Rect:Trect) : Boolean;
+procedure CheckRectClipping (ClipRect:TRect; var Rect:Trect);
 begin
   with ClipRect do
-    Result:=CheckRectClipping (ClipRect, left,top,right,bottom);
+    CheckRectClipping (ClipRect, left,top,right,bottom);
 end;
 
-Function CheckRectClipping (ClipRect:TRect; var x1,y1, x2,y2 : integer) : boolean;
-
+procedure CheckRectClipping (ClipRect:TRect; var x1,y1, x2,y2 : integer);
   procedure ClearRect;
   begin
     x1 := -1;
@@ -76,10 +75,8 @@ Function CheckRectClipping (ClipRect:TRect; var x1,y1, x2,y2 : integer) : boolea
     y2 := -1;
   end;
 begin
-  Result:=true;
   SortRect (ClipRect);
   SortRect (x1,y1, x2,y2);
-
   with ClipRect do
     begin
     if ( x1 < Left ) then // left side needs to be clipped
@@ -90,11 +87,8 @@ begin
       y1 := top;
     if ( y2 > bottom ) then // bottom side needs to be clipped
       y2 := bottom;
-    if (x1 > x2) or (y1 > y2) then
-      begin
+    if (x1 > x2) or (y1 < y2) then
       ClearRect;
-      Result:=False;
-      end;
     end;
 end;
 

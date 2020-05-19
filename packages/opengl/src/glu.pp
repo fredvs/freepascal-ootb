@@ -67,18 +67,26 @@ uses
   GL;
 
 Const
-{$if defined(Windows)}
+{$IFDEF Windows}
   GLU_Lib = 'glu32.dll';
-{$elseif defined(OS2)}
+{$ELSE}
+{$IFDEF OS2}
   GLU_Lib = 'opengl.dll';
-{$elseif defined(darwin)}
+{$ELSE OS2}
+{$ifdef darwin}
   GLU_LIB =  '/System/Library/Frameworks/OpenGL.framework/Libraries/libGLU.dylib';
-{$elseif defined(haiku) or defined(OpenBSD)}
+{$else}
+{$IFDEF haiku}
   GLU_LIB = 'libGLU.so';
-{$elseif defined(MorphOS)}
+{$ELSE}
+{$ifdef MorphOS}
   GLU_LIB = 'tinygl.library';
 {$else}
   GLU_LIB = 'libGLU.so.1';
+{$endif}
+{$ENDIF}
+{$ENDIF}
+{$ENDIF OS2}
 {$endif}
                               
 type

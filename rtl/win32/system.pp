@@ -20,10 +20,7 @@ interface
   {$define SYSTEMEXCEPTIONDEBUG}
 {$endif SYSTEMDEBUG}
 
-{$ifdef VER3_0}
-{ 3.1.1+ do not require this anymore }
-{$define FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-{$endif VER3_0}
+{$define FPC_HAS_INDIRECT_MAIN_INFORMATION}
 
 {$ifdef cpui386}
   {$define Set_i386_Exception_handler}
@@ -31,9 +28,6 @@ interface
 
 {$define DISABLE_NO_THREAD_MANAGER}
 {$define HAS_WIDESTRINGMANAGER}
-{$define DISABLE_NO_DYNLIBS_MANAGER}
-{$define FPC_SYSTEM_HAS_SYSDLH}
-{$define FPC_HAS_SETCTRLBREAKHANDLER}
 
 {$ifdef FPC_USE_WIN32_SEH}
   {$define FPC_SYSTEM_HAS_RAISEEXCEPTION}
@@ -115,10 +109,19 @@ Const
 implementation
 
 var
-  FPCSysInstance : PLongint;public name '_FPC_SysInstance';
-
-{$define FPC_SYSTEM_HAS_OSSETUPENTRYINFORMATION}
-procedure OsSetupEntryInformation(constref info: TEntryInformation); forward;
+  SysInstance : Longint;public name '_FPC_SysInstance';
+  InitFinalTable : record end; external name 'INITFINAL';
+  ThreadvarTablesTable : record end; external name 'FPC_THREADVARTABLES';
+  procedure PascalMain;stdcall;external name 'PASCALMAIN';
+  procedure asm_exit;stdcall;external name 'asm_exit';
+const
+  EntryInformation : TEntryInformation = (
+    InitFinalTable : @InitFinalTable;
+    ThreadvarTablesTable : @ThreadvarTablesTable;
+    asm_exit : @asm_exit;
+    PascalMain : @PascalMain;
+    valgrind_used : false;
+    );
 
 {$ifdef FPC_USE_WIN32_SEH}
 function main_wrapper(arg: Pointer; proc: Pointer): ptrint; forward;
@@ -137,12 +140,6 @@ end;
 { include code common with win64 }
 {$I syswin.inc}
 
-procedure OsSetupEntryInformation(constref info: TEntryInformation);
-begin
-  TlsKey := info.OS.TlsKeyAddr;
-  FPCSysInstance := info.OS.SysInstance;
-  WStrInitTablesTable := info.OS.WideInitTables;
-end;
 
 {*****************************************************************************
                          System Dependent Exit code
@@ -184,7 +181,7 @@ begin
 {$endif FPC_USE_WIN32_SEH}
 
   { do cleanup required by the startup code }
-  EntryInformation.OS.asm_exit();
+  EntryInformation.asm_exit();
 
   { call exitprocess, with cleanup as required }
   ExitProcess(exitcode);
@@ -195,11 +192,11 @@ var
     to check if the call stack can be written on exceptions }
   _SS : Cardinal;
 
-procedure Exe_entry(constref info : TEntryInformation);[public,alias:'_FPC_EXE_Entry'];
+procedure Exe_entry(const info : TEntryInformation);[public,alias:'_FPC_EXE_Entry'];
   var
     xframe: TEXCEPTION_FRAME;
   begin
-     SetupEntryInformation(info);
+     EntryInformation:=info;
      IsLibrary:=false;
      { install the handlers for exe only ?
        or should we install them for DLL also ? (PM) }
@@ -424,7 +421,7 @@ procedure JumpToHandleErrorFrame;
 
 function syswin32_i386_exception_handler(excep : PExceptionPointers) : Longint;stdcall;
   var
-    res,ssecode: longint;
+    res: longint;
     err: byte;
     must_reset_fpu: boolean;
   begin
@@ -494,17 +491,6 @@ function syswin32_i386_exception_handler(excep : PExceptionPointers) : Longint;s
           begin
             err := 218;
             must_reset_fpu := false;
-          end;
-        STATUS_FLOAT_MULTIPLE_FAULTS,
-        STATUS_FLOAT_MULTIPLE_TRAPS:
-          begin
-            { dumping ExtendedRegisters and comparing with the actually value of mxcsr revealed 24 }
-            TranslateMxcsr(excep^.ContextRecord^.ExtendedRegisters[24],ssecode);
-{$ifdef SYSTEMEXCEPTIONDEBUG}
-            if IsConsole then
-              Writeln(stderr,'MXSR: ',hexstr(excep^.ContextRecord^.ExtendedRegisters[24], 2),' SSECODE: ',ssecode);
-{$endif SYSTEMEXCEPTIONDEBUG}
-            err:=-ssecode;
           end;
         else
           begin
@@ -667,9 +653,9 @@ begin
   GetStartupInfo(@startupinfo);
   { some misc Win32 stuff }
   if not IsLibrary then
-    FPCSysInstance^:=getmodulehandle(nil);
+    SysInstance:=getmodulehandle(nil);
 
-  MainInstance:=FPCSysInstance^;
+  MainInstance:=SysInstance;
 
   { pass dummy value }
   StackLength := CheckInitialStkLen($1000000);
@@ -690,7 +676,6 @@ begin
   SysInitStdIO;
   { Arguments }
   setup_arguments;
-  InitSystemDynLibs;
   { Reset IO Error }
   InOutRes:=0;
   ProcessID := GetCurrentProcessID;

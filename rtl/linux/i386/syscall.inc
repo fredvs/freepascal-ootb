@@ -4,6 +4,7 @@
     member of the Free Pascal development team.
 
     The syscalls for the new RTL, moved to platform dependant dir.
+    Old linux calling convention is still kept.
 
     See the file COPYING.FPC, included in this distribution,
     for details about the copyright.
@@ -478,12 +479,8 @@ asm
         movl  param3,%edx	// param3
         movl  param4,%esi	// param4
 	movl  param5,%edi	// param5
-        // push address of psysinfo, since ebp will be rewritten below 
-        // and ebp based access to local vars will be unavailable after that
-        push  _psysinfo
 	movl  param6,%ebp	// param6
-        call  (%esp)
-        addl $4,%esp // adjust esp
+        call  _psysinfo 
   {$else FPC_PIC}
         movl  %edx,%ebx		// param1
 	pop   %ecx		// param2

@@ -158,7 +158,6 @@ type
 //-----------------------------------------------------------------------------
   TFixedFormatDataSet = class(TDataSet)
   private
-    FCodePage: String;
     FSchema             :TStringList;
     FFileName           :TFileName;
     FFilterBuffer       :TRecordBuffer;
@@ -166,8 +165,6 @@ type
     FReadOnly           :Boolean;
     FLoadFromStream     :Boolean;
     FTrimSpace          :Boolean;
-    FEncoding : TEncoding;
-    procedure SetCodePage(AValue: String);
     procedure SetSchema(const Value: TStringList);
     procedure SetFileName(Value : TFileName);
     procedure SetFileMustExist(Value : Boolean);
@@ -239,7 +236,6 @@ type
     property FileName : TFileName read FFileName write SetFileName;
     property Schema: TStringList read FSchema write SetSchema;
     property TrimSpace: Boolean read FTrimSpace write SetTrimSpace default True;
-    Property CodePage : String Read FCodePage Write SetCodePage;
     property FieldDefs;
     property Active;
     property AutoCalcFields;
@@ -287,7 +283,7 @@ type
     procedure InternalInitFieldDefs; override;
     function BufToStore(Buffer: TRecordBuffer): String; override;
     function StoreToBuf(Source: String): String; override;
-    function ExtractDelimited(const S: String; var Pos: integer): string; virtual;
+    function ExtractDelimited(const S: String; var Pos: integer): string;
   public
     constructor Create(AOwner: TComponent); override;
   published
@@ -304,10 +300,6 @@ procedure Register;
 implementation
 
 //{$R *.Res}
-
-Resourcestring
-  SErrUnknownCodePage = 'Unknown code page: %s';
-
 
 //-----------------------------------------------------------------------------
 // TFixedFormatDataSet
@@ -327,31 +319,14 @@ end;
 destructor TFixedFormatDataSet.Destroy;
 begin
   inherited Destroy;
-  FreeAndNil(FEncoding);
-  FreeAndNil(FData);
-  FreeAndNil(FSchema);
+  FData.Free;
+  FSchema.Free;
 end;
 
 procedure TFixedFormatDataSet.SetSchema(const Value: TStringList);
 begin
   CheckInactive;
   FSchema.Assign(Value);
-end;
-
-procedure TFixedFormatDataSet.SetCodePage(AValue: String);
-
-Var
-  F : TSystemCodePage;
-
-begin
-  if FCodePage=AValue then Exit;
-  CheckInactive;
-  F:=CodePageNameToCodePage(aValue);
-  if (F=$FFFF) then
-    DatabaseErrorFmt(SErrUnknownCodePage,[aValue]);
-  FCodePage:=AValue;
-  FreeAndNil(FEncoding);
-  FEncoding:=TMBCSEncoding.Create(F);
 end;
 
 procedure TFixedFormatDataSet.SetFileMustExist(Value : Boolean);
@@ -382,8 +357,6 @@ procedure TFixedFormatDataSet.InternalInitFieldDefs;
 var
   i, Len, MaxLen :Integer;
   LstFields      :TStrings;
-  FEnc : TSystemCodePage;
-
 begin
   if not Assigned(FData) then Exit;
 
@@ -406,11 +379,7 @@ begin
     for i := 0 to LstFields.Count -1 do  // Add fields
     begin
       Len := StrToIntDef(LstFields.Values[LstFields.Names[i]], MaxLen);
-      if Assigned(FEncoding) then
-        Fenc:=FEncoding.CodePage
-      else
-        FEnc:=DefaultSystemCodePage;
-      FieldDefs.Add(Trim(LstFields.Names[i]), ftString, Len, 0, False,False,FieldDefs.Count+1,FEnc);
+      FieldDefs.Add(Trim(LstFields.Names[i]), ftString, Len, False);
       Inc(Len);
 {$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
       Len := Align(Len, SizeOf(PtrInt));
@@ -491,10 +460,7 @@ begin
     FLoadFromStream := True;
     if not Assigned(FData) then
       raise Exception.Create('Data buffer unassigned');
-    if Assigned(FEncoding) then
-      FData.LoadFromStream(Stream,FEncoding)
-    else
-      FData.LoadFromStream(Stream);
+    FData.LoadFromStream(Stream);
     Active := True;
   end
   else
@@ -505,10 +471,7 @@ end;
 procedure TFixedFormatDataSet.SaveToStream(Stream: TStream);
 begin
   if assigned(stream) then
-    if assigned(Fencoding) then
-      FData.SaveToStream(Stream,FEncoding)
-    else
-      FData.SaveToStream(Stream)
+    FData.SaveToStream(Stream)
   else
     raise exception.Create('Invalid Stream Assigned (Save To Stream');
 end;
@@ -599,13 +562,12 @@ function TFixedFormatDataSet.GetRecNo: Longint;
 var
   RecBuf: TRecordBuffer;
 begin
+  Result := 0;
   if GetActiveRecBuf(RecBuf) and (State <> dsInsert) then
   begin
-    UpdateCursorPos;
+    InternalSetToRecord(RecBuf);
     Result := FCurRec + 1 - FDataOffset;
-  end
-  else
-    Result := 0;
+  end;
 end;
 
 procedure TFixedFormatDataSet.SetRecNo(Value: Integer);

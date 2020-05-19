@@ -20,7 +20,7 @@ interface
 {$define NOMOUSE}
 {$endif}
 
-{$if defined(haiku) or defined(beos)}
+{$if defined(haiku)}
 {$define NOGPM}
 {$endif}
 

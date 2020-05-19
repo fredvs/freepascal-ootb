@@ -65,8 +65,6 @@ begin
   writeln;
   writeln('Options:');
   writeln;
-  writeln('  --');
-  Writeln('      Read program from standard input');
   writeln('  --set-cache=<path to cache>');
   writeln('      Set the cache to be used. Otherwise using environment variable');
   writeln('      INSTANTFPCCACHE.');
@@ -97,8 +95,7 @@ var
   CacheDir: String;
   CacheFilename: String;
   OutputFilename: String;
-  S,E : String;
-  DeleteCache : Boolean = False;
+  E : String;
   RunIt: boolean = true;
   
 // Return true if filename found.
@@ -133,11 +130,6 @@ begin
   else if (P<>'') and (p[1]<>'-') then
     begin
     Filename:=p;
-    Result:=True;
-    end
-  else if (p='--') then
-    begin
-    Filename:='--';
     Result:=True;
     end;
 end;
@@ -181,18 +173,7 @@ begin
   CheckSourceName(Filename);
   Src:=TStringList.Create;
   try
-    if FileName<>'--' then
-      Src.LoadFromFile(Filename)
-    else  
-      begin
-      While not EOF do 
-        begin
-        Readln(S);
-        Src.Add(S);
-        end;
-      FileName:=ChangeFileExt(GetTempFileName,'.pp');  
-      DeleteCache:=true;
-      end;  
+    Src.LoadFromFile(Filename);
     CommentShebang(Src);
     CacheDir:=GetCacheDir;
 
@@ -206,14 +187,10 @@ begin
       // save source in cache to find out next time if something changed
       Src.SaveToFile(CacheFilename);
       Compile(Filename,CacheFilename,OutputFilename);
-      if deleteCache then
-        DeleteFile(CacheFileName);
     end;
     // run
     if RunIt then
       Run(OutputFilename);
-    if DeleteCache then
-      DeleteFile(OutputFileName);  
   finally
     // memory is freed by OS, but for debugging puposes you can do it manually
     {$IFDEF IFFreeMem}

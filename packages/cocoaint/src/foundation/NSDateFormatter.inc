@@ -1,13 +1,10 @@
 { Parsed from Foundation.framework NSDateFormatter.h }
 
-
-{ Types from NSDateFormatter }
 {$ifdef TYPES}
+{$ifndef NSDATEFORMATTER_PAS_T}
+{$define NSDATEFORMATTER_PAS_T}
 
-type
-  NSDateFormatterStyle = NSUInteger;
-type
-  NSDateFormatterStylePtr = ^NSDateFormatterStyle;
+{ Constants }
 
 const
   NSDateFormatterNoStyle = kCFDateFormatterNoStyle;
@@ -16,121 +13,141 @@ const
   NSDateFormatterLongStyle = kCFDateFormatterLongStyle;
   NSDateFormatterFullStyle = kCFDateFormatterFullStyle;
 
-type
-  NSDateFormatterBehavior = NSUInteger;
-type
-  NSDateFormatterBehaviorPtr = ^NSDateFormatterBehavior;
-
 const
   NSDateFormatterBehaviorDefault = 0;
-  {$if (defined(TARGET_OS_MAC) and not (defined(TARGET_OS_EMBEDDED) or defined(TARGET_OS_IPHONE)))}
   NSDateFormatterBehavior10_0 = 1000;
-  {$endif}
   NSDateFormatterBehavior10_4 = 1040;
+
+{ Types }
+type
+  NSDateFormatterStyle = NSUInteger;
+  NSDateFormatterStylePtr = ^NSDateFormatterStyle;
+  NSDateFormatterBehavior = NSUInteger;
+  NSDateFormatterBehaviorPtr = ^NSDateFormatterBehavior;
+
+{$endif}
 {$endif}
 
+{$ifdef RECORDS}
+{$ifndef NSDATEFORMATTER_PAS_R}
+{$define NSDATEFORMATTER_PAS_R}
 
-{$ifdef TYPES}
-type
-  NSDateFormatterPtr = ^NSDateFormatter;
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSDATEFORMATTER_PAS_F}
+{$define NSDATEFORMATTER_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSDATEFORMATTER_PAS_S}
+{$define NSDATEFORMATTER_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSDateFormatter = objcclass;
+  NSDateFormatterPointer = ^NSDateFormatter;
+  NSDateFormatterPtr = NSDateFormatterPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSDATEFORMATTER_PAS_C}
+{$define NSDATEFORMATTER_PAS_C}
 
-type
+{ NSDateFormatter }
   NSDateFormatter = objcclass external (NSFormatter)
   private
     _attributes: NSMutableDictionary;
-    _formatter: CFDateFormatterRef;
+    _formatter: CFDateFormatterRef; {garbage collector: __strong }
     _counter: NSUInteger;
+    
   public
-    procedure setFormattingContext(newValue: NSFormattingContext); message 'setFormattingContext:';
-    function formattingContext: NSFormattingContext; message 'formattingContext';
-    function getObjectValue_forString_range_error (obj: idPtr; string_: NSString; rangep: NSRangePtr; error: NSErrorPtr): ObjCBOOL; message 'getObjectValue:forString:range:error:';
-    function stringFromDate (date: NSDate): NSString; message 'stringFromDate:';
-    function dateFromString (string_: NSString): NSDate; message 'dateFromString:';
-    class function localizedStringFromDate_dateStyle_timeStyle (date: NSDate; dstyle: NSDateFormatterStyle; tstyle: NSDateFormatterStyle): NSString; message 'localizedStringFromDate:dateStyle:timeStyle:'; { available in 10_6, 4_0 }
-    class function dateFormatFromTemplate_options_locale (tmplate: NSString; opts: NSUInteger; locale: NSLocale): NSString; message 'dateFormatFromTemplate:options:locale:'; { available in 10_6, 4_0 }
-    class function defaultFormatterBehavior: NSDateFormatterBehavior; message 'defaultFormatterBehavior';
-    class procedure setDefaultFormatterBehavior (behavior: NSDateFormatterBehavior); message 'setDefaultFormatterBehavior:';
-    procedure setLocalizedDateFormatFromTemplate (dateFormatTemplate: NSString); message 'setLocalizedDateFormatFromTemplate:'; { available in 10_10, 8_0 }
-    procedure setDateFormat(newValue: NSString); message 'setDateFormat:';
+    function getObjectValue_forString_range_error(obj: idPtr; string_: NSString; rangep: NSRangePtr; error: NSErrorPointer): Boolean; message 'getObjectValue:forString:range:error:';
+    function stringFromDate(date: NSDate): NSString; message 'stringFromDate:';
+    function dateFromString(string_: NSString): NSDate; message 'dateFromString:';
+    class function localizedStringFromDate_dateStyle_timeStyle(date: NSDate; dstyle: NSDateFormatterStyle; tstyle: NSDateFormatterStyle): NSString; message 'localizedStringFromDate:dateStyle:timeStyle:';
+    class function dateFormatFromTemplate_options_locale(tmplate: NSString; opts: NSUInteger; locale_: NSLocale): NSString; message 'dateFormatFromTemplate:options:locale:';
     function dateFormat: NSString; message 'dateFormat';
-    procedure setDateStyle(newValue: NSDateFormatterStyle); message 'setDateStyle:';
     function dateStyle: NSDateFormatterStyle; message 'dateStyle';
-    procedure setTimeStyle(newValue: NSDateFormatterStyle); message 'setTimeStyle:';
+    procedure setDateStyle(style: NSDateFormatterStyle); message 'setDateStyle:';
     function timeStyle: NSDateFormatterStyle; message 'timeStyle';
-    procedure setLocale(newValue: NSLocale); message 'setLocale:';
+    procedure setTimeStyle(style: NSDateFormatterStyle); message 'setTimeStyle:';
     function locale: NSLocale; message 'locale';
-    procedure setGeneratesCalendarDates(newValue: ObjCBOOL); message 'setGeneratesCalendarDates:';
-    function generatesCalendarDates: ObjCBOOL; message 'generatesCalendarDates';
-    procedure setFormatterBehavior(newValue: NSDateFormatterBehavior); message 'setFormatterBehavior:';
+    procedure setLocale(locale_: NSLocale); message 'setLocale:';
+    function generatesCalendarDates: Boolean; message 'generatesCalendarDates';
+    procedure setGeneratesCalendarDates(b: Boolean); message 'setGeneratesCalendarDates:';
     function formatterBehavior: NSDateFormatterBehavior; message 'formatterBehavior';
-    procedure setTimeZone(newValue: NSTimeZone); message 'setTimeZone:';
+    procedure setFormatterBehavior(behavior: NSDateFormatterBehavior); message 'setFormatterBehavior:';
+    class function defaultFormatterBehavior: NSDateFormatterBehavior; message 'defaultFormatterBehavior';
+    class procedure setDefaultFormatterBehavior(behavior: NSDateFormatterBehavior); message 'setDefaultFormatterBehavior:';
+    procedure setDateFormat(string_: NSString); message 'setDateFormat:';
     function timeZone: NSTimeZone; message 'timeZone';
-    procedure setCalendar(newValue: NSCalendar); message 'setCalendar:';
+    procedure setTimeZone(tz: NSTimeZone); message 'setTimeZone:';
     function calendar: NSCalendar; message 'calendar';
-    procedure setLenient(newValue: ObjCBOOL); message 'setLenient:';
-    function isLenient: ObjCBOOL; message 'isLenient';
-    procedure setTwoDigitStartDate(newValue: NSDate); message 'setTwoDigitStartDate:';
+    procedure setCalendar(calendar_: NSCalendar); message 'setCalendar:';
+    function isLenient: Boolean; message 'isLenient';
+    procedure setLenient(b: Boolean); message 'setLenient:';
     function twoDigitStartDate: NSDate; message 'twoDigitStartDate';
-    procedure setDefaultDate(newValue: NSDate); message 'setDefaultDate:';
+    procedure setTwoDigitStartDate(date: NSDate); message 'setTwoDigitStartDate:';
     function defaultDate: NSDate; message 'defaultDate';
-    procedure setEraSymbols(newValue: NSArray); message 'setEraSymbols:';
+    procedure setDefaultDate(date: NSDate); message 'setDefaultDate:';
     function eraSymbols: NSArray; message 'eraSymbols';
-    procedure setMonthSymbols(newValue: NSArray); message 'setMonthSymbols:';
+    procedure setEraSymbols(array_: NSArray); message 'setEraSymbols:';
     function monthSymbols: NSArray; message 'monthSymbols';
-    procedure setShortMonthSymbols(newValue: NSArray); message 'setShortMonthSymbols:';
+    procedure setMonthSymbols(array_: NSArray); message 'setMonthSymbols:';
     function shortMonthSymbols: NSArray; message 'shortMonthSymbols';
-    procedure setWeekdaySymbols(newValue: NSArray); message 'setWeekdaySymbols:';
+    procedure setShortMonthSymbols(array_: NSArray); message 'setShortMonthSymbols:';
     function weekdaySymbols: NSArray; message 'weekdaySymbols';
-    procedure setShortWeekdaySymbols(newValue: NSArray); message 'setShortWeekdaySymbols:';
+    procedure setWeekdaySymbols(array_: NSArray); message 'setWeekdaySymbols:';
     function shortWeekdaySymbols: NSArray; message 'shortWeekdaySymbols';
-    procedure setAMSymbol(newValue: NSString); message 'setAMSymbol:';
+    procedure setShortWeekdaySymbols(array_: NSArray); message 'setShortWeekdaySymbols:';
     function AMSymbol: NSString; message 'AMSymbol';
-    procedure setPMSymbol(newValue: NSString); message 'setPMSymbol:';
+    procedure setAMSymbol(string_: NSString); message 'setAMSymbol:';
     function PMSymbol: NSString; message 'PMSymbol';
-    procedure setLongEraSymbols(newValue: NSArray); message 'setLongEraSymbols:';
+    procedure setPMSymbol(string_: NSString); message 'setPMSymbol:';
     function longEraSymbols: NSArray; message 'longEraSymbols';
-    procedure setVeryShortMonthSymbols(newValue: NSArray); message 'setVeryShortMonthSymbols:';
+    procedure setLongEraSymbols(array_: NSArray); message 'setLongEraSymbols:';
     function veryShortMonthSymbols: NSArray; message 'veryShortMonthSymbols';
-    procedure setStandaloneMonthSymbols(newValue: NSArray); message 'setStandaloneMonthSymbols:';
+    procedure setVeryShortMonthSymbols(array_: NSArray); message 'setVeryShortMonthSymbols:';
     function standaloneMonthSymbols: NSArray; message 'standaloneMonthSymbols';
-    procedure setShortStandaloneMonthSymbols(newValue: NSArray); message 'setShortStandaloneMonthSymbols:';
+    procedure setStandaloneMonthSymbols(array_: NSArray); message 'setStandaloneMonthSymbols:';
     function shortStandaloneMonthSymbols: NSArray; message 'shortStandaloneMonthSymbols';
-    procedure setVeryShortStandaloneMonthSymbols(newValue: NSArray); message 'setVeryShortStandaloneMonthSymbols:';
+    procedure setShortStandaloneMonthSymbols(array_: NSArray); message 'setShortStandaloneMonthSymbols:';
     function veryShortStandaloneMonthSymbols: NSArray; message 'veryShortStandaloneMonthSymbols';
-    procedure setVeryShortWeekdaySymbols(newValue: NSArray); message 'setVeryShortWeekdaySymbols:';
+    procedure setVeryShortStandaloneMonthSymbols(array_: NSArray); message 'setVeryShortStandaloneMonthSymbols:';
     function veryShortWeekdaySymbols: NSArray; message 'veryShortWeekdaySymbols';
-    procedure setStandaloneWeekdaySymbols(newValue: NSArray); message 'setStandaloneWeekdaySymbols:';
+    procedure setVeryShortWeekdaySymbols(array_: NSArray); message 'setVeryShortWeekdaySymbols:';
     function standaloneWeekdaySymbols: NSArray; message 'standaloneWeekdaySymbols';
-    procedure setShortStandaloneWeekdaySymbols(newValue: NSArray); message 'setShortStandaloneWeekdaySymbols:';
+    procedure setStandaloneWeekdaySymbols(array_: NSArray); message 'setStandaloneWeekdaySymbols:';
     function shortStandaloneWeekdaySymbols: NSArray; message 'shortStandaloneWeekdaySymbols';
-    procedure setVeryShortStandaloneWeekdaySymbols(newValue: NSArray); message 'setVeryShortStandaloneWeekdaySymbols:';
+    procedure setShortStandaloneWeekdaySymbols(array_: NSArray); message 'setShortStandaloneWeekdaySymbols:';
     function veryShortStandaloneWeekdaySymbols: NSArray; message 'veryShortStandaloneWeekdaySymbols';
-    procedure setQuarterSymbols(newValue: NSArray); message 'setQuarterSymbols:';
+    procedure setVeryShortStandaloneWeekdaySymbols(array_: NSArray); message 'setVeryShortStandaloneWeekdaySymbols:';
     function quarterSymbols: NSArray; message 'quarterSymbols';
-    procedure setShortQuarterSymbols(newValue: NSArray); message 'setShortQuarterSymbols:';
+    procedure setQuarterSymbols(array_: NSArray); message 'setQuarterSymbols:';
     function shortQuarterSymbols: NSArray; message 'shortQuarterSymbols';
-    procedure setStandaloneQuarterSymbols(newValue: NSArray); message 'setStandaloneQuarterSymbols:';
+    procedure setShortQuarterSymbols(array_: NSArray); message 'setShortQuarterSymbols:';
     function standaloneQuarterSymbols: NSArray; message 'standaloneQuarterSymbols';
-    procedure setShortStandaloneQuarterSymbols(newValue: NSArray); message 'setShortStandaloneQuarterSymbols:';
+    procedure setStandaloneQuarterSymbols(array_: NSArray); message 'setStandaloneQuarterSymbols:';
     function shortStandaloneQuarterSymbols: NSArray; message 'shortStandaloneQuarterSymbols';
-    procedure setGregorianStartDate(newValue: NSDate); message 'setGregorianStartDate:';
+    procedure setShortStandaloneQuarterSymbols(array_: NSArray); message 'setShortStandaloneQuarterSymbols:';
     function gregorianStartDate: NSDate; message 'gregorianStartDate';
-    procedure setDoesRelativeDateFormatting(newValue: ObjCBOOL); message 'setDoesRelativeDateFormatting:';
-    function doesRelativeDateFormatting: ObjCBOOL; message 'doesRelativeDateFormatting';
+    procedure setGregorianStartDate(date: NSDate); message 'setGregorianStartDate:';
+    function doesRelativeDateFormatting: Boolean; message 'doesRelativeDateFormatting';
+    procedure setDoesRelativeDateFormatting(b: Boolean); message 'setDoesRelativeDateFormatting:';
   end;
-{$endif}
 
-{$if (defined(TARGET_OS_MAC) and not (defined(TARGET_OS_EMBEDDED) or defined(TARGET_OS_IPHONE)))}
-{$ifdef CLASSES}
-
-type
-  NSDateFormatterCompatibility = objccategory external (NSDateFormatter)
-    function initWithDateFormat_allowNaturalLanguage (format: NSString; flag: ObjCBOOL): id; message 'initWithDateFormat:allowNaturalLanguage:'; deprecated 'in 10_4, 10_9, "Use -setDateFormat: as of OS X 10.9 to set the date format of a 10.0-style date formatter; but expect 10.0-style date formatting to be deprecated in the future as well"';
-    function allowsNaturalLanguage: ObjCBOOL; message 'allowsNaturalLanguage'; deprecated 'in 10_4, 10_9, "There is no replacement"';
+{ NSDateFormatterCompatibilityCategory }
+  NSDateFormatterCompatibilityCategory = objccategory external (NSDateFormatter)
+    function initWithDateFormat_allowNaturalLanguage(format: NSString; flag: Boolean): id; message 'initWithDateFormat:allowNaturalLanguage:';
+    function allowsNaturalLanguage: Boolean; message 'allowsNaturalLanguage';
   end;
-{$endif}
 
+{$endif}
 {$endif}

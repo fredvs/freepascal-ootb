@@ -133,22 +133,18 @@ end;
 Procedure FillChar(var x;count:SizeInt;value:byte);
 var
   pdest,pend : pbyte;
-  v : ALUUInt;
+  v : ptruint;
 begin
   if count <= 0 then
     exit;
   pdest:=@x;
   if Count>4*sizeof(ptruint)-1 then
     begin
-{$if sizeof(v)>=2}
       v:=(value shl 8) or value;
-{$endif sizeof(v)>=2}
-{$if sizeof(v)>=4}
       v:=(v shl 16) or v;
-{$endif sizeof(v)>=4}
-{$if sizeof(v)=8}
+{$ifdef CPU64}
       v:=(v shl 32) or v;
-{$endif sizeof(v)=8}
+{$endif CPU64}
       { Align on native pointer size }
       pend:=pbyte(align(pdest,sizeof(PtrUInt)));
       dec(count,pend-pdest);
@@ -181,19 +177,17 @@ procedure fillword(var x;count : SizeInt;value : word);
 var
   aligncount : sizeint;
   pdest,pend : pword;
-  v : ALUUInt;
+  v : ptruint;
 begin
   if count <= 0 then
     exit;
   pdest:=@x;
   if Count>4*sizeof(ptruint)-1 then
     begin
-{$if sizeof(v)>=4}
       v:=(value shl 16) or value;
-{$endif sizeof(v)>=4}
-{$if sizeof(v)=8}
+{$ifdef CPU64}
       v:=(v shl 32) or v;
-{$endif sizeof(v)=8}
+{$endif CPU64}
       { Align on native pointer size }
       aligncount:=(PtrUInt(pdest) and (sizeof(PtrUInt)-1)) shr 1;
       dec(count,aligncount);
@@ -227,7 +221,7 @@ procedure filldword(var x;count : SizeInt;value : dword);
 var
   aligncount : sizeint;
   pdest,pend : pdword;
-  v : ALUUInt;
+  v : ptruint;
 begin
   if count <= 0 then
     exit;
@@ -235,9 +229,9 @@ begin
   if Count>4*sizeof(ptruint)-1 then
     begin
       v:=value;
-{$if sizeof(v)=8}
+{$ifdef CPU64}
       v:=(v shl 32) or v;
-{$endif sizeof(v)=8}
+{$endif CPU64}
       { Align on native pointer size }
       aligncount:=(PtrUInt(pdest) and (sizeof(PtrUInt)-1)) shr 2;
       dec(count,aligncount);
@@ -603,7 +597,6 @@ begin
   pdest:=@buf2;
   if (len>4*sizeof(ptruint)-11)
 {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
-    and ((PtrUInt(pdest) and (sizeof(PtrUInt)-1))=(PtrUInt(psrc) and (sizeof(PtrUInt)-1)))
     and (((PtrUInt(pdest) and 3) or (PtrUInt(psrc) and 3))=0)
 {$endif FPC_REQUIRES_PROPER_ALIGNMENT}
     then
@@ -748,7 +741,7 @@ type
   pobjectvmt=^tobjectvmt;
   tobjectvmt=record
     size,msize:sizeuint;
-    parent:{$ifdef VER3_0}pointer{$else}ppointer{$endif};
+    parent:pointer;
   end;
 
 {$ifndef FPC_SYSTEM_HAS_FPC_HELP_CONSTRUCTOR}
@@ -794,7 +787,7 @@ begin
      exit;
    if (pobjectvmt(ppointer(_self+vmt_pos)^)^.size=0) or
       (pobjectvmt(ppointer(_self+vmt_pos)^)^.size+pobjectvmt(ppointer(_self+vmt_pos)^)^.msize<>0) then
-     HandleErrorAddrFrameInd(210,get_pc_addr,get_frame);
+     RunError(210);
    { reset vmt to nil for protection }
    ppointer(_self+vmt_pos)^:=nil;
    freemem(_self);
@@ -833,7 +826,7 @@ begin
   if (_vmt=nil) or
      (pobjectvmt(_vmt)^.size=0) or
      (pobjectvmt(_vmt)^.size+pobjectvmt(_vmt)^.msize<>0) then
-    HandleErrorAddrFrameInd(210,get_pc_addr,get_frame);
+    RunError(210);
 end;
 
 {$endif ndef FPC_SYSTEM_HAS_FPC_CHECK_OBJECT}
@@ -848,20 +841,13 @@ begin
    if (vmt=nil) or
       (pobjectvmt(vmt)^.size=0) or
       (pobjectvmt(vmt)^.size+pobjectvmt(vmt)^.msize<>0) then
-        HandleErrorAddrFrameInd(210,get_pc_addr,get_frame);
+        RunError(210);
    while assigned(vmt) do
      if vmt=expvmt then
        exit
      else
-       {$ifdef VER3_0}
        vmt:=pobjectvmt(vmt)^.parent;
-       {$else VER3_0}
-       if assigned(pobjectvmt(vmt)^.parent) then
-         vmt:=pobjectvmt(vmt)^.parent^
-       else
-         vmt:=nil;
-       {$endif}
-   HandleErrorAddrFrameInd(219,get_pc_addr,get_frame);
+   RunError(219);
 end;
 {$endif not FPC_SYSTEM_HAS_FPC_CHECK_OBJECT_EXT}
 
@@ -907,7 +893,7 @@ end;
 {$ifndef FPC_SYSTEM_HAS_FPC_SHORTSTR_CONCAT}
 procedure fpc_shortstr_concat(var dests:shortstring;const s1,s2:shortstring);compilerproc;
 var
-  s1l, s2l : ObjpasInt;
+  s1l, s2l : longint;
 begin
   s1l:=length(s1);
   s2l:=length(s2);
@@ -937,7 +923,7 @@ procedure fpc_shortstr_concat_multi(var dests:shortstring;const sarr:array of ps
 var
   s2l : byte;
   LowStart,i,
-  Len : ObjpasInt;
+  Len : longint;
   needtemp : boolean;
   tmpstr  : shortstring;
   p,pdest  : pshortstring;
@@ -1018,7 +1004,7 @@ end;
 function fpc_shortstr_compare(const left,right:shortstring) : longint;[public,alias:'FPC_SHORTSTR_COMPARE']; compilerproc;
 var
    s1,s2,max,i : byte;
-   d : ObjpasInt;
+   d : longint;
 begin
   s1:=length(left);
   s2:=length(right);
@@ -1047,9 +1033,9 @@ end;
 {$ifndef FPC_SYSTEM_HAS_FPC_SHORTSTR_COMPARE_EQUAL}
 function fpc_shortstr_compare_equal(const left,right:shortstring): longint; [public,alias:'FPC_SHORTSTR_COMPARE_EQUAL']; compilerproc;
 begin
-  Result := ObjpasInt(left[0]) - ObjpasInt(right[0]);
+  Result := longint(left[0]) - longint(right[0]);
   if Result = 0 then
-    Result := CompareByte(left[1],right[1], ObjpasInt(left[0]));
+    Result := CompareByte(left[1],right[1], longint(left[0]));
 end;
 {$endif ndef FPC_SYSTEM_HAS_FPC_SHORTSTR_COMPARE_EQUAL}
 
@@ -1059,7 +1045,7 @@ end;
 
 procedure fpc_pchar_to_shortstr(out res : shortstring;p:pchar);[public,alias:'FPC_PCHAR_TO_SHORTSTR']; compilerproc;
 var
-  l : ObjpasInt;
+  l : longint;
   s: shortstring;
 begin
   if p=nil then
@@ -1104,7 +1090,7 @@ function Utf8CodePointLen(P: PAnsiChar; MaxLookAhead: SizeInt; IncludeCombiningD
         result:=0;
         exit;
       end;
-    { include the first byte }
+    { inlcude the first byte }
     result:=1;
     { multiple byte utf-8 code point? }
     if p[0]>#127 then
@@ -1232,8 +1218,8 @@ function Utf8CodePointLen(P: PAnsiChar; MaxLookAhead: SizeInt; IncludeCombiningD
 
 procedure fpc_chararray_to_shortstr(out res : shortstring;const arr: array of char; zerobased: boolean = true);[public,alias:'FPC_CHARARRAY_TO_SHORTSTR']; compilerproc;
 var
- l: ObjpasInt;
- index: ObjpasInt;
+ l: longint;
+ index: longint;
  len: byte;
 begin
   l:=high(arr)+1;
@@ -1262,7 +1248,7 @@ end;
 
 procedure fpc_shortstr_to_chararray(out res: array of char; const src: ShortString); compilerproc;
 var
-  len: ObjpasInt;
+  len: longint;
 begin
   len := length(src);
   if len > length(res) then
@@ -1280,11 +1266,13 @@ end;
 {$ifndef FPC_SYSTEM_HAS_FPC_PCHAR_LENGTH}
 
 function fpc_pchar_length(p:pchar):sizeint;[public,alias:'FPC_PCHAR_LENGTH']; compilerproc;
+var i : sizeint;
 begin
+  i:=0;
   if assigned(p) then
-    Result:=IndexByte(p^,high(Result),0)
-  else
-    Result:=0;
+    while p[i]<>#0 do
+      inc(i);
+  exit(i);
 end;
 
 {$endif ndef FPC_SYSTEM_HAS_FPC_PCHAR_LENGTH}
@@ -1327,8 +1315,6 @@ end;
                           Software multiplication
 ****************************************************************************}
 {$ifdef FPC_INCLUDE_SOFTWARE_MUL}
-
-{$ifdef VER3_0}
 
 {$ifndef FPC_SYSTEM_HAS_MUL_INTEGER}
     function fpc_mul_integer(f1,f2 : integer;checkoverflow : boolean) : integer;[public,alias: 'FPC_MUL_INTEGER']; compilerproc;
@@ -1498,316 +1484,6 @@ end;
       end;
 {$endif FPC_SYSTEM_HAS_MUL_DWORD}
 
-{$else VER3_0}
-
-{$ifndef FPC_SYSTEM_HAS_MUL_SHORTINT}
-    function fpc_mul_shortint(f1,f2 : shortint) : shortint;[public,alias: 'FPC_MUL_SHORTINT']; compilerproc;
-      begin
-        { there's no difference between signed and unsigned multiplication,
-          when the destination size is equal to the source size and overflow
-          checking is off }
-        { byte(f1) * byte(f2) is coded as a call to mul_byte }
-        fpc_mul_shortint := shortint(byte(f1) * byte(f2));
-      end;
-
-    function fpc_mul_shortint_checkoverflow(f1,f2 : shortint) : shortint;[public,alias: 'FPC_MUL_SHORTINT_CHECKOVERFLOW']; compilerproc;
-      var
-        sign : boolean;
-        q1,q2,q3 : byte;
-      begin
-        sign:=false;
-        if f1 < 0 then
-          begin
-            sign := not(sign);
-            q1 := byte(-f1);
-          end
-        else
-          q1 := f1;
-        if f2 < 0 then
-          begin
-            sign := not(sign);
-            q2 := byte(-f2);
-          end
-        else
-          q2 := f2;
-        { the q1*q2 is coded as call to mul_byte }
-        q3 := q1 * q2;
-
-        if (q1 <> 0) and (q2 <> 0) and
-          ((q1 > q3) or (q2 > q3) or
-          { the bit 7 can be only set if we have $80 }
-          { and sign is true                            }
-          (q3 shr 7 <> 0) and
-           ((q3 <> byte(byte(1) shl 7)) or not(sign))
-          ) then
-          HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
-
-        if sign then
-          fpc_mul_shortint_checkoverflow := -q3
-        else
-          fpc_mul_shortint_checkoverflow := q3;
-      end;
-{$endif FPC_SYSTEM_HAS_MUL_SHORTINT}
-
-{$ifndef FPC_SYSTEM_HAS_MUL_BYTE}
-    function fpc_mul_byte(f1,f2 : byte) : byte;[public,alias: 'FPC_MUL_BYTE']; compilerproc;
-      var
-        _f1, bitpos : byte;
-        b : byte;
-      begin
-        fpc_mul_byte := 0;
-        bitpos := 1;
-
-        for b := 0 to 7 do
-          begin
-            if (f2 and bitpos) <> 0 then
-              begin
-                _f1 := fpc_mul_byte;
-                fpc_mul_byte := fpc_mul_byte + f1;
-              end;
-            f1 := f1 shl 1;
-            bitpos := bitpos shl 1;
-          end;
-      end;
-
-    function fpc_mul_byte_checkoverflow(f1,f2 : byte) : byte;[public,alias: 'FPC_MUL_BYTE_CHECKOVERFLOW']; compilerproc;
-      var
-        _f1, bitpos : byte;
-        b : byte;
-        f1overflowed : boolean;
-      begin
-        fpc_mul_byte_checkoverflow := 0;
-        bitpos := 1;
-        f1overflowed := false;
-
-        for b := 0 to 7 do
-          begin
-            if (f2 and bitpos) <> 0 then
-              begin
-                _f1 := fpc_mul_byte_checkoverflow;
-                fpc_mul_byte_checkoverflow := fpc_mul_byte_checkoverflow + f1;
-
-                { if one of the operands is greater than the result an
-                  overflow occurs                                      }
-                if f1overflowed or ((_f1 <> 0) and (f1 <> 0) and
-                  ((_f1 > fpc_mul_byte_checkoverflow) or (f1 > fpc_mul_byte_checkoverflow))) then
-                  HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
-              end;
-            { when bootstrapping, we forget about overflow checking for qword :) }
-            f1overflowed := f1overflowed or ((f1 and (1 shl 7)) <> 0);
-            f1 := f1 shl 1;
-            bitpos := bitpos shl 1;
-          end;
-      end;
-{$endif FPC_SYSTEM_HAS_MUL_BYTE}
-
-{$ifndef FPC_SYSTEM_HAS_MUL_INTEGER}
-    function fpc_mul_integer(f1,f2 : integer) : integer;[public,alias: 'FPC_MUL_INTEGER']; compilerproc;
-      begin
-        { there's no difference between signed and unsigned multiplication,
-          when the destination size is equal to the source size and overflow
-          checking is off }
-        { word(f1)*word(f2) is coded as a call to mulword }
-        fpc_mul_integer:=integer(word(f1)*word(f2));
-      end;
-
-    function fpc_mul_integer_checkoverflow(f1,f2 : integer) : integer;[public,alias: 'FPC_MUL_INTEGER_CHECKOVERFLOW']; compilerproc;
-      var
-        sign : boolean;
-        q1,q2,q3 : word;
-      begin
-        sign:=false;
-        if f1<0 then
-          begin
-            sign:=not(sign);
-            q1:=word(-f1);
-          end
-        else
-          q1:=f1;
-        if f2<0 then
-          begin
-            sign:=not(sign);
-            q2:=word(-f2);
-          end
-        else
-          q2:=f2;
-        { the q1*q2 is coded as call to mulword }
-        q3:=q1*q2;
-
-        if (q1 <> 0) and (q2 <>0) and
-          ((q1>q3) or (q2>q3) or
-          { the bit 63 can be only set if we have $8000 }
-          { and sign is true                            }
-          (q3 shr 15<>0) and
-           ((q3<>word(word(1) shl 15)) or not(sign))
-          ) then
-          HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
-
-        if sign then
-          fpc_mul_integer_checkoverflow:=-q3
-        else
-          fpc_mul_integer_checkoverflow:=q3;
-      end;
-{$endif FPC_SYSTEM_HAS_MUL_INTEGER}
-
-
-{$ifndef FPC_SYSTEM_HAS_MUL_WORD}
-    function fpc_mul_word(f1,f2 : word) : word;[public,alias: 'FPC_MUL_WORD']; compilerproc;
-      var
-        _f1,bitpos : word;
-        b : byte;
-      begin
-        fpc_mul_word:=0;
-        bitpos:=1;
-
-        for b:=0 to 15 do
-          begin
-            if (f2 and bitpos)<>0 then
-              begin
-                _f1:=fpc_mul_word;
-                fpc_mul_word:=fpc_mul_word+f1;
-              end;
-            f1:=f1 shl 1;
-            bitpos:=bitpos shl 1;
-          end;
-      end;
-
-    function fpc_mul_word_checkoverflow(f1,f2 : word) : word;[public,alias: 'FPC_MUL_WORD_CHECKOVERFLOW']; compilerproc;
-      var
-        _f1,bitpos : word;
-        b : byte;
-        f1overflowed : boolean;
-      begin
-        fpc_mul_word_checkoverflow:=0;
-        bitpos:=1;
-        f1overflowed:=false;
-
-        for b:=0 to 15 do
-          begin
-            if (f2 and bitpos)<>0 then
-              begin
-                _f1:=fpc_mul_word_checkoverflow;
-                fpc_mul_word_checkoverflow:=fpc_mul_word_checkoverflow+f1;
-
-                { if one of the operands is greater than the result an
-                  overflow occurs                                      }
-                if f1overflowed or ((_f1<>0) and (f1<>0) and
-                  ((_f1>fpc_mul_word_checkoverflow) or (f1>fpc_mul_word_checkoverflow))) then
-                  HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
-              end;
-            { when bootstrapping, we forget about overflow checking for qword :) }
-            f1overflowed:=f1overflowed or ((f1 and (1 shl 15))<>0);
-            f1:=f1 shl 1;
-            bitpos:=bitpos shl 1;
-          end;
-      end;
-{$endif FPC_SYSTEM_HAS_MUL_WORD}
-
-
-{$ifndef FPC_SYSTEM_HAS_MUL_LONGINT}
-    function fpc_mul_longint(f1,f2 : longint) : longint;[public,alias: 'FPC_MUL_LONGINT']; compilerproc;
-      begin
-        { there's no difference between signed and unsigned multiplication,
-          when the destination size is equal to the source size and overflow
-          checking is off }
-        { dword(f1)*dword(f2) is coded as a call to muldword }
-        fpc_mul_longint:=longint(dword(f1)*dword(f2));
-      end;
-
-    function fpc_mul_longint_checkoverflow(f1,f2 : longint) : longint;[public,alias: 'FPC_MUL_LONGINT_CHECKOVERFLOW']; compilerproc;
-      var
-        sign : boolean;
-        q1,q2,q3 : dword;
-      begin
-        sign:=false;
-        if f1<0 then
-          begin
-            sign:=not(sign);
-            q1:=dword(-f1);
-          end
-        else
-          q1:=f1;
-        if f2<0 then
-          begin
-            sign:=not(sign);
-            q2:=dword(-f2);
-          end
-        else
-          q2:=f2;
-        { the q1*q2 is coded as call to muldword }
-        q3:=q1*q2;
-
-        if (q1 <> 0) and (q2 <>0) and
-          ((q1>q3) or (q2>q3) or
-          { the bit 31 can be only set if we have $8000 0000 }
-          { and sign is true                                 }
-          (q3 shr 15<>0) and
-           ((q3<>dword(dword(1) shl 31)) or not(sign))
-          ) then
-          HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
-
-        if sign then
-          fpc_mul_longint_checkoverflow:=-q3
-        else
-          fpc_mul_longint_checkoverflow:=q3;
-      end;
-{$endif FPC_SYSTEM_HAS_MUL_INTEGER}
-
-
-{$ifndef FPC_SYSTEM_HAS_MUL_DWORD}
-    function fpc_mul_dword(f1,f2 : dword) : dword;[public,alias: 'FPC_MUL_DWORD']; compilerproc;
-      var
-        _f1,bitpos : dword;
-        b : byte;
-      begin
-        fpc_mul_dword:=0;
-        bitpos:=1;
-
-        for b:=0 to 31 do
-          begin
-            if (f2 and bitpos)<>0 then
-              begin
-                _f1:=fpc_mul_dword;
-                fpc_mul_dword:=fpc_mul_dword+f1;
-              end;
-            f1:=f1 shl 1;
-            bitpos:=bitpos shl 1;
-          end;
-      end;
-
-    function fpc_mul_dword_checkoverflow(f1,f2 : dword) : dword;[public,alias: 'FPC_MUL_DWORD_CHECKOVERFLOW']; compilerproc;
-      var
-        _f1,bitpos : dword;
-        b : byte;
-        f1overflowed : boolean;
-      begin
-        fpc_mul_dword_checkoverflow:=0;
-        bitpos:=1;
-        f1overflowed:=false;
-
-        for b:=0 to 31 do
-          begin
-            if (f2 and bitpos)<>0 then
-              begin
-                _f1:=fpc_mul_dword_checkoverflow;
-                fpc_mul_dword_checkoverflow:=fpc_mul_dword_checkoverflow+f1;
-
-                { if one of the operands is greater than the result an
-                  overflow occurs                                      }
-                if f1overflowed or ((_f1<>0) and (f1<>0) and
-                  ((_f1>fpc_mul_dword_checkoverflow) or (f1>fpc_mul_dword_checkoverflow))) then
-                  HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);
-              end;
-            { when bootstrapping, we forget about overflow checking for qword :) }
-            f1overflowed:=f1overflowed or ((f1 and (dword(1) shl 31))<>0);
-            f1:=f1 shl 1;
-            bitpos:=bitpos shl 1;
-          end;
-      end;
-{$endif FPC_SYSTEM_HAS_MUL_DWORD}
-
-{$endif VER3_0}
-
 {$endif FPC_INCLUDE_SOFTWARE_MUL}
 
 {****************************************************************************
@@ -1880,136 +1556,6 @@ function fpc_mod_dword(n,z : dword) : dword; [public,alias: 'FPC_MOD_DWORD']; co
 {$endif FPC_SYSTEM_HAS_MOD_DWORD}
 
 
-{$ifndef FPC_SYSTEM_HAS_DIV_WORD}
-function fpc_div_word(n,z : word) : word; [public,alias: 'FPC_DIV_WORD']; compilerproc;
-  var
-     shift,lzz,lzn : Byte;
-  begin
-     result:=0;
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     if z=0 then
-       exit;
-     lzz:=BsrWord(z);
-     lzn:=BsrWord(n);
-     { if the denominator contains less zeros
-       then the numerator
-       then d is greater than the n }
-     if lzn>lzz then
-       exit;
-     shift:=lzz-lzn;
-     n:=n shl shift;
-     for shift:=shift downto 0 do
-       begin
-         if z>=n then
-           begin
-              z:=z-n;
-              result:=result+word(word(1) shl shift);
-           end;
-         n:=n shr 1;
-       end;
-  end;
-{$endif FPC_SYSTEM_HAS_DIV_WORD}
-
-
-{$ifndef FPC_SYSTEM_HAS_MOD_WORD}
-function fpc_mod_word(n,z : word) : word; [public,alias: 'FPC_MOD_WORD']; compilerproc;
-  var
-     shift,lzz,lzn : Byte;
-  begin
-     result:=0;
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     if z=0 then
-       exit;
-     lzz:=BsrWord(z);
-     lzn:=BsrWord(n);
-     { if the denominator contains less zeros
-       then the numerator
-       then d is greater than the n }
-     if lzn>lzz then
-      begin
-         result:=z;
-         exit;
-      end;
-     shift:=lzz-lzn;
-     n:=n shl shift;
-     for shift:=shift downto 0 do
-       begin
-         if z>=n then
-           z:=z-n;
-         n:=n shr 1;
-       end;
-    result:=z;
-  end;
-{$endif FPC_SYSTEM_HAS_MOD_WORD}
-
-
-{$ifndef FPC_SYSTEM_HAS_DIV_BYTE}
-function fpc_div_byte(n,z : byte) : byte; [public,alias: 'FPC_DIV_BYTE']; compilerproc;
-  var
-     shift,lzz,lzn : Byte;
-  begin
-     result:=0;
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     if z=0 then
-       exit;
-     lzz:=BsrByte(z);
-     lzn:=BsrByte(n);
-     { if the denominator contains less zeros
-       then the numerator
-       then d is greater than the n }
-     if lzn>lzz then
-       exit;
-     shift:=lzz-lzn;
-     n:=n shl shift;
-     for shift:=shift downto 0 do
-       begin
-         if z>=n then
-           begin
-              z:=z-n;
-              result:=result+byte(byte(1) shl shift);
-           end;
-         n:=n shr 1;
-       end;
-  end;
-{$endif FPC_SYSTEM_HAS_DIV_BYTE}
-
-
-{$ifndef FPC_SYSTEM_HAS_MOD_BYTE}
-function fpc_mod_byte(n,z : byte) : byte; [public,alias: 'FPC_MOD_BYTE']; compilerproc;
-  var
-     shift,lzz,lzn : Byte;
-  begin
-     result:=0;
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     if z=0 then
-       exit;
-     lzz:=BsrByte(z);
-     lzn:=BsrByte(n);
-     { if the denominator contains less zeros
-       then the numerator
-       then d is greater than the n }
-     if lzn>lzz then
-      begin
-         result:=z;
-         exit;
-      end;
-     shift:=lzz-lzn;
-     n:=n shl shift;
-     for shift:=shift downto 0 do
-       begin
-         if z>=n then
-           z:=z-n;
-         n:=n shr 1;
-       end;
-    result:=z;
-  end;
-{$endif FPC_SYSTEM_HAS_MOD_BYTE}
-
-
 {$ifndef FPC_SYSTEM_HAS_DIV_LONGINT}
 function fpc_div_longint(n,z : longint) : longint; [public,alias: 'FPC_DIV_LONGINT']; compilerproc;
   var
@@ -2072,159 +1618,10 @@ function fpc_mod_longint(n,z : longint) : longint; [public,alias: 'FPC_MOD_LONGI
   end;
 {$endif FPC_SYSTEM_HAS_MOD_LONGINT}
 
-
-{$ifndef FPC_SYSTEM_HAS_DIV_SMALLINT}
-function fpc_div_smallint(n,z : smallint) : smallint; [public,alias: 'FPC_DIV_SMALLINT']; compilerproc;
-  var
-     sign : boolean;
-     w1,w2 : word;
-  begin
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     sign:=false;
-     if z<0 then
-       begin
-          sign:=not(sign);
-          w1:=word(-z);
-       end
-     else
-       w1:=z;
-     if n<0 then
-       begin
-          sign:=not(sign);
-          w2:=word(-n);
-       end
-     else
-       w2:=n;
-
-     { the div is coded by the compiler as call to divdword }
-     if sign then
-       result:=-(w1 div w2)
-     else
-       result:=w1 div w2;
-  end;
-{$endif FPC_SYSTEM_HAS_DIV_SMALLINT}
-
-
-{$ifndef FPC_SYSTEM_HAS_MOD_SMALLINT}
-function fpc_mod_smallint(n,z : smallint) : smallint; [public,alias: 'FPC_MOD_SMALLINT']; compilerproc;
-  var
-     signed : boolean;
-     r,nq,zq : word;
-  begin
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     nq:=abs(n);
-
-     if z<0 then
-       begin
-          zq:=word(-z);
-          signed:=true;
-       end
-     else
-       begin
-         zq:=z;
-         signed:=false;
-       end;
-
-     r:=zq mod nq;
-     if signed then
-       result:=-smallint(r)
-     else
-       result:=r;
-  end;
-{$endif FPC_SYSTEM_HAS_MOD_SMALLINT}
-
-
-{$ifndef FPC_SYSTEM_HAS_DIV_SHORTINT}
-function fpc_div_shortint(n,z : shortint) : shortint; [public,alias: 'FPC_DIV_SHORTINT']; compilerproc;
-  var
-     sign : boolean;
-     b1,b2 : byte;
-  begin
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     sign:=false;
-     if z<0 then
-       begin
-          sign:=not(sign);
-          b1:=byte(-z);
-       end
-     else
-       b1:=z;
-     if n<0 then
-       begin
-          sign:=not(sign);
-          b2:=byte(-n);
-       end
-     else
-       b2:=n;
-
-     { the div is coded by the compiler as call to divdword }
-     if sign then
-       result:=-(b1 div b2)
-     else
-       result:=b1 div b2;
-  end;
-{$endif FPC_SYSTEM_HAS_DIV_SHORTINT}
-
-
-{$ifndef FPC_SYSTEM_HAS_MOD_SHORTINT}
-function fpc_mod_shortint(n,z : shortint) : shortint; [public,alias: 'FPC_MOD_SHORTINT']; compilerproc;
-  var
-     signed : boolean;
-     r,nq,zq : byte;
-  begin
-     if n=0 then
-       HandleErrorAddrFrameInd(200,get_pc_addr,get_frame);
-     nq:=abs(n);
-
-     if z<0 then
-       begin
-          zq:=byte(-z);
-          signed:=true;
-       end
-     else
-       begin
-         zq:=z;
-         signed:=false;
-       end;
-
-     r:=zq mod nq;
-     if signed then
-       result:=-shortint(r)
-     else
-       result:=r;
-  end;
-{$endif FPC_SYSTEM_HAS_MOD_SHORTINT}
-
 {$endif FPC_INCLUDE_SOFTWARE_MOD_DIV}
 
+
 {****************************************************************************}
-
-{$if defined(CPUINT8)}
-{$ifndef FPC_SYSTEM_HAS_ABS_SHORTINT}
-function abs(l:shortint):shortint;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   if l<0 then
-     abs:=-l
-   else
-     abs:=l;
-end;
-{$endif not FPC_SYSTEM_HAS_ABS_SMALLINT}
-{$endif CPUINT8}
-
-{$if defined(CPUINT16) or defined(CPUINT8)}
-{$ifndef FPC_SYSTEM_HAS_ABS_SMALLINT}
-function abs(l:smallint):smallint;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   if l<0 then
-     abs:=-l
-   else
-     abs:=l;
-end;
-{$endif not FPC_SYSTEM_HAS_ABS_SMALLINT}
-{$endif CPUINT16 or CPUINT8}
 
 {$ifndef FPC_SYSTEM_HAS_ABS_LONGINT}
 { This is only needed to bootstrap on SPARC targets
@@ -2238,36 +1635,6 @@ begin
 end;
 
 {$endif not FPC_SYSTEM_HAS_ABS_LONGINT}
-
-{$if defined(CPUINT8)}
-{$ifndef FPC_SYSTEM_HAS_ODD_SHORTINT}
-function odd(l:shortint):Boolean;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   odd:=boolean(l and 1);
-end;
-{$endif ndef FPC_SYSTEM_HAS_ODD_SHORTINT}
-{$ifndef FPC_SYSTEM_HAS_ODD_BYTE}
-function odd(l:byte):Boolean;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   odd:=boolean(l and 1);
-end;
-{$endif ndef FPC_SYSTEM_HAS_ODD_BYTE}
-{$endif CPUINT8}
-
-{$if defined(CPUINT16) or defined(CPUINT8)}
-{$ifndef FPC_SYSTEM_HAS_ODD_SMALLINT}
-function odd(l:smallint):Boolean;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   odd:=boolean(l and 1);
-end;
-{$endif ndef FPC_SYSTEM_HAS_ODD_SMALLINT}
-{$ifndef FPC_SYSTEM_HAS_ODD_WORD}
-function odd(l:word):Boolean;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   odd:=boolean(l and 1);
-end;
-{$endif ndef FPC_SYSTEM_HAS_ODD_WORD}
-{$endif CPUINT16 or CPUINT8}
 
 {$ifndef FPC_SYSTEM_HAS_ODD_LONGINT}
 
@@ -2305,24 +1672,6 @@ begin
 end;
 
 {$endif ndef FPC_SYSTEM_HAS_ODD_QWORD}
-
-{$if defined(CPUINT8)}
-{$ifndef FPC_SYSTEM_HAS_SQR_SHORTINT}
-function sqr(l:shortint):shortint;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   sqr:=l*l;
-end;
-{$endif ndef FPC_SYSTEM_HAS_SQR_SHORTINT}
-{$endif CPUINT8}
-
-{$if defined(CPUINT16) or defined(CPUINT8)}
-{$ifndef FPC_SYSTEM_HAS_SQR_SMALLINT}
-function sqr(l:smallint):smallint;{$ifdef SYSTEMINLINE}inline;{$endif}
-begin
-   sqr:=l*l;
-end;
-{$endif ndef FPC_SYSTEM_HAS_SQR_SMALLINT}
-{$endif CPUINT16 or CPUINT8}
 
 {$ifndef FPC_SYSTEM_HAS_SQR_LONGINT}
 
@@ -2429,7 +1778,7 @@ function align(addr : PtrUInt;alignment : PtrUInt) : PtrUInt;{$ifdef SYSTEMINLIN
   var
     tmp: PtrUInt;
   begin
-    tmp:=addr+PtrUInt(alignment-1);
+    tmp:=addr+(alignment-1);
     result:=tmp-(tmp mod alignment)
   end;
 
@@ -2529,11 +1878,6 @@ end;
 {$ifndef FPC_SYSTEM_HAS_INT_STR_INT64}
 
 procedure int_str(l:int64;out s:shortstring);
-{$ifdef EXCLUDE_COMPLEX_PROCS}
-begin
-  runerror(217);
-end;
-{$else EXCLUDE_COMPLEX_PROCS}
 var
   m,m1 : qword;
   pcstart,
@@ -2571,18 +1915,12 @@ begin
     end;
   s[0]:=char(pc2-pc2start);
 end;
-{$endif EXCLUDE_COMPLEX_PROCS}
 
 {$endif ndef FPC_SYSTEM_HAS_INT_STR_INT64}
 
 {$ifndef FPC_SYSTEM_HAS_INT_STR_QWORD}
 
 procedure int_str_unsigned(l:qword;out s:shortstring);
-{$ifdef EXCLUDE_COMPLEX_PROCS}
-begin
-  runerror(217);
-end;
-{$else EXCLUDE_COMPLEX_PROCS}
 var
   m1 : qword;
   pcstart,
@@ -2612,7 +1950,6 @@ begin
     end;
   s[0]:=char(pc2-pc2start);
 end;
-{$endif EXCLUDE_COMPLEX_PROCS}
 
 {$endif ndef FPC_SYSTEM_HAS_INT_STR_QWORD}
 
@@ -2653,14 +1990,14 @@ function SwapEndian(const AValue: Word): Word;{$ifdef SYSTEMINLINE}inline;{$endi
   end;
 {$endif}
 
-function SwapEndian(const AValue: LongInt): LongInt;{$ifdef SYSTEMINLINE}inline;{$endif}
+function SwapEndian(const AValue: LongInt): LongInt;
   begin
     Result := ((AValue shl 8) and $FF00FF00) or ((AValue shr 8) and $00FF00FF);
     Result := (Result shl 16) or (Result shr 16);
   end;
 
 {$ifndef cpujvm}
-function SwapEndian(const AValue: DWord): DWord;{$ifdef SYSTEMINLINE}inline;{$endif}
+function SwapEndian(const AValue: DWord): DWord;
   begin
     Result := ((AValue shl 8) and $FF00FF00) or ((AValue shr 8) and $00FF00FF);
     Result := (Result shl 16) or (Result shr 16);
@@ -3089,33 +2426,6 @@ function RolQWord(Const AValue : QWord;const Dist : Byte): QWord;{$ifdef SYSTEMI
 {$endif FPC_SYSTEM_HAS_ROX_QWORD}
 {$endif FPC_HAS_INTERNAL_ROX_QWORD}
 
-{$ifndef FPC_HAS_INTERNAL_ROX_ASSIGN_QWORD}
-{$ifndef FPC_SYSTEM_HAS_ROX_ASSIGN_QWORD}
-procedure fpc_ror_assign_int64(var AValue : int64;const Dist : Byte); [Public,Alias:'FPC_ROR_ASSIGN_INT64']; compilerproc;
-  begin
-    AValue:=(AValue shr (Dist and 63)) or (AValue shl (64-(Dist and 63)));
-  end;
-
-
-procedure fpc_ror_assign_qword(var AValue : QWord;const Dist : Byte); [Public,Alias:'FPC_ROR_ASSIGN_QWORD']; compilerproc;
-  begin
-    AValue:=(AValue shr (Dist and 63)) or (AValue shl (64-(Dist and 63)));
-  end;
-
-
-procedure fpc_rol_assign_int64(var AValue : int64;const Dist : Byte); [Public,Alias:'FPC_ROL_ASSIGN_INT64']; compilerproc;
-  begin
-    AValue:=(AValue shl (Dist and 63)) or (AValue shr (64-(Dist and 63)));
-  end;
-
-
-procedure fpc_rol_assign_qword(var AValue : QWord;const Dist : Byte); [Public,Alias:'FPC_ROL_ASSIGN_QWORD']; compilerproc;
-  begin
-    AValue:=(AValue shl (Dist and 63)) or (AValue shr (64-(Dist and 63)));
-  end;
-{$endif FPC_SYSTEM_HAS_ROX_ASSIGN_QWORD}
-{$endif FPC_HAS_INTERNAL_ROX_ASSIGN_QWORD}
-
 {$ifndef FPC_HAS_INTERNAL_SAR_BYTE}
 {$ifndef FPC_SYSTEM_HAS_SAR_BYTE}
 function SarShortint(Const AValue : Shortint;const Shift : Byte): Shortint;
@@ -3151,19 +2461,6 @@ function fpc_SarInt64(Const AValue : Int64;const Shift : Byte): Int64; [Public,A
   end;
 {$endif FPC_HAS_INTERNAL_SAR_QWORD}
 {$endif FPC_SYSTEM_HAS_SAR_QWORD}
-
-{$ifndef FPC_HAS_INTERNAL_SAR_ASSIGN_QWORD}
-{$ifndef FPC_SYSTEM_HAS_SAR_ASSIGN_QWORD}
-procedure fpc_sar_assign_int64(var AValue : Int64;const Shift : Byte); [Public,Alias:'FPC_SAR_ASSIGN_INT64']; compilerproc;
-  begin
-    AValue:=int64(qword(qword(qword(AValue) shr (Shift and 63)) or (qword(int64(qword(0-qword(qword(AValue) shr 63)) and qword(int64(0-(ord((Shift and 63)<>0){ and 1}))))) shl (64-(Shift and 63)))));
-  end;
-procedure fpc_sar_assign_qword(var AValue : QWord;const Shift : Byte); [Public,Alias:'FPC_SAR_ASSIGN_QWORD']; compilerproc;
-  begin
-    AValue:=qword(qword(qword(qword(AValue) shr (Shift and 63)) or (qword(int64(qword(0-qword(qword(AValue) shr 63)) and qword(int64(0-(ord((Shift and 63)<>0){ and 1}))))) shl (64-(Shift and 63)))));
-  end;
-{$endif FPC_HAS_INTERNAL_SAR_ASSIGN_QWORD}
-{$endif FPC_SYSTEM_HAS_SAR_ASSIGN_QWORD}
 
 {$ifndef FPC_HAS_INTERNAL_BSF_BYTE}
 {$ifndef FPC_SYSTEM_HAS_BSF_BYTE}

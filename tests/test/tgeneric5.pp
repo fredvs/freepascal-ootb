@@ -25,7 +25,7 @@ begin
       writeln('Typeinfo error');
       err:=true;
     end;
-  if sizeof(item)<>sizeof(integer) then
+  if sizeof(item)<>4 then
     begin
       writeln('Sizeof error');
       err:=true;

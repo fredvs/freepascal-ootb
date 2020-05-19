@@ -100,7 +100,7 @@ const
 function PathConv(path: string): string; external name 'PATHCONV';
 
 function dosLock(const name: String;
-                 accessmode: Longint) : BPTR;
+                 accessmode: Longint) : LongInt;
 var
  buffer: array[0..255] of Char;
 begin
@@ -109,9 +109,9 @@ begin
   dosLock:=Lock(buffer,accessmode);
 end;
 
-function BADDR(bval: PtrInt): Pointer; Inline;
+function BADDR(bval: LongInt): Pointer; Inline;
 begin
-  {$if defined(AROS)}  // deactivated for now //and (not defined(AROS_BINCOMPAT))}
+  {$if defined(AROS) and (not defined(AROS_FLAVOUR_BINCOMPAT))}
   BADDR := Pointer(bval);
   {$else}
   BADDR:=Pointer(bval Shl 2);
@@ -120,16 +120,16 @@ end;
 
 function BSTR2STRING(s : Pointer): PChar; Inline;
 begin
-  {$if defined(AROS)}  // deactivated for now //and (not defined(AROS_BINCOMPAT))}
+  {$if defined(AROS) and (not defined(AROS_FLAVOUR_BINCOMPAT))}
   BSTR2STRING:=PChar(s);
   {$else}
   BSTR2STRING:=PChar(BADDR(PtrInt(s)))+1;
   {$endif}
 end;
 
-function BSTR2STRING(s : PtrInt): PChar; Inline;
+function BSTR2STRING(s : LongInt): PChar; Inline;
 begin
-  {$if defined(AROS)}  // deactivated for now //and (not defined(AROS_BINCOMPAT))}
+  {$if defined(AROS) and (not defined(AROS_FLAVOUR_BINCOMPAT))}
   BSTR2STRING:=PChar(s);
   {$else}
   BSTR2STRING:=PChar(BADDR(s))+1;
@@ -491,7 +491,7 @@ procedure Exec(const Path: PathStr; const ComLine: ComStr);
 var
   tmpPath: array[0..515] of char;
   result : longint;
-  tmpLock: BPTR;
+  tmpLock: longint;
 begin
   DosError:= 0;
   LastDosExitCode:=0;
@@ -563,10 +563,10 @@ end;
 var
   DeviceList: array[0..26] of string[20];
   NumDevices: Integer = 0;
-
+  
 const
   IllegalDevices: array[0..12] of string =(
-                   'PED:',
+                   'PED:',  
                    'PRJ:',
                    'PIPE:',   // Pipes
                    'XPIPE:',  // Extented Pipe
@@ -649,7 +649,7 @@ end;
 //
 function DiskSize(Drive: AnsiString): Int64;
 var
-  DirLock: BPTR;
+  DirLock: LongInt;
   Inf: TInfoData;
   OldWinPtr: Pointer;
 begin
@@ -670,7 +670,7 @@ end;
 function DiskSize(Drive: Byte): Int64;
 begin
   DiskSize := -1;
-  if (Drive >= NumDevices) then
+  if (Drive < 0) or (Drive >= NumDevices) then
     Exit;
   DiskSize := DiskSize(DeviceList[Drive]);
 end;
@@ -679,7 +679,7 @@ end;
 //
 function DiskFree(Drive: AnsiString): Int64;
 var
-  DirLock: BPTR;
+  DirLock: LongInt;
   Inf: TInfoData;
   OldWinPtr: Pointer;
 begin
@@ -700,7 +700,7 @@ end;
 function DiskFree(Drive: Byte): Int64;
 begin
   DiskFree := -1;
-  if (Drive >= NumDevices) then
+  if (Drive < 0) or (Drive >= NumDevices) then
     Exit;
   DiskFree := DiskFree(DeviceList[Drive]);
 end;
@@ -804,42 +804,27 @@ var
 begin
   { No wildcards allowed in these things }
   if (pos('?',path)<>0) or (pos('*',path)<>0) or (path='') then
-  begin
-    FSearch:='';
-    exit;
+    FSearch:=''
+  else begin
+    repeat
+      p1:=pos(';',dirlist);
+      if p1<>0 then begin
+        newdir:=Copy(dirlist,1,p1-1);
+        Delete(dirlist,1,p1);
+      end else begin
+        newdir:=dirlist;
+        dirlist:='';
+      end;
+      if (newdir<>'') and (not (newdir[length(newdir)] in ['/',':'])) then
+        newdir:=newdir+'/';
+      FindFirst(newdir+path,anyfile,tmpSR);
+      if doserror=0 then
+        newdir:=newdir+path
+      else
+        newdir:='';
+    until (dirlist='') or (newdir<>'');
+    FSearch:=newdir;
   end;
-  { check if the file specified exists }
-  findfirst(path,anyfile and not(directory), tmpSR);
-  if doserror=0 then
-  begin
-    findclose(tmpSR);
-    fsearch:=path;
-    exit;
-  end;
-  findclose(tmpSR);
-
-  repeat
-    p1:=pos(';',dirlist);
-    if p1<>0 then
-    begin
-      newdir:=Copy(dirlist,1,p1-1);
-      Delete(dirlist,1,p1);
-    end
-    else
-    begin
-      newdir:=dirlist;
-      dirlist:='';
-    end;
-    if (newdir<>'') and (not (newdir[length(newdir)] in [DirectorySeparator, DriveSeparator])) then
-      newdir:=newdir+DirectorySeparator;
-    FindFirst(newdir+path,anyfile and not(directory),tmpSR);
-    if doserror=0 then
-      newdir:=newdir+path
-    else
-      newdir:='';
-    findclose(tmpSR);
-  until (dirlist='') or (newdir<>'');
-  FSearch:=newdir;
 end;
 
 
@@ -851,7 +836,7 @@ Procedure getftime (var f; var time : longint);
 var
     FInfo : pFileInfoBlock;
     FTime : Longint;
-    FLock : BPTR;
+    FLock : Longint;
     Str   : String;
     i     : integer;
 begin
@@ -889,7 +874,7 @@ end;
     Str: String;
     i: Integer;
     Days, Minutes,Ticks: longint;
-    FLock: BPTR;
+    FLock: longint;
   Begin
     new(DateStamp);
 {$ifdef FPC_ANSI_TEXTFILEREC}
@@ -920,7 +905,7 @@ end;
 procedure getfattr(var f; var attr : word);
 var
     info : pFileInfoBlock;
-    MyLock : BPTR;
+    MyLock : Longint;
     flags: word;
     Str: String;
     i: integer;
@@ -968,7 +953,7 @@ begin
 procedure setfattr(var f; attr : word);
 var
   flags: longint;
-  tmpLock : BPTR;
+  tmpLock : longint;
 {$ifndef FPC_ANSI_TEXTFILEREC}
   r : rawbytestring;
 {$endif not FPC_ANSI_TEXTFILEREC}
@@ -1007,7 +992,7 @@ end;
 var
   strofpaths : string;
 
-function SystemTags(const command: PChar; const tags: array of PtrUInt): LongInt;
+function SystemTags(const command: PChar; const tags: array of DWord): LongInt;
 begin
   SystemTags:=SystemTagList(command,@tags);
 end;
@@ -1024,7 +1009,7 @@ begin
 
    { Alternatively, this could use PIPE: handler on systems which
      have this by default (not the case on classic Amiga), but then
-     the child process should be started async, which for a simple
+     the child process should be started async, which for a simple 
      Path command probably isn't worth the trouble. (KB) }
    assign(f,'T:'+HexStr(FindTask(nil))+'_path.tmp');
    rewrite(f);
@@ -1162,7 +1147,7 @@ begin
     if EnvList[Index].Local then
       EnvStr := EnvList[Index].Name + '=' + EnvList[Index].Value
     else
-      EnvStr := EnvList[Index].Name + '=' + GetEnvFromEnv(EnvList[Index].Name);
+      EnvStr := EnvList[Index].Name + '=' + GetEnvFromEnv(EnvList[Index].Name);  
   end;
 end;
 
@@ -1179,8 +1164,8 @@ begin
       StrOfPaths := GetPathString;
     GetEnv := StrOfPaths;
   end else
-  begin
-    InitEnvironmentStrings;
+  begin    
+    InitEnvironmentStrings;  
     for i := 0 to High(EnvList) do
     begin
       if EnvVarName = UpCase(EnvList[i].Name) then
@@ -1190,9 +1175,9 @@ begin
         else
           GetEnv := GetEnvFromEnv(EnvList[i].Name);
         Break;
-      end;
+      end;  
     end;
-  end;
+  end;  
 end;
 
 begin

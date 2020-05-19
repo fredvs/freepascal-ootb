@@ -42,8 +42,6 @@ type
   TGIDListEnumerator = class;
 
 
-  { TFontSubsetter }
-
   TFontSubsetter = class(TObject)
   private
     FPrefix: string;
@@ -60,7 +58,7 @@ type
     function    ToUInt32(const ABytes: AnsiString): UInt32;
     function    GetRawTable(const ATableName: AnsiString): TMemoryStream;
     function    WriteFileHeader(AOutStream: TStream; const nTables: integer): uint32;
-    function    WriteTableHeader(AOutStream: TStream; const ATag: AnsiString; const AOffset: UInt32; const AData: TStream): UInt32;
+    function    WriteTableHeader(AOutStream: TStream; const ATag: AnsiString; const AOffset: UInt32; const AData: TStream): int64;
     function    GetNewGlyphId(const OldGid: integer): Integer;
     procedure   WriteTableBodies(AOutStream: TStream; const ATables: TStringList);
     procedure   UpdateOrigGlyphIDList;
@@ -253,28 +251,21 @@ begin
 end;
 
 function TFontSubsetter.WriteTableHeader(AOutStream: TStream; const ATag: AnsiString; const AOffset: UInt32;
-  const AData: TStream): UInt32;
+  const AData: TStream): int64;
 var
-  checksum, w: UInt32;
+  checksum: Int64;
   n: integer;
   lByte: Byte;
 begin
   AData.Position := 0;
   checksum := 0;
-  w := 0;
 
   for n := 0 to AData.Size-1 do
   begin
     lByte := AData.ReadByte;
-    //checksum := checksum + (((lByte and $FF) shl 24) - n mod 4 * 8);
-    w := w or (lByte shl ((3 - (n mod 4))*8));
-    if n mod 4 = 3 then begin
-      Inc(checksum, w);
-      w := 0;
-    end;
+    checksum := checksum + (((lByte and $FF) shl 24) - n mod 4 * 8);
   end;
-  Inc(checksum, w);
-  //checksum := checksum and $FFFFFFFF;
+  checksum := checksum and $FFFFFFFF;
 
   AOutStream.WriteBuffer(Pointer(ATag)^, 4); // Tag is always 4 bytes - written as-is, no NtoBE() required
   WriteUInt32(AOutStream, checksum);
@@ -676,22 +667,19 @@ end;
 function TFontSubsetter.buildFpgmTable: TStream;
 begin
   Result := GetRawTable('fpgm');
-  if Assigned(Result) then
-    Result.Position := 0;
+  Result.Position := 0;
 end;
 
 function TFontSubsetter.buildPrepTable: TStream;
 begin
   Result := GetRawTable('prep');
-  if Assigned(Result) then
   Result.Position := 0;
 end;
 
 function TFontSubsetter.buildCvtTable: TStream;
 begin
   Result := GetRawTable('cvt ');
-  if Assigned(Result) then
-    Result.Position := 0;
+  Result.Position := 0;
 end;
 
 function TFontSubsetter.buildGlyfTable(var newOffsets: TArrayUInt32): TStream;
@@ -840,9 +828,9 @@ var
   itm: TTextMapping;
 begin
   Result := TMemoryStream.Create;
-  SetLength(startCode, FGlyphIDList.Count + 1);
-  SetLength(endCode, FGlyphIDList.Count + 1);
-  SetLength(idDelta, FGlyphIDList.Count + 1);
+  SetLength(startCode, FGlyphIDList.Count);
+  SetLength(endCode, FGlyphIDList.Count);
+  SetLength(idDelta, FGlyphIDList.Count);
 
   // cmap header
   WriteUInt16(Result, 0);  // version
@@ -1023,7 +1011,7 @@ end;
 
 procedure TFontSubsetter.SaveToStream(const AStream: TStream);
 var
-  checksum: UInt32;
+  checksum: int64;
   offset: int64;
   head: TStream;
   hhea: TStream;
@@ -1100,11 +1088,11 @@ begin
       offset := offset + o;
     end;
   end;
-  checksum := UInt32($B1B0AFBA) - checksum;
+  checksum := $B1B0AFBA - (checksum and $ffffffff);
 
   // update head.ChecksumAdjustment field
   head.Seek(8, soBeginning);
-  WriteUInt32(head, checksum);
+  WriteInt32(head, Int32(checksum));
 
   // write table bodies
   WriteTableBodies(AStream, tables);

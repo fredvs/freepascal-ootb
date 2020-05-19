@@ -1,4 +1,4 @@
-{ %OPT=-Ooregvar }
+{ %OPT=-Or}
 program rangecse;
 
 {$r+}

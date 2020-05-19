@@ -1,5 +1,5 @@
 { %NORUN }
-{ %SKIPTARGET=macos,$nosharedlib }
+{ %SKIPTARGET=macos,go32v2 }
 
 {$ifdef darwin}
 {$PIC+}

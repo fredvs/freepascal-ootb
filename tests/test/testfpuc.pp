@@ -1,17 +1,12 @@
-{ %target=linux,freebsd,darwin,solaris,aix,android,haiku }
+{ %target=linux,freebsd,darwin,solaris,aix,android }
 
 {$mode objfpc}
 program testr;
 
 uses sysutils;
 function sprintf(buf,fmt : pchar) : longint; varargs;cdecl; external 'c';
-{$ifdef haiku}
-function cosh(f : double) : double; cdecl; external 'root';
-function ccos(f : double) : double; cdecl; external 'root' name 'cos';
-{$else}
 function cosh(f : double) : double; cdecl; external 'm';
 function ccos(f : double) : double; cdecl; external 'm' name 'cos';
-{$endif}
 
 Type
   TTest = Class(TObject)

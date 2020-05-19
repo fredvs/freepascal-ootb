@@ -133,7 +133,7 @@ procedure TXMLDatapacketReader.LoadFieldDefs(var AnAutoIncValue: integer);
     else result := '';
   end;
 
-var i,s           : integer;
+var i           : integer;
     AFieldDef   : TFieldDef;
     iFieldType  : TFieldType;
     FTString    : string;
@@ -160,11 +160,7 @@ begin
       AFieldDef := Dataset.FieldDefs.AddFieldDef;
       AFieldDef.DisplayName:=GetNodeAttribute(AFieldNode,'fieldname');
       AFieldDef.Name:=GetNodeAttribute(AFieldNode,'attrname');
-      // Difference in casing between CDS and bufdataset...
-      S:=StrToIntDef(GetNodeAttribute(AFieldNode,'width'),-1);
-      if (S=-1) then
-        S:=StrToIntDef(GetNodeAttribute(AFieldNode,'WIDTH'),0);
-      AFieldDef.Size:=s;
+      AFieldDef.Size:=StrToIntDef(GetNodeAttribute(AFieldNode,'width'),0);
       FTString:=GetNodeAttribute(AFieldNode,'fieldtype');
       SubFTString:=GetNodeAttribute(AFieldNode,'subtype');
       if SubFTString<>'' then

@@ -1,5 +1,4 @@
 { %target=win32,win64 }
-{ %skiptarget=$nosharedlib }
 { %needlibrary }
 
 { Checks that the two functions with the same exported name 'p'

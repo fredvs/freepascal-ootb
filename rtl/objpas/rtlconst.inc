@@ -70,7 +70,6 @@ ResourceString
   SCmplxUnexpectedEOS           = 'Unexpected end of string [%s]';
   SColorPrefix                  = 'Color';
   SColorTags                    = 'ABCDEFGHIJKLMNOP';
-  SComponentDoesntImplement     = 'Component "%s" does not implement "%s"';
   SComponentNameTooLong         = 'Component name "%s" exceeds 64 character limit';
   SConfirmCreateDir             = 'The selected directory does not exist. Should it be created?';
   SControlParentSetToSelf       = 'A component can not have itself as parent';
@@ -143,7 +142,6 @@ ResourceString
   SParamIsNil                   = 'Parameter %s cannot be nil';
   SIniFileWriteError            = 'Unable to write to "%s"';
   SInsertLineError              = 'Line could not be inserted';
-  SInterfaceNoIIDStr            = 'Interface "%s" does not have an IIDStr';
   SInvalidActionCreation        = 'Invalid action creation';
   SInvalidActionEnumeration     = 'Invalid action enumeration';
   SInvalidActionRegistration    = 'Invalid action registration';
@@ -305,10 +303,6 @@ ResourceString
   SClassCantBeConstructed       = 'Class %s can not be constructed';
   SErrStatusCallBackRequired    = 'Thread status report handler cannot be empty.';
   SErrFindNeedsSortedList       = 'Cannot use find on unsorted list';
-  SParamIsNegative              = 'Parameter "%s" cannot be negative.';
-  SErrCannotWriteToProperty     = 'Cannot write to property "%s".';
-  SErrCannotReadProperty        = 'Cannot read property "%s".';
-  SErrNoNameValuePairAt         = 'No name=value pair at position %d.';
 
 { ---------------------------------------------------------------------
     Keysim Names

@@ -24,12 +24,12 @@
   This file contains the implementation of the AnsiString type,
   and all things that are needed for it.
   AnsiString is defined as a 'silent' pchar :
-  a pchar that points to (S= SizeOf(SizeInt)):
+  a pchar that points to :
 
-  @-3*S   : Code page indicator.
-  @-3*S+2 : Character size (2 bytes)
-  @-2*S   : SizeInt for reference count;
-  @-S  : SizeInt for size;
+  @-16 : Code page indicator.
+  @-12 : Character size (2 bytes)
+  @-8  : SizeInt for reference count;
+  @-4  : SizeInt for size;
   @    : String + Terminating #0;
   Pchar(Ansistring) is a valid typecast.
   So AS[i] is converted to the address @AS+i-1.
@@ -627,20 +627,6 @@ end;
 
 {$ifndef FPC_HAS_ANSISTR_COMPARE}
 {$define FPC_HAS_ANSISTR_COMPARE}
-
-Function fpc_utf8_Compare(const S1,S2 : RawByteString): SizeInt;
-
-var
-  r1,r2 : RawByteString;
-begin
-  r1:=S1;
-  r2:=S2;
-  //convert them to utf8 then compare
-  SetCodePage(r1,65001);
-  SetCodePage(r2,65001);
-  Result:=fpc_AnsiStr_Compare(r1,r2);
-end;
-
 Function fpc_AnsiStr_Compare(const S1,S2 : RawByteString): SizeInt;[Public,Alias : 'FPC_ANSISTR_COMPARE'];  compilerproc;
 {
   Compares 2 AnsiStrings;
@@ -687,33 +673,20 @@ begin
         result:=Length(S1)-Length(S2);
     end
   else
-    Result:=fpc_utf8_compare(s1,s2);
+    begin
+      r1:=S1;
+      r2:=S2;
+      //convert them to utf8 then compare
+      SetCodePage(r1,65001);
+      SetCodePage(r2,65001);
+      Result:=fpc_AnsiStr_Compare(r1,r2);
+    end;
 end;
 {$endif FPC_HAS_ANSISTR_COMPARE}
 
 
 {$ifndef FPC_HAS_ANSISTR_COMPARE_EQUAL}
 {$define FPC_HAS_ANSISTR_COMPARE_EQUAL}
-
-Function fpc_utf8_Compare_equal(Const S1,S2 : RawByteString): SizeInt;
-
-Var
-  r1,r2 : RawByteString;
-  L1,L2 : SizeInt;
-begin
-  r1:=S1;
-  r2:=S2;
-  //convert them to utf8 then compare
-  SetCodePage(r1,65001);
-  SetCodePage(r2,65001);
-  L1:=Length(r1);
-  L2:=Length(r2);
-  Result:=L1-L2;
-  if Result = 0 then
-    if L1>0 then
-      result:=CompareByte(r1[1],r2[1],L1);
-end;
-
 Function fpc_AnsiStr_Compare_equal(const S1,S2 : RawByteString): SizeInt;[Public,Alias : 'FPC_ANSISTR_COMPARE_EQUAL'];  compilerproc;
 {
   Compares 2 AnsiStrings for equality/inequality only;
@@ -724,12 +697,24 @@ Function fpc_AnsiStr_Compare_equal(const S1,S2 : RawByteString): SizeInt;[Public
 Var
   MaxI,Temp : SizeInt;
   cp1,cp2 : TSystemCodePage;
+  r1,r2 : RawByteString;
 begin
   if pointer(S1)=pointer(S2) then
-    Exit(0);
+    begin
+      result:=0;
+      exit;
+    end;
   { don't compare strings if one of them is empty }
-  if (pointer(S1)=nil) or (pointer(S2)=Nil) then
-    Exit(-1);
+  if (pointer(S1)=nil) then
+    begin
+      result:=-1;
+      exit;
+    end;
+  if (pointer(S2)=nil) then
+    begin
+      result:=1;
+      exit;
+    end;
   cp1:=TranslatePlaceholderCP(StringCodePage(S1));
   cp2:=TranslatePlaceholderCP(StringCodePage(S2));
   if cp1=cp2 then
@@ -743,7 +728,17 @@ begin
     end
   else
     begin
-    Result:=fpc_utf8_Compare_equal(S1,S2);
+      r1:=S1;
+      r2:=S2;
+      //convert them to utf8 then compare
+      SetCodePage(r1,65001);
+      SetCodePage(r2,65001);
+      Maxi:=Length(r1);
+      temp:=Length(r2);
+      Result := Maxi - temp;
+      if Result = 0 then
+        if MaxI>0 then
+          result:=CompareByte(r1[1],r2[1],MaxI);
     end;
 end;
 {$endif FPC_HAS_ANSISTR_COMPARE_EQUAL}
@@ -920,18 +915,18 @@ end;
 
 {$ifndef FPC_HAS_POS_SHORTSTR_ANSISTR}
 {$define FPC_HAS_POS_SHORTSTR_ANSISTR}
-Function Pos(Const Substr : ShortString; Const Source : RawByteString; Offset : Sizeint = 1) : SizeInt;
+Function Pos(Const Substr : ShortString; Const Source : RawByteString) : SizeInt;
 
 var
   i,MaxLen : SizeInt;
   pc : PAnsiChar;
 begin
   Pos:=0;
-  if (Length(SubStr)>0) and (Offset>0) and (Offset<=Length(Source)) then
+  if Length(SubStr)>0 then
    begin
      MaxLen:=Length(source)-Length(SubStr);
-     i:=Offset-1;
-     pc:=@source[Offset];
+     i:=0;
+     pc:=@source[1];
      while (i<=MaxLen) do
       begin
         inc(i);
@@ -950,17 +945,17 @@ end;
 
 {$ifndef FPC_HAS_POS_ANSISTR_ANSISTR}
 {$define FPC_HAS_POS_ANSISTR_ANSISTR}
-Function Pos(Const Substr : RawByteString; Const Source : RawByteString; Offset : Sizeint = 1) : SizeInt;
+Function Pos(Const Substr : RawByteString; Const Source : RawByteString) : SizeInt;
 var
   i,MaxLen : SizeInt;
   pc : PAnsiChar;
 begin
   Pos:=0;
-  if (Length(SubStr)>0) and (Offset>0) and (Offset<=Length(Source)) then
+  if Length(SubStr)>0 then
    begin
      MaxLen:=Length(source)-Length(SubStr);
-     i:=Offset-1;
-     pc:=@source[Offset];
+     i:=0;
+     pc:=@source[1];
      while (i<=MaxLen) do
       begin
         inc(i);
@@ -983,16 +978,13 @@ end;
 { pos(c: char; const s: shortstring) also exists, so otherwise   }
 { using pos(char,pchar) will always call the shortstring version }
 { (exact match for first argument), also with $h+ (JM)           }
-Function Pos(c : AnsiChar; Const s : RawByteString; Offset : Sizeint = 1) : SizeInt;
+Function Pos(c : AnsiChar; Const s : RawByteString) : SizeInt;
 var
   i: SizeInt;
   pc : PAnsiChar;
 begin
-  Pos:=0;
-  If (Offset<1) or (Offset>Length(S)) then 
-    exit;
-  pc:=@s[OffSet];
-  for i:=Offset to length(s) do
+  pc:=@s[1];
+  for i:=1 to length(s) do
    begin
      if pc^=c then
       begin
@@ -1247,6 +1239,7 @@ end;
 {$endif FPC_STR_ENUM_INTERN}
 
 
+{$ifdef FPC_HAS_STR_CURRENCY}
 procedure fpc_AnsiStr_Currency(c : currency;len,fr : SizeInt;out s : RawByteString{$ifdef FPC_HAS_CPSTRING};cp : TSystemCodePage{$endif FPC_HAS_CPSTRING});[public,alias:'FPC_ANSISTR_CURRENCY']; compilerproc; inline;
 var
   ss: ShortString;
@@ -1257,6 +1250,7 @@ begin
   SetCodePage(s,cp,false);
   {$endif FPC_HAS_CPSTRING}
 end;
+{$endif FPC_HAS_STR_CURRENCY}
 
 Procedure fpc_AnsiStr_UInt(v : ValUInt;Len : SizeInt; out S : RawByteString{$ifdef FPC_HAS_CPSTRING};cp : TSystemCodePage{$endif FPC_HAS_CPSTRING});[Public,Alias : 'FPC_ANSISTR_VALUINT']; compilerproc; inline;
 Var
@@ -1355,7 +1349,7 @@ begin
 end;
 {$endif CPU16 or CPU8}
 
-Procedure {$ifdef VER3_0}Delete{$else}fpc_ansistr_delete{$endif}(Var S : RawByteString; Index,Size: SizeInt);
+Procedure Delete(Var S : RawByteString; Index,Size: SizeInt);
 Var
   LS : SizeInt;
 begin
@@ -1374,7 +1368,7 @@ begin
 end;
 
 
-Procedure {$ifdef VER3_0}Insert{$else}fpc_ansistr_insert{$endif}(Const Source : RawByteString; Var S : RawByteString; Index : SizeInt);
+Procedure Insert(Const Source : RawByteString; Var S : RawByteString; Index : SizeInt);
 var
   Temp : RawByteString;
   LS : SizeInt;

@@ -1,5 +1,4 @@
 { %NEEDLIBRARY }
-{ %skiptarget=$nosharedlib }
 { %delfiles=tweaklib1 }
 
 {$ifdef mswindows}

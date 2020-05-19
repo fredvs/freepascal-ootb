@@ -211,7 +211,7 @@ end;
 begin
 {$IFDEF EMX}
  if os_Mode <> osOS2 then
-  FileUnzipEx := TFileUnzipEx (@Unzip51g.FileUnzipEx)
+  FileUnzipEx := TFileUnzipEx (@Unzip.FileUnzipEx)
  else
 {$ENDIF EMX}
  if DLLInit then

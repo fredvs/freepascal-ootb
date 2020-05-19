@@ -21,25 +21,15 @@ unit System;
 interface
 
 {$define FPC_IS_SYSTEM}
-{$define FPC_HAS_ANSI_TEXTFILEREC}
-
-{.$define FPC_AMIGA_USE_TINYHEAP}
-
-{$ifdef FPC_AMIGA_USE_TINYHEAP}
-{$define HAS_MEMORYMANAGER}
-{$endif FPC_AMIGA_USE_TINYHEAP}
 
 {$I systemh.inc}
-{$ifdef FPC_AMIGA_USE_TINYHEAP}
-{$i tnyheaph.inc}
-{$endif FPC_AMIGA_USE_TINYHEAP}
 {$I osdebugh.inc}
 
-{$if defined(cpum68k) and defined(fpusoft)}
+{$ifdef cpum68k}
 {$define fpc_softfpu_interface}
 {$i softfpu.pp}
 {$undef fpc_softfpu_interface}
-{$endif defined(cpum68k) and defined(fpusoft)}
+{$endif cpum68k}
 
 const
   LineEnding = #10;
@@ -104,11 +94,8 @@ var
 
 implementation
 
-{$if defined(cpum68k) and defined(fpusoft)}
-
+{$ifdef cpum68k}
 {$define fpc_softfpu_implementation}
-{$define softfpu_compiler_mul32to64}
-{$define softfpu_inline}
 {$i softfpu.pp}
 {$undef fpc_softfpu_implementation}
 
@@ -123,13 +110,11 @@ implementation
 {$define FPC_SYSTEM_HAS_ExtractFloat32Frac}
 {$define FPC_SYSTEM_HAS_extractFloat32Exp}
 {$define FPC_SYSTEM_HAS_extractFloat32Sign}
-{$endif defined(cpum68k) and defined(fpusoft)}
+{$endif cpum68k}
 
 {$I system.inc}
-{$ifdef FPC_AMIGA_USE_TINYHEAP}
-{$i tinyheap.inc}
-{$endif FPC_AMIGA_USE_TINYHEAP}
 {$I osdebug.inc}
+{$I m68kamiga.inc}
 
 {$IFDEF AMIGAOS4}
   // Required to allow opening of utility library interface...
@@ -144,27 +129,6 @@ implementation
 {$IFDEF ASYS_FPC_MEMDEBUG}
 {$WARNING Compiling with memory debug enabled!}
 {$ENDIF}
-
-type
-    PWBArg = ^TWBArg;
-    TWBArg = record
-        wa_Lock         : LongInt;      { a lock descriptor }
-        wa_Name         : PChar;       { a string relative to that lock }
-    end;
-
-    WBArgList = array[1..MaxInt] of TWBArg; { Only 1..smNumArgs are valid }
-    PWBArgList = ^WBArgList;
-
-
-    PWBStartup = ^TWBStartup;
-    TWBStartup = record
-        sm_Message      : TMessage;      { a standard message structure }
-        sm_Process      : Pointer;   { the process descriptor for you }
-        sm_Segment      : Pointer;     { a descriptor for your code }
-        sm_NumArgs      : Longint;      { the number of elements in ArgList }
-        sm_ToolWindow   : Pointer;       { description of window }
-        sm_ArgList      : PWBArgList; { the arguments themselves }
-    end;
 
 
 {*****************************************************************************
@@ -219,16 +183,146 @@ begin
   haltproc(ExitCode);
 end;
 
+{ Generates correct argument array on startup }
+procedure GenerateArgs;
+var
+  argvlen : longint;
+
+  procedure allocarg(idx,len:longint);
+    var
+      i,oldargvlen : longint;
+    begin
+      if idx>=argvlen then
+        begin
+          oldargvlen:=argvlen;
+          argvlen:=(idx+8) and (not 7);
+          sysreallocmem(argv,argvlen*sizeof(pointer));
+          for i:=oldargvlen to argvlen-1 do
+            argv[i]:=nil;
+        end;
+      ArgV [Idx] := SysAllocMem (Succ (Len));
+    end;
+
+var
+  count: word;
+  start: word;
+  localindex: word;
+  p : pchar;
+  temp : string;
+
+begin
+  p:=GetArgStr;
+  argvlen:=0;
+
+  { Set argv[0] }
+  temp:=paramstr(0);
+  allocarg(0,length(temp));
+  move(temp[1],argv[0]^,length(temp));
+  argv[0][length(temp)]:=#0;
+
+  { check if we're started from Ambient }
+  if AOS_wbMsg<>nil then
+    begin
+      argc:=0;
+      exit;
+    end;
+
+  { Handle the other args }
+  count:=0;
+  { first index is one }
+  localindex:=1;
+  while (p[count]<>#0) do
+    begin
+      while (p[count]=' ') or (p[count]=#9) or (p[count]=LineEnding) do inc(count);
+      start:=count;
+      while (p[count]<>#0) and (p[count]<>' ') and (p[count]<>#9) and (p[count]<>LineEnding) do inc(count);
+      if (count-start>0) then
+        begin
+          allocarg(localindex,count-start);
+          move(p[start],argv[localindex]^,count-start);
+          argv[localindex][count-start]:=#0;
+          inc(localindex);
+        end;
+    end;
+  argc:=localindex;
+end;
+
+function GetProgDir: String;
+var
+  s1     : String;
+  alock  : LongInt;
+  counter: Byte;
+begin
+  GetProgDir:='';
+  FillChar(s1,255,#0);
+  { GetLock of program directory }
+
+  alock:=GetProgramDir;
+  if alock<>0 then begin
+    if NameFromLock(alock,@s1[1],255) then begin
+      counter:=1;
+      while (s1[counter]<>#0) and (counter<>0) do Inc(counter);
+      s1[0]:=Char(counter-1);
+      GetProgDir:=s1;
+    end;
+  end;
+end;
+
+function GetProgramName: String;
+{ Returns ONLY the program name }
+var
+  s1     : String;
+  counter: Byte;
+begin
+  GetProgramName:='';
+  FillChar(s1,255,#0);
+
+  if GetProgramName(@s1[1],255) then begin
+    { now check out and assign the length of the string }
+    counter := 1;
+    while (s1[counter]<>#0) and (counter<>0) do Inc(counter);
+    s1[0]:=Char(counter-1);
+
+    { now remove any component path which should not be there }
+    for counter:=length(s1) downto 1 do
+      if (s1[counter] = '/') or (s1[counter] = ':') then break;
+    { readjust counterv to point to character }
+    if counter<>1 then Inc(counter);
+
+    GetProgramName:=copy(s1,counter,length(s1));
+  end;
+end;
+
+
 {*****************************************************************************
-                          Parameterhandling
-                       as include in amicommon
+                             ParamStr/Randomize
 *****************************************************************************}
 
-{$I paramhandling.inc}
+{ number of args }
+function paramcount : longint;
+begin
+  if AOS_wbMsg<>nil then
+    paramcount:=0
+  else
+    paramcount:=argc-1;
+end;
 
-{*****************************************************************************
-                             Randomize
-*****************************************************************************}
+{ argument number l }
+function paramstr(l : longint) : string;
+var
+  s1: String;
+begin
+  paramstr:='';
+  if AOS_wbMsg<>nil then exit;
+
+  if l=0 then begin
+    s1:=GetProgDir;
+    if s1[length(s1)]=':' then paramstr:=s1+GetProgramName
+                          else paramstr:=s1+'/'+GetProgramName;
+  end else begin
+    if (l>0) and (l+1<=argc) then paramstr:=strpas(argv[l]);
+  end;
+end;
 
 { set randseed to a new pseudo random value }
 procedure randomize;
@@ -314,8 +408,11 @@ end;
 
 begin
   IsConsole := TRUE;
+  SysResetFPU;
+  if not(IsLibrary) then
+    SysInitFPU;
   StackLength := CheckInitialStkLen(InitialStkLen);
-  StackBottom := StackTop - StackLength;
+  StackBottom := Sptr - StackLength;
 { OS specific startup }
   AOS_wbMsg:=nil;
   ASYS_origDir:=0;
@@ -324,14 +421,9 @@ begin
   SysInitAmigaOS;
 { Set up signals handlers }
 //  InstallSignals;
-{$ifndef FPC_AMIGA_USE_TINYHEAP}
 { Setup heap }
   InitHeap;
-{$endif FPC_AMIGA_USE_TINYHEAP}
   SysInitExceptions;
-{$ifdef cpum68k}
-  fpc_cpucodeinit;
-{$endif}
   initunicodestringmanager;
 { Setup stdin, stdout and stderr }
   SysInitStdIO;
@@ -340,7 +432,4 @@ begin
 { Arguments }
   GenerateArgs;
   InitSystemThreads;
-{$ifdef FPC_HAS_FEATURE_DYNLIBS}
-  InitSystemDynLibs;
-{$endif}
 end.

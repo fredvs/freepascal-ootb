@@ -32,7 +32,7 @@ begin
 end;
 
 var
-  p : codepointer;
+  p : pointer;
 
 begin
   writeln('vreemd!');

@@ -115,10 +115,6 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
         {$ifdef cpusparc}
         threadvarblocksize:=align(threadvarblocksize,16);
         {$endif cpusparc}
-        
-        {$ifdef cpusparc64}
-        threadvarblocksize:=align(threadvarblocksize,16);
-        {$endif cpusparc64}
 
         {$ifdef cpupowerpc}
         threadvarblocksize:=align(threadvarblocksize,8);
@@ -143,10 +139,6 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
         {$ifdef cpupowerpc64}
         threadvarblocksize:=align(threadvarblocksize,16);
         {$endif cpupowerpc64}
-
-        {$ifdef cpuaarch64}
-        threadvarblocksize:=align(threadvarblocksize,16);
-        {$endif cpuaarch64}
 
         offset:=threadvarblocksize;
 
@@ -310,14 +302,10 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
         pthread_exit(ThreadMain);
       end;
 
-
-  var
-    TLSInitialized : longbool = FALSE;
-
-  Procedure InitCTLS;
+  Procedure InitCThreading;
   
   begin
-    if (InterLockedExchange(longint(TLSInitialized),ord(true)) = 0) then
+    if (InterLockedExchange(longint(IsMultiThread),ord(true)) = 0) then
       begin
         { We're still running in single thread mode, setup the TLS }
         pthread_key_create(@TLSKey,nil);
@@ -346,10 +334,8 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
       writeln('Creating new thread');
 {$endif DEBUG_MT}
       { Initialize multithreading if not done }
-      if not TLSInitialized then
-        InitCTLS;
-      IsMultiThread:=true;
-
+      if not IsMultiThread then
+        InitCThreading;
       { the only way to pass data to the newly created thread
         in a MT safe way, is to use the heap }
       new(ti);
@@ -361,7 +347,7 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
       writeln('Starting new thread');
 {$endif DEBUG_MT}
       pthread_attr_init(@thread_attr);
-      {$if not defined(HAIKU)and not defined(BEOS) and not defined(ANDROID)}
+      {$if not defined(HAIKU) and not defined(ANDROID)}
       {$if defined (solaris) or defined (netbsd) }
       pthread_attr_setinheritsched(@thread_attr, PTHREAD_INHERIT_SCHED);
       {$else not solaris}
@@ -541,6 +527,190 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
                            Semaphore routines
 *****************************************************************************}
 
+procedure cSemaphoreWait(const FSem: Pointer);
+var
+  res: cint;
+  err: cint;
+{$if not defined(has_sem_init) and not defined(has_sem_open)}
+  b: byte;
+{$endif}
+begin
+{$if defined(has_sem_init) or defined(has_sem_open)}
+  repeat
+    res:=sem_wait(PSemaphore(FSem));
+    err:=fpgetCerrno;
+  until (res<>-1) or (err<>ESysEINTR);
+{$else}
+  repeat
+    res:=fpread(PFilDes(FSem)^[0], b, 1);
+    err:=fpgeterrno;
+  until (res<>-1) or ((err<>ESysEINTR) and (err<>ESysEAgain));
+{$endif}
+end;
+
+{$if defined(has_sem_timedwait)}
+
+function cSemaphoreTimedWait(const FSem: Pointer; const Timeout: ttimespec): cint;
+var
+  res: cint;
+  err: cint;
+begin
+  repeat
+    res:=sem_timedwait(PSemaphore(FSem), @Timeout);
+    if res=0 then exit(0);
+    err:=fpgetCerrno;
+  until err<>ESysEINTR;
+  result:=err;
+end;
+
+{$endif}
+
+procedure cSemaphorePost(const FSem: Pointer);
+{$if defined(has_sem_init) or defined(has_sem_open)}
+begin
+  sem_post(PSemaphore(FSem));
+end;
+{$else}
+var
+  writeres: cint;
+  err: cint;
+  b : byte;
+begin
+  b:=0;
+  repeat
+    writeres:=fpwrite(PFilDes(FSem)^[1], b, 1);
+    err:=fpgeterrno;
+  until (writeres<>-1) or ((err<>ESysEINTR) and (err<>ESysEAgain));
+end;
+{$endif}
+
+
+function cSemaphoreTryWait(const FSem: pointer): TTryWaitResult;
+var
+  res: cint;
+  err: cint;
+{$if defined(has_sem_init) or defined(has_sem_open)}
+begin
+  repeat
+    res:=sem_trywait(FSem);
+    err:=fpgetCerrno;
+  until (res<>-1) or (err<>ESysEINTR);
+  if (res=0) then
+    result:=tw_semwasunlocked
+  else if (err=ESysEAgain) then
+    result:=tw_semwaslocked
+  else
+    result:=tw_error;
+{$else has_sem_init or has_sem_open}
+var
+  fds: TFDSet;
+  tv : timeval;
+begin
+  tv.tv_sec:=0;
+  tv.tv_usec:=0;
+  fpFD_ZERO(fds);
+  fpFD_SET(PFilDes(FSem)^[0],fds);
+  repeat
+    res:=fpselect(PFilDes(FSem)^[0]+1,@fds,nil,nil,@tv);
+    err:=fpgeterrno;
+  until (res>=0) or ((res=-1) and (err<>ESysEIntr));
+  if (res>0) then
+    begin
+      cSemaphoreWait(FSem);
+      result:=tw_semwasunlocked
+    end
+  else if (res=0) then
+    result:=tw_semwaslocked
+  else
+    result:=tw_error;
+{$endif has_sem_init or has_sem_open}
+end;
+
+
+
+
+{$if defined(has_sem_open) and not defined(has_sem_init)}
+function cIntSemaphoreOpen(const name: pchar; initvalue: boolean): Pointer;
+var
+  err: cint;
+begin
+  repeat
+    cIntSemaphoreOpen := sem_open(name,O_CREAT,0,ord(initvalue));
+    err:=fpgetCerrno;
+  until (ptrint(cIntSemaphoreOpen) <> SEM_FAILED) or (err <> ESysEINTR);
+  if (ptrint(cIntSemaphoreOpen) <> SEM_FAILED) then
+    { immediately unlink so the semaphore will be destroyed when the }
+    { the process exits                                              }
+    sem_unlink(name)
+  else
+    { 0 is a valid for sem_open on some platforms; pointer(-1) shouldn't
+      be valid anywhere, even for sem_init }
+    cIntSemaphoreOpen:=pointer(-1);
+end;
+{$endif}
+
+
+function cIntSemaphoreInit(initvalue: boolean): Pointer;
+{$if defined(has_sem_open) and not defined(has_sem_init)}
+var
+  tid: string[31];
+  semname: string[63];
+{$endif}
+begin
+{$ifdef has_sem_init}
+  cIntSemaphoreInit := GetMem(SizeOf(TSemaphore));
+  if sem_init(PSemaphore(cIntSemaphoreInit), 0, ord(initvalue)) <> 0 then
+    begin
+      FreeMem(cIntSemaphoreInit);
+      { 0 is a valid for sem_open on some platforms; pointer(-1) shouldn't
+        be valid anywhere, even for sem_init }
+      cIntSemaphoreInit:=pointer(-1);
+    end;
+{$else}
+{$ifdef has_sem_open}
+  { avoid a potential temporary nameclash with another process/thread }
+  str(fpGetPid,semname);
+  str(ptruint(pthread_self()),tid);
+  semname:='/FPC'+semname+'T'+tid+#0;
+  cIntSemaphoreInit:=cIntSemaphoreOpen(@semname[1],initvalue);
+{$else}
+  cIntSemaphoreInit := GetMem(SizeOf(TFilDes));
+  if (fppipe(PFilDes(cIntSemaphoreInit)^) <> 0) then
+    begin
+      FreeMem(cIntSemaphoreInit);
+      { 0 is a valid for sem_open on some platforms; pointer(-1) shouldn't
+        be valid anywhere, even for sem_init }
+      cIntSemaphoreInit:=pointer(-1);
+    end
+  else if initvalue then
+    cSemaphorePost(cIntSemaphoreInit);
+{$endif}
+{$endif}
+end;
+
+
+function cSemaphoreInit: Pointer;
+begin
+  cSemaphoreInit:=cIntSemaphoreInit(false);
+end;
+
+
+procedure cSemaphoreDestroy(const FSem: Pointer);
+begin
+{$ifdef has_sem_init}
+  sem_destroy(PSemaphore(FSem));
+  FreeMem(FSem);
+{$else}
+{$ifdef has_sem_open}
+  sem_close(PSemaphore(FSem));
+{$else has_sem_init}
+  fpclose(PFilDes(FSem)^[0]);
+  fpclose(PFilDes(FSem)^[1]);
+  FreeMem(FSem);
+{$endif}
+{$endif}
+end;
+
 
 type
      TPthreadCondition = pthread_cond_t;
@@ -667,7 +837,7 @@ begin
     end
   else
     begin
-      //Wait with timeout using pthread_cond_timedwait
+      //Wait with timeout using pthread_cont_timedwait
       fpgettimeofday(@tnow,nil);
       timespec.tv_sec  := tnow.tv_sec + (clong(timeout) div 1000);
       timespec.tv_nsec := (clong(timeout) mod 1000)*1000000 + tnow.tv_usec*1000;
@@ -827,7 +997,7 @@ begin
   Writeln('InitThreads : ',Result);
 {$endif DEBUG_MT}
   // We assume that if you set the thread manager, the application is multithreading.
-  InitCTLS;
+  InitCThreading;
 end;
 
 Function CDoneThreads : Boolean;
@@ -881,6 +1051,11 @@ begin
     rtlEventResetEvent     :=@intrtlEventResetEvent;
     rtleventWaitForTimeout :=@intrtleventWaitForTimeout;
     rtleventWaitFor        :=@intrtleventWaitFor;
+    // semaphores
+    SemaphoreInit          :=@cSemaphoreInit;
+    SemaphoreDestroy       :=@cSemaphoreDestroy;
+    SemaphoreWait          :=@cSemaphoreWait;
+    SemaphorePost          :=@cSemaphorePost;
   end;
   SetThreadManager(CThreadManager);
 end;

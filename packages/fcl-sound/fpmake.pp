@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Dependencies.Add('fcl-base');
 
     P.Author := 'Abou Al Montacir of the Free Pascal development team';
@@ -26,9 +26,7 @@ begin
     P.Email := '';
     P.Description := 'Sound loading, storing and conversion parts for the Free Component Libraries (FCL), FPC''s OOP library.';
     P.NeedLibC:= false;
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes:=AllOSes-[embedded,msdos];
 
     P.SourcePath.Add('src');
 

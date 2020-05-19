@@ -31,9 +31,7 @@
 					NULL
 }
 
-{$asmmode gas}
-
-{$L abitag.o}
+procedure PASCALMAIN; external name 'PASCALMAIN';
 
 {******************************************************************************
                           Process start/halt
@@ -42,37 +40,8 @@
 var
   dlexitproc: pointer;
 
-procedure _FPC_proc_haltproc(e: longint); forward;
-
 procedure _FPC_proc_start; assembler; nostackframe; public name '_start';
   asm
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    movq     SysInitEntryInformation@GOTPCREL(%rip),%r10          { load address of SysInitEntryInformation variable }
-
-    popq     %rsi                                  { Pop the argument count.  }
-    movq     %rsi,TEntryInformation.OS.argc(%r10)
-    movq     %rsp,TEntryInformation.OS.argv(%r10)                           { argv starts just at the current stack top.  }
-    leaq     8(,%rsi,8),%rax
-    addq     %rsp,%rax
-    movq     %rax,TEntryInformation.OS.envp(%r10)
-    andq     $0xfffffffffffffff0,%rsp                             { Align the stack to a 16 byte boundary to follow the ABI.  }
-
-    { Save initial stackpointer }
-    movq    %rsp,TEntryInformation.OS.stkptr(%r10)
-
-    { store stack length }
-    movq    StackLength@GOTPCREL(%rip),%rax
-    movq    %rax,TEntryInformation.OS.stklen(%r10)
-
-    { store pointer to haltproc }
-    movq    _FPC_proc_haltproc@GOTPCREL(%rip),%rax
-    movq    %rax,TEntryInformation.OS.haltproc(%r10)
-
-    movq    %r10,%rdi
-
-    xorq    %rbp, %rbp
-    call    SysEntry
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     popq     %rsi                                  { Pop the argument count.  }
     movq     operatingsystem_parameter_argc@GOTPCREL(%rip),%rax
     movq     %rsi,(%rax)
@@ -90,7 +59,6 @@ procedure _FPC_proc_start; assembler; nostackframe; public name '_start';
 
     xorq    %rbp, %rbp
     call    PASCALMAIN
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
   end;
 
 procedure _FPC_dynamic_proc_start; assembler; nostackframe; public name '_dynamic_start';
@@ -100,11 +68,8 @@ procedure _FPC_dynamic_proc_start; assembler; nostackframe; public name '_dynami
     jmp _FPC_proc_start
   end;
 
-procedure _FPC_proc_haltproc(e: longint); assembler; public name '_haltproc';
-  var
-    code: longint;
+procedure _FPC_proc_haltproc; assembler; nostackframe; public name '_haltproc';
   asm
-    movl    %edi,code
     movq    dlexitproc@GOTPCREL(%rip),%rax
     movq    (%rax),%rdx
     testq   %rdx,%rdx
@@ -114,8 +79,26 @@ procedure _FPC_proc_haltproc(e: longint); assembler; public name '_haltproc';
 
   .Lhaltproc:
     movl    $231,%eax                             { exit_group call }
-    movl    code,%edi
+    movq    ExitCode@GOTPCREL(%rip),%rdi
+    movzwl  (%rdi),%edi
     syscall
     jmp     .Lhaltproc
+
+    { We need this stuff to make gdb behave itself, otherwise
+      gdb will chokes with SIGILL when trying to debug apps.
+    }
+(*
+    .section ".note.ABI-tag", "a"
+    .align 4
+    .long 1f - 0f
+    .long 3f - 2f
+    .long  1
+0:  .asciz "GNU"
+1:  .align 4
+2:  .long 0
+    .long 2,4,0
+3:  .align 4
+
+    .section	.note.GNU-stack,"",@progbits *)
   end;
 

@@ -28,19 +28,19 @@ Type
   { TCustomSimpleXMlExporter }
   TCustomSimpleXMLExporter = Class(TCustomFileExporter)
   Private
-    FCurrentRow : UTF8String;
-    FIndent : UTF8String;
-    FRowElementName : UTF8String;
-    FRootNode : UTF8String;
+    FCurrentRow : String;
+    FIndent : String;
+    FRowElementName : String;
+    FRootNode : String;
     FAA : Boolean;
     FIS : Integer;
-    function AttrString(S: UTF8String): UTF8String;
+    function AttrString(S: String): String;
     procedure DecIndent;
     function GetXMLFormatsettings: TSimpleXMLFormatSettings;
     procedure IncIndent;
-    procedure OutputRow(const ARow: UTF8String);
+    procedure OutputRow(const ARow: String);
     procedure SetXMLFormatSettings(const AValue: TSimpleXMLFormatSettings);
-    function TextString(S: UTF8String): UTF8String;
+    function TextString(S: String): String;
   Protected
     Function  CreateFormatSettings : TCustomExportFormatSettings; override;
     Procedure DoBeforeExecute; override;
@@ -79,7 +79,7 @@ implementation
 
 { TCustomSimpleXMLExporter }
 
-procedure TCustomSimpleXMLExporter.OutputRow(const ARow: UTF8String);
+procedure TCustomSimpleXMLExporter.OutputRow(const ARow: String);
 begin
   Writeln(TextFile,FIndent,ARow);
 end;
@@ -134,21 +134,21 @@ begin
 end;
 
 const
-  QuotStr : UTF8String = '&quot;';
-  AmpStr : UTF8String = '&amp;';
-  ltStr : UTF8String = '&lt;';
-  gtStr : UTF8String = '&gt;';
+  QuotStr = '&quot;';
+  AmpStr = '&amp;';
+  ltStr = '&lt;';
+  gtStr = '&gt;';
 
-Procedure AddToResult(Var Res : UTF8String; S : UTF8String; P : integer; Var J : Integer; Const Add : UTF8String);
+Procedure AddToResult(Var Res : String; S : String; P : integer; Var J : Integer; Const Add : String);
 
 begin
-  Res:=Res+Copy(S,J,P-J);
+  Res:=Res+Copy(S,J,P-J+1);
   If (Add<>'') then
     Res:=Res+Add;
   J:=P+1;
 end;
 
-Function TCustomSimpleXMLExporter.AttrString(S : UTF8String) : UTF8String;
+Function TCustomSimpleXMLExporter.AttrString(S : String) : String;
 
 Var
   I,J : Integer;
@@ -169,7 +169,7 @@ begin
   AddToResult(Result,S,Length(S)+1,J,'');
 end;
 
-Function TCustomSimpleXMLExporter.TextString(S : UTF8String) : UTF8String;
+Function TCustomSimpleXMLExporter.TextString(S : String) : String;
 
 
 Var
@@ -204,11 +204,12 @@ end;
 procedure TCustomSimpleXMLExporter.DoDataHeader;
 
 Var
-  S : UTF8String;
+  S : String;
   P : Integer;
 
 begin
-  Writeln(TextFile,'<?xml version="1.0" encoding = "utf-8" ?>');
+  // Proper UTF-8 support would be good.
+  Writeln(TextFile,'<?xml version="1.0" encoding = "ISO 8859-1" ?>');
   S:=FRootNode;
   if S[Length(S)]<>'/' then
     S:=S+'/';
@@ -226,7 +227,7 @@ procedure TCustomSimpleXMLExporter.DoDataFooter;
 
 Var
   P,L : Integer;
-  S : UTF8String;
+  S : String;
 
 begin
   S:=FRootNode;
@@ -250,7 +251,7 @@ end;
 procedure TCustomSimpleXMLExporter.ExportField(EF: TExportFieldItem);
 
 Var
-  S : UTF8String;
+  S : String;
 
 begin
   S:=FormatField(EF.Field);

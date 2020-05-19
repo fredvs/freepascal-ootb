@@ -42,7 +42,7 @@ Type
     procedure ConvertFile(const AFileName: String; Src: TStrings; Dir,OS : String);
     Procedure ConvertFile(Const Source,Dest: String);
   Public
-    function Execute: Boolean;override;
+    Procedure Execute;override;
   end;
 
 
@@ -696,18 +696,12 @@ begin
   end;
 end;
 
-function TMakeFileConverter.Execute: Boolean;
+procedure TMakeFileConverter.Execute;
 begin
   if not FileExists('fpmake.pp') then
-    begin
-      ConvertFile('Makefile.fpc','fpmake.pp');
-      Result := True;
-    end
+    ConvertFile('Makefile.fpc','fpmake.pp')
   else
-    begin
-      Error(SErrConvertFPMakeExists);
-      Result := False;
-    end;
+    Error(SErrConvertFPMakeExists);
 end;
 
 begin

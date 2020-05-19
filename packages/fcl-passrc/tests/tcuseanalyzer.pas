@@ -21,7 +21,6 @@ type
     FAnalyzer: TPasAnalyzer;
     FPAMessages: TFPList; // list of TPAMessage
     FPAGoodMessages: TFPList;
-    FProcAnalyzer: TPasAnalyzer;
     function GetPAMessages(Index: integer): TPAMessage;
     procedure OnAnalyzerMessage(Sender: TObject; Msg: TPAMessage);
   protected
@@ -36,11 +35,8 @@ type
       const MsgText: string); virtual;
     procedure CheckUseAnalyzerUnexpectedHints; virtual;
     procedure CheckUnitUsed(const aFilename: string; Used: boolean); virtual;
-    procedure CheckScopeReferences(const ScopeName: string;
-      const RefNames: array of string);
   public
     property Analyzer: TPasAnalyzer read FAnalyzer;
-    property ProcAnalyzer: TPasAnalyzer read FProcAnalyzer;
     function PAMessageCount: integer;
     property PAMessages[Index: integer]: TPAMessage read GetPAMessages;
   end;
@@ -61,52 +57,29 @@ type
     procedure TestM_RepeatUntilStatement;
     procedure TestM_TryFinallyStatement;
     procedure TestM_TypeAlias;
-    procedure TestM_TypeAliasTypeInfo;
-    procedure TestM_RangeType;
     procedure TestM_Unary;
     procedure TestM_Const;
-    procedure TestM_ResourceString;
     procedure TestM_Record;
-    procedure TestM_RecordGeneric;
-    procedure TestM_PointerTyped_Record;
     procedure TestM_Array;
     procedure TestM_NestedFuncResult;
     procedure TestM_Enums;
     procedure TestM_ProcedureType;
-    procedure TestM_AnonymousProc;
     procedure TestM_Params;
     procedure TestM_Class;
     procedure TestM_ClassForward;
     procedure TestM_Class_Property;
-    procedure TestM_Class_PropertyProtected;
     procedure TestM_Class_PropertyOverride;
     procedure TestM_Class_MethodOverride;
     procedure TestM_Class_MethodOverride2;
-    procedure TestM_ClassInterface_Corba;
-    procedure TestM_ClassInterface_NoHintsForMethod;
-    procedure TestM_ClassInterface_NoHintsForImpl;
-    procedure TestM_ClassInterface_Delegation;
-    procedure TestM_ClassInterface_COM;
     procedure TestM_TryExceptStatement;
 
     // single module hints
     procedure TestM_Hint_UnitNotUsed;
     procedure TestM_Hint_UnitNotUsed_No_OnlyExternal;
-    procedure TestM_Hint_UnitUsed;
-    procedure TestM_Hint_UnitUsedVarArgs;
     procedure TestM_Hint_ParameterNotUsed;
-    procedure TestM_Hint_ParameterNotUsedOff;
-    procedure TestM_Hint_ParameterInOverrideNotUsed;
-    procedure TestM_Hint_ParameterAssignedButNotReadVarParam;
     procedure TestM_Hint_ParameterNotUsed_Abstract;
     procedure TestM_Hint_ParameterNotUsedTypecast;
-    procedure TestM_Hint_OutParam_No_AssignedButNeverUsed;
-    procedure TestM_Hint_ArgPassed_No_ParameterNotUsed;
-    procedure TestM_Hint_ArrayArg_No_ParameterNotUsed;
-    procedure TestM_Hint_ArrayArg_No_ParameterNotUsed2;
-    procedure TestM_Hint_InheritedWithoutParams;
     procedure TestM_Hint_LocalVariableNotUsed;
-    procedure TestM_HintsOff_LocalVariableNotUsed;
     procedure TestM_Hint_ForVar_No_LocalVariableNotUsed;
     procedure TestM_Hint_InterfaceUnitVariableUsed;
     procedure TestM_Hint_ValueParameterIsAssignedButNeverUsed;
@@ -114,7 +87,6 @@ type
     procedure TestM_Hint_LocalXYNotUsed;
     procedure TestM_Hint_PrivateFieldIsNeverUsed;
     procedure TestM_Hint_PrivateFieldIsAssignedButNeverUsed;
-    procedure TestM_Hint_PrivateFieldExtClassNoIsAssignedButNeverUsed;
     procedure TestM_Hint_PrivateMethodIsNeverUsed;
     procedure TestM_Hint_LocalDestructor_No_IsNeverUsed;
     procedure TestM_Hint_PrivateTypeNeverUsed;
@@ -122,32 +94,24 @@ type
     procedure TestM_Hint_PrivatePropertyNeverUsed;
     procedure TestM_Hint_LocalClassInProgramNotUsed;
     procedure TestM_Hint_LocalMethodInProgramNotUsed;
-    procedure TestM_Hint_LocalVarOfNotUsedProc;
-    procedure TestM_Hint_LocalVarOfNotUsedMethod;
     procedure TestM_Hint_AssemblerParameterIgnored;
     procedure TestM_Hint_AssemblerDelphiParameterIgnored;
     procedure TestM_Hint_FunctionResultDoesNotSeemToBeSet;
     procedure TestM_Hint_FunctionResultDoesNotSeemToBeSet_Abstract;
     procedure TestM_Hint_FunctionResultRecord;
-    procedure TestM_Hint_FunctionResultRecordEmpty;
     procedure TestM_Hint_FunctionResultPassRecordElement;
-    procedure TestM_Hint_FunctionResultAssembler;
-    procedure TestM_Hint_FunctionResultExit;
-    procedure TestM_Hint_AbsoluteVar;
-    procedure TestM_Hint_GenFunctionResultArgNotUsed;
+    procedure TestM_Hint_OutParam_No_AssignedButNeverUsed;
+    procedure TestM_Hint_ArgPassed_No_ParameterNotUsed;
 
     // whole program optimization
     procedure TestWP_LocalVar;
     procedure TestWP_UnitUsed;
-    procedure TestWP_UnitUsed_ResourceString;
     procedure TestWP_UnitNotUsed;
     procedure TestWP_UnitInitialization;
     procedure TestWP_UnitFinalization;
     procedure TestWP_CallInherited;
     procedure TestWP_ProgramPublicDeclarations;
-    procedure TestWP_ClassOverride;
     procedure TestWP_ClassDefaultProperty;
-    procedure TestWP_BeforeConstruction;
     procedure TestWP_Published;
     procedure TestWP_PublishedSetType;
     procedure TestWP_PublishedArrayType;
@@ -157,37 +121,9 @@ type
     procedure TestWP_PublishedProperty;
     procedure TestWP_BuiltInFunctions;
     procedure TestWP_TypeInfo;
-    procedure TestWP_TypeInfo_PropertyEnumType;
-    procedure TestWP_TypeInfo_Alias;
-    procedure TestWP_ForInClass;
-    procedure TestWP_AssertSysUtils;
-    procedure TestWP_RangeErrorSysUtils;
-    procedure TestWP_ClassInterface;
-    procedure TestWP_ClassInterface_OneWayIntfToObj;
-    procedure TestWP_ClassInterface_Delegation;
-    procedure TestWP_ClassInterface_COM;
-    procedure TestWP_ClassInterface_COM_Unit;
-    procedure TestWP_ClassInterface_Typeinfo;
-    procedure TestWP_ClassInterface_TGUID;
-    procedure TestWP_ClassHelper;
-    procedure TestWP_ClassHelper_ClassConstrucor_Used;
-    procedure TestWP_Attributes;
-    procedure TestWP_Attributes_ForwardClass;
-    procedure TestWP_Attributes_Params;
-
-    // scope references
-    procedure TestSR_Proc_UnitVar;
-    procedure TestSR_Init_UnitVar;
   end;
 
-function dbgs(a: TPSRefAccess) : string;
-
 implementation
-
-function dbgs(a: TPSRefAccess): string;
-begin
-  str(a,Result);
-end;
 
 { TCustomTestUseAnalyzer }
 
@@ -222,7 +158,6 @@ begin
     TPAMessage(FPAMessages[i]).Release;
   FreeAndNil(FPAMessages);
   FreeAndNil(FAnalyzer);
-  FreeAndNil(FProcAnalyzer);
   inherited TearDown;
 end;
 
@@ -253,21 +188,15 @@ begin
 end;
 
 procedure TCustomTestUseAnalyzer.CheckUsedMarkers;
-type
-  TUsed = (
-    uUsed,
-    uNotUsed,
-    uTypeInfo,
-    uNoTypeinfo
-    );
 var
   aMarker: PSrcMarker;
   p: SizeInt;
   Postfix: String;
   Elements: TFPList;
   i: Integer;
-  El, FoundEl: TPasElement;
-  ExpectedUsed: TUsed;
+  El: TPasElement;
+  ExpectedUsed: Boolean;
+  FoundEl: TPAElement;
 begin
   aMarker:=FirstSrcMarker;
   while aMarker<>nil do
@@ -279,13 +208,9 @@ begin
       Postfix:=copy(aMarker^.Identifier,p+1);
 
       if Postfix='used' then
-        ExpectedUsed:=uUsed
+        ExpectedUsed:=true
       else if Postfix='notused' then
-        ExpectedUsed:=uNotUsed
-      else if Postfix='typeinfo' then
-        ExpectedUsed:=uTypeInfo
-      else if Postfix='notypeinfo' then
-        ExpectedUsed:=uNoTypeInfo
+        ExpectedUsed:=false
       else
         RaiseErrorAtSrcMarker('TCustomTestUseAnalyzer.CheckUsedMarkers unknown postfix "'+Postfix+'"',aMarker);
 
@@ -296,34 +221,18 @@ begin
           begin
           El:=TPasElement(Elements[i]);
           writeln('TCustomTestUseAnalyzer.CheckUsedMarkers ',aMarker^.Identifier,' ',i,'/',Elements.Count,' El=',GetObjName(El),' ',GetObjName(El.CustomData));
-          case ExpectedUsed of
-          uUsed,uNotUsed:
-            if Analyzer.IsUsed(El) then
-              begin
-              FoundEl:=El;
-              break;
-              end;
-          uTypeInfo,uNoTypeinfo:
-            if Analyzer.IsTypeInfoUsed(El) then
-              begin
-              FoundEl:=El;
-              break;
-              end;
-          end;
+          FoundEl:=Analyzer.FindElement(El);
+          if FoundEl<>nil then break;
           end;
         if FoundEl<>nil then
-          case ExpectedUsed of
-          uNotUsed:
+          begin
+          if not ExpectedUsed then
             RaiseErrorAtSrcMarker('expected element to be *not* used, but it is marked',aMarker);
-          uNoTypeinfo:
-            RaiseErrorAtSrcMarker('expected element to have *no* typeinfo, but it is marked',aMarker);
           end
         else
-          case ExpectedUsed of
-          uUsed:
+          begin
+          if ExpectedUsed then
             RaiseErrorAtSrcMarker('expected element to be used, but it is not marked',aMarker);
-          uTypeInfo:
-            RaiseErrorAtSrcMarker('expected element to have typeinfo, but it is not marked',aMarker);
           end;
       finally
         Elements.Free;
@@ -331,6 +240,7 @@ begin
       end;
     aMarker:=aMarker^.Next;
     end;
+
 end;
 
 procedure TCustomTestUseAnalyzer.CheckUseAnalyzerHint(MsgType: TMessageType;
@@ -404,175 +314,6 @@ begin
     if Used then
       Fail('expected unit "'+aFilename+'" used, but it is not used');
     end;
-end;
-
-procedure TCustomTestUseAnalyzer.CheckScopeReferences(
-  const ScopeName: string; const RefNames: array of string);
-type
-  TEntry = record
-    Name: string;
-    Access: TPSRefAccess;
-  end;
-
-var
-  Entries: array of TEntry;
-
-  procedure CheckRefs(ScopeRefs: TPasScopeReferences; const Prefix: string);
-
-    procedure DumpRefsAndFail(Refs: TFPList; const Msg: string);
-    var
-      i: Integer;
-      Ref: TPasScopeReference;
-    begin
-      {$IFDEF VerbosePasAnalyzer}
-      if Refs.Count=0 then
-        writeln('DumpRefsAndFail ',Prefix,' NO REFS');
-      {$ENDIF}
-      for i:=0 to Refs.Count-1 do
-        begin
-        Ref:=TPasScopeReference(Refs[i]);
-        if Ref=nil then break;
-        {$IFDEF VerbosePasAnalyzer}
-        writeln('DumpRefsAndFail ',Prefix,' ',i,' ',GetObjName(Ref.Element),' ',Ref.Access);
-        {$ENDIF}
-        end;
-      Fail(Prefix+': '+Msg);
-    end;
-
-  var
-    Refs: TFPList;
-    j, i: Integer;
-    o: TObject;
-    Ref: TPasScopeReference;
-  begin
-    if ScopeRefs=nil then
-      Refs:=TFPList.Create
-    else
-      Refs:=ScopeRefs.GetList;
-    try
-      // check that Refs only contains TPasProcScopeReference
-      for i:=0 to Refs.Count-1 do
-        begin
-        o:=TObject(Refs[i]);
-        if not (o is TPasScopeReference) then
-          Fail(Prefix+': Refs['+IntToStr(i)+'] '+GetObjName(o));
-        end;
-      // check that all Entries are referenced
-      for i:=0 to length(Entries)-1 do
-        begin
-        j:=Refs.Count-1;
-        while (j>=0)
-            and (CompareText(Entries[i].Name,TPasScopeReference(Refs[j]).Element.Name)<>0) do
-          dec(j);
-        if j<0 then
-          DumpRefsAndFail(Refs,'Missing reference "'+Entries[i].Name+'"');
-        Ref:=TPasScopeReference(Refs[j]);
-        if (Entries[i].Access<>psraNone) and (Ref.Access<>Entries[i].Access) then
-          DumpRefsAndFail(Refs,'Wrong reference access "'+Entries[i].Name+'",'
-            +' expected '+dbgs(Entries[i].Access)+', but got '+dbgs(Ref.Access));
-        end;
-      // check that no other references are in Refs
-      for i:=0 to Refs.Count-1 do
-        begin
-        Ref:=TPasScopeReference(Refs[i]);
-        j:=length(Entries)-1;
-        while (j>=0)
-            and (CompareText(Ref.Element.Name,Entries[j].Name)<>0) do
-          dec(j);
-        if j<0 then
-          DumpRefsAndFail(Refs,'Unneeded reference "'+GetObjName(Ref.Element)+'"');
-        end;
-    finally
-      Refs.Free;
-    end;
-  end;
-
-  function FindProc(Section: TPasSection): boolean;
-  var
-    i: Integer;
-    El: TPasElement;
-    Proc: TPasProcedure;
-    Scope: TPasProcedureScope;
-  begin
-    for i:=0 to Section.Declarations.Count-1 do
-      begin
-      El:=TPasElement(Section.Declarations[i]);
-      if CompareText(El.Name,ScopeName)<>0 then continue;
-      if not (El is TPasProcedure) then
-        Fail('El is not proc '+GetObjName(El));
-      Proc:=TPasProcedure(El);
-      Scope:=Proc.CustomData as TPasProcedureScope;
-      if Scope.DeclarationProc<>nil then continue;
-
-      // check references created by AnalyzeModule
-      CheckRefs(Scope.References,'AnalyzeModule');
-
-      exit(true);
-      end;
-    Result:=false;
-  end;
-
-  procedure CheckInitialFinalization(El: TPasImplBlock);
-  var
-    Scope: TPasInitialFinalizationScope;
-  begin
-    Scope:=El.CustomData as TPasInitialFinalizationScope;
-    CheckRefs(Scope.References,'AnalyzeModule');
-  end;
-
-var
-  i: Integer;
-begin
-  Entries:=nil;
-  SetLength(Entries,High(RefNames)-low(RefNames)+1);
-  for i:=low(RefNames) to high(RefNames) do
-    begin
-    Entries[i].Name:=RefNames[i];
-    Entries[i].Access:=psraNone;
-    end;
-
-  if Module is TPasProgram then
-    begin
-    if CompareText(ScopeName,'begin')=0 then
-      begin
-      // check begin-block references created by AnalyzeModule
-      CheckInitialFinalization(Module.InitializationSection);
-      exit;
-      end
-    else if FindProc(TPasProgram(Module).ProgramSection) then
-      exit;
-    end
-  else if Module is TPasLibrary then
-    begin
-    if CompareText(ScopeName,'begin')=0 then
-      begin
-      // check begin-block references created by AnalyzeModule
-      CheckInitialFinalization(Module.InitializationSection);
-      exit;
-      end
-    else if FindProc(TPasLibrary(Module).LibrarySection) then
-      exit;
-    end
-  else if Module.ClassType=TPasModule then
-    begin
-    if CompareText(ScopeName,'initialization')=0 then
-      begin
-      // check initialization references created by AnalyzeModule
-      CheckInitialFinalization(Module.InitializationSection);
-      exit;
-      end
-    else if CompareText(ScopeName,'finalization')=0 then
-      begin
-      // check finalization references created by AnalyzeModule
-      CheckInitialFinalization(Module.FinalizationSection);
-      exit;
-      end
-    else if FindProc(Module.InterfaceSection) then
-      exit
-    else if FindProc(Module.ImplementationSection) then
-      exit;
-    end;
-  Fail('missing proc '+ScopeName);
 end;
 
 function TCustomTestUseAnalyzer.PAMessageCount: integer;
@@ -687,7 +428,6 @@ begin
   Add('  {#c_used}c: longint;');
   Add('begin');
   Add('  if a=0 then b:=1 else c:=2;');
-  Add('  if a=0 then else ;');
   Add('end;');
   Add('begin');
   Add('  DoIt;');
@@ -761,43 +501,6 @@ begin
   AnalyzeProgram;
 end;
 
-procedure TTestUseAnalyzer.TestM_TypeAliasTypeInfo;
-begin
-  StartUnit(false);
-  Add([
-  'interface',
-  'type',
-  '  {#integer_typeinfo}integer = type longint;',
-  '  {tobject_used}TObject = class',
-  '  private',
-  '    type {#tcolor_notypeinfo}tcolor = type longint;',
-  '  protected',
-  '    type {#tsize_typeinfo}tsize = type longint;',
-  '  end;',
-  'implementation',
-  '']);
-  AnalyzeUnit;
-end;
-
-procedure TTestUseAnalyzer.TestM_RangeType;
-begin
-  StartProgram(false);
-  Add('procedure {#DoIt_used}DoIt;');
-  Add('const');
-  Add('  {#neg1_used}Neg1 = -1;');
-  Add('  {#pos1_used}Pos1 = +1;');
-  Add('type');
-  Add('  {#trg_used}TRg = Neg1..Pos1;');
-  Add('var');
-  Add('  {#a_used}a: trg;');
-  Add('begin');
-  Add('  a:=0;');
-  Add('end;');
-  Add('begin');
-  Add('  DoIt;');
-  AnalyzeProgram;
-end;
-
 procedure TTestUseAnalyzer.TestM_Unary;
 begin
   StartProgram(false);
@@ -819,130 +522,43 @@ end;
 procedure TTestUseAnalyzer.TestM_Const;
 begin
   StartProgram(false);
-  Add([
-  'procedure {#DoIt_used}DoIt;',
-  'var',
-  '  {#a_used}a: longint;',
-  '  {#b_used}b: boolean;',
-  '  {#c_used}c: array of longint;',
-  '  {#d_used}d: string;',
-  'begin',
-  '  a:=+1;',
-  '  b:=true;',
-  '  c:=nil;',
-  '  d:=''foo'';',
-  'end;',
-  'begin',
-  '  DoIt;']);
-  AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_ResourceString;
-begin
-  StartProgram(false);
-  Add([
-  'resourcestring',
-  '  {#a_used}a = ''txt'';',
-  '  {#b_used}b = ''foo'';',
-  '  {#c_notused}c = ''bar'';',
-  'procedure {#DoIt_used}DoIt(s: string);',
-  'var',
-  '  {#d_used}d: string;',
-  'begin',
-  '  d:=b;',
-  'end;',
-  'begin',
-  '  DoIt(a);']);
+  Add('procedure {#DoIt_used}DoIt;');
+  Add('var');
+  Add('  {#a_used}a: longint;');
+  Add('  {#b_used}b: boolean;');
+  Add('  {#c_used}c: array of longint;');
+  Add('  {#d_used}d: string;');
+  Add('begin');
+  Add('  a:=+1;');
+  Add('  b:=true;');
+  Add('  c:=nil;');
+  Add('  d:=''foo'';');
+  Add('end;');
+  Add('begin');
+  Add('  DoIt;');
   AnalyzeProgram;
 end;
 
 procedure TTestUseAnalyzer.TestM_Record;
 begin
   StartProgram(false);
-  Add([
-  'procedure {#DoIt_used}DoIt;',
-  'type',
-  '  {#integer_used}integer = longint;',
-  '  {#trec_used}TRec = record',
-  '    {#a_used}a: integer;',
-  '    {#b_notused}b: integer;',
-  '    {#c_used}c: integer;',
-  '  end;',
-  'var',
-  '  {#r_used}r: TRec;',
-  'const',
-  '  ci = 2;',
-  '  cr: TRec = (a:0;b:ci;c:2);',
-  'begin',
-  '  r.a:=3;',
-  '  with r do c:=4;',
-  '  r:=cr;',
-  'end;',
-  'begin',
-  '  DoIt;']);
+  Add('procedure {#DoIt_used}DoIt;');
+  Add('type');
+  Add('  {#integer_used}integer = longint;');
+  Add('  {#trec_used}TRec = record');
+  Add('    {#a_used}a: integer;');
+  Add('    {#b_notused}b: integer;');
+  Add('    {#c_used}c: integer;');
+  Add('  end;');
+  Add('var');
+  Add('  {#r_used}r: TRec;');
+  Add('begin');
+  Add('  r.a:=3;');
+  Add('  with r do c:=4;');
+  Add('end;');
+  Add('begin');
+  Add('  DoIt;');
   AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_RecordGeneric;
-begin
-  StartProgram(false);
-  Add([
-  'procedure {#DoIt_used}DoIt;',
-  'type',
-  '  {#integer_used}integer = longint;',
-  '  {#number_used}number = word;',
-  '  generic {#trec_used}TRec<{#trec_t_notused}T> = record',
-  '    {#a_used}a: integer;',
-  '    {#b_notused}b: integer;',
-  '    {#c_used}c: T;',
-  '  end;',
-  'var',
-  '  {#r_used}r: specialize TRec<number>;',
-  'const',
-  '  ci = 2;',
-  '  cr: specialize TRec<number> = (a:0;b:ci;c:2);',
-  'begin',
-  '  r.a:=3;',
-  '  with r do c:=4;',
-  '  r:=cr;',
-  'end;',
-  'begin',
-  '  DoIt;']);
-  AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_PointerTyped_Record;
-begin
-  StartProgram(false);
-  Add([
-  'procedure {#DoIt_used}DoIt;',
-  'type',
-  '  {#prec_used}PRec = ^TRec;',
-  '  {#trec_used}TRec = record',
-  '    {#a_used}a: longint;',
-  '    {#b_notused}b: longint;',
-  '    {#c_used}c: longint;',
-  '    {#d_used}d: longint;',
-  '    {#e_used}e: longint;',
-  '  end;',
-  'var',
-  '  r: TRec;',
-  '  p: PRec;',
-  '  i: longint;',
-  'begin',
-  '  p:=@r;',
-  '  i:=p^.a;',
-  '  p^.c:=i;',
-  '  if i=p^.d then;',
-  '  if p^.e=i then;',
-  'end;',
-  'begin',
-  '  DoIt;']);
-  AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "b" not used');
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableIsAssignedButNeverUsed,
-    'Local variable "c" is assigned but never used');
-  CheckUseAnalyzerUnexpectedHints;
 end;
 
 procedure TTestUseAnalyzer.TestM_Array;
@@ -964,7 +580,7 @@ begin
   Add('  {#i_used}i: TArrayInt;');
   Add('begin');
   Add('  a[b]:=c[d];');
-  Add('  SetLength(e,f);');
+  Add('  SetLength(e,f)');
   Add('  if low(g)=high(h)+length(i) then');
   Add('end;');
   Add('begin');
@@ -1036,27 +652,6 @@ begin
   Add('end;');
   Add('begin');
   Add('  DoIt;');
-  AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_AnonymousProc;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  {#TProc_used}TProc = reference to procedure;',
-  'procedure {#DoIt_used}DoIt;',
-  'var',
-  '  {#p_used}p: TProc;',
-  '  {#i_used}i: longint;',
-  'begin',
-  '  p:=procedure',
-  '    begin',
-  '      i:=3;',
-  '    end;',
-  'end;',
-  'begin',
-  '  DoIt;']);
   AnalyzeProgram;
 end;
 
@@ -1148,31 +743,6 @@ begin
   AnalyzeProgram;
 end;
 
-procedure TTestUseAnalyzer.TestM_Class_PropertyProtected;
-begin
-  StartUnit(false);
-  Add([
-  'interface',
-  'type',
-  '  {#integer_used}integer = longint;',
-  '  {tobject_used}TObject = class',
-  '  private',
-  '    {#fb_used}Fb: integer;',
-  '    {#fc_used}Fc: integer;',
-  '    {#fd_used}Fd: integer;',
-  '    {#fe_notused}Fe: integer;',
-  '    function {#iscstored_used}IsCStored: boolean;',
-  '  protected',
-  '    property {#C_used}C: integer read FC write FD stored IsCStored;',
-  '  end;',
-  'implementation',
-  'function TObject.IsCStored: boolean;',
-  'begin',
-  '  Result:=Fb<>0;',
-  'end;']);
-  AnalyzeUnit;
-end;
-
 procedure TTestUseAnalyzer.TestM_Class_PropertyOverride;
 begin
   StartProgram(false);
@@ -1220,10 +790,10 @@ procedure TTestUseAnalyzer.TestM_Class_MethodOverride2;
 begin
   StartProgram(false);
   Add('type');
-  Add('  {#tobject_used}TObject = class');
+  Add('  {tobject_used}TObject = class');
   Add('    procedure {#obj_doa_used}DoA; virtual; abstract;');
   Add('  end;');
-  Add('  {#tmobile_used}TMobile = class(TObject)');
+  Add('  {tmobile_used}TMobile = class(TObject)');
   Add('    constructor {#mob_create_used}Create;');
   Add('    procedure {#mob_doa_used}DoA; override;');
   Add('  end;');
@@ -1234,168 +804,6 @@ begin
   Add('  o.DoA;');
   Add('  o:=TMobile.Create;'); // use TMobile after o.DoA
   AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_ClassInterface_Corba;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  {#iunknown_used}IUnknown = interface',
-  '    procedure {#iunknown_run_used}Run;',
-  '    procedure {#iunknown_walk_notused}Walk;',
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    procedure IUnknown.Run = Fly;',
-  '    procedure {#tbird_fly_used}Fly; virtual; abstract;',
-  '    procedure {#tbird_walk_used}Walk; virtual; abstract;',
-  '  end;',
-  '  {#teagle_used}TEagle = class(TBird)',
-  '  strict private',
-  '    procedure {#teagle_fly_used}Fly; override;',
-  '    procedure {#teagle_walk_used}Walk; override;',
-  '  end;',
-  'procedure TEagle.Fly; begin end;',
-  'procedure TEagle.Walk; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  i.Run;',
-  '']);
-  AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_ClassInterface_NoHintsForMethod;
-begin
-  StartUnit(false);
-  Add([
-  '{$interfaces corba}',
-  'interface',
-  'type',
-  '  {#iunknown_used}IUnknown = interface',
-  '    procedure {#iunknown_run_used}Run(i: longint);',
-  '    function {#iunknown_walk_used}Walk: boolean;',
-  '  end;',
-  'implementation',
-  '']);
-  AnalyzeUnit;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_ClassInterface_NoHintsForImpl;
-begin
-  AddModuleWithIntfImplSrc('unit2.pp',
-    LinesToStr([
-    '{$interfaces corba}',
-    'type',
-    '  IBird = interface',
-    '    procedure DoIt;',
-    '  end;',
-    '']),
-    LinesToStr([
-    '']));
-
-  StartUnit(true);
-  Add([
-  '{$interfaces corba}',
-  'interface',
-  'uses unit2;',
-  'type',
-  '  {#tobject_used}TObject = class(IBird)',
-  '  strict private',
-  '    procedure {#tobject_doit_used}DoIt;',
-  '  end;',
-  'implementation',
-  'procedure TObject.DoIt; begin end;',
-  '']);
-  AnalyzeUnit;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_ClassInterface_Delegation;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  {#iunknown_used}IUnknown = interface',
-  '    procedure {#iunknown_run_used}Run;',
-  '    procedure {#iunknown_walk_notused}Walk;',
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    procedure IUnknown.Run = Fly;',
-  '    procedure {#tbird_fly_used}Fly;',
-  '    procedure {#tbird_walk_used}Walk;',
-  '  end;',
-  '  {#teagle_used}TEagle = class(TObject,IUnknown)',
-  '  strict private',
-  '    {#teagle_fbird_used}FBird: TBird;',
-  '    property {#teagle_bird_used}Bird: TBird read FBird implements IUnknown;',
-  '  end;',
-  'procedure TBird.Fly; begin end;',
-  'procedure TBird.Walk; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  i.Run;',
-  '']);
-  AnalyzeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestM_ClassInterface_COM;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces com}',
-  'type',
-  '  {#tguid_used}TGuid = string;',
-  '  {#integer_used}integer = longint;',
-  '  {#iunknown_used}IUnknown = interface',
-  '    function {#iunknown_queryintf_used}QueryInterface(const iid: TGuid; out obj): Integer;',
-  '    function {#iunknown_addref_used}_AddRef: Integer;',
-  '    function {#iunknown_release_used}_Release: Integer;',
-  '    procedure {#iunknown_doit_notused}DoIt;',
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    function {#tbird_queryintf_used}QueryInterface(const iid: TGuid; out obj): Integer;',
-  '    function {#tbird_addref_used}_AddRef: Integer;',
-  '    function {#tbird_release_used}_Release: Integer;',
-  '    procedure {#tbird_doit_used}DoIt;',
-  '  end;',
-  '  {#teagle_used}TEagle = class(TBird)',
-  '  end;',
-  'function TBird.QueryInterface(const iid: TGuid; out obj): Integer;',
-  'begin',
-  '  if iid='''' then obj:=nil;',
-  '  Result:=0;',
-  'end;',
-  'function TBird._AddRef: Integer; begin Result:=1; end;',
-  'function TBird._Release: Integer; begin Result:=2; end;',
-  'procedure TBird.DoIt; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  if i=nil then ;',
-  '']);
-  AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalXYNotUsed,'Local procedure "DoIt" not used');
-  CheckUseAnalyzerUnexpectedHints;
 end;
 
 procedure TTestUseAnalyzer.TestM_TryExceptStatement;
@@ -1472,40 +880,6 @@ begin
   CheckUseAnalyzerUnexpectedHints;
 end;
 
-procedure TTestUseAnalyzer.TestM_Hint_UnitUsed;
-begin
-  AddModuleWithIntfImplSrc('unit2.pp',
-    LinesToStr([
-    'var i: longint;',
-    '']),
-    LinesToStr(['']));
-
-  StartProgram(true);
-  Add('uses unit2;');
-  Add('begin');
-  Add('  i:=3;');
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_UnitUsedVarArgs;
-begin
-  AddModuleWithIntfImplSrc('unit2.pp',
-    LinesToStr([
-    'var i: longint;',
-    '']),
-    LinesToStr(['']));
-
-  StartProgram(true);
-  Add('uses unit2;');
-  Add('procedure Writeln(); varargs;');
-  Add('begin end;');
-  Add('begin');
-  Add('  writeln(i);');
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
 procedure TTestUseAnalyzer.TestM_Hint_ParameterNotUsed;
 begin
   StartProgram(true);
@@ -1515,61 +889,6 @@ begin
   Add('  DoIt(1);');
   AnalyzeProgram;
   CheckUseAnalyzerHint(mtHint,nPAParameterNotUsed,'Parameter "i" not used');
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_ParameterNotUsedOff;
-begin
-  StartProgram(true);
-  Add('{$warn '+IntToStr(nPAParameterNotUsed)+' off}');
-  Add('procedure DoIt(i: longint);');
-  Add('begin end;');
-  Add('begin');
-  Add('  DoIt(1);');
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_ParameterInOverrideNotUsed;
-begin
-  StartProgram(true);
-  Add([
-  'type',
-  '  TObject = class',
-  '    procedure DoIt(i: longint); virtual;',
-  '  end;',
-  '  TBird = class',
-  '    procedure DoIt(j: longint); override;',
-  '  end;',
-  'procedure TObject.DoIt(i: longint);',
-  'begin',
-  'end;',
-  'procedure TBird.DoIt(j: longint);',
-  'begin',
-  'end;',
-  'var b: TBird;',
-  'begin',
-  '  TObject(b).DoIt(1);']);
-  AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPAParameterInOverrideNotUsed,'Parameter "i" not used');
-  CheckUseAnalyzerHint(mtHint,nPAParameterInOverrideNotUsed,'Parameter "j" not used');
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_ParameterAssignedButNotReadVarParam;
-begin
-  StartUnit(false);
-  Add([
-  'interface',
-  'procedure DoIt(i: longint);',
-  'implementation',
-  'procedure DoIt(i: longint);',
-  'begin',
-  '{$Hints off}',
-  'end;',
-  'begin',
-  '  DoIt(3);']);
-  AnalyzeUnit;
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -1607,140 +926,24 @@ begin
   CheckUseAnalyzerUnexpectedHints;
 end;
 
-procedure TTestUseAnalyzer.TestM_Hint_OutParam_No_AssignedButNeverUsed;
-begin
-  StartProgram(true);
-  Add('procedure DoIt(out x: longint);');
-  Add('begin');
-  Add('  x:=3;');
-  Add('end;');
-  Add('var i: longint;');
-  Add('begin');
-  Add('  DoIt(i);');
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_ArgPassed_No_ParameterNotUsed;
-begin
-  StartProgram(false);
-  Add([
-  'procedure AssertTrue(b: boolean);',
-  'begin',
-  '  if b then ;',
-  'end;',
-  'procedure AssertFalse(b: boolean);',
-  'begin',
-  '  AssertTrue(not b);',
-  'end;',
-  'begin',
-  '  AssertFalse(true);',
-  '']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_ArrayArg_No_ParameterNotUsed;
-begin
-  StartProgram(false);
-  Add([
-  'type TArr = array of boolean;',
-  'procedure Fly(a: TArr);',
-  'begin',
-  '  a[1]:=true;',
-  'end;',
-  'begin',
-  '  Fly(nil);',
-  '']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_ArrayArg_No_ParameterNotUsed2;
-begin
-  StartProgram(false);
-  Add([
-  'type {#Tarr_used}TArr = array of boolean;',
-  'procedure {#Run_used}Run({#b_used}b: boolean);',
-  'begin',
-  '  if b then ;',
-  'end;',
-  'procedure {#Fly_used}Fly({#a_used}a: TArr);',
-  'begin',
-  '  Run(a[1]);',
-  'end;',
-  'begin',
-  '  Fly(nil);',
-  '']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_InheritedWithoutParams;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  TObject = class',
-  '    constructor Create(i: longint); virtual;',
-  '  end;',
-  '  TBird = class',
-  '    constructor Create(i: longint); override;',
-  '  end;',
-  'constructor TObject.Create(i: longint);',
-  'begin',
-  '  if i=0 then ;',
-  'end;',
-  'constructor TBird.Create(i: longint);',
-  'begin',
-  '  inherited;',
-  'end;',
-  'begin',
-  '  TBird.Create(3);']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
 procedure TTestUseAnalyzer.TestM_Hint_LocalVariableNotUsed;
 begin
   StartProgram(true);
-  Add([
-  'procedure DoIt;',
-  'const',
-  '  a = 13;',
-  '  b: longint = 14;',
-  'var',
-  '  c: char;',
-  '  d: longint = 15;',
-  'begin',
-  'end;',
-  'begin',
-  '  DoIt;']);
+  Add('procedure DoIt;');
+  Add('const');
+  Add('  a = 13;');
+  Add('  b: longint = 14;');
+  Add('var');
+  Add('  c: char;');
+  Add('  d: longint = 15;');
+  Add('begin end;');
+  Add('begin');
+  Add('  DoIt;');
   AnalyzeProgram;
   CheckUseAnalyzerHint(mtHint,nPALocalXYNotUsed,'Local constant "a" not used');
   CheckUseAnalyzerHint(mtHint,nPALocalXYNotUsed,'Local constant "b" not used');
   CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "c" not used');
   CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "d" not used');
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_HintsOff_LocalVariableNotUsed;
-begin
-  StartProgram(true);
-  Add([
-  'procedure DoIt;',
-  'const',
-  '  a = 13;',
-  '  b: longint = 14;',
-  'var',
-  '  c: char;',
-  '  d: longint = 15;',
-  'begin',
-  '{$Hints off}',
-  'end;',
-  'begin',
-  '  DoIt;']);
-  AnalyzeProgram;
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -1894,27 +1097,6 @@ begin
   AnalyzeProgram;
   CheckUseAnalyzerHint(mtHint,nPAPrivateFieldIsAssignedButNeverUsed,
     'Private field "TMobile.a" is assigned but never used');
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.
-  TestM_Hint_PrivateFieldExtClassNoIsAssignedButNeverUsed;
-begin
-  StartProgram(false,[]);
-  Add([
-  '{$modeswitch externalclass}',
-  'type',
-  '  TMobile = class external name ''foo''',
-  '  private',
-  '    FA: longint;',
-  '  public',
-  '    property A: longint write FA;',
-  '  end;',
-  'var m: TMobile;',
-  'begin',
-  '  m.A:=3;',
-  '']);
-  AnalyzeProgram;
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -2072,41 +1254,6 @@ begin
   CheckUseAnalyzerUnexpectedHints;
 end;
 
-procedure TTestUseAnalyzer.TestM_Hint_LocalVarOfNotUsedProc;
-begin
-  StartProgram(true,[]);
-  Add('type');
-  Add('procedure DoIt;');
-  Add('var i: longint;');
-  Add('begin');
-  Add('end;');
-  Add('begin');
-  AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalXYNotUsed,'Local procedure "DoIt" not used');
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_LocalVarOfNotUsedMethod;
-begin
-  StartProgram(true,[supTObject]);
-  Add('type');
-  Add('  TMobile = class');
-  Add('  private');
-  Add('    procedure DoIt;');
-  Add('  end;');
-  Add('procedure TMobile.DoIt;');
-  Add('var i: longint;');
-  Add('begin');
-  Add('end;');
-  Add('var');
-  Add('  m: TMobile;');
-  Add('begin');
-  Add('  if m=nil then ;');
-  AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPAPrivateMethodIsNeverUsed,'Private method "TMobile.DoIt" is never used');
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
 procedure TTestUseAnalyzer.TestM_Hint_AssemblerParameterIgnored;
 begin
   StartProgram(true);
@@ -2200,25 +1347,6 @@ begin
   CheckUseAnalyzerUnexpectedHints;
 end;
 
-procedure TTestUseAnalyzer.TestM_Hint_FunctionResultRecordEmpty;
-begin
-  StartProgram(true);
-  Add([
-  '{$modeswitch AdvancedRecords}',
-  'type',
-  '  TEmpty = record',
-  '    class function Create: TEmpty; static;',
-  '  end;',
-  'class function TEmpty.Create: TEmpty;',
-  'begin',
-  'end;',
-  'begin',
-  '  TEmpty.Create;',
-  '']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
 procedure TTestUseAnalyzer.TestM_Hint_FunctionResultPassRecordElement;
 begin
   StartProgram(true);
@@ -2239,69 +1367,36 @@ begin
   CheckUseAnalyzerUnexpectedHints;
 end;
 
-procedure TTestUseAnalyzer.TestM_Hint_FunctionResultAssembler;
-begin
-  StartProgram(false);
-  Add([
-  'function GetIt: longint; assembler;',
-  'asm',
-  'end;',
-  'begin',
-  '  GetIt;']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_FunctionResultExit;
-begin
-  StartProgram(false);
-  Add([
-  'function GetIt: longint;',
-  'begin',
-  '  exit(3);',
-  'end;',
-  'begin',
-  '  GetIt;']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_AbsoluteVar;
-begin
-  StartProgram(false);
-  Add([
-  'procedure {#DoIt_used}DoIt({#p_used}p: pointer);',
-  'var',
-  '  {#i_used}i: longint absolute p;',
-  '  {#j_used}j: longint absolute i;',
-  'begin',
-  '  if j=3 then ;',
-  'end;',
-  'begin',
-  '  DoIt(nil);']);
-  AnalyzeProgram;
-  CheckUseAnalyzerUnexpectedHints;
-end;
-
-procedure TTestUseAnalyzer.TestM_Hint_GenFunctionResultArgNotUsed;
+procedure TTestUseAnalyzer.TestM_Hint_OutParam_No_AssignedButNeverUsed;
 begin
   StartProgram(true);
+  Add('procedure DoIt(out x: longint);');
+  Add('begin');
+  Add('  x:=3;');
+  Add('end;');
+  Add('var i: longint;');
+  Add('begin');
+  Add('  DoIt(i);');
+  AnalyzeProgram;
+  CheckUseAnalyzerUnexpectedHints;
+end;
+
+procedure TTestUseAnalyzer.TestM_Hint_ArgPassed_No_ParameterNotUsed;
+begin
+  StartProgram(false);
   Add([
-  'type',
-  '  generic TPoint<U> = record X,Y: U; end;',
-  'generic procedure Three<S>(out x: S);',
+  'procedure AssertTrue(b: boolean);',
   'begin',
-  '  x:=3;',
+  '  if b then ;',
   'end;',
-  'generic function Point<T>(): specialize TPoint<T>;',
+  'procedure AssertFalse(b: boolean);',
   'begin',
-  '  specialize Three<T>(Result.X)',
+  '  AssertTrue(not b);',
   'end;',
   'begin',
-  '  specialize Point<word>();',
+  '  AssertFalse(true);',
   '']);
   AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "Y" not used');
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -2336,25 +1431,6 @@ begin
   CheckUnitUsed('unit2.pp',true);
 end;
 
-procedure TTestUseAnalyzer.TestWP_UnitUsed_ResourceString;
-begin
-  AddModuleWithIntfImplSrc('unit2.pp',
-    LinesToStr([
-    'resourcestring rs = ''txt'';',
-    'procedure DoIt;',
-    '']),
-    LinesToStr([
-    'procedure DoIt; begin end;']));
-
-  StartProgram(true);
-  Add('uses unit2;');
-  Add('begin');
-  Add('  if rs='''' then ;');
-  AnalyzeWholeProgram;
-
-  CheckUnitUsed('unit2.pp',true);
-end;
-
 procedure TTestUseAnalyzer.TestWP_UnitNotUsed;
 begin
   AddModuleWithIntfImplSrc('unit2.pp',
@@ -2366,8 +1442,7 @@ begin
     'procedure DoIt; begin end;']));
 
   StartProgram(true);
-  Add('uses');
-  Add('  unit2;');
+  Add('uses unit2;');
   Add('begin');
   AnalyzeWholeProgram;
 
@@ -2376,13 +1451,6 @@ end;
 
 procedure TTestUseAnalyzer.TestWP_UnitInitialization;
 begin
-  AddModuleWithIntfImplSrc('unit2.pp',
-    LinesToStr([
-    'var i: longint;',
-    '']),
-    LinesToStr([
-    '']));
-
   AddModuleWithIntfImplSrc('unit1.pp',
     LinesToStr([
     'uses unit2;',
@@ -2390,6 +1458,13 @@ begin
     LinesToStr([
     'initialization',
     'i:=2;']));
+
+  AddModuleWithIntfImplSrc('unit2.pp',
+    LinesToStr([
+    'var i: longint;',
+    '']),
+    LinesToStr([
+    '']));
 
   StartProgram(true);
   Add('uses unit1;');
@@ -2467,42 +1542,6 @@ begin
   AnalyzeWholeProgram;
 end;
 
-procedure TTestUseAnalyzer.TestWP_ClassOverride;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  {#TObject_used}TObject = class',
-  '  protected',
-  '    function {#TObject_getcount_used}GetCount: longint; virtual; abstract;',
-  '  public',
-  '    property {#TObject_count_used}Count: longint read GetCount;',
-  '  end;',
-  '',
-  '  {#tb_used}TB = class(TObject)',
-  '  private',
-  '    {#tb_fcount_used}FCount: longint;',
-  '  protected',
-  '    function {#tb_getcount_used}GetCount: longint; override;',
-  '  end;',
-  '',
-  'function TB.GetCount: longint;',
-  'begin',
-  '  Result:=FCount;',
-  'end;',
-  '',
-  'procedure {#doit_used}DoIt;',
-  'var',
-  '  {#l_used}l: TB;',
-  'begin',
-  '  if l.count=3 then ;',
-  'end;',
-  '',
-  'begin',
-  '  DoIt;']);
-  AnalyzeWholeProgram;
-end;
-
 procedure TTestUseAnalyzer.TestWP_ClassDefaultProperty;
 begin
   StartProgram(false);
@@ -2518,39 +1557,6 @@ begin
   Add('  {#l_used}L: TObject;');
   Add('begin');
   Add('  L[0]:=''birdy'';');
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_BeforeConstruction;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  ' {#tobject_used}TObject = class',
-  '    procedure {#oAfter_used}AfterConstruction; virtual;',
-  '    procedure {#oBefore_used}BeforeDestruction; virtual;',
-  '    procedure {#oFree_used}Free;',
-  '    constructor {#oCreate_used}Create;',
-  '    destructor {#oDestroy_used}Destroy; virtual;',
-  '    procedure {#oDoIt_notused}DoIt; virtual; abstract;',
-  '  end;',
-  '  TBird = class',
-  '    procedure {#bAfter_used}AfterConstruction; override;',
-  '    procedure {#bBefore_used}BeforeDestruction; override;',
-  '  end;',
-  'procedure TObject.AfterConstruction; begin end;',
-  'procedure TObject.BeforeDestruction; begin end;',
-  'procedure TObject.Free; begin Destroy; end;',
-  'constructor TObject.Create; begin end;',
-  'destructor TObject.Destroy; begin end;',
-  'procedure TBird.AfterConstruction; begin end;',
-  'procedure TBird.BeforeDestruction; begin end;',
-  'var',
-  '  {#b_used}b: TBird;',
-  'begin',
-  '  b:=TBird.Create;',
-  '  b.Free;',
-  '']);
   AnalyzeWholeProgram;
 end;
 
@@ -2630,21 +1636,18 @@ end;
 procedure TTestUseAnalyzer.TestWP_PublishedRecordType;
 begin
   StartProgram(false);
-  Add([
-  'type',
-  '  {#trec_used}TRec = record',
-  '    {treci_used}i: longint;',
-  '  end;',
-  'const c: TRec = (i:1);',
-  'type',
-  '  {#tobject_used}TObject = class',
-  '  published',
-  '    {#fielda_used}FieldA: TRec;',
-  '  end;',
-  'var',
-  '  {#o_used}o: TObject;',
-  'begin',
-  '  o:=nil;']);
+  Add('type');
+  Add('  {#trec_used}TRec = record');
+  Add('    {treci_used}i: longint;');
+  Add('  end;');
+  Add('  {#tobject_used}TObject = class');
+  Add('  published');
+  Add('    {#fielda_used}FieldA: TRec;');
+  Add('  end;');
+  Add('var');
+  Add('  {#o_used}o: TObject;');
+  Add('begin');
+  Add('  o:=nil;');
   AnalyzeWholeProgram;
 end;
 
@@ -2752,658 +1755,8 @@ begin
   AnalyzeWholeProgram;
 end;
 
-procedure TTestUseAnalyzer.TestWP_TypeInfo_PropertyEnumType;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  TObject = class end;',
-  '  {#talign_typeinfo}TAlign = (alLeft,alRight);',
-  '  {$M+}',
-  '  TPersistent = class',
-  '  private',
-  '    FAlign: TAlign;',
-  '  public',
-  '    property {#tpersistent_align_notypeinfo}Align: TAlign read FAlign write FAlign;',
-  '  end;',
-  '  {$M-}',
-  '  {#tbutton_typeinfo}TButton = class(TPersistent)',
-  '  published',
-  '    property {#tbutton_align_typeinfo}Align;',
-  '  end;',
-  'var',
-  '  {#p_notypeinfo}p: pointer;',
-  'begin',
-  '  p:=typeinfo(TButton);',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_TypeInfo_Alias;
-begin
-  AddModuleWithIntfImplSrc('mysystem.pp',
-    LinesToStr([
-    'type',
-    '  integer = longint;',
-    '  PTypeInfo = pointer;',
-    '  {#tdatetime_typeinfo}TDateTime = type double;',
-    '']),
-    '');
-  AddModuleWithIntfImplSrc('unit1.pp',
-    LinesToStr([
-    'uses mysystem;',
-    'type',
-    '  {#ttime_typeinfo}TTime = type TDateTime;',
-    '  TDate = TDateTime;',
-    'var',
-    '  dt: TDateTime;',
-    '  t: TTime;',
-    '  d: TDate;',
-    '  TI: PTypeInfo;',
-    '']),'');
-  AddModuleWithIntfImplSrc('unit2.pp',
-    LinesToStr([
-    'uses unit1;',
-    '']),
-    LinesToStr([
-    'initialization',
-    '  dt:=1.0;',
-    '  t:=2.0;',
-    '  d:=3.0;',
-    '  ti:=typeinfo(dt);',
-    '  ti:=typeinfo(t);',
-    '  ti:=typeinfo(d);',
-    '']));
-  StartProgram(true);
-  Add([
-    'uses mysystem, unit2;',
-    'var',
-    '  PInfo: PTypeInfo;',
-    'begin',
-    '  PInfo:=typeinfo(TDateTime);',
-    'end.']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ForInClass;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  TObject = class',
-  '  end;',
-  '  {#tenumerator_used}TEnumerator = class',
-  '  strict private',
-  '    {#fcurrent_used}FCurrent: longint;',
-  '  public',
-  '    {#v_notused}v: string;',
-  '    function {#movenext_used}MoveNext: boolean;',
-  '    property {#current_used}Current: longint read FCurrent;',
-  '  end;',
-  '  {#tbird_used}TBird = class',
-  '    function {#getenumerator_used}GetEnumerator: TEnumerator;',
-  '  end;',
-  'function TEnumerator.MoveNext: boolean;',
-  'begin',
-  'end;',
-  'function TBird.GetEnumerator: TEnumerator;',
-  'begin',
-  'end;',
-  'var',
-  '  {#b_used}b: TBird;',
-  '  {#i_used}i: longint;',
-  'begin',
-  '  for i in b do ;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_AssertSysUtils;
-begin
-  AddModuleWithIntfImplSrc('SysUtils.pas',
-    LinesToStr([
-    'type',
-    '  TObject = class',
-    '    constructor {#a_used}Create;',
-    '  end;',
-    '  {#e_used}EAssertionFailed = class',
-    '    constructor {#b_used}Create(s: string);',
-    '  end;',
-    '']),
-    LinesToStr([
-    'constructor TObject.Create;',
-    'begin end;',
-    'constructor EAssertionFailed.Create(s: string);',
-    'begin end;',
-    '']) );
-
-  StartProgram(true);
-  Add([
-  'uses sysutils;',
-  'procedure DoIt;',
-  'var',
-  '  b: boolean;',
-  '  s: string;',
-  'begin',
-  '  {$Assertions on}',
-  '  Assert(b);',
-  '  Assert(b,s);',
-  'end;',
-  'begin',
-  '  DoIt;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_RangeErrorSysUtils;
-begin
-  AddModuleWithIntfImplSrc('SysUtils.pas',
-    LinesToStr([
-    'type',
-    '  TObject = class',
-    '    constructor {#a_used}Create;',
-    '  end;',
-    '  {#e_used}ERangeError = class',
-    '  end;',
-    '']),
-    LinesToStr([
-    'constructor TObject.Create;',
-    'begin end;',
-    '']) );
-
-  StartProgram(true);
-  Add([
-  'uses sysutils;',
-  'procedure DoIt;',
-  'var',
-  '  b: byte;',
-  'begin',
-  '  {$R+}',
-  '  b:=1;',
-  'end;',
-  'begin',
-  '  DoIt;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  {#iunknown_used}IUnknown = interface',
-  '    procedure {#iunknown_run_used}Run;',
-  '    procedure {#iunknown_walk_notused}Walk;',
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    procedure IUnknown.Run = Fly;',
-  '    procedure {#tbird_fly_used}Fly; virtual; abstract;',
-  '    procedure {#tbird_walk_notused}Walk; virtual; abstract;',
-  '  end;',
-  '  {#teagle_used}TEagle = class(TBird)',
-  '  strict private',
-  '    procedure {#teagle_fly_used}Fly; override;',
-  '    procedure {#teagle_walk_notused}Walk; override;',
-  '  end;',
-  'procedure TEagle.Fly; begin end;',
-  'procedure TEagle.Walk; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  i.Run;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface_OneWayIntfToObj;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  {#iunknown_used}IUnknown = interface',
-  '    procedure {#iunknown_run_used}Run;',
-  '    procedure {#iunknown_walk_notused}Walk;',// not used
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    procedure IUnknown.Run = Fly;',
-  '    procedure {#tbird_fly_used}Fly; virtual; abstract;',
-  '    procedure {#tbird_walk_notused}Walk; virtual; abstract;', // used
-  '  end;',
-  '  {#teagle_used}TEagle = class(TBird)',
-  '  private',
-  '    procedure {#teagle_fly_used}Fly; override;',
-  '    procedure {#teagle_walk_used}Walk; override;',
-  '  end;',
-  'procedure TEagle.Fly; begin end;',
-  'procedure TEagle.Walk; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  i.Run;',  // using IUnknown.Walk must mark TEagle.Walk
-  '  e.Walk;', // using TEagle.Walk must not mark IUnknown.Walk
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface_Delegation;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  {#iunknown_used}IUnknown = interface',
-  '    procedure {#iunknown_run_used}Run;',
-  '    procedure {#iunknown_walk_notused}Walk;',
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    procedure IUnknown.Run = Fly;',
-  '    procedure {#tbird_fly_used}Fly;',
-  '    procedure {#tbird_walk_notused}Walk;',
-  '  end;',
-  '  {#teagle_used}TEagle = class(TObject,IUnknown)',
-  '  strict private',
-  '    {#teagle_fbird_used}FBird: TBird;',
-  '    property {#teagle_bird_used}Bird: TBird read FBird implements IUnknown;',
-  '  end;',
-  'procedure TBird.Fly; begin end;',
-  'procedure TBird.Walk; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  i.Run;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface_COM;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces com}',
-  'type',
-  '  {#tguid_used}TGuid = string;',
-  '  {#integer_used}integer = longint;',
-  '  {#iunknown_used}IUnknown = interface',
-  '    function {#iunknown_queryintf_used}QueryInterface(const iid: TGuid; out obj): Integer;',
-  '    function {#iunknown_addref_used}_AddRef: Integer;',
-  '    function {#iunknown_release_used}_Release: Integer;',
-  '    procedure {#iunknown_doit_notused}DoIt;',
-  '  end;',
-  '  {#tobject_used}TObject = class',
-  '  end;',
-  '  {#tbird_used}TBird = class(TObject,IUnknown)',
-  '  strict private',
-  '    function {#tbird_queryintf_used}QueryInterface(const iid: TGuid; out obj): Integer;',
-  '    function {#tbird_addref_used}_AddRef: Integer;',
-  '    function {#tbird_release_used}_Release: Integer;',
-  '    procedure {#tbird_doit_notused}DoIt;',
-  '  end;',
-  '  {#teagle_used}TEagle = class(TBird)',
-  '  end;',
-  'function TBird.QueryInterface(const iid: TGuid; out obj): Integer;',
-  'begin',
-  '  if iid='''' then obj:=nil;',
-  '  Result:=0;',
-  'end;',
-  'function TBird._AddRef: Integer; begin Result:=1; end;',
-  'function TBird._Release: Integer; begin Result:=2; end;',
-  'procedure TBird.DoIt; begin end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IUnknown;',
-  'begin',
-  '  i:=e;',
-  '  if i=nil then ;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface_COM_Unit;
-begin
-  AddModuleWithIntfImplSrc('SysUtils.pas',
-    LinesToStr([
-    '{$interfaces com}',
-    'type',
-    '  {#tguid_used}TGuid = string;',
-    '  {#integer_used}integer = longint;',
-    '  {#iunknown_used}IUnknown = interface',
-    '    function {#iunknown_queryintf_used}QueryInterface(const iid: TGuid; out obj): Integer;',
-    '    function {#iunknown_addref_used}_AddRef: Integer;',
-    '    function {#iunknown_release_used}_Release: Integer;',
-    '    procedure {#iunknown_doit_notused}DoIt;',
-    '  end;',
-    '  IBird = interface(IUnknown)',
-    '    procedure {#ibird_fly_used}Fly;',
-    '  end;',
-    '  {#tobject_used}TObject = class',
-    '  end;',
-    '  {#tbird_used}TBird = class(TObject,IBird)',
-    '  strict private',
-    '    function {#tbird_queryintf_used}QueryInterface(const iid: TGuid; out obj): Integer;',
-    '    function {#tbird_addref_used}_AddRef: Integer;',
-    '    function {#tbird_release_used}_Release: Integer;',
-    '    procedure {#tbird_doit_notused}DoIt;',
-    '    procedure {#tbird_fly_used}Fly;',
-    '  end;',
-    '']),
-    LinesToStr([
-    'function TBird.QueryInterface(const iid: TGuid; out obj): Integer;',
-    'begin',
-    '  if iid='''' then obj:=nil;',
-    '  Result:=0;',
-    'end;',
-    'function TBird._AddRef: Integer; begin Result:=1; end;',
-    'function TBird._Release: Integer; begin Result:=2; end;',
-    'procedure TBird.DoIt; begin end;',
-    'procedure TBird.Fly; begin end;',
-    '']) );
-
-  StartProgram(true);
-  Add([
-  'uses sysutils;',
-  'type',
-  '  {#teagle_used}TEagle = class(TBird)',
-  '  end;',
-  'var',
-  '  e: TEagle;',
-  '  i: IBird;',
-  'begin',
-  '  i:=e;',
-  '  if i=nil then ;',
-  '  i.Fly;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface_Typeinfo;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  {#iunknown_typeinfo}IUnknown = interface',
-  '    function {#iunknown_getflag_typeinfo}GetFlag: boolean;',
-  '    procedure {#iunknown_setflag_typeinfo}SetFlag(Value: boolean);',
-  '    procedure {#iunknown_doit_notypeinfo}DoIt;',
-  '    property {#iunknown_flag_typeinfo}Flag: boolean read GetFlag write SetFlag;',
-  '  end;',
-  '  {#ibird_notused}IBird = interface(IUnknown)',
-  '  end;',
-  'var',
-  '  t: pointer;',
-  '  i: IUnknown;',
-  'begin',
-  '  t:=typeinfo(IUnknown);',
-  '  if i.Flag then ;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassInterface_TGUID;
-begin
-  StartProgram(false);
-  Add([
-  '{$interfaces corba}',
-  'type',
-  '  TGuid = record',
-  '    {#d1_used}D1: longword;',
-  '    {#d2_used}D2: word;',
-  '    {#d3_used}D3: word;',
-  '    {#d4_used}D4: array[0..7] of byte;',
-  '  end;',
-  'var g,h: TGuid;',
-  'begin',
-  '  if g=h then ;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassHelper;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  {#TObject_used}TObject = class',
-  '  end;',
-  '  {#TBird_used}TBird = class',
-  '    {#TBird_A_notused}A: word;',
-  '  end;',
-  '  {#TAnt_used}TAnt = class',
-  '    {#TAnt_B_notused}B: word;',
-  '  type',
-  '    {#TMouth_used}TMouth = class',
-  '      {#TMouth_C_notused}C: word;',
-  '    type',
-  '      {#TBirdHelper_used}TBirdHelper = class helper for TBird',
-  '        procedure {#TBirdHelper_Fly_used}Fly;',
-  '      end;',
-  '    end;',
-  '  end;',
-  'procedure TAnt.TMouth.TBirdHelper.Fly;',
-  'begin',
-  'end;',
-  'var b: TBird;',
-  'begin',
-  '  b.Fly;;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_ClassHelper_ClassConstrucor_Used;
-begin
-  StartProgram(false);
-  Add([
-  'type',
-  '  {#TObject_used}TObject = class',
-  '    class constructor {#TObject_Init_used}Init;',
-  '    class destructor {#TObject_Done_used}Done;',
-  '  end;',
-  '  {#TBird_used}TBird = class',
-  '    {#TBird_A_notused}A: word;',
-  '    class constructor {#TBird_Init_used}Init;',
-  '    class destructor {#TBird_Done_used}Done;',
-  '  end;',
-  '  {#TBirdHelper_used}TBirdHelper = class helper for TBird',
-  '    procedure {#TBirdHelper_Fly_used}Fly;',
-  '    class constructor {#TBirdHelper_Init_used}Init;',
-  '    class destructor {#TBirdHelper_Done_used}Done;',
-  '  end;',
-  '  TAnt = class',
-  '    class constructor {#TAnt_Init_notused}Init;',
-  '    class destructor {#TAnt_Done_notused}Done;',
-  '  end;',
-  'class constructor TObject.Init;',
-  'begin',
-  'end;',
-  'class destructor TObject.Done;',
-  'begin',
-  'end;',
-  'class constructor TBird.Init;',
-  'begin',
-  'end;',
-  'class destructor TBird.Done;',
-  'begin',
-  'end;',
-  'procedure TBirdHelper.Fly;',
-  'begin',
-  'end;',
-  'class constructor TBirdHelper.Init;',
-  'begin',
-  'end;',
-  'class destructor TBirdHelper.Done;',
-  'begin',
-  'end;',
-  'class constructor TAnt.Init;',
-  'begin',
-  'end;',
-  'class destructor TAnt.Done;',
-  'begin',
-  'end;',
-  'var b: TBird;',
-  'begin',
-  '  b.Fly;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_Attributes;
-begin
-  StartProgram(false);
-  Add([
-  '{$modeswitch prefixedattributes}',
-  'type',
-  '  TObject = class',
-  '    constructor {#TObject_Create_notused}Create;',
-  '  end;',
-  '  {#TCustomAttribute_used}TCustomAttribute = class',
-  '  end;',
-  '  {#RedAttribute_used}RedAttribute = class(TCustomAttribute)',
-  '    constructor {#Red_A_used}Create(Id: word = 3; Deep: boolean = false); overload;',
-  '    constructor {#Red_B_notused}Create(Size: double); overload;',
-  '  end;',
-  '  {#Red_notused}Red = word;',
-  'constructor TObject.Create; begin end;',
-  'constructor RedAttribute.Create(Id: word; Deep: boolean); begin end;',
-  'constructor RedAttribute.Create(Size: double); begin end;',
-  'var',
-  '  [NotExisting]',
-  '  [Red]',
-  '  o: TObject;',
-  'begin',
-  '  if typeinfo(o)=nil then ;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_Attributes_ForwardClass;
-begin
-  StartProgram(false);
-  Add([
-  '{$modeswitch prefixedattributes}',
-  'type',
-  '  TObject = class',
-  '    constructor {#TObject_Create_used}Create;',
-  '  end;',
-  '  {#TCustomAttribute_used}TCustomAttribute = class',
-  '  end;',
-  '  [TCustom]',
-  '  TBird = class;',
-  '  TMyInt = word;',
-  '  TBird = class end;',
-  'constructor TObject.Create; begin end;',
-  'begin',
-  '  if typeinfo(TBird)=nil then ;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestWP_Attributes_Params;
-begin
-  StartProgram(false);
-  Add([
-  '{$modeswitch prefixedattributes}',
-  'type',
-  '  TObject = class',
-  '    constructor {#TObject_Create_notused}Create;',
-  '    destructor {#TObject_Destroy_used}Destroy; virtual;',
-  '  end;',
-  '  {#TCustomAttribute_used}TCustomAttribute = class',
-  '  end;',
-  '  {#BigAttribute_used}BigAttribute = class(TCustomAttribute)',
-  '    constructor {#Big_A_used}Create(Id: word = 3); overload;',
-  '    destructor {#Big_B_used}Destroy; override;',
-  '  end;',
-  'constructor TObject.Create; begin end;',
-  'destructor TObject.Destroy; begin end;',
-  'constructor BigAttribute.Create(Id: word); begin end;',
-  'destructor BigAttribute.Destroy; begin end;',
-  'var',
-  '  [Big(3)]',
-  '  o: TObject;',
-  '  a: TCustomAttribute;',
-  'begin',
-  '  if typeinfo(o)=nil then ;',
-  '  a.Destroy;',
-  '']);
-  AnalyzeWholeProgram;
-end;
-
-procedure TTestUseAnalyzer.TestSR_Proc_UnitVar;
-begin
-  StartUnit(false);
-  Add([
-  'interface',
-  'type',
-  '  TColor = longint;',
-  '  TIntColor = TColor;',
-  'var',
-  '  i: longint;',
-  '  j: longint;',
-  'procedure DoIt;',
-  'implementation',
-  'procedure DoIt;',
-  'type',
-  '  TSubColor = TIntColor;',
-  'var',
-  '  b: TSubColor;',
-  'begin',
-  '  b:=i;',
-  'end;',
-  '']);
-  Analyzer.Options:=Analyzer.Options+[paoImplReferences];
-  AnalyzeUnit;
-  CheckScopeReferences('DoIt',['i','tintcolor']);
-end;
-
-procedure TTestUseAnalyzer.TestSR_Init_UnitVar;
-begin
-  StartUnit(false);
-  Add([
-  'interface',
-  'type',
-  '  TColor = longint;',
-  '  TIntColor = TColor;',
-  'var',
-  '  i: longint;',
-  '  j: longint;',
-  'implementation',
-  'type',
-  '  TSubColor = TIntColor;',
-  'var',
-  '  b: TSubColor;',
-  'initialization',
-  '  b:=i;',
-  'finalization',
-  '  b:=j;',
-  'end.',
-  '']);
-  Analyzer.Options:=Analyzer.Options+[paoImplReferences];
-  AnalyzeUnit;
-  CheckScopeReferences('initialization',['b','i']);
-  CheckScopeReferences('finalization',['b','j']);
-end;
-
 initialization
   RegisterTests([TTestUseAnalyzer]);
 
 end.
-
 

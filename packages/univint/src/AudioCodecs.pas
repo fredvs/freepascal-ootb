@@ -1,19 +1,18 @@
 {==================================================================================================
-     File:       AudioToolbox/AudioCodec.h
+     File:       AudioUnit/AudioCodec.h
 
      Contains:   A component API for encoding/decoding audio data.
 
-     Copyright:  (c) 1985-2015 by Apple, Inc., all rights reserved.
+     Copyright:  (c) 1985-2008 by Apple, Inc., all rights reserved.
 
      Bugs?:      For bug reports, consult the following page on
                  the World Wide Web:
 
-                     http://bugs.freepascal.org
+                     http://www.freepascal.org/bugs.html
 
 ==================================================================================================}
 {  Pascal Translation:  Gorazd Krosl <gorazd_1957@yahoo.ca>, October 2009 }
 {  Pascal Translation Update: Jonas Maebe <jonas@freepascal.org>, October 2012 }
-{  Pascal Translation Update: Jonas Maebe <jonas@freepascal.org>, July 2019 }
 
 {
     Modified for use with Free Pascal
@@ -23,7 +22,6 @@
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -70,11 +68,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -93,7 +86,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -104,7 +96,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -115,7 +106,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -132,16 +122,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -149,26 +132,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -315,6 +285,7 @@ type
 //=============================================================================
 
 
+{$ifc not TARGET_OS_IPHONE}
 {!
 	@enum           AudioCodecComponentType
  
@@ -333,7 +304,9 @@ type
 const
 	kAudioDecoderComponentType = FourCharCode('adec');
 	kAudioEncoderComponentType = FourCharCode('aenc');
-	kAudioUnityCodecComponentType = FourCharCode('acdc'); 
+	kAudioUnityCodecComponentType = FourCharCode('acdc');
+{$endc} {TARGET_OS_IPHONE}
+
 
 //=============================================================================
 //#pragma	mark Global Codec Properties
@@ -480,14 +453,6 @@ const
 						This always refers to the encoded data, so for encoders it refers to the
 						output data and for decoders the input data.
 						Not writable.
-	@constant		kAudioCodecPropertyPacketSizeLimitForVBR
-                        A UInt32 indicating the maximum number of bits in an output packet of an encoder.
-                        The output packet size will not exceed this number. The size should be smaller 
-                        than kAudioCodecPropertyMaximumPacketByteSize. This property will configure the 
-                        encoder to VBR mode with the highest VBR quality that can maintain the packet 
-                        size limit. kAudioCodecPropertySoundQualityForVBR can be used to retrieve the 
-                        quality setting that will be used given that packet size limit.
-                        Writeable if supported.
 	@constant		kAudioCodecPropertyCurrentInputFormat
 						An AudioStreamBasicDescription describing the format the codec
 						expects its input data in
@@ -538,11 +503,6 @@ const
 						This property is only relevant to encoders.
 						See also kAudioCodecPropertyAvailableBitRateRange.
 						Not writable.
-    @constant		kAudioCodecPropertyRecommendedBitRateRange
-                        An array of AudioValueRange indicating the recommended bit rates
-                        at given sample rate.
-                        This property is only relevant to encoders.
-                        Not writable.
 	@constant		kAudioCodecPropertyApplicableInputSampleRates
 						An array of AudioValueRange indicating the valid ranges for the
 						input sample rate of the codec for the current bit rate. 
@@ -614,39 +574,13 @@ const
 						Writable if supported.
     @constant		kAudioCodecPropertyDelayMode
                         A UInt32 specifying the delay mode. See enum below.                        
-                        Writable if supported.
-	@constant		kAudioCodecPropertyAdjustLocalQuality
-						An SInt32 number in the range [-128, 127] to allow encoding quality adjustements on a packet by packet basis.
-						This property can be set on an initialized encoder object without having to uninitialize and re-intialize it
-						and allows to adjust the encoder quality level for every packet. This is useful for packets streamed over
-						unreliable IP networks where the encoder needs to adapt immediately to network condition changes.
-						Escape property ID's start with a '^' symbol as the first char code. This bypasses the initilization check.
-    @constant		kAudioCodecPropertyProgramTargetLevel
-						A Float32 specifying the program target level in dB FS for decoders.
-						Supported target levels are in the range of -31.0 to -20.0dB.
-						This property controls the decoding of broadcast loudness
-						normalization metadata with goal of achieving consistent loudness across various
-						programs. The property complies with the target level defined in the MPEG Audio
-						standard ISO/IEC 14496-3. It will override kAudioCodecPropertyProgramTargetLevelConstant.
-	@constant		kAudioCodecPropertyProgramTargetLevelConstant
-						A UInt32 specifying the program target level constant in dB FS (Full Scale) for decoders.
-						Supported target levels are defined as enum with the prefix kProgramTargetLevel
-						(see below). This property controls the decoding of broadcast loudness
-						normalization metadata with the goal of achieving consistent loudness across various
-						programs. The property complies with the target level defined in the MPEG Audio
-						standard ISO/IEC 14496-3. The default is kProgramTargetLevel_None.
-    @constant		kAudioCodecPropertyDynamicRangeControlMode
-						A UInt32 specifying the DRC mode. Supported modes are defined as enum with the
-						prefix kDynamicRangeControlMode (see below). This property controls which
-						dynamic range compression scheme is applied if the information is present in
-						the bitstream. The default is kDynamicRangeControlMode_None.
-}
+                        Encoders only, writable if supported.
+ }
 const
 	kAudioCodecPropertyInputBufferSize = FourCharCode('tbuf');
 	kAudioCodecPropertyPacketFrameSize = FourCharCode('pakf');
 	kAudioCodecPropertyHasVariablePacketByteSizes = FourCharCode('vpk?');
 	kAudioCodecPropertyMaximumPacketByteSize = FourCharCode('pakb');
-	kAudioCodecPropertyPacketSizeLimitForVBR = FourCharCode('pakl');
 	kAudioCodecPropertyCurrentInputFormat = FourCharCode('ifmt');
 	kAudioCodecPropertyCurrentOutputFormat = FourCharCode('ofmt');
 	kAudioCodecPropertyMagicCookie = FourCharCode('kuki');
@@ -657,7 +591,6 @@ const
 	kAudioCodecPropertyCurrentOutputSampleRate = FourCharCode('cosr');
 	kAudioCodecPropertyQualitySetting = FourCharCode('srcq');
 	kAudioCodecPropertyApplicableBitRateRange = FourCharCode('brta');
-	kAudioCodecPropertyRecommendedBitRateRange = FourCharCode('brtr');
 	kAudioCodecPropertyApplicableInputSampleRates = FourCharCode('isra');
 	kAudioCodecPropertyApplicableOutputSampleRates = FourCharCode('osra');
 	kAudioCodecPropertyPaddedZeros = FourCharCode('pad0');
@@ -670,10 +603,6 @@ const
 	kAudioCodecPropertyBitRateControlMode = FourCharCode('acbf');
 	kAudioCodecPropertySoundQualityForVBR = FourCharCode('vbrq');
 	kAudioCodecPropertyDelayMode = FourCharCode('dmod');
-	kAudioCodecPropertyAdjustLocalQuality = FourCharCode('^qal');
-	kAudioCodecPropertyProgramTargetLevel = FourCharCode('pptl');
-	kAudioCodecPropertyDynamicRangeControlMode = FourCharCode('mdrc');
-	kAudioCodecPropertyProgramTargetLevelConstant = FourCharCode('ptlc'); 
 
 
 {!
@@ -770,45 +699,11 @@ const
     @constant		kAudioCodecDelayMode_Optimal
                         In this mode, the resulting bitstream has the minimum amount of priming necessary for the decoder.
                         For aac this number is 1024 which corresponds to exactly one packet.
-}
+ }
 const
 	kAudioCodecDelayMode_Compatibility = 0;
 	kAudioCodecDelayMode_Minimum = 1;
-	kAudioCodecDelayMode_Optimal = 2; 
-
-{!
-	@enum			ProgramTargetLevel
-
-	@discussion		Constants to be used with kAudioCodecPropertyProgramTargetLevelConstant
-
-	@constant		kProgramTargetLevel_None
-						
-	@constant		kProgramTargetLevel_Minus31dB
-	@constant		kProgramTargetLevel_Minus23dB
-	@constant		kProgramTargetLevel_Minus20dB
-}
-const
-	kProgramTargetLevel_None = 0;
-	kProgramTargetLevel_Minus31dB = 1;
-	kProgramTargetLevel_Minus23dB = 2;
-	kProgramTargetLevel_Minus20dB = 3; 
-    
-{!
-	@enum			DynamicRangeControlMode
-
-	@discussion		Constants to be used with kAudioCodecPropertyDynamicRangeControlMode
-
-	@constant		kDynamicRangeControlMode_None
-						Dynamic range compression disabled
-	@constant		kDynamicRangeControlMode_Light
-						Light compression according to MPEG-Audio ISO/IEC 14496
-	@constant		kDynamicRangeControlMode_Heavy
-						Heavy compression according to ETSI TS 101 154
-}
-const
-	kDynamicRangeControlMode_None = 0;
-	kDynamicRangeControlMode_Light = 1;
-	kDynamicRangeControlMode_Heavy = 2; 
+	kAudioCodecDelayMode_Optimal = 2;
 
 {!
 	@struct			AudioCodecPrimeInfo 
@@ -861,7 +756,7 @@ const
 
 
 {!
-	@enum			AudioSettingsFlags
+	@enum			AudioSettingsFlag
  
 	@discussion		Constants to be used with kAudioSettings_Hint
 					in the kAudioCodecPropertySettings property dictionary.
@@ -877,8 +772,6 @@ const
 	@constant		kAudioSettingsFlags_UserInterfaceParameter
 						If set, then this is only a user interface element and not reflected in the codec's bit stream.
 }
-type
-	AudioSettingsFlags = UInt32;
 const
 	kAudioSettingsFlags_ExpertParameter = 1 shl 0;
 	kAudioSettingsFlags_InvisibleParameter = 1 shl 1;
@@ -926,7 +819,7 @@ const
 
 //=============================================================================
 //#pragma mark -
-//#pragma mark Selectors for the component routines
+//#pragma mark Selectors for the component routines (preliminary)
 //=============================================================================
 {!
 	@enum			AudioCodecSelectors
@@ -975,7 +868,6 @@ const
 	@constant		kAudioCodecUnsupportedFormatError
 	@constant		kAudioCodecStateError
 	@constant		kAudioCodecNotEnoughBufferSpaceError
-	@constant		kAudioCodecBadDataError
 }
 const
 	kAudioCodecNoError = 0;
@@ -986,7 +878,6 @@ const
 	kAudioCodecUnsupportedFormatError = FourCharCode('!dat');
 	kAudioCodecStateError = FourCharCode('!stt');
 	kAudioCodecNotEnoughBufferSpaceError = FourCharCode('!buf');
-	kAudioCodecBadDataError = FourCharCode('bada'); 
 
 
 //=============================================================================
@@ -1014,7 +905,7 @@ const
 	@result			The OSStatus value
 }
 function AudioCodecGetPropertyInfo( inCodec: AudioCodec; inPropertyID: AudioCodecPropertyID; var outSize: UInt32; var outWritable: Boolean ): OSStatus; external name '_AudioCodecGetPropertyInfo';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 
 {!
@@ -1036,7 +927,7 @@ function AudioCodecGetPropertyInfo( inCodec: AudioCodec; inPropertyID: AudioCode
 	@result			The OSStatus value
 }
 function AudioCodecGetProperty( inCodec: AudioCodec; inPropertyID: AudioCodecPropertyID; var ioPropertyDataSize: UInt32; outPropertyData: UnivPtr ): OSStatus; external name '_AudioCodecGetProperty';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 
 {!
@@ -1056,7 +947,7 @@ function AudioCodecGetProperty( inCodec: AudioCodec; inPropertyID: AudioCodecPro
 	@result			The OSStatus value
 }
 function AudioCodecSetProperty( inCodec: AudioCodec; inPropertyID: AudioCodecPropertyID; inPropertyDataSize: UInt32; inPropertyData: {const} UnivPtr ): OSStatus; external name '_AudioCodecSetProperty';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 
 //=============================================================================
@@ -1086,7 +977,7 @@ function AudioCodecSetProperty( inCodec: AudioCodec; inPropertyID: AudioCodecPro
 	@result			The OSStatus value
 }
 function AudioCodecInitialize( inCodec: AudioCodec; const (*var*) inInputFormat: AudioStreamBasicDescription; const (*var*) inOutputFormat: AudioStreamBasicDescription; inMagicCookie: {const} UnivPtr; inMagicCookieByteSize: UInt32 ): OSStatus; external name '_AudioCodecInitialize';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 
 {!
@@ -1102,7 +993,7 @@ function AudioCodecInitialize( inCodec: AudioCodec; const (*var*) inInputFormat:
 	@result			The OSStatus value
 }
 function AudioCodecUninitialize( inCodec: AudioCodec ): OSStatus; external name '_AudioCodecUninitialize';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 
 {!
@@ -1134,7 +1025,7 @@ function AudioCodecUninitialize( inCodec: AudioCodec ): OSStatus; external name 
 	@result			The OSStatus value
 }
 function AudioCodecAppendInputData( inCodec: AudioCodec; inInputData: {const} UnivPtr; var ioInputDataByteSize: UInt32; var ioNumberPackets: UInt32; const (*var*) inPacketDescription: AudioStreamPacketDescription ): OSStatus; external name '_AudioCodecAppendInputData';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 
 {!
@@ -1167,13 +1058,15 @@ function AudioCodecAppendInputData( inCodec: AudioCodec; inInputData: {const} Un
 	@result			The OSStatus value
 }
 function AudioCodecProduceOutputPackets( inCodec: AudioCodec; outOutputData: UnivPtr; var ioOutputDataByteSize: UInt32; var ioNumberPackets: UInt32; var outPacketDescription: AudioStreamPacketDescription; var outStatus: UInt32 ): OSStatus; external name '_AudioCodecProduceOutputPackets';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
+{$ifc not TARGET_OS_IPHONE}
 function AudioCodecAppendInputBufferList( inCodec: AudioCodec; const (*var*) inBufferList: AudioBufferList; var ioNumberPackets: UInt32; const (*var*) inPacketDescription: AudioStreamPacketDescription; var outBytesConsumed: UInt32 ): OSStatus; external name '_AudioCodecAppendInputBufferList';
-(* API_AVAILABLE(macos(10.7), ios(4.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_7,__IPHONE_NA) *)
 
 function AudioCodecProduceOutputBufferList( inCodec: AudioCodec; var ioBufferList: AudioBufferList; var ioNumberPackets: UInt32; var outPacketDescription: AudioStreamPacketDescription; var outStatus: UInt32 ): OSStatus; external name '_AudioCodecProduceOutputBufferList';
-(* API_AVAILABLE(macos(10.7), ios(4.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_7,__IPHONE_NA) *)
+{$endc} {not TARGET_OS_IPHONE}
 
 {!
 	@function		AudioCodecReset
@@ -1187,7 +1080,7 @@ function AudioCodecProduceOutputBufferList( inCodec: AudioCodec; var ioBufferLis
 	@result			the OSStatus value
 }
 function AudioCodecReset( inCodec: AudioCodec ): OSStatus; external name '_AudioCodecReset';
-(* API_AVAILABLE(macos(10.2), ios(2.0), watchos(2.0), tvos(9.0)) *)
+(* __OSX_AVAILABLE_STARTING(__MAC_10_2,__IPHONE_2_0) *)
 
 //=====================================================================================================================
 type
@@ -1228,7 +1121,7 @@ type
 {!
     @enum		AudioCodecProperty
     @deprecated
-
+ 
     @constant	kAudioCodecPropertyMinimumDelayMode
                     A UInt32 equal 1 sets the encoder, where applicable, in it's lowest possible delay mode. An encoder
                     may prepend zero valued samples to the input signal in order to make additional delays, like e.g.

@@ -17,11 +17,9 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.SourcePath.Add('src');
-    P.OSes := AllUnixOSes+AllWindowsOSes+[os2,emx]-[qnx,win16];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes := AllUnixOSes+AllWindowsOSes+[os2,emx]-[qnx];
 
     T:=P.Targets.AddUnit('tcl80.pp');
 

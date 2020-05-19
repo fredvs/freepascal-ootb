@@ -6,8 +6,8 @@
 # Warning: no package should contain more than 31 files (32-bit version
 # of TV/FV cannot hold more than 31 members of a checkbox group)
 
-title=Free Pascal Compiler 3.2.0-beta
-version=3.2.0-beta
+title=Free Pascal Compiler 3.0.5
+version=3.0.5
 
 #
 # General
@@ -144,8 +144,6 @@ package=units-ptcdos.zip[uptcdos.zip],Free portable framebuffer library
 package=utils-dxegendos.zip[dxegdos.zip],Generation of D~X~E modules loadable at runtime
 # Dos-2 24
 package=ufcl-pdfdos.zip[ufcpddos.zip],PDF generating and TTF file info library
-# Dos-2 25
-package=urtl-genericsdos.zip[urtlgdos.zip],RTL-generic collection library
 
 #
 # Win32 packages
@@ -456,14 +454,6 @@ package=utils-unicodeos2.zip[ucodeos2.zip],Transformation of Unicode consortium 
 
 
 #
-# OS/2 packages 3rd part
-#
-pack=OS/2-3
-filecheck=*os2.zip
-# OS/2-3 1
-package=urtl-genericsos2.zip[urtlgos2.zip],RTL-generic collection library
-
-#
 # EMX packages
 #
 pack=~E~MX
@@ -626,15 +616,6 @@ package=utils-unicodeemx.zip[ucodeemx.zip],Transformation of Unicode consortium 
 
 
 #
-# EMX packages 3rd part
-#
-pack=EMX-3
-filecheck=*emx.zip
-# EMX-3 1
-package=urtl-genericsemx.zip[urtlgemx.zip],RTL-generic collection library
-
-
-#
 # Common packages
 #
 pack=Commo~n~
@@ -748,7 +729,7 @@ package=units-os2units.source.zip[uos2src.zip],Units interfacing libraries deliv
 #package=units-clkdll.source.zip[uclksrc.zip],CLKDLL interface unit (eCS 1.1+)
 # Source-2 9
 #package=units-lvm.source.zip[ulvmsrc.zip],OS/2 LVM interface unit sources
-package=units-sdl.source.zip[usdlsrc.zip],SDL (Simple DirectMedia Layer) interface units sources
+package=units-sdl.source.zip[usdlsrc.zip],SDL interface units sources
 # Source-2 10
 package=units-pasjpeg.source.zip[upjpsrc.zip],PasJPEG units sources
 # Source-2 11
@@ -785,7 +766,6 @@ package=fcl-js.source.zip[ufcjssrc.zip],Free Component Library (FCL)-Javascript 
 package=units-ptc.source.zip[uptcsrc.zip],Free portable framebuffer library
 # Source-2 27
 package=units-x11.source.zip[ux11src.zip],X Window (X11) interface units
-# Source-2 28
 # Source-2 29
 package=units-fcl-pdf.source.zip[ufcpdsrc.zip],PDF generating and TTF file info library
 # Source-2 30
@@ -855,9 +835,6 @@ package=units-rtl-extra.source.zip[urtlesrc.zip],RTL-additional units not needed
 package=units-rtl-objpas.source.zip[urtlosrc.zip],RTL-Object Pascal units (e.g. Delphi compatibility)
 # Source-3 29
 package=units-rtl-unicode.source.zip[urtlusrc.zip],RTL-miscellaneous Unicode support units
-# Source-3 30
-package=units-rtl-generics.source.zip[urtlgsrc.zip],RTL-generic collection library
-
 
 defaultcfg=
 #

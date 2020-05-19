@@ -16,9 +16,6 @@ begin
     begin
     P:=AddPackage('utils-fpcres');
     P.ShortName:='fpres';
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
 
     P.Author := 'Giulio Bernardi';
     P.License := 'LGPL with modification';
@@ -28,7 +25,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
 
     P.OSes:=[win32,win64,wince,haiku,linux,freebsd,openbsd,netbsd,darwin,iphonesim,solaris,os2,emx,aix,aros,amiga,morphos];
 

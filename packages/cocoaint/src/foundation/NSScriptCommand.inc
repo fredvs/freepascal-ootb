@@ -1,12 +1,11 @@
 { Parsed from Foundation.framework NSScriptCommand.h }
 
-
 {$ifdef TYPES}
-type
-  NSScriptCommandPtr = ^NSScriptCommand;
-{$endif}
+{$ifndef NSSCRIPTCOMMAND_PAS_T}
+{$define NSSCRIPTCOMMAND_PAS_T}
 
-{$ifdef TYPES}
+{ Constants }
+
 const
   NSNoScriptError = 0;
   NSReceiverEvaluationScriptError = 1;
@@ -19,11 +18,43 @@ const
   NSInternalScriptError = 8;
   NSOperationNotSupportedForKeyScriptError = 9;
   NSCannotCreateScriptCommandError = 10;
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSSCRIPTCOMMAND_PAS_R}
+{$define NSSCRIPTCOMMAND_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSSCRIPTCOMMAND_PAS_F}
+{$define NSSCRIPTCOMMAND_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSSCRIPTCOMMAND_PAS_S}
+{$define NSSCRIPTCOMMAND_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSScriptCommand = objcclass;
+  NSScriptCommandPointer = ^NSScriptCommand;
+  NSScriptCommandPtr = NSScriptCommandPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSSCRIPTCOMMAND_PAS_C}
+{$define NSSCRIPTCOMMAND_PAS_C}
 
-type
+{ NSScriptCommand }
   NSScriptCommand = objcclass external (NSObject, NSCodingProtocol)
   private
     _commandDescription: NSScriptCommandDescription;
@@ -32,47 +63,50 @@ type
     _evaluatedReceivers: id;
     _arguments: NSDictionary;
     _evaluatedArguments: NSMutableDictionary;
-    _flags: bitpacked record
+    __flags: record
       case byte of
-        0: (_anonBitField__flags0: cuint);
-        1: (
-          hasEvaluatedReceivers: 0..1;
-          hasEvaluatedArguments: 0..1;
-          RESERVED: 0..((1 shl 30)-1);
-        );
+       0: (_anonbitfield_NSScriptCommand0: cuint);
+       1: (data: bitpacked record
+        hasEvaluatedReceivers: 0..1;
+        hasEvaluatedArguments: 0..1;
+        RESERVED: 0..((1 shl 30)-1);
+       end;
+      );
       end;
     _moreVars: id;
-    _reserved: pointer;
+    _reserved: Pointer;
+    
   public
-    function initWithCommandDescription (commandDef: NSScriptCommandDescription): instancetype; message 'initWithCommandDescription:'; { NS_DESIGNATED_INITIALIZER }
-    function initWithCoder (inCoder: NSCoder): instancetype; message 'initWithCoder:';
+    function initWithCommandDescription(commandDef: NSScriptCommandDescription): id; message 'initWithCommandDescription:';
     function commandDescription: NSScriptCommandDescription; message 'commandDescription';
-    procedure setDirectParameter(newValue: id); message 'setDirectParameter:';
+    procedure setDirectParameter(directParameter_: id); message 'setDirectParameter:';
     function directParameter: id; message 'directParameter';
-    procedure setReceiversSpecifier(newValue: NSScriptObjectSpecifier); message 'setReceiversSpecifier:';
+    procedure setReceiversSpecifier(receiversRef: NSScriptObjectSpecifier); message 'setReceiversSpecifier:';
     function receiversSpecifier: NSScriptObjectSpecifier; message 'receiversSpecifier';
     function evaluatedReceivers: id; message 'evaluatedReceivers';
-    procedure setArguments(newValue: NSDictionary); message 'setArguments:';
+    procedure setArguments(args: NSDictionary); message 'setArguments:';
     function arguments: NSDictionary; message 'arguments';
     function evaluatedArguments: NSDictionary; message 'evaluatedArguments';
-    function isWellFormed: ObjCBOOL; message 'isWellFormed';
+    function isWellFormed: Boolean; message 'isWellFormed';
     function performDefaultImplementation: id; message 'performDefaultImplementation';
     function executeCommand: id; message 'executeCommand';
-    procedure setScriptErrorNumber(newValue: cint); message 'setScriptErrorNumber:';
+    procedure setScriptErrorNumber(errorNumber: cint); message 'setScriptErrorNumber:';
+    procedure setScriptErrorOffendingObjectDescriptor(errorOffendingObjectDescriptor: NSAppleEventDescriptor); message 'setScriptErrorOffendingObjectDescriptor:';
+    procedure setScriptErrorExpectedTypeDescriptor(errorExpectedTypeDescriptor: NSAppleEventDescriptor); message 'setScriptErrorExpectedTypeDescriptor:';
+    procedure setScriptErrorString(errorString: NSString); message 'setScriptErrorString:';
     function scriptErrorNumber: cint; message 'scriptErrorNumber';
-    procedure setScriptErrorOffendingObjectDescriptor(newValue: NSAppleEventDescriptor); message 'setScriptErrorOffendingObjectDescriptor:';
     function scriptErrorOffendingObjectDescriptor: NSAppleEventDescriptor; message 'scriptErrorOffendingObjectDescriptor';
-    procedure setScriptErrorExpectedTypeDescriptor(newValue: NSAppleEventDescriptor); message 'setScriptErrorExpectedTypeDescriptor:';
     function scriptErrorExpectedTypeDescriptor: NSAppleEventDescriptor; message 'scriptErrorExpectedTypeDescriptor';
-    procedure setScriptErrorString(newValue: NSString); message 'setScriptErrorString:';
     function scriptErrorString: NSString; message 'scriptErrorString';
     class function currentCommand: NSScriptCommand; message 'currentCommand';
     function appleEvent: NSAppleEventDescriptor; message 'appleEvent';
     procedure suspendExecution; message 'suspendExecution';
-    procedure resumeExecutionWithResult (result_: id); message 'resumeExecutionWithResult:';
+    procedure resumeExecutionWithResult(result_: id); message 'resumeExecutionWithResult:';
 
-    { Adopted protocols }
-    procedure encodeWithCoder (aCoder: NSCoder); message 'encodeWithCoder:';
+    { Adopted Protocols }
+    procedure encodeWithCoder(aCoder: NSCoder);
+    function initWithCoder(aDecoder: NSCoder): id;
   end;
-{$endif}
 
+{$endif}
+{$endif}

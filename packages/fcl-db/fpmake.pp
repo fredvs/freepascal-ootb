@@ -32,12 +32,10 @@ begin
     P.Email := '';
     P.Description := 'Database library of Free Component Libraries(FCL), FPC''s OOP library.';
     P.NeedLibC:= false;
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes:=AllOSes-[embedded,msdos];
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.SourcePath.Add('src');
     P.SourcePath.Add('src/base');
     P.SourcePath.Add('src/paradox', ParadoxOSes);
@@ -135,9 +133,6 @@ begin
     T:=P.Targets.AddUnit('sqltypes.pp');
 
     T:=P.Targets.AddUnit('sqlscript.pp');
-    T.ResourceStrings:=true;
-    
-    T:=P.Targets.AddUnit('fieldmap.pp');
     T.ResourceStrings:=true;
 
     T:=P.Targets.AddUnit('dbwhtml.pp');
@@ -340,18 +335,7 @@ begin
         begin
           AddUnit('fpddcodegen');
         end;
-    T.ResourceStrings:=true;    
-    T:=P.Targets.AddUnit('fpcgfieldmap.pp', DatadictOSes);
-      with T.Dependencies do
-        begin
-          AddUnit('fpddcodegen');
-        end;
-    T:=P.Targets.AddUnit('fpcgtypesafedataset.pp', DatadictOSes);
-      with T.Dependencies do
-        begin
-          AddUnit('fpddcodegen');
-          AddUnit('fpcgfieldmap');
-        end;
+    T.ResourceStrings:=true;
     T:=P.Targets.AddUnit('fpcgtiopf.pp', DatadictOSes);
       with T.Dependencies do
         begin
@@ -456,22 +440,6 @@ begin
           AddUnit('fpdatadict');
           AddUnit('fpddsqldb');
           AddUnit('mysql55conn');
-        end;
-    T:=P.Targets.AddUnit('fpddmysql56.pp', DatadictOSes);
-      with T.Dependencies do
-        begin
-          AddUnit('sqldb');
-          AddUnit('fpdatadict');
-          AddUnit('fpddsqldb');
-          AddUnit('mysql56conn');
-        end;
-    T:=P.Targets.AddUnit('fpddmysql57.pp', DatadictOSes);
-      with T.Dependencies do
-        begin
-          AddUnit('sqldb');
-          AddUnit('fpdatadict');
-          AddUnit('fpddsqldb');
-          AddUnit('mysql57conn');
         end;
     T:=P.Targets.AddUnit('fpddodbc.pp', DatadictOSes);
       with T.Dependencies do
@@ -749,7 +717,6 @@ begin
           AddUnit('bufdataset');
         end;
     T:=P.Targets.AddUnit('pqeventmonitor.pp', SqldbConnectionOSes);
-      T.ResourceStrings:=true;
       with T.Dependencies do
         begin
           AddUnit('sqldb');
@@ -781,7 +748,6 @@ begin
           AddUnit('sqltypes');
         end;
     T:=P.Targets.AddUnit('sqldblib.pp');
-      T.ResourceStrings:=true;
       with T.Dependencies do
         begin
           AddUnit('sqldb');
@@ -824,16 +790,6 @@ begin
     T.ResourceStrings := True;
 
     T:=P.Targets.AddUnit('fpjsondataset.pp');
-    with T.Dependencies do
-      AddUnit('db');
-    
-    T:=P.Targets.AddUnit('extjsdataset.pp');
-    with T.Dependencies do
-      AddUnit('fpjsondataset');
-
-    T:=P.Targets.AddUnit('sqldbini.pp');
-    with T.Dependencies do
-      AddUnit('sqldb');
 
     P.ExamplePath.Add('tests');
     T:=P.Targets.AddExampleProgram('dbftoolsunit.pas', DBaseOSes);

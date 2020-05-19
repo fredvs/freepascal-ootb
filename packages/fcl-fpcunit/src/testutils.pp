@@ -67,7 +67,7 @@ type
   PMethodNameRec = ^TMethodNameRec;
   TMethodNameRec = packed record
     name : pshortstring;
-    addr : codepointer;
+    addr : pointer;
   end;
 
   TMethodNameTable = packed record
@@ -80,15 +80,15 @@ type
 var
   methodTable : pMethodNameTable;
   i : dword;
-  vmt: PVmt;
+  vmt: TClass;
   idx: integer;
   pmr: PMethodNameRec;
 begin
   AList.Clear;
-  vmt := PVmt(aClass);
+  vmt := aClass;
   while assigned(vmt) do
   begin
-    methodTable := pMethodNameTable(vmt^.vMethodTable);
+    methodTable := pMethodNameTable((Pointer(vmt) + vmtMethodTable)^);
     if assigned(MethodTable) then
     begin
       pmr := @methodTable^.entries[0];
@@ -102,7 +102,7 @@ begin
         Inc(pmr);
       end;
     end;
-    vmt := vmt^.vParent;
+    vmt := pClass(pointer(vmt) + vmtParent)^;
   end;
 end;
 

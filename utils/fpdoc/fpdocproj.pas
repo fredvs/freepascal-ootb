@@ -146,7 +146,7 @@ begin
         F:=W;
       end;
     end;
-  aFile:=F;
+  AFile:=F;
   AOption:=O;
 end;
 

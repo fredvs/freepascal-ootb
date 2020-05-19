@@ -26,7 +26,6 @@ unit ncgmat;
 interface
 
     uses
-      symtype,
       node,nmat,cpubase,cgbase;
 
     type
@@ -42,7 +41,7 @@ interface
            point values are stored in the register
            in IEEE-754 format.
          }
-         procedure emit_float_sign_change(r: tregister; _size : tdef);virtual;
+         procedure emit_float_sign_change(r: tregister; _size : tcgsize);virtual;
 {$ifdef SUPPORT_MMX}
          procedure second_mmx;virtual;abstract;
 {$endif SUPPORT_MMX}
@@ -102,9 +101,6 @@ interface
       end;
 
       tcgshlshrnode = class(tshlshrnode)
-{$ifdef SUPPORT_MMX}
-         procedure second_mmx;virtual;abstract;
-{$endif SUPPORT_MMX}
 {$ifndef cpu64bitalu}
          procedure second_64bit;virtual;
 {$endif not cpu64bitalu}
@@ -133,17 +129,21 @@ implementation
     uses
       globtype,systems,
       cutils,verbose,globals,
-      symtable,symconst,symdef,aasmbase,aasmdata,aasmcpu,defutil,
+      symtable,symconst,symtype,symdef,aasmbase,aasmtai,aasmdata,aasmcpu,defutil,
       parabase,
       pass_2,
       ncon,
-      tgobj,cgobj,cgutils,paramgr,hlcgobj;
+      tgobj,ncgutil,cgobj,cgutils,paramgr,hlcgobj,procinfo
+{$ifndef cpu64bitalu}
+      ,cg64f32
+{$endif not cpu64bitalu}
+      ;
 
 {*****************************************************************************
                           TCGUNARYMINUSNODE
 *****************************************************************************}
 
-    procedure tcgunaryminusnode.emit_float_sign_change(r: tregister; _size : tdef);
+    procedure tcgunaryminusnode.emit_float_sign_change(r: tregister; _size : tcgsize);
       var
         href,
         href2 : treference;
@@ -151,48 +151,30 @@ implementation
         { get a temporary memory reference to store the floating
           point value
         }
-        tg.gethltemp(current_asmdata.CurrAsmList,_size,_size.size,tt_normal,href);
+        tg.gettemp(current_asmdata.CurrAsmList,tcgsize2size[_size],tcgsize2size[_size],tt_normal,href);
         { store the floating point value in the temporary memory area }
-        case getregtype(r) of
-          R_FPUREGISTER:
-            hlcg.a_loadfpu_reg_ref(current_asmdata.CurrAsmList,_size,_size,r,href);
-          R_MMREGISTER:
-            hlcg.a_loadmm_reg_ref(current_asmdata.CurrAsmList,_size,_size,r,href,mms_movescalar);
-          else
-            internalerror(2015091005);
-        end;
+        cg.a_loadfpu_reg_ref(current_asmdata.CurrAsmList,_size,_size,r,href);
         { only single and double ieee are supported, for little endian
           the signed bit is in the second dword }
         href2:=href;
-        if _size.typ<>floatdef then
-          internalerror(2014012211);
-        case tfloatdef(_size).floattype of
-          s64real,
-          s64comp,
-          s64currency:
+        case _size of
+          OS_F64 :
             if target_info.endian = endian_little then
               inc(href2.offset,4);
-          s32real :
+          OS_F32 :
             ;
           else
             internalerror(200406021);
         end;
         { flip sign-bit (bit 31/63) of single/double }
-        hlcg.a_op_const_ref(current_asmdata.CurrAsmList,OP_XOR,u32inttype,
+        cg.a_op_const_ref(current_asmdata.CurrAsmList,OP_XOR,OS_32,
 {$ifdef cpu64bitalu}
           aint($80000000),
 {$else cpu64bitalu}
           longint($80000000),
 {$endif cpu64bitalu}
           href2);
-        case getregtype(r) of
-          R_FPUREGISTER:
-            hlcg.a_loadfpu_ref_reg(current_asmdata.CurrAsmList,_size,_size,href,r);
-          R_MMREGISTER:
-            hlcg.a_loadmm_ref_reg(current_asmdata.CurrAsmList,_size,_size,href,r,mms_movescalar);
-          else
-            internalerror(2015091006);
-        end;
+        cg.a_loadfpu_ref_reg(current_asmdata.CurrAsmList,_size,_size,href,r);
         tg.ungetiftemp(current_asmdata.CurrAsmList,href);
       end;
 
@@ -250,35 +232,23 @@ implementation
           LOC_REFERENCE,
           LOC_CREFERENCE :
             begin
-              location.register:=hlcg.getregisterfordef(current_asmdata.CurrAsmList,resultdef);
-              case getregtype(location.register) of
-                R_FPUREGISTER:
-                  hlcg.a_loadfpu_ref_reg(current_asmdata.CurrAsmList,
-                     left.resultdef,resultdef,
-                     left.location.reference,location.register);
-                R_MMREGISTER:
-                  hlcg.a_loadmm_ref_reg(current_asmdata.CurrAsmList,
-                     left.resultdef,resultdef,
-                     left.location.reference,location.register,mms_movescalar);
-                else
-                  internalerror(2015091004);
-              end;
-              emit_float_sign_change(location.register,left.resultdef);
+              location.register:=cg.getfpuregister(current_asmdata.CurrAsmList,location.size);
+              cg.a_loadfpu_ref_reg(current_asmdata.CurrAsmList,
+                 left.location.size,location.size,
+                 left.location.reference,location.register);
+              emit_float_sign_change(location.register,def_cgsize(left.resultdef));
             end;
-          LOC_FPUREGISTER,
+          LOC_FPUREGISTER:
+            begin
+               location.register:=left.location.register;
+               emit_float_sign_change(location.register,def_cgsize(left.resultdef));
+            end;
           LOC_CFPUREGISTER:
             begin
-               location.register:=hlcg.getfpuregister(current_asmdata.CurrAsmList,resultdef);
-               hlcg.a_loadfpu_reg_reg(current_asmdata.CurrAsmList,left.resultdef,resultdef,left.location.register,location.register);
-               emit_float_sign_change(location.register,left.resultdef);
+               location.register:=cg.getfpuregister(current_asmdata.CurrAsmList,location.size);
+               cg.a_loadfpu_reg_reg(current_asmdata.CurrAsmList,left.location.size,location.size,left.location.register,location.register);
+               emit_float_sign_change(location.register,def_cgsize(left.resultdef));
             end;
-          LOC_MMREGISTER,
-          LOC_CMMREGISTER:
-            begin
-               location.register:=hlcg.getmmregister(current_asmdata.CurrAsmList,resultdef);
-               hlcg.a_loadmm_reg_reg(current_asmdata.CurrAsmList,left.resultdef,resultdef,left.location.register,location.register,mms_movescalar);
-               emit_float_sign_change(location.register,left.resultdef);
-            end
           else
             internalerror(200306021);
         end;
@@ -311,7 +281,7 @@ implementation
           begin
             current_asmdata.getjumplabel(hl);
             hlcg.a_cmp_const_reg_label(current_asmdata.CurrAsmList,opsize,OC_NE,torddef(opsize).low.svalue,location.register,hl);
-            hlcg.g_call_system_proc(current_asmdata.CurrAsmList,'fpc_overflow',[],nil);
+            hlcg.g_call_system_proc(current_asmdata.CurrAsmList,'fpc_overflow',nil);
             hlcg.a_label(current_asmdata.CurrAsmList,hl);
           end;
       end;
@@ -451,7 +421,7 @@ implementation
                       cg.a_cmp_const_reg_label(current_asmdata.CurrAsmList,OS_INT,OC_NE,0,hdenom,hl);
                       paraloc1.init;
                       pd:=search_system_proc('fpc_handleerror');
-                      paramanager.getintparaloc(current_asmdata.CurrAsmList,pd,1,paraloc1);
+                      paramanager.getintparaloc(pd,1,paraloc1);
                       cg.a_load_const_cgpara(current_asmdata.CurrAsmList,OS_S32,aint(200),paraloc1);
                       paramanager.freecgpara(current_asmdata.CurrAsmList,paraloc1);
                       cg.a_call_name(current_asmdata.CurrAsmList,'FPC_HANDLEERROR',false);
@@ -487,9 +457,9 @@ implementation
     procedure tcgshlshrnode.second_integer;
       var
          op : topcg;
-         opdef,shiftcountdef: tdef;
+         opdef,right_opdef : tdef;
          hcountreg : tregister;
-         opsize : tcgsize;
+         opsize,right_opsize : tcgsize;
          shiftval : longint;
       begin
          { determine operator }
@@ -502,63 +472,44 @@ implementation
 {$ifdef cpunodefaultint}
         opsize:=left.location.size;
         opdef:=left.resultdef;
-        shiftcountdef:=opdef;
+        right_opsize:=opsize;
+        right_opdef:=opdef;
 {$else cpunodefaultint}
-        if left.resultdef.size<=4 then
-          begin
-            if is_signed(left.resultdef) then
-              begin
-                if (sizeof(aint)<4) and
-                   (left.resultdef.size<=sizeof(aint)) then
-                  begin
-                    opsize:=OS_SINT;
-                    opdef:=sinttype;
-                  end
-                else
-                  begin
-                    opdef:=s32inttype;
-                    opsize:=OS_S32;
-                  end;
-{$ifdef cpu16bitalu}
-                shiftcountdef:=s16inttype;
-{$else cpu16bitalu}
-                shiftcountdef:=opdef;
-{$endif cpu16bitalu}
-              end
-            else
-              begin
-                if (sizeof(aint)<4) and
-                   (left.resultdef.size<=sizeof(aint)) then
-                  begin
-                    opsize:=OS_INT;
-                    opdef:=uinttype;
-                  end
-                else
-                  begin
-                    opdef:=u32inttype;
-                    opsize:=OS_32;
-                  end;
-{$ifdef cpu16bitalu}
-                shiftcountdef:=u16inttype;
-{$else cpu16bitalu}
-                shiftcountdef:=opdef;
-{$endif cpu16bitalu}
-              end
-          end
-        else
-          begin
-            if is_signed(left.resultdef) then
-              begin
-                opdef:=s64inttype;
-                opsize:=OS_S64;
-              end
-            else
-              begin
-                opdef:=u64inttype;
-                opsize:=OS_64;
-              end;
-            shiftcountdef:=opdef;
-          end;
+         { load left operators in a register }
+         if is_signed(left.resultdef) then
+           begin
+             right_opsize:=OS_SINT;
+             right_opdef:=ossinttype;
+             {$ifdef cpu16bitalu}
+               if left.resultdef.size > 2 then
+                 begin
+                   opsize:=OS_S32;
+                   opdef:=s32inttype;
+                 end
+               else
+             {$endif cpu16bitalu}
+                 begin
+                   opsize:=OS_SINT;
+                   opdef:=ossinttype
+                 end;
+           end
+         else
+           begin
+             right_opsize:=OS_INT;
+             right_opdef:=osuinttype;
+             {$ifdef cpu16bitalu}
+               if left.resultdef.size > 2 then
+                 begin
+                   opsize:=OS_32;
+                   opdef:=u32inttype;
+                 end
+               else
+             {$endif cpu16bitalu}
+                 begin
+                   opsize:=OS_INT;
+                   opdef:=osuinttype;
+                 end;
+             end;
 {$endif cpunodefaultint}
 
          if not(left.location.loc in [LOC_CREGISTER,LOC_REGISTER]) or
@@ -587,8 +538,14 @@ implementation
                 is done since most target cpu which will use this
                 node do not support a shift count in a mem. location (cec)
               }
-              hlcg.location_force_reg(current_asmdata.CurrAsmList,right.location,right.resultdef,shiftcountdef,true);
-              hlcg.a_op_reg_reg_reg(current_asmdata.CurrAsmList,op,opdef,right.location.register,left.location.register,location.register);
+              if not(right.location.loc in [LOC_CREGISTER,LOC_REGISTER]) then
+                begin
+                  hcountreg:=hlcg.getintregister(current_asmdata.CurrAsmList,right_opdef);
+                  hlcg.a_load_loc_reg(current_asmdata.CurrAsmList,right.resultdef,right_opdef,right.location,hcountreg);
+                end
+              else
+                hcountreg:=right.location.register;
+              hlcg.a_op_reg_reg_reg(current_asmdata.CurrAsmList,op,opdef,hcountreg,left.location.register,location.register);
            end;
          { shl/shr nodes return the same type as left, which can be different
            from opdef }
@@ -605,11 +562,6 @@ implementation
       begin
          secondpass(left);
          secondpass(right);
-{$ifdef SUPPORT_MMX}
-           if (cs_mmx in current_settings.localswitches) and is_mmx_able_array(left.resultdef) then
-             second_mmx
-         else
-{$endif SUPPORT_MMX}
 {$ifndef cpu64bitalu}
          if is_64bit(left.resultdef) then
            second_64bit
@@ -651,10 +603,15 @@ implementation
 
 
     function tcgnotnode.handle_locjump: boolean;
+      var
+        hl: tasmlabel;
       begin
         result:=(left.expectloc=LOC_JUMP);
         if result then
           begin
+            hl:=current_procinfo.CurrTrueLabel;
+            current_procinfo.CurrTrueLabel:=current_procinfo.CurrFalseLabel;
+            current_procinfo.CurrFalseLabel:=hl;
             secondpass(left);
 
             if is_constboolnode(left) then
@@ -662,8 +619,12 @@ implementation
             if left.location.loc<>LOC_JUMP then
               internalerror(2012081306);
 
-            { switch true and false labels to invert result }
-            location_reset_jump(location,left.location.falselabel,left.location.truelabel);
+            { This does nothing for LOC_JUMP }
+            //maketojumpbool(current_asmdata.CurrAsmList,left,lr_load_regvars);
+            hl:=current_procinfo.CurrTrueLabel;
+            current_procinfo.CurrTrueLabel:=current_procinfo.CurrFalseLabel;
+            current_procinfo.CurrFalseLabel:=hl;
+            location_reset(location,LOC_JUMP,OS_NO);
           end;
       end;
 

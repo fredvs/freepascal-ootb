@@ -1,4 +1,3 @@
-{%skiptarget=$nothread }
 { %OPT=-gh }
 // Creating a suspended TThread and then destroying it should not cause memory leaks.
 // Also, Execute() method should not be called.
@@ -19,7 +18,7 @@ type
 var
   t: TThread;
   Flag: Boolean;
-
+  
 procedure TMyThread.Execute;
 begin
   flag := True;

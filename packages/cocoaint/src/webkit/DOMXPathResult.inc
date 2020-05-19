@@ -1,12 +1,11 @@
-{ Parsed from WebKit.framework DOMXPathResult.h }
-
-
-{$ifdef TYPES}
-type
-  DOMXPathResultPtr = ^DOMXPathResult;
-{$endif}
+{ Parsed from Webkit.framework DOMXPathResult.h }
 
 {$ifdef TYPES}
+{$ifndef DOMXPATHRESULT_PAS_T}
+{$define DOMXPATHRESULT_PAS_T}
+
+{ Constants }
+
 const
   DOM_ANY_TYPE = 0;
   DOM_NUMBER_TYPE = 1;
@@ -18,22 +17,56 @@ const
   DOM_ORDERED_NODE_SNAPSHOT_TYPE = 7;
   DOM_ANY_UNORDERED_NODE_TYPE = 8;
   DOM_FIRST_ORDERED_NODE_TYPE = 9;
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef DOMXPATHRESULT_PAS_R}
+{$define DOMXPATHRESULT_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef DOMXPATHRESULT_PAS_F}
+{$define DOMXPATHRESULT_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef DOMXPATHRESULT_PAS_S}
+{$define DOMXPATHRESULT_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  DOMXPathResult = objcclass;
+  DOMXPathResultPointer = ^DOMXPathResult;
+  DOMXPathResultPtr = DOMXPathResultPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef DOMXPATHRESULT_PAS_C}
+{$define DOMXPATHRESULT_PAS_C}
 
-type
+{ DOMXPathResult }
   DOMXPathResult = objcclass external (DOMObject)
+    
   public
-    function resultType: cushort; message 'resultType';
+    function resultType: cuint; message 'resultType';
     function numberValue: double; message 'numberValue';
     function stringValue: NSString; message 'stringValue';
-    function ObjCBOOLValue: ObjCBOOL; message 'ObjCBOOLValue';
+    function booleanValue: Boolean; message 'booleanValue';
     function singleNodeValue: DOMNode; message 'singleNodeValue';
-    function invalidIteratorState: ObjCBOOL; message 'invalidIteratorState';
+    function invalidIteratorState: Boolean; message 'invalidIteratorState';
     function snapshotLength: cuint; message 'snapshotLength';
     function iterateNext: DOMNode; message 'iterateNext';
-    function snapshotItem (index: cuint): DOMNode; message 'snapshotItem:';
+    function snapshotItem(index: cuint): DOMNode; message 'snapshotItem:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

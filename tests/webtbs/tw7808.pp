@@ -1,9 +1,6 @@
 { %cpu=i386 }
-{ %target=go32v2,linux,freebsd,win32,haiku}
+{ %target=go32v2,linux,freebsd,win32}
 { %opt=-Sew -vw }
-
-{ do not warn about the lea esp,[esp+16] }
-{$WARN 7105 OFF}
 
 {$mode delphi}
 
@@ -15,14 +12,8 @@ end;
 
 begin
   asm
-{$if FPC_STACKALIGNMENT=16}
-    lea esp,[esp-12]
-{$endif FPC_STACKALIGNMENT=16}  
     push word $dead
     push word $beef
-    call test        
-{$if FPC_STACKALIGNMENT=16}
-    lea esp,[esp-4]
-{$endif FPC_STACKALIGNMENT=16}  
+    call test
   end;
 end.

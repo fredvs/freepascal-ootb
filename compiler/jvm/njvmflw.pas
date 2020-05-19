@@ -41,14 +41,10 @@ interface
 
        tjvmtryexceptnode = class(ttryexceptnode)
           procedure pass_generate_code;override;
-         protected
-          procedure adjust_estimated_stack_size; override;
        end;
 
        tjvmtryfinallynode = class(ttryfinallynode)
           procedure pass_generate_code;override;
-         protected
-          procedure adjust_estimated_stack_size; override;
        end;
 
        tjvmonnode = class(tonnode)
@@ -232,7 +228,7 @@ implementation
                the exception code (in case of an anonymous "raise") }
              current_asmdata.CurrAsmList.concat(tai_marker.create(mark_NoLineInfoStart));
              prev_except_loc:=current_except_loc;
-             location_reset_ref(current_except_loc,LOC_REFERENCE,OS_ADDR,4,[]);
+             location_reset_ref(current_except_loc,LOC_REFERENCE,OS_ADDR,4);
              tg.GetLocal(current_asmdata.CurrAsmList,sizeof(pint),java_jlthrowable,current_except_loc.reference);
              thlcgjvm(hlcg).incstack(current_asmdata.CurrAsmList,1);
              thlcgjvm(hlcg).a_load_stack_loc(current_asmdata.CurrAsmList,java_jlthrowable,current_except_loc);
@@ -259,12 +255,6 @@ implementation
          { return all used control flow statements }
          flowcontrol:=oldflowcontrol+(exceptflowcontrol +
            tryflowcontrol - [fc_inflowcontrol]);
-      end;
-
-
-    procedure tjvmtryexceptnode.adjust_estimated_stack_size;
-      begin
-        { do nothing }
       end;
 
 
@@ -302,7 +292,7 @@ implementation
 
          { Retrieve exception variable }
          { 1) prepare the location where we'll store it }
-         location_reset_ref(exceptvarsym.localloc,LOC_REFERENCE,OS_ADDR,sizeof(pint),[]);
+         location_reset_ref(exceptvarsym.localloc,LOC_REFERENCE,OS_ADDR,sizeof(pint));
          tg.GetLocal(current_asmdata.CurrAsmList,sizeof(pint),exceptvarsym.vardef,exceptvarsym.localloc.reference);
          prev_except_loc:=current_except_loc;
          current_except_loc:=exceptvarsym.localloc;
@@ -506,12 +496,6 @@ implementation
             current_procinfo.CurrBreakLabel:=oldBreakLabel;
           end;
          flowcontrol:=oldflowcontrol+(tryflowcontrol-[fc_inflowcontrol]);
-      end;
-
-
-    procedure tjvmtryfinallynode.adjust_estimated_stack_size;
-      begin
-        { do nothing }
       end;
 
 begin

@@ -1,14 +1,45 @@
-{ Parsed from AppKit.framework NSPathComponentCell.h }
-
+{ Parsed from Appkit.framework NSPathComponentCell.h }
 
 {$ifdef TYPES}
-type
-  NSPathComponentCellPtr = ^NSPathComponentCell;
+{$ifndef NSPATHCOMPONENTCELL_PAS_T}
+{$define NSPATHCOMPONENTCELL_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSPATHCOMPONENTCELL_PAS_R}
+{$define NSPATHCOMPONENTCELL_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSPATHCOMPONENTCELL_PAS_F}
+{$define NSPATHCOMPONENTCELL_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSPATHCOMPONENTCELL_PAS_S}
+{$define NSPATHCOMPONENTCELL_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSPathComponentCell = objcclass;
+  NSPathComponentCellPointer = ^NSPathComponentCell;
+  NSPathComponentCellPtr = NSPathComponentCellPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSPATHCOMPONENTCELL_PAS_C}
+{$define NSPATHCOMPONENTCELL_PAS_C}
 
-type
+{ NSPathComponentCell }
   NSPathComponentCell = objcclass external (NSTextFieldCell)
   private
     _image: NSImage;
@@ -16,24 +47,27 @@ type
     _resizedWidth: CGFloat;
     _currentWidth: CGFloat;
     _url: NSURL;
-    _flags: bitpacked record
+    __flags: record
       case byte of
-        0: (_anonBitField__flags0: cuint);
-        1: (
-          shouldDrawArrow: 0..1;
-          drawsAsNavigationBar: 0..1;
-          isFirstItem: 0..1;
-          isLastItem: 0..1;
-          isDropTarget: 0..1;
-          reserved: 0..((1 shl 27)-1);
-        );
+       0: (_anonbitfield_NSPathComponentCell0: cuint);
+       1: (data: bitpacked record
+        shouldDrawArrow: 0..1;
+        drawsAsNavigationBar: 0..1;
+        isFirstItem: 0..1;
+        isLastItem: 0..1;
+        isDropTarget: 0..1;
+        reserved: 0..((1 shl 27)-1);
+       end;
+      );
       end;
     _aux: id;
+    
   public
-    procedure setImage(newValue: NSImage); message 'setImage:';
     function image: NSImage; message 'image';
-    procedure setURL(newValue: NSURL); message 'setURL:';
+    procedure setImage(value: NSImage); message 'setImage:';
     function URL: NSURL; message 'URL';
+    procedure setURL(url_: NSURL); message 'setURL:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

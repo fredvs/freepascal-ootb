@@ -158,7 +158,6 @@ var
 
 begin
   L:=Length(Astr);
-  Result:='';
   SetLength(Result,L);
   If (L=0) then
     exit;
@@ -214,7 +213,6 @@ var
 
 begin
   L:=Length(AStr);
-  Result:='';
   SetLength(Result,L*3); // Worst case scenario
   if (L=0) then
     exit;

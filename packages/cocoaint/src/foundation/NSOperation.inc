@@ -1,13 +1,10 @@
 { Parsed from Foundation.framework NSOperation.h }
 
-
-{ Types from NSOperation }
 {$ifdef TYPES}
+{$ifndef NSOPERATION_PAS_T}
+{$define NSOPERATION_PAS_T}
 
-type
-  NSOperationQueuePriority = NSInteger;
-type
-  NSOperationQueuePriorityPtr = ^NSOperationQueuePriority;
+{ Constants }
 
 const
   NSOperationQueuePriorityVeryLow = -8;
@@ -15,126 +12,123 @@ const
   NSOperationQueuePriorityNormal = 0;
   NSOperationQueuePriorityHigh = 4;
   NSOperationQueuePriorityVeryHigh = 8;
-{$endif}
-
-
-{ Types from NSOperationQueue }
-{$ifdef TYPES}
 
 const
   NSOperationQueueDefaultMaxConcurrentOperationCount = -1;
-{$endif}
 
-
-{$ifdef TYPES}
+{ Types }
 type
-  NSOperationPtr = ^NSOperation;
-  NSBlockOperationPtr = ^NSBlockOperation;
-  NSInvocationOperationPtr = ^NSInvocationOperation;
-  NSOperationQueuePtr = ^NSOperationQueue;
+  NSOperationQueuePriority = NSInteger;
+  NSOperationQueuePriorityPtr = ^NSOperationQueuePriority;
+
+{$endif}
 {$endif}
 
-{$ifdef TYPES}
-const
-  NSOperationQualityOfServiceUserInteractive = NSQualityOfServiceUserInteractive;
-  NSOperationQualityOfServiceUserInitiated = NSQualityOfServiceUserInitiated;
-  NSOperationQualityOfServiceUtility = NSQualityOfServiceUtility;
+{$ifdef RECORDS}
+{$ifndef NSOPERATION_PAS_R}
+{$define NSOPERATION_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSOPERATION_PAS_F}
+{$define NSOPERATION_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSOPERATION_PAS_S}
+{$define NSOPERATION_PAS_S}
+
+{ External string constants }
+var
+  NSInvocationOperationVoidResultException: NSString; cvar; external;
+  NSInvocationOperationCancelledException: NSString; cvar; external;
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSOperation = objcclass;
+  NSOperationPointer = ^NSOperation;
+  NSOperationPtr = NSOperationPointer;
+  NSInvocationOperation = objcclass;
+  NSInvocationOperationPointer = ^NSInvocationOperation;
+  NSInvocationOperationPtr = NSInvocationOperationPointer;
+  NSOperationQueue = objcclass;
+  NSOperationQueuePointer = ^NSOperationQueue;
+  NSOperationQueuePtr = NSOperationQueuePointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSOPERATION_PAS_C}
+{$define NSOPERATION_PAS_C}
 
-type
+{ NSOperation }
   NSOperation = objcclass external (NSObject)
   private
     _private: id;
-    _private1: cint32;
-    {$if defined(__LP64__)}
-    _private1b: cint32;
-    {$endif}
+    _reserved: Pointer;
+    
   public
+    function init: id; message 'init';
     procedure start; message 'start';
     procedure main; message 'main';
-    function isCancelled: ObjCBOOL; message 'isCancelled';
+    function isCancelled: Boolean; message 'isCancelled';
     procedure cancel; message 'cancel';
-    function isExecuting: ObjCBOOL; message 'isExecuting';
-    function isFinished: ObjCBOOL; message 'isFinished';
-    function isConcurrent: ObjCBOOL; message 'isConcurrent';
-    function isAsynchronous: ObjCBOOL; message 'isAsynchronous';
-    function isReady: ObjCBOOL; message 'isReady';
-    procedure addDependency (op: NSOperation); message 'addDependency:';
-    procedure removeDependency (op: NSOperation); message 'removeDependency:';
+    function isExecuting: Boolean; message 'isExecuting';
+    function isFinished: Boolean; message 'isFinished';
+    function isConcurrent: Boolean; message 'isConcurrent';
+    function isReady: Boolean; message 'isReady';
+    procedure addDependency(op: NSOperation); message 'addDependency:';
+    procedure removeDependency(op: NSOperation); message 'removeDependency:';
     function dependencies: NSArray; message 'dependencies';
-    procedure setQueuePriority(newValue: NSOperationQueuePriority); message 'setQueuePriority:';
     function queuePriority: NSOperationQueuePriority; message 'queuePriority';
-    procedure setCompletionBlock(newValue: OpaqueCBlock); message 'setCompletionBlock:';
-    function completionBlock: OpaqueCBlock; message 'completionBlock';
-    procedure waitUntilFinished; message 'waitUntilFinished'; { available in 10_6, 4_0 }
-    procedure setThreadPriority(newValue: double); message 'setThreadPriority:';
+    procedure setQueuePriority(p: NSOperationQueuePriority); message 'setQueuePriority:';
+    procedure waitUntilFinished; message 'waitUntilFinished';
     function threadPriority: double; message 'threadPriority';
-    procedure setQualityOfService(newValue: NSQualityOfService); message 'setQualityOfService:';
-    function qualityOfService: NSQualityOfService; message 'qualityOfService';
-    procedure setName(newValue: NSString); message 'setName:';
-    function name: NSString; message 'name';
+    procedure setThreadPriority(p: double); message 'setThreadPriority:';
   end;
 
-type
-  NSBlockOperation = objcclass external (NSOperation)
-  private
-    _private2: id;
-    _reserved2: pointer;
-  public
-    class function blockOperationWithBlock (block: OpaqueCBlock): instancetype; message 'blockOperationWithBlock:';
-    procedure addExecutionBlock (block: OpaqueCBlock); message 'addExecutionBlock:';
-    function executionBlocks: NSArray; message 'executionBlocks';
-  end;
-
-type
+{ NSInvocationOperation }
   NSInvocationOperation = objcclass external (NSOperation)
   private
     _inv: id;
     _exception: id;
-    _reserved2: pointer;
+    _reserved2: Pointer;
+    
   public
-    function initWithTarget_selector_object (target: id; sel_: SEL; arg: id): instancetype; message 'initWithTarget:selector:object:';
-    function initWithInvocation (inv: NSInvocation): instancetype; message 'initWithInvocation:'; { NS_DESIGNATED_INITIALIZER }
+    function initWithTarget_selector_object(target: id; sel_: SEL; arg: id): id; message 'initWithTarget:selector:object:';
+    function initWithInvocation(inv: NSInvocation): id; message 'initWithInvocation:';
     function invocation: NSInvocation; message 'invocation';
     function result_: id; message 'result';
   end;
-{$endif}
 
-{$ifdef EXTERNAL_SYMBOLS}
-var
-  NSInvocationOperationVoidResultException: NSString { available in 10_5, 2_0 }; cvar; external;
-  NSInvocationOperationCancelledException: NSString { available in 10_5, 2_0 }; cvar; external;
-{$endif}
-
-{$ifdef CLASSES}
-
-type
+{ NSOperationQueue }
   NSOperationQueue = objcclass external (NSObject)
   private
     _private: id;
-    _reserved: pointer;
+    _reserved: Pointer;
+    
   public
-    procedure addOperation (op: NSOperation); message 'addOperation:';
-    procedure addOperations_waitUntilFinished (ops: NSArray; wait: ObjCBOOL); message 'addOperations:waitUntilFinished:'; { available in 10_6, 4_0 }
-    procedure addOperationWithBlock (block: OpaqueCBlock); message 'addOperationWithBlock:'; { available in 10_6, 4_0 }
+    procedure addOperation(op: NSOperation); message 'addOperation:';
+    procedure addOperations_waitUntilFinished(ops: NSArray; wait: Boolean); message 'addOperations:waitUntilFinished:';
     function operations: NSArray; message 'operations';
     function operationCount: NSUInteger; message 'operationCount';
-    procedure setMaxConcurrentOperationCount(newValue: NSInteger); message 'setMaxConcurrentOperationCount:';
     function maxConcurrentOperationCount: NSInteger; message 'maxConcurrentOperationCount';
-    procedure setSuspended(newValue: ObjCBOOL); message 'setSuspended:';
-    function isSuspended: ObjCBOOL; message 'isSuspended';
-    procedure setName(newValue: NSString); message 'setName:';
+    procedure setMaxConcurrentOperationCount(cnt: NSInteger); message 'setMaxConcurrentOperationCount:';
+    procedure setSuspended(b: Boolean); message 'setSuspended:';
+    function isSuspended: Boolean; message 'isSuspended';
+    procedure setName(n: NSString); message 'setName:';
     function name: NSString; message 'name';
-    procedure setQualityOfService(newValue: NSQualityOfService); message 'setQualityOfService:';
-    function qualityOfService: NSQualityOfService; message 'qualityOfService';
-    procedure setUnderlyingQueue(newValue: dispatch_queue_t); message 'setUnderlyingQueue:';
-    function underlyingQueue: dispatch_queue_t; message 'underlyingQueue';
     procedure cancelAllOperations; message 'cancelAllOperations';
     procedure waitUntilAllOperationsAreFinished; message 'waitUntilAllOperationsAreFinished';
-    class function currentQueue: NSOperationQueue; message 'currentQueue'; { available in 10_6, 4_0 }
-    class function mainQueue: NSOperationQueue; message 'mainQueue'; { available in 10_6, 4_0 }
+    class function currentQueue: id; message 'currentQueue';
+    class function mainQueue: id; message 'mainQueue';
   end;
-{$endif}
 
+{$endif}
+{$endif}

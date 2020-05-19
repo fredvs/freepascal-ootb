@@ -18,8 +18,6 @@
 
 {$include h2pas/fpmake.pp}
 
-{$include json2pas/fpmake.pp}
-
 {$include importtl/fpmake.pp}
 
 {$include instantfpc/fpmake.pp}
@@ -35,6 +33,4 @@
 {$include tply/fpmake.pp}
 
 {$include unicode/fpmake.pp}
-
-{$include pas2js/fpmake.pp}
 

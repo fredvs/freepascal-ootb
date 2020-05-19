@@ -1,42 +1,70 @@
-{ Parsed from AppKit.framework NSSearchFieldCell.h }
-
-
-{$ifdef TYPES}
-type
-  NSSearchFieldCellPtr = ^NSSearchFieldCell;
-{$endif}
+{ Parsed from Appkit.framework NSSearchFieldCell.h }
 
 {$ifdef TYPES}
+{$ifndef NSSEARCHFIELDCELL_PAS_T}
+{$define NSSEARCHFIELDCELL_PAS_T}
+
+{ Defines }
 const
   NSSearchFieldRecentsTitleMenuItemTag = 1000;
   NSSearchFieldRecentsMenuItemTag = 1001;
   NSSearchFieldClearRecentsMenuItemTag = 1002;
   NSSearchFieldNoRecentsMenuItemTag = 1003;
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSSEARCHFIELDCELL_PAS_R}
+{$define NSSEARCHFIELDCELL_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSSEARCHFIELDCELL_PAS_F}
+{$define NSSEARCHFIELDCELL_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSSEARCHFIELDCELL_PAS_S}
+{$define NSSEARCHFIELDCELL_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSSearchFieldCell = objcclass;
+  NSSearchFieldCellPointer = ^NSSearchFieldCell;
+  NSSearchFieldCellPtr = NSSearchFieldCellPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSSEARCHFIELDCELL_PAS_C}
+{$define NSSEARCHFIELDCELL_PAS_C}
 
-type
+{ NSSearchFieldCell }
   NSSearchFieldCell = objcclass external (NSTextFieldCell)
   private
-    _sfFlags: bitpacked record
+    __sfFlags: record
       case byte of
-        0: (_anonBitField__sfFlags0: cuint);
-        1: (
-          sendsWholeSearchString: 0..1;
-          maximumRecents: 0..((1 shl 8)-1);
-          cancelVisible: 0..1;
-          reserved2: 0..((1 shl 2)-1);
-          disableText: 0..1;
-          menuTracking: 0..1;
-          deferredUpdate: 0..1;
-          sendsImmediately: 0..1;
-          centeredLook: 0..1;
-          renderingCentered: 0..1;
-          becomeTransition: 0..1;
-          resignTransition: 0..1;
-          reserved: 0..((1 shl 12)-1);
-        );
+       0: (_anonbitfield_NSSearchFieldCell0: cuint);
+       1: (data: bitpacked record
+        _sendsWholeSearchString: 0..1;
+        _maximumRecents: 0..((1 shl 8)-1);
+        cancelVisible: 0..1;
+        reserved2: 0..((1 shl 2)-1);
+        disableText: 0..1;
+        menuTracking: 0..1;
+        deferredUpdate: 0..1;
+        sendsImmediately: 0..1;
+        
+        reserved: 0..((1 shl 16)-1);
+       end;
+      );
       end;
     _searchButtonCell: NSButtonCell;
     _cancelButtonCell: NSButtonCell;
@@ -49,28 +77,30 @@ type
     _reserved2: cuint;
     _reserved3: cuint;
     _reserved4: cuint;
+    
   public
-    procedure setSearchButtonCell(newValue: NSButtonCell); message 'setSearchButtonCell:';
     function searchButtonCell: NSButtonCell; message 'searchButtonCell';
-    procedure setCancelButtonCell(newValue: NSButtonCell); message 'setCancelButtonCell:';
+    procedure setSearchButtonCell(cell: NSButtonCell); message 'setSearchButtonCell:';
     function cancelButtonCell: NSButtonCell; message 'cancelButtonCell';
+    procedure setCancelButtonCell(cell: NSButtonCell); message 'setCancelButtonCell:';
     procedure resetSearchButtonCell; message 'resetSearchButtonCell';
     procedure resetCancelButtonCell; message 'resetCancelButtonCell';
-    function searchTextRectForBounds (rect: NSRect): NSRect; message 'searchTextRectForBounds:';
-    function searchButtonRectForBounds (rect: NSRect): NSRect; message 'searchButtonRectForBounds:';
-    function cancelButtonRectForBounds (rect: NSRect): NSRect; message 'cancelButtonRectForBounds:';
-    procedure setSearchMenuTemplate(newValue: NSMenu); message 'setSearchMenuTemplate:';
+    function searchTextRectForBounds(rect: NSRect): NSRect; message 'searchTextRectForBounds:';
+    function searchButtonRectForBounds(rect: NSRect): NSRect; message 'searchButtonRectForBounds:';
+    function cancelButtonRectForBounds(rect: NSRect): NSRect; message 'cancelButtonRectForBounds:';
+    procedure setSearchMenuTemplate(menu_: NSMenu); message 'setSearchMenuTemplate:';
     function searchMenuTemplate: NSMenu; message 'searchMenuTemplate';
-    procedure setSendsWholeSearchString(newValue: ObjCBOOL); message 'setSendsWholeSearchString:';
-    function sendsWholeSearchString: ObjCBOOL; message 'sendsWholeSearchString';
-    procedure setMaximumRecents(newValue: NSInteger); message 'setMaximumRecents:';
+    procedure setSendsWholeSearchString(flag: Boolean); message 'setSendsWholeSearchString:';
+    function sendsWholeSearchString: Boolean; message 'sendsWholeSearchString';
+    procedure setMaximumRecents(maxRecents: NSInteger); message 'setMaximumRecents:';
     function maximumRecents: NSInteger; message 'maximumRecents';
-    procedure setRecentSearches(newValue: NSArray); message 'setRecentSearches:';
+    procedure setRecentSearches(searches: NSArray); message 'setRecentSearches:';
     function recentSearches: NSArray; message 'recentSearches';
-    procedure setRecentsAutosaveName(newValue: NSString); message 'setRecentsAutosaveName:';
+    procedure setRecentsAutosaveName(string_: NSString); message 'setRecentsAutosaveName:';
     function recentsAutosaveName: NSString; message 'recentsAutosaveName';
-    procedure setSendsSearchStringImmediately(newValue: ObjCBOOL); message 'setSendsSearchStringImmediately:';
-    function sendsSearchStringImmediately: ObjCBOOL; message 'sendsSearchStringImmediately';
+    function sendsSearchStringImmediately: Boolean; message 'sendsSearchStringImmediately';
+    procedure setSendsSearchStringImmediately(flag: Boolean); message 'setSendsSearchStringImmediately:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

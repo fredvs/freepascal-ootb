@@ -19,10 +19,10 @@ unit ufloat128;
   interface
 
     uses
-      sfpu128;
+      softfpu;
 
     type
-      float128 = sfpu128.float128;
+      float128 = softfpu.float128;
 
     operator+ (const f1,f2 : float128) result : float128;inline;
     operator* (const f1,f2 : float128) result : float128;inline;

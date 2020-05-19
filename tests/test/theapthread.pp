@@ -1,4 +1,3 @@
-{%skiptarget=$nothread }
 { %TIMEOUT=105 }
 {$mode objfpc}{$h+}
 

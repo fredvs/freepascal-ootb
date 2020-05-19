@@ -139,7 +139,7 @@ end;
 Function HaveChar(AChar : Char; const AList: array of Char) : Boolean;
 
 Var
-  I : SizeInt;
+  I : Integer;
 
 begin
   I:=0;
@@ -151,13 +151,13 @@ begin
     end;
 end;
 
-function TStringHelper.GetChar(AIndex: SizeInt): Char;
+function TStringHelper.GetChar(AIndex: Integer): Char;
 begin
   Result:=Self[AIndex+1];
 end;
 
 
-function TStringHelper.GetLength: SizeInt;
+function TStringHelper.GetLength: Integer;
 
 begin
   Result:=System.Length(Self);
@@ -187,15 +187,15 @@ begin
 end;
 
 
-class function TStringHelper.Compare(const A: string; IndexA: SizeInt;
-  const B: string; IndexB: SizeInt; ALen: SizeInt): Integer;
+class function TStringHelper.Compare(const A: string; IndexA: Integer;
+  const B: string; IndexB: Integer; ALen: Integer): Integer;
 begin
   Result:=Compare(A,IndexA,B,IndexB,ALen,[]);
 end;
 
 
-class function TStringHelper.Compare(const A: string; IndexA: SizeInt;
-  const B: string; IndexB: SizeInt; ALen: SizeInt; IgnoreCase: Boolean
+class function TStringHelper.Compare(const A: string; IndexA: Integer;
+  const B: string; IndexB: Integer; ALen: Integer; IgnoreCase: Boolean
   ): Integer; //deprecated 'Use same with TCompareOptions';
 begin
   if IgnoreCase then
@@ -205,12 +205,12 @@ begin
 end;
 
 
-class function TStringHelper.Compare(const A: string; IndexA: SizeInt;
-  const B: string; IndexB: SizeInt; ALen: SizeInt; Options: TCompareOptions
+class function TStringHelper.Compare(const A: string; IndexA: Integer;
+  const B: string; IndexB: Integer; ALen: Integer; Options: TCompareOptions
   ): Integer;
 
 Var
-  L : SizeInt;
+  l : Integer;
 
 begin
   L:=ALen;
@@ -231,7 +231,7 @@ class function TStringHelper.CompareOrdinal(const A: string; const B: string
   ): Integer;
 
 Var
-  L : SizeInt;
+  L : Integer;
 
 begin
   L:=System.Length(B);
@@ -241,8 +241,8 @@ begin
 end;
 
 
-class function TStringHelper.CompareOrdinal(const A: string; IndexA: SizeInt;
-  const B: string; IndexB: SizeInt; ALen: SizeInt): Integer;
+class function TStringHelper.CompareOrdinal(const A: string; IndexA: Integer;
+  const B: string; IndexB: Integer; ALen: Integer): Integer;
 
 begin
   Result:=StrLComp(PAnsiChar(@A[IndexA+1]), PAnsiChar(@B[IndexB+1]), ALen);
@@ -263,7 +263,7 @@ begin
 end;
 
 
-class function TStringHelper.Create(AChar: Char; ACount: SizeInt): string;
+class function TStringHelper.Create(AChar: Char; ACount: Integer): string;
 begin
    Result:=StringOfChar(AChar,ACount);
 end;
@@ -277,7 +277,7 @@ end;
 
 
 class function TStringHelper.Create(const AValue: array of Char;
-  StartIndex: SizeInt; ALen: SizeInt): string;
+  StartIndex: Integer; ALen: Integer): string;
 begin
   SetLength(Result,ALen);
   if ALen>0 then
@@ -321,7 +321,7 @@ class function TStringHelper.Join(const Separator: string;
 
 Var
   SValues : Array of string;
-  I,L : SizeInt;
+  I,L : Integer;
   S : String;
   P : ^TVarRec;
 
@@ -368,10 +368,10 @@ end;
 
 
 class function TStringHelper.Join(const Separator: string;
-  const Values: array of string; StartIndex: SizeInt; ACount: SizeInt): string;
+  const Values: array of string; StartIndex: Integer; ACount: Integer): string;
 
 Var
-  I,L,VLen : SizeInt;
+  I,L,VLen : integer;
 
 begin
   VLen:=High(Values);
@@ -469,7 +469,7 @@ begin
   Result:=sysUtils.StrComp(PChar(Self),PChar(B));
 end;
 
-procedure TStringHelper.CopyTo(SourceIndex: SizeInt; var destination: array of Char; DestinationIndex: SizeInt; ACount: SizeInt);
+procedure TStringHelper.CopyTo(SourceIndex: Integer; var destination: array of Char; DestinationIndex: Integer; ACount: Integer);
 
 Var
   P1,P2 : PChar;
@@ -490,7 +490,7 @@ begin
 end;
 
 
-function TStringHelper.CountChar(const C: Char): SizeInt;
+function TStringHelper.CountChar(const C: Char): Integer;
 
 Var
   S : Char;
@@ -511,7 +511,7 @@ end;
 function TStringHelper.DeQuotedString(const AQuoteChar: Char): string;
 
 var
-  L,I : SizeInt;
+  L,I : Integer;
   Res : Array of Char;
   PS,PD : PChar;
   IsQuote : Boolean;
@@ -557,13 +557,12 @@ end;
 function TStringHelper.EndsWith(const AValue: string; IgnoreCase: Boolean): Boolean;
 
 Var
-  L : SizeInt;
+  L : integer;
   S : String;
-  
 begin
   L:=system.Length(AVAlue);
-  Result:=L=0;
-  if Not Result then
+  Result:=L>0;
+  if Result then
     begin
     S:=system.Copy(Self,Length-L+1,L);
     Result:=system.Length(S)=L;
@@ -575,16 +574,12 @@ begin
     end;
 end;
 
-
 function TStringHelper.Equals(const AValue: string): Boolean;
-
 begin
   Result:=(Self=AValue);
 end;
 
-
 function TStringHelper.Format(const args: array of const): string;
-
 begin
   Result:=Format(Self,Args);
 end;
@@ -610,33 +605,33 @@ begin
 end;
 
 
-function TStringHelper.IndexOf(AValue: Char): SizeInt;
+function TStringHelper.IndexOf(AValue: Char): Integer;
 begin
   Result:=IndexOf(AValue,0,Length);
 end;
 
 
-function TStringHelper.IndexOf(const AValue: string): SizeInt;
+function TStringHelper.IndexOf(const AValue: string): Integer;
 begin
   Result:=IndexOf(AValue,0,Length);
 end;
 
 
-function TStringHelper.IndexOf(AValue: Char; StartIndex: SizeInt): SizeInt;
+function TStringHelper.IndexOf(AValue: Char; StartIndex: Integer): Integer;
 begin
   Result:=IndexOf(AValue,StartIndex,Length);
 end;
 
 
-function TStringHelper.IndexOf(const AValue: string; StartIndex: SizeInt
-  ): SizeInt;
+function TStringHelper.IndexOf(const AValue: string; StartIndex: Integer
+  ): Integer;
 begin
   Result:=IndexOf(AValue,StartIndex,Length);
 end;
 
 
-function TStringHelper.IndexOf(AValue: Char; StartIndex: SizeInt;
-  ACount: SizeInt): SizeInt;
+function TStringHelper.IndexOf(AValue: Char; StartIndex: Integer;
+  ACount: Integer): Integer;
 
 Var
   S : String;
@@ -649,8 +644,8 @@ begin
 end;
 
 
-function TStringHelper.IndexOf(const AValue: string; StartIndex: SizeInt;
-  ACount: SizeInt): SizeInt;
+function TStringHelper.IndexOf(const AValue: string; StartIndex: Integer;
+  ACount: Integer): Integer;
 
 Var
   S : String;
@@ -663,15 +658,15 @@ begin
 end;
 
 function TStringHelper.IndexOfUnQuoted(const AValue: string; StartQuote,
-  EndQuote: Char; StartIndex: SizeInt = 0): SizeInt;
+  EndQuote: Char; StartIndex: Integer = 0): Integer;
 
 Var
-  LV : SizeInt;
+  LV : Integer;
 
-  Function MatchAt(I : SizeInt) : Boolean ; Inline;
+  Function MatchAt(I : Integer) : Boolean ; Inline;
 
   Var
-    J : SizeInt;
+    J : integer;
 
   begin
     J:=1;
@@ -682,7 +677,8 @@ Var
   end;
 
 Var
-  I,L,Q: SizeInt;
+  I,L: Integer;
+  Q : Integer;
 
 begin
   Result:=-1;
@@ -719,24 +715,24 @@ begin
 end;
 
 
-function TStringHelper.IndexOfAny(const AnyOf: array of Char): SizeInt;
+function TStringHelper.IndexOfAny(const AnyOf: array of Char): Integer;
 begin
   Result:=IndexOfAny(AnyOf,0,Length);
 end;
 
 
 function TStringHelper.IndexOfAny(const AnyOf: array of Char;
-  StartIndex: SizeInt): SizeInt;
+  StartIndex: Integer): Integer;
 begin
   Result:=IndexOfAny(AnyOf,StartIndex,Length);
 end;
 
 
 function TStringHelper.IndexOfAny(const AnyOf: array of Char;
-  StartIndex: SizeInt; ACount: SizeInt): SizeInt;
+  StartIndex: Integer; ACount: Integer): Integer;
 
 Var
-  i,L : SizeInt;
+  i,L : Integer;
 
 begin
   I:=StartIndex+1;
@@ -752,32 +748,32 @@ begin
     end;
 end;
 
-function TStringHelper.IndexOfAny(const AnyOf: array of String): SizeInt;
+function TStringHelper.IndexOfAny(const AnyOf: array of String): Integer;
 begin
   Result:=IndexOfAny(AnyOf,0,Length);
 end;
 
 function TStringHelper.IndexOfAny(const AnyOf: array of String;
-  StartIndex: SizeInt): SizeInt;
+  StartIndex: Integer): Integer;
 begin
   Result:=IndexOfAny(AnyOf,StartIndex,Length-StartIndex);
 end;
 
 function TStringHelper.IndexOfAny(const AnyOf: array of String;
-  StartIndex: SizeInt; ACount: SizeInt): SizeInt;
+  StartIndex: Integer; ACount: Integer): Integer;
 
 Var
-  M : SizeInt;
+  M : Integer;
 
 begin
   Result:=IndexOfAny(AnyOf,StartIndex,ACount,M);
 end;
 
 function TStringHelper.IndexOfAny(const AnyOf: array of String;
-  StartIndex: SizeInt; ACount: SizeInt; out AMatch: SizeInt): SizeInt;
+  StartIndex: Integer; ACount: Integer; out AMatch: Integer): Integer;
 
 Var
-  L,I : SizeInt;
+  L,I : Integer;
 
 begin
   Result:=-1;
@@ -794,25 +790,25 @@ end;
 
 
 function TStringHelper.IndexOfAnyUnquoted(const AnyOf: array of Char;
-  StartQuote, EndQuote: Char): SizeInt;
+  StartQuote, EndQuote: Char): Integer;
 begin
   Result:=IndexOfAnyUnquoted(AnyOf,StartQuote,EndQuote,0,Length);
 end;
 
 
 function TStringHelper.IndexOfAnyUnquoted(const AnyOf: array of Char;
-  StartQuote, EndQuote: Char; StartIndex: SizeInt): SizeInt;
+  StartQuote, EndQuote: Char; StartIndex: Integer): Integer;
 begin
   Result:=IndexOfAnyUnquoted(AnyOf,StartQuote,EndQuote,StartIndex,Length);
 end;
 
 
 function TStringHelper.IndexOfAnyUnquoted(const AnyOf: array of Char;
-  StartQuote, EndQuote: Char; StartIndex: SizeInt; ACount: SizeInt): SizeInt;
+  StartQuote, EndQuote: Char; StartIndex: Integer; ACount: Integer): Integer;
 
 Var
-  I,L : SizeInt;
-  Q : SizeInt;
+  I,L : Integer;
+  Q : Integer;
 
 begin
   Result:=-1;
@@ -849,11 +845,11 @@ begin
 end;
 
 function TStringHelper.IndexOfAnyUnquoted(const AnyOf: array of string;
-  StartQuote, EndQuote: Char; StartIndex: SizeInt; out Matched: SizeInt
-  ): SizeInt;
+  StartQuote, EndQuote: Char; StartIndex: Integer; out Matched: Integer
+  ): Integer;
 
 Var
-  L,I : SizeInt;
+  L,I : Integer;
 
 begin
   Result:=-1;
@@ -869,7 +865,7 @@ begin
 end;
 
 
-function TStringHelper.Insert(StartIndex: SizeInt; const AValue: string
+function TStringHelper.Insert(StartIndex: Integer; const AValue: string
   ): string;
 begin
   system.Insert(AValue,Self,StartIndex+1);
@@ -877,7 +873,7 @@ begin
 end;
 
 
-function TStringHelper.IsDelimiter(const Delimiters: string; Index: SizeInt
+function TStringHelper.IsDelimiter(const Delimiters: string; Index: Integer
   ): Boolean;
 begin
   Result:=sysutils.IsDelimiter(Delimiters,Self,Index+1);
@@ -890,42 +886,42 @@ begin
 end;
 
 
-function TStringHelper.LastDelimiter(const Delims: string): SizeInt;
+function TStringHelper.LastDelimiter(const Delims: string): Integer;
 begin
   Result:=sysutils.LastDelimiter(Delims,Self)-1;
 end;
 
 
-function TStringHelper.LastIndexOf(AValue: Char): SizeInt;
+function TStringHelper.LastIndexOf(AValue: Char): Integer;
 begin
   Result:=LastIndexOf(AValue,Length-1,Length);
 end;
 
 
-function TStringHelper.LastIndexOf(const AValue: string): SizeInt;
+function TStringHelper.LastIndexOf(const AValue: string): Integer;
 begin
   Result:=LastIndexOf(AValue,Length-1,Length);
 end;
 
 
-function TStringHelper.LastIndexOf(AValue: Char; AStartIndex: SizeInt): SizeInt;
+function TStringHelper.LastIndexOf(AValue: Char; AStartIndex: Integer): Integer;
 begin
   Result:=LastIndexOf(AValue,AStartIndex,Length);
 end;
 
 
-function TStringHelper.LastIndexOf(const AValue: string; AStartIndex: SizeInt
-  ): SizeInt;
+function TStringHelper.LastIndexOf(const AValue: string; AStartIndex: Integer
+  ): Integer;
 begin
   Result:=LastIndexOf(AValue,AStartIndex,Length);
 end;
 
 
-function TStringHelper.LastIndexOf(AValue: Char; AStartIndex: SizeInt;
-  ACount: SizeInt): SizeInt;
+function TStringHelper.LastIndexOf(AValue: Char; AStartIndex: Integer;
+  ACount: Integer): Integer;
 
 Var
-  Min : SizeInt;
+  Min : Integer;
 
 begin
   Result:=AStartIndex+1;
@@ -941,55 +937,31 @@ begin
 end;
 
 
-function TStringHelper.LastIndexOf(const AValue: string; AStartIndex: SizeInt; ACount: SizeInt): SizeInt;
-  
-var
-  I,L,LS,M : SizeInt;
-  S : String;
-  P : PChar;
-    
+function TStringHelper.LastIndexOf(const AValue: string; AStartIndex: Integer;
+  ACount: Integer): Integer;
 begin
-  Result:=-1;
-  LS:=system.Length(Self);
-  L:=system.Length(AValue);
-  if (L=0) or (L>LS) then
-    Exit;
-  P:=PChar(AValue);  
-  S:=Self;
-  I:=AStartIndex+1; // 1 based
-  if (I>LS) then
-    I:=LS;
-  I:=I-L+1;
-  M:=AStartIndex-ACount+1; // 1 based
-  if M<1 then
-    M:=1;
-  while (Result=-1) and (I>=M) do
-    begin
-    if (0=StrLComp(PChar(@S[I]),P,L)) then
-      Result:=I-1;
-    Dec(I);
-    end;
+  Result:=LastIndexOf(AValue,AStartIndex,AStartIndex+1);
 end;
 
 
-function TStringHelper.LastIndexOfAny(const AnyOf: array of Char): SizeInt;
+function TStringHelper.LastIndexOfAny(const AnyOf: array of Char): Integer;
 begin
   Result:=LastIndexOfAny(AnyOf,Length-1,Length);
 end;
 
 
 function TStringHelper.LastIndexOfAny(const AnyOf: array of Char;
-  AStartIndex: SizeInt): SizeInt;
+  AStartIndex: Integer): Integer;
 begin
   Result:=LastIndexOfAny(AnyOf,AStartIndex,Length);
 end;
 
 
 function TStringHelper.LastIndexOfAny(const AnyOf: array of Char;
-  AStartIndex: SizeInt; ACount: SizeInt): SizeInt;
+  AStartIndex: Integer; ACount: Integer): Integer;
 
 Var
-  Min : SizeInt;
+  Min : Integer;
 
 begin
   Result:=AStartIndex+1;
@@ -1005,15 +977,15 @@ begin
 end;
 
 
-function TStringHelper.PadLeft(ATotalWidth: SizeInt): string;
+function TStringHelper.PadLeft(ATotalWidth: Integer): string;
 begin
   Result:=PadLeft(ATotalWidth,' ');
 end;
 
 
-function TStringHelper.PadLeft(ATotalWidth: SizeInt; PaddingChar: Char): string;
+function TStringHelper.PadLeft(ATotalWidth: Integer; PaddingChar: Char): string;
 Var
-  L : SizeInt;
+  L : Integer;
 
 begin
   Result:=Self;
@@ -1023,17 +995,17 @@ begin
 end;
 
 
-function TStringHelper.PadRight(ATotalWidth: SizeInt): string;
+function TStringHelper.PadRight(ATotalWidth: Integer): string;
 begin
   Result:=PadRight(ATotalWidth,' ');
 end;
 
 
-function TStringHelper.PadRight(ATotalWidth: SizeInt; PaddingChar: Char
+function TStringHelper.PadRight(ATotalWidth: Integer; PaddingChar: Char
   ): string;
 
 Var
-  L : SizeInt;
+  L : Integer;
 
 begin
   Result:=Self;
@@ -1055,13 +1027,13 @@ begin
 end;
 
 
-function TStringHelper.Remove(StartIndex: SizeInt): string;
+function TStringHelper.Remove(StartIndex: Integer): string;
 begin
   Result:=Remove(StartIndex,Self.Length-StartIndex);
 end;
 
 
-function TStringHelper.Remove(StartIndex: SizeInt; ACount: SizeInt): string;
+function TStringHelper.Remove(StartIndex: Integer; ACount: Integer): string;
 begin
   Result:=Self;
   System.Delete(Result,StartIndex+1,ACount);
@@ -1097,38 +1069,38 @@ end;
 
 function TStringHelper.Split(const Separators: array of Char): TStringArray;
 begin
-  Result:=Split(Separators,#0,#0,Length+1,TStringSplitOptions.None);
+  Result:=SPlit(Separators,#0,#0,Length,TStringSplitOptions.None);
 end;
 
 
-function TStringHelper.Split(const Separators: array of Char; ACount: SizeInt
+function TStringHelper.Split(const Separators: array of Char; ACount: Integer
   ): TStringArray;
 begin
-  Result:=Split(Separators,#0,#0,ACount,TStringSplitOptions.None);
+  Result:=SPlit(Separators,#0,#0,ACount,TStringSplitOptions.None);
 end;
 
 
 function TStringHelper.Split(const Separators: array of Char;
   Options: TStringSplitOptions): TStringArray;
 begin
-  Result:=Split(Separators,Length+1,Options);
+  Result:=SPlit(Separators,Length,Options);
 end;
 
 
-function TStringHelper.Split(const Separators: array of Char; ACount: SizeInt;
+function TStringHelper.Split(const Separators: array of Char; ACount: Integer;
   Options: TStringSplitOptions): TStringArray;
 begin
-  Result:=Split(Separators,#0,#0,ACount,Options);
+  Result:=SPlit(Separators,#0,#0,ACount,Options);
 end;
 
 
 function TStringHelper.Split(const Separators: array of string): TStringArray;
 begin
-  Result:=Split(Separators,Length+1);
+  Result:=Split(Separators,Length);
 end;
 
 
-function TStringHelper.Split(const Separators: array of string; ACount: SizeInt
+function TStringHelper.Split(const Separators: array of string; ACount: Integer
   ): TStringArray;
 begin
   Result:=Split(Separators,ACount,TStringSplitOptions.None);
@@ -1138,12 +1110,12 @@ end;
 function TStringHelper.Split(const Separators: array of string;
   Options: TStringSplitOptions): TStringArray;
 begin
-  Result:=Split(Separators,Length+1,Options);
+  Result:=Split(Separators,Length,Options);
 end;
 
 
 function TStringHelper.Split(const Separators: array of string;
-  ACount: SizeInt; Options: TStringSplitOptions): TStringArray;
+  ACount: Integer; Options: TStringSplitOptions): TStringArray;
 begin
   Result:=Split(Separators,#0,#0,ACount,Options);
 end;
@@ -1166,24 +1138,24 @@ end;
 function TStringHelper.Split(const Separators: array of Char; AQuoteStart,
   AQuoteEnd: Char; Options: TStringSplitOptions): TStringArray;
 begin
-  Result:=Split(Separators,AQuoteStart,AQuoteEnd,Length+1,Options);
+  Result:=Split(Separators,AQuoteStart,AQuoteEnd,Length,Options);
 end;
 
 
 function TStringHelper.Split(const Separators: array of Char; AQuoteStart,
-  AQuoteEnd: Char; ACount: SizeInt): TStringArray;
+  AQuoteEnd: Char; ACount: Integer): TStringArray;
 begin
   Result:=Split(Separators,AQuoteStart,AQuoteEnd,ACount,TStringSplitOptions.None);
 end;
 
 
 function TStringHelper.Split(const Separators: array of Char; AQuoteStart,
-  AQuoteEnd: Char; ACount: SizeInt; Options: TStringSplitOptions): TStringArray;
+  AQuoteEnd: Char; ACount: Integer; Options: TStringSplitOptions): TStringArray;
 
 Const
   BlockSize = 10;
 
-  Function NextSep(StartIndex : SizeInt) : SizeInt;
+  Function NextSep(StartIndex : integer) : Integer;
 
   begin
     if (AQuoteStart<>#0) then
@@ -1192,7 +1164,7 @@ Const
       Result:=Self.IndexOfAny(Separators,StartIndex);
   end;
 
-  Procedure MaybeGrow(Curlen : SizeInt);
+  Procedure MaybeGrow(Curlen : Integer);
 
   begin
     if System.Length(Result)<=CurLen then
@@ -1200,7 +1172,7 @@ Const
   end;
 
 Var
-  Sep,LastSep,Len : SizeInt;
+  Sep,LastSep,Len : integer;
   T : String;
 
 begin
@@ -1211,7 +1183,7 @@ begin
   While (Sep<>-1) and ((ACount=0) or (Len<ACount)) do
     begin
     T:=SubString(LastSep,Sep-LastSep);
-//    Writeln('Examining >',T,'< at pos ',LastSep,', till pos ',Sep);
+//    Writeln('Examining >',T,'< at pos,',LastSep,' till pos ',Sep);
     If (T<>'') or (not (TStringSplitOptions.ExcludeEmpty=Options)) then
       begin
       MaybeGrow(Len);
@@ -1221,7 +1193,7 @@ begin
     LastSep:=Sep+1;
     Sep:=NextSep(LastSep);
     end;
-  if (LastSep<=Length) and ((ACount=0) or (Len<ACount)) then
+  if (LastSep<Length) and ((ACount=0) or (Len<ACount)) then
     begin
     T:=SubString(LastSep);
 //    Writeln('Examining >',T,'< at pos,',LastSep,' till pos ',Sep);
@@ -1243,30 +1215,30 @@ end;
 function TStringHelper.Split(const Separators: array of string; AQuoteStart,
   AQuoteEnd: Char): TStringArray;
 begin
-  Result:=SPlit(Separators,AQuoteStart,AQuoteEnd,Length+1,TStringSplitOptions.None);
+  Result:=SPlit(Separators,AQuoteStart,AQuoteEnd,Length,TStringSplitOptions.None);
 end;
 
 
 function TStringHelper.Split(const Separators: array of string; AQuoteStart,
   AQuoteEnd: Char; Options: TStringSplitOptions): TStringArray;
 begin
-  Result:=SPlit(Separators,AQuoteStart,AQuoteEnd,Length+1,Options);
+  Result:=SPlit(Separators,AQuoteStart,AQuoteEnd,Length,Options);
 end;
 
 
 function TStringHelper.Split(const Separators: array of string; AQuoteStart,
-  AQuoteEnd: Char; ACount: SizeInt): TStringArray;
+  AQuoteEnd: Char; ACount: Integer): TStringArray;
 begin
   Result:=SPlit(Separators,AQuoteStart,AQuoteEnd,ACount,TStringSplitOptions.None);
 end;
 
 
 function TStringHelper.Split(const Separators: array of string; AQuoteStart,
-  AQuoteEnd: Char; ACount: SizeInt; Options: TStringSplitOptions): TStringArray;
+  AQuoteEnd: Char; ACount: Integer; Options: TStringSplitOptions): TStringArray;
 Const
   BlockSize = 10;
 
-  Function NextSep(StartIndex : SizeInt; out Match : SizeInt) : SizeInt;
+  Function NextSep(StartIndex : integer; out Match : Integer) : Integer;
 
   begin
     if (AQuoteStart<>#0) then
@@ -1276,7 +1248,7 @@ Const
     if Result<>-1 then
   end;
 
-  Procedure MaybeGrow(Curlen : SizeInt);
+  Procedure MaybeGrow(Curlen : Integer);
 
   begin
     if System.Length(Result)<=CurLen then
@@ -1284,7 +1256,7 @@ Const
   end;
 
 Var
-  Sep,LastSep,Len,Match : SizeInt;
+  Sep,LastSep,Len,Match : integer;
   T : String;
 
 begin
@@ -1304,7 +1276,7 @@ begin
     LastSep:=Sep+System.Length(Separators[Match]);
     Sep:=NextSep(LastSep,Match);
     end;
-  if (LastSep<=Length) and ((ACount=0) or (Len<ACount)) then
+  if (LastSep<Length-1) and ((ACount=0) or (Len<ACount)) then
     begin
     T:=SubString(LastSep);
 //    Writeln('Examining >',T,'< at pos,',LastSep,' till pos ',Sep);
@@ -1325,32 +1297,25 @@ end;
 function TStringHelper.StartsWith(const AValue: string; IgnoreCase: Boolean
   ): Boolean;
 Var
-  L : SizeInt;
-  S : String;
-  
+  L : Integer;
 begin
   L:=System.Length(AValue);
-  Result:=L<=0;
-  if not Result then
-    begin
-    S:=System.Copy(Self,1,L);
-    Result:=(System.Length(S)=L);
-    if Result then
-      if IgnoreCase then
-        Result:=SameText(S,aValue)
-      else
-        Result:=SameStr(S,AValue);
-    end;  
+  Result:=L>0;
+  if Result then
+    if IgnoreCase then
+      Result:=StrLiComp(PChar(AValue),PChar(Self),L)=0
+    else
+      Result:=StrLComp(PChar(AValue),PChar(Self),L)=0
 end;
 
 
-function TStringHelper.Substring(AStartIndex: SizeInt): string;
+function TStringHelper.Substring(AStartIndex: Integer): string;
 begin
   Result:=Self.SubString(AStartIndex,Self.Length-AStartIndex);
 end;
 
 
-function TStringHelper.Substring(AStartIndex: SizeInt; ALen: SizeInt): string;
+function TStringHelper.Substring(AStartIndex: Integer; ALen: Integer): string;
 begin
   Result:=system.Copy(Self,AStartIndex+1,ALen);
 end;
@@ -1399,11 +1364,11 @@ begin
 end;
 
 
-function TStringHelper.ToCharArray(AStartIndex: SizeInt; ALen: SizeInt
+function TStringHelper.ToCharArray(AStartIndex: Integer; ALen: Integer
   ): TCharArray;
 
 Var
-  I : SizeInt;
+  I : Integer;
 
 begin
   SetLength(Result,ALen);
@@ -1463,7 +1428,7 @@ end;
 function TStringHelper.TrimLeft(const ATrimChars: array of Char): string;
 
 Var
-  I,Len : SizeInt;
+  I,Len : Integer;
 
 begin
   I:=1;
@@ -1481,7 +1446,7 @@ end;
 function TStringHelper.TrimRight(const ATrimChars: array of Char): string;
 
 Var
-  I,Len : SizeInt;
+  I,Len : Integer;
 
 begin
   Len:=Self.Length;
@@ -1518,7 +1483,6 @@ end;
 {$define FLOATTYPE:=Single}
 {$define TFloatRec:=TSingleRec}
 {$i syshelpf.inc}
-{$UNDEF TFloatRec}
 {$ENDIF FPC_HAS_TYPE_SINGLE}
 
 { ---------------------------------------------------------------------
@@ -1529,7 +1493,6 @@ end;
 {$define FLOATTYPE:=Double}
 {$define TFloatRec:=TDoubleRec}
 {$i syshelpf.inc}
-{$UNDEF TFloatRec}
 {$ENDIF FPC_HAS_TYPE_DOUBLE}
 
 { ---------------------------------------------------------------------
@@ -1541,7 +1504,6 @@ end;
 {$define FLOATTYPE:=Extended}
 {$define TFloatRec:=TExtended80Rec}
 {$i syshelpf.inc}
-{$UNDEF TFloatRec}
 {$ENDIF FPC_HAS_TYPE_EXTENDED}
 
 { ---------------------------------------------------------------------
@@ -1550,7 +1512,6 @@ end;
 
 {$define TORDINALHELPER:=TByteHelper}
 {$define TORDINALTYPE:=Byte}
-{$define TORDINALBITINDEX:=TByteBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1559,7 +1520,6 @@ end;
 
 {$define TORDINALHELPER:=TShortIntHelper}
 {$define TORDINALTYPE:=ShortInt}
-{$define TORDINALBITINDEX:=TShortIntBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1568,7 +1528,6 @@ end;
 
 {$define TORDINALHELPER:=TSmallIntHelper}
 {$define TORDINALTYPE:=SmallInt}
-{$define TORDINALBITINDEX:=TSmallIntBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1577,7 +1536,6 @@ end;
 
 {$define TORDINALHELPER:=TWordHelper}
 {$define TORDINALTYPE:=Word}
-{$define TORDINALBITINDEX:=TWordBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1586,7 +1544,6 @@ end;
 
 {$define TORDINALHELPER:=TCardinalHelper}
 {$define TORDINALTYPE:=Cardinal}
-{$define TORDINALBITINDEX:=TCardinalBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1595,7 +1552,6 @@ end;
 
 {$define TORDINALHELPER:=TIntegerHelper}
 {$define TORDINALTYPE:=Integer}
-{$define TORDINALBITINDEX:=TIntegerBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1604,7 +1560,6 @@ end;
 
 {$define TORDINALHELPER:=TInt64Helper}
 {$define TORDINALTYPE:=Int64}
-{$define TORDINALBITINDEX:=TInt64BitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1613,7 +1568,6 @@ end;
 
 {$define TORDINALHELPER:=TQWordHelper}
 {$define TORDINALTYPE:=QWord}
-{$define TORDINALBITINDEX:=TQwordBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1622,7 +1576,6 @@ end;
 
 {$define TORDINALHELPER:=TNativeIntHelper}
 {$define TORDINALTYPE:=NativeInt}
-{$define TORDINALBITINDEX:=TNativeIntBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------
@@ -1631,7 +1584,6 @@ end;
 
 {$define TORDINALHELPER:=TNativeUIntHelper}
 {$define TORDINALTYPE:=NativeUInt}
-{$define TORDINALBITINDEX:=TNativeUIntBitIndex}
 {$i syshelpo.inc}
 
 { ---------------------------------------------------------------------

@@ -60,9 +60,6 @@ unit cgobj;
           executionweight : longint;
           alignment : talignment;
           rg        : array[tregistertype] of trgobj;
-{$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-          has_next_reg: bitpacked array[TSuperRegister] of boolean;
-{$endif cpu8bitalu or cpu16bitalu}
        {$ifdef flowgraph}
           aktflownode:word;
        {$endif}
@@ -88,20 +85,8 @@ unit cgobj;
           function getfpuregister(list:TAsmList;size:Tcgsize):Tregister;virtual;
           function getmmregister(list:TAsmList;size:Tcgsize):Tregister;virtual;
           function getflagregister(list:TAsmList;size:Tcgsize):Tregister;virtual;
-          function gettempregister(list:TAsmList):Tregister;virtual;
           {Does the generic cg need SIMD registers, like getmmxregister? Or should
            the cpu specific child cg object have such a method?}
-
-{$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-          {# returns the next virtual register }
-          function GetNextReg(const r: TRegister): TRegister;virtual;
-{$endif cpu8bitalu or cpu16bitalu}
-{$ifdef cpu8bitalu}
-          {# returns the register with the offset of ofs of a continuous set of register starting with r }
-          function GetOffsetReg(const r : TRegister;ofs : shortint) : TRegister;virtual;abstract;
-          {# returns the register with the offset of ofs of a continuous set of register starting with r and being continued with rhi }
-          function GetOffsetReg64(const r,rhi: TRegister;ofs : shortint): TRegister;virtual;abstract;
-{$endif cpu8bitalu}
 
           procedure add_reg_instruction(instr:Tai;r:tregister);virtual;
           procedure add_move_instruction(instr:Taicpu);virtual;
@@ -120,7 +105,7 @@ unit cgobj;
           procedure do_register_allocation(list:TAsmList;headertai:tai);virtual;
           procedure translate_register(var reg : tregister);
 
-          function makeregsize(list:TAsmList;reg:Tregister;size:Tcgsize):Tregister; virtual;
+          function makeregsize(list:TAsmList;reg:Tregister;size:Tcgsize):Tregister;
 
           {# Emit a label to the instruction stream. }
           procedure a_label(list : TAsmList;l : tasmlabel);virtual;
@@ -170,9 +155,6 @@ unit cgobj;
              @param(cgpara where the parameter will be stored)
           }
           procedure a_load_ref_cgpara(list : TAsmList;size : tcgsize;const r : treference;const cgpara : TCGPara);virtual;
-         protected
-          procedure a_load_ref_cgparalocref(list: TAsmList; sourcesize: tcgsize; sizeleft: tcgint; const ref, paralocref: treference; const cgpara: tcgpara; const location: PCGParaLocation); virtual;
-         public
           {# Pass the value of a parameter, which can be located either in a register or memory location,
              to a routine.
 
@@ -265,7 +247,7 @@ unit cgobj;
           procedure a_loadaddr_ref_reg(list : TAsmList;const ref : treference;r : tregister);virtual; abstract;
 
           { bit scan instructions }
-          procedure a_bit_scan_reg_reg(list: TAsmList; reverse: boolean; srcsize, dstsize: tcgsize; src, dst: TRegister); virtual;
+          procedure a_bit_scan_reg_reg(list: TAsmList; reverse: boolean; size: tcgsize; src, dst: TRegister); virtual;
 
           { Multiplication with doubling result size.
             dstlo or dsthi may be NR_NO, in which case corresponding half of result is discarded. }
@@ -280,8 +262,6 @@ unit cgobj;
           procedure a_loadfpu_reg_loc(list: TAsmList; fromsize: tcgsize; const reg: tregister; const loc: tlocation);
           procedure a_loadfpu_reg_cgpara(list : TAsmList;size : tcgsize;const r : tregister;const cgpara : TCGPara);virtual;
           procedure a_loadfpu_ref_cgpara(list : TAsmList;size : tcgsize;const ref : treference;const cgpara : TCGPara);virtual;
-
-          procedure a_loadfpu_intreg_reg(list: TAsmList; fromsize, tosize : tcgsize; intreg, fpureg: tregister); virtual;
 
           { vector register move instructions }
           procedure a_loadmm_reg_reg(list: TAsmList; fromsize, tosize : tcgsize;reg1, reg2: tregister;shuffle : pmmshuffle); virtual;
@@ -315,7 +295,6 @@ unit cgobj;
           procedure a_op_reg_ref(list : TAsmList; Op: TOpCG; size: TCGSize; reg: TRegister; const ref: TReference); virtual;
           procedure a_op_ref_reg(list : TAsmList; Op: TOpCG; size: TCGSize; const ref: TReference; reg: TRegister); virtual;
           procedure a_op_reg_loc(list : TAsmList; Op: TOpCG; reg: tregister; const loc: tlocation);
-          procedure a_op_loc_reg(list : TAsmList; Op: TOpCG; size: TCGSize; const loc: tlocation; reg: tregister);
           procedure a_op_ref_loc(list : TAsmList; Op: TOpCG; const ref: TReference; const loc: tlocation);
 
           { trinary operations for processors that support them, 'emulated' }
@@ -367,7 +346,38 @@ unit cgobj;
           }
           procedure optimize_op_const(size: TCGSize; var op: topcg; var a : tcgint);virtual;
 
+         {#
+             This routine is used in exception management nodes. It should
+             save the exception reason currently in the FUNCTION_RETURN_REG. The
+             save should be done either to a temp (pointed to by href).
+             or on the stack (pushing the value on the stack).
 
+             The size of the value to save is OS_S32. The default version
+             saves the exception reason to a temp. memory area.
+          }
+         procedure g_exception_reason_save(list : TAsmList; const href : treference);virtual;
+         {#
+             This routine is used in exception management nodes. It should
+             save the exception reason constant. The
+             save should be done either to a temp (pointed to by href).
+             or on the stack (pushing the value on the stack).
+
+             The size of the value to save is OS_S32. The default version
+             saves the exception reason to a temp. memory area.
+          }
+         procedure g_exception_reason_save_const(list : TAsmList; const href : treference; a: tcgint);virtual;
+         {#
+             This routine is used in exception management nodes. It should
+             load the exception reason to the FUNCTION_RETURN_REG. The saved value
+             should either be in the temp. area (pointed to by href , href should
+             *NOT* be freed) or on the stack (the value should be popped).
+
+             The size of the value to save is OS_S32. The default version
+             saves the exception reason to a temp. memory area.
+          }
+         procedure g_exception_reason_load(list : TAsmList; const href : treference);virtual;
+
+          procedure g_maybe_testvmt(list : TAsmList;reg:tregister;objdef:tobjectdef);
           {# This should emit the opcode to copy len bytes from the source
              to destination.
 
@@ -436,7 +446,14 @@ unit cgobj;
           }
           procedure g_restore_registers(list:TAsmList);virtual;
 
+          procedure g_intf_wrapper(list: TAsmList; procdef: tprocdef; const labelname: string; ioffset: longint);virtual;abstract;
           procedure g_adjust_self_value(list:TAsmList;procdef: tprocdef;ioffset: tcgint);virtual;
+
+          { generate a stub which only purpose is to pass control the given external method,
+          setting up any additional environment before doing so (if required).
+
+          The default implementation issues a jump instruction to the external name. }
+          procedure g_external_wrapper(list : TAsmList; procdef: tprocdef; const externalname: string); virtual;
 
           { initialize the pic/got register }
           procedure g_maybe_got_init(list: TAsmList); virtual;
@@ -572,7 +589,7 @@ implementation
 
     uses
        globals,systems,
-       verbose,paramgr,symsym,
+       verbose,paramgr,symtable,symsym,
        tgobj,cutils,procinfo;
 
 {*****************************************************************************
@@ -591,12 +608,9 @@ implementation
 
     procedure tcg.init_register_allocators;
       begin
-{$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-        fillchar(has_next_reg,sizeof(has_next_reg),0);
-{$endif cpu8bitalu or cpu16bitalu}
         fillchar(rg,sizeof(rg),0);
         add_reg_instruction_hook:=@add_reg_instruction;
-        executionweight:=100;
+        executionweight:=1;
       end;
 
 
@@ -605,9 +619,6 @@ implementation
         { Safety }
         fillchar(rg,sizeof(rg),0);
         add_reg_instruction_hook:=nil;
-{$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-        fillchar(has_next_reg,sizeof(has_next_reg),0);
-{$endif cpu8bitalu or cpu16bitalu}
       end;
 
     {$ifdef flowgraph}
@@ -624,76 +635,10 @@ implementation
     {$endif}
 
     function tcg.getintregister(list:TAsmList;size:Tcgsize):Tregister;
-{$ifdef cpu8bitalu}
-      var
-        tmp1,tmp2,tmp3 : TRegister;
-{$endif cpu8bitalu}
       begin
         if not assigned(rg[R_INTREGISTER]) then
           internalerror(200312122);
-{$if defined(cpu8bitalu)}
-        case size of
-          OS_8,OS_S8:
-            Result:=rg[R_INTREGISTER].getregister(list,cgsize2subreg(R_INTREGISTER,size));
-          OS_16,OS_S16:
-            begin
-              Result:=getintregister(list, OS_8);
-              has_next_reg[getsupreg(Result)]:=true;
-              { ensure that the high register can be retrieved by
-                GetNextReg
-              }
-              if getintregister(list, OS_8)<>GetNextReg(Result) then
-                internalerror(2011021331);
-            end;
-          OS_32,OS_S32:
-            begin
-              Result:=getintregister(list, OS_8);
-              has_next_reg[getsupreg(Result)]:=true;
-              tmp1:=getintregister(list, OS_8);
-              has_next_reg[getsupreg(tmp1)]:=true;
-              { ensure that the high register can be retrieved by
-                GetNextReg
-              }
-              if tmp1<>GetNextReg(Result) then
-                internalerror(2011021332);
-              tmp2:=getintregister(list, OS_8);
-              has_next_reg[getsupreg(tmp2)]:=true;
-              { ensure that the upper register can be retrieved by
-                GetNextReg
-              }
-              if tmp2<>GetNextReg(tmp1) then
-                internalerror(2011021333);
-              tmp3:=getintregister(list, OS_8);
-              { ensure that the upper register can be retrieved by
-                GetNextReg
-              }
-              if tmp3<>GetNextReg(tmp2) then
-                internalerror(2011021334);
-            end;
-          else
-            internalerror(2011021330);
-        end;
-{$elseif defined(cpu16bitalu)}
-        case size of
-          OS_8, OS_S8,
-          OS_16, OS_S16:
-            Result:=rg[R_INTREGISTER].getregister(list,cgsize2subreg(R_INTREGISTER,size));
-          OS_32, OS_S32:
-            begin
-              Result:=getintregister(list, OS_16);
-              has_next_reg[getsupreg(Result)]:=true;
-              { ensure that the high register can be retrieved by
-                GetNextReg
-              }
-              if getintregister(list, OS_16)<>GetNextReg(Result) then
-                internalerror(2013030202);
-            end;
-          else
-            internalerror(2013030201);
-        end;
-{$elseif defined(cpu32bitalu) or defined(cpu64bitalu)}
         result:=rg[R_INTREGISTER].getregister(list,cgsize2subreg(R_INTREGISTER,size));
-{$endif}
       end;
 
 
@@ -724,34 +669,6 @@ implementation
             result:=rg[R_INTREGISTER].getregister(list,R_SUBWHOLE);
           end;
       end;
-
-
-    function tcg.gettempregister(list: TAsmList): Tregister;
-      begin
-        result:=rg[R_TEMPREGISTER].getregister(list,R_SUBWHOLE);
-      end;
-
-
-{$if defined(cpu8bitalu) or defined(cpu16bitalu)}
-    function tcg.GetNextReg(const r: TRegister): TRegister;
-      begin
-{$ifndef AVR}
-        { the AVR code generator depends on the fact that it can do GetNextReg also on physical registers }
-        if getsupreg(r)<first_int_imreg then
-          internalerror(2013051401);
-        if not has_next_reg[getsupreg(r)] then
-          internalerror(2017091103);
-{$else AVR}
-        if (getsupreg(r)>=first_int_imreg) and not(has_next_reg[getsupreg(r)]) then
-          internalerror(2017091103);
-{$endif AVR}
-        if getregtype(r)<>R_INTREGISTER then
-          internalerror(2017091101);
-        if getsubreg(r)<>R_SUBWHOLE then
-          internalerror(2017091102);
-        result:=TRegister(longint(r)+1);
-      end;
-{$endif cpu8bitalu or cpu16bitalu}
 
 
     function Tcg.makeregsize(list:TAsmList;reg:Tregister;size:Tcgsize):Tregister;
@@ -948,14 +865,7 @@ implementation
          ref : treference;
          tmpreg : tregister;
       begin
-         if assigned(cgpara.location^.next) then
-           begin
-             tg.gethltemp(list,cgpara.def,cgpara.def.size,tt_persistent,ref);
-             a_load_reg_ref(list,size,size,r,ref);
-             a_load_ref_cgpara(list,size,ref,cgpara);
-             tg.ungettemp(list,ref);
-             exit;
-           end;
+         cgpara.check_simple_location;
          paramanager.alloccgpara(list,cgpara);
          if cgpara.location^.shiftval<0 then
            begin
@@ -968,7 +878,7 @@ implementation
               a_load_reg_reg(list,size,cgpara.location^.size,r,cgpara.location^.register);
             LOC_REFERENCE,LOC_CREFERENCE:
               begin
-                 reference_reset_base(ref,cgpara.location^.reference.index,cgpara.location^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
+                 reference_reset_base(ref,cgpara.location^.reference.index,cgpara.location^.reference.offset,cgpara.alignment);
                  a_load_reg_ref(list,size,cgpara.location^.size,r,ref);
               end;
             LOC_MMREGISTER,LOC_CMMREGISTER:
@@ -999,7 +909,7 @@ implementation
               a_load_const_reg(list,cgpara.location^.size,a,cgpara.location^.register);
             LOC_REFERENCE,LOC_CREFERENCE:
               begin
-                 reference_reset_base(ref,cgpara.location^.reference.index,cgpara.location^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
+                 reference_reset_base(ref,cgpara.location^.reference.index,cgpara.location^.reference.offset,cgpara.alignment);
                  a_load_const_ref(list,cgpara.location^.size,a,ref);
               end
             else
@@ -1126,8 +1036,16 @@ implementation
                 end;
               LOC_REFERENCE,LOC_CREFERENCE:
                 begin
-                  reference_reset_base(ref,location^.reference.index,location^.reference.offset,ctempposinvalid,newalignment(cgpara.alignment,cgpara.intsize-sizeleft),[]);
-                  a_load_ref_cgparalocref(list,size,sizeleft,tmpref,ref,cgpara,location);
+                   if assigned(location^.next) then
+                     internalerror(2010052906);
+                   reference_reset_base(ref,location^.reference.index,location^.reference.offset,newalignment(cgpara.alignment,cgpara.intsize-sizeleft));
+                   if (size <> OS_NO) and
+                      (tcgsize2size[size] <= sizeof(aint)) then
+                     a_load_ref_ref(list,size,location^.size,tmpref,ref)
+                   else
+                     { use concatcopy, because the parameter can be larger than }
+                     { what the OS_* constants can handle                       }
+                     g_concatcopy(list,tmpref,ref,sizeleft);
                 end;
               LOC_MMREGISTER,LOC_CMMREGISTER:
                 begin
@@ -1142,10 +1060,6 @@ implementation
                      else
                        internalerror(2010053101);
                    end;
-                end;
-              LOC_FPUREGISTER,LOC_CFPUREGISTER:
-                begin
-                  a_loadfpu_ref_reg(list,size,location^.size,tmpref,location^.register);
                 end
               else
                 internalerror(2010053111);
@@ -1155,19 +1069,6 @@ implementation
             location:=location^.next;
           end;
       end;
-
-    procedure tcg.a_load_ref_cgparalocref(list: TAsmList; sourcesize: tcgsize; sizeleft: tcgint; const ref, paralocref: treference; const cgpara: tcgpara; const location: PCGParaLocation);
-      begin
-        if assigned(location^.next) then
-          internalerror(2010052906);
-        if (sourcesize<>OS_NO) and
-           (tcgsize2size[sourcesize]<=sizeof(aint)) then
-           a_load_ref_ref(list,sourcesize,location^.size,ref,paralocref)
-        else
-          { use concatcopy, because the parameter can be larger than }
-          { what the OS_* constants can handle                       }
-          g_concatcopy(list,ref,paralocref,sizeleft);
-       end;
 
 
     procedure tcg.a_load_loc_cgpara(list : TAsmList;const l:tlocation;const cgpara : TCGPara);
@@ -1212,156 +1113,57 @@ implementation
         hreg : tregister;
         cgsize: tcgsize;
       begin
-        case paraloc.loc of
-          LOC_REGISTER :
-            begin
-              hreg:=paraloc.register;
-              cgsize:=paraloc.size;
-              if paraloc.shiftval>0 then
-                a_op_const_reg_reg(list,OP_SHL,OS_INT,paraloc.shiftval,paraloc.register,paraloc.register)
-              { in case the original size was 3 or 5/6/7 bytes, the value was
-                shifted to the top of the to 4 resp. 8 byte register on the
-                caller side and needs to be stored with those bytes at the
-                start of the reference -> don't shift right }
-              else if (paraloc.shiftval<0) and
-                      ((-paraloc.shiftval) in [8,16,32]) then
-                begin
-                  a_op_const_reg_reg(list,OP_SHR,OS_INT,-paraloc.shiftval,paraloc.register,paraloc.register);
-                  { convert to a register of 1/2/4 bytes in size, since the
-                    original register had to be made larger to be able to hold
-                    the shifted value }
-                  cgsize:=int_cgsize(tcgsize2size[OS_INT]-(-paraloc.shiftval div 8));
-                  if cgsize=OS_NO then
-                    cgsize:=OS_INT;
-                  hreg:=getintregister(list,cgsize);
-                  a_load_reg_reg(list,OS_INT,cgsize,paraloc.register,hreg);
-                end;
-              { use the exact size to avoid overwriting of adjacent data }
-              if tcgsize2size[cgsize]<=sizeleft then
-                a_load_reg_ref(list,paraloc.size,cgsize,hreg,ref)
-              else
-                case sizeleft of
-                  1,2,4,8:
-                    a_load_reg_ref(list,paraloc.size,int_cgsize(sizeleft),hreg,ref);
-                  3:
-                    begin
-                      if target_info.endian=endian_big then
-                        begin
-                          href:=ref;
-                          inc(href.offset,2);
-                          a_load_reg_ref(list,paraloc.size,OS_8,hreg,href);
-                          a_op_const_reg_reg(list,OP_SHR,OS_INT,8,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_16,hreg,ref);
-                        end
-                      else
-                        begin
-                          a_load_reg_ref(list,paraloc.size,OS_16,hreg,ref);
-                          href:=ref;
-                          inc(href.offset,2);
-                          a_op_const_reg_reg(list,OP_SHR,cgsize,16,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_8,hreg,href);
-                        end
-                    end;
-                  5:
-                    begin
-                      if target_info.endian=endian_big then
-                        begin
-                          href:=ref;
-                          inc(href.offset,4);
-                          a_load_reg_ref(list,paraloc.size,OS_8,hreg,href);
-                          a_op_const_reg_reg(list,OP_SHR,OS_INT,8,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_32,hreg,ref);
-                        end
-                      else
-                       begin
-                          a_load_reg_ref(list,paraloc.size,OS_32,hreg,ref);
-                          href:=ref;
-                          inc(href.offset,4);
-                          a_op_const_reg_reg(list,OP_SHR,cgsize,32,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_8,hreg,href);
-                        end
-                    end;
-                  6:
-                    begin
-                      if target_info.endian=endian_big then
-                        begin
-                          href:=ref;
-                          inc(href.offset,4);
-                          a_load_reg_ref(list,paraloc.size,OS_16,hreg,href);
-                          a_op_const_reg_reg(list,OP_SHR,OS_INT,16,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_32,hreg,ref);
-                        end
-                      else
-                       begin
-                          a_load_reg_ref(list,paraloc.size,OS_32,hreg,ref);
-                          href:=ref;
-                          inc(href.offset,4);
-                          a_op_const_reg_reg(list,OP_SHR,cgsize,32,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_16,hreg,href);
-                        end
-                    end;
-                  7:
-                    begin
-                      if target_info.endian=endian_big then
-                        begin
-                          href:=ref;
-                          inc(href.offset,6);
-                          a_load_reg_ref(list,paraloc.size,OS_8,hreg,href);
-
-                          a_op_const_reg_reg(list,OP_SHR,OS_INT,8,hreg,hreg);
-                          href:=ref;
-                          inc(href.offset,4);
-                          a_load_reg_ref(list,paraloc.size,OS_16,hreg,href);
-
-                          a_op_const_reg_reg(list,OP_SHR,OS_INT,16,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_32,hreg,ref);
-                        end
-                      else
-                       begin
-                          a_load_reg_ref(list,paraloc.size,OS_32,hreg,ref);
-
-                          href:=ref;
-                          inc(href.offset,4);
-                          a_op_const_reg_reg(list,OP_SHR,cgsize,32,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_16,hreg,href);
-
-                          inc(href.offset,2);
-                          a_op_const_reg_reg(list,OP_SHR,cgsize,16,hreg,hreg);
-                          a_load_reg_ref(list,paraloc.size,OS_8,hreg,href);
-                        end
-                    end;
-                  else
-                    { other sizes not allowed }
-                    Internalerror(2017080901);
-                end;
-            end;
-          LOC_MMREGISTER :
-            begin
-              case paraloc.size of
-                OS_F32,
-                OS_F64,
-                OS_F128:
-                  a_loadmm_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref,mms_movescalar);
-                OS_M8..OS_M128,
-                OS_MS8..OS_MS128:
-                  a_loadmm_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref,nil);
-                else
-                  internalerror(2010053102);
-              end;
-            end;
-          LOC_FPUREGISTER :
-            a_loadfpu_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref);
-          LOC_REFERENCE :
-            begin
-              reference_reset_base(href,paraloc.reference.index,paraloc.reference.offset,ctempposinvalid,align,[]);
-              { use concatcopy, because it can also be a float which fails when
-                load_ref_ref is used. Don't copy data when the references are equal }
-              if not((href.base=ref.base) and (href.offset=ref.offset)) then
-                g_concatcopy(list,href,ref,sizeleft);
-            end;
-          else
-            internalerror(2002081302);
-        end;
+         case paraloc.loc of
+           LOC_REGISTER :
+             begin
+               hreg:=paraloc.register;
+               cgsize:=paraloc.size;
+               if paraloc.shiftval>0 then
+                 a_op_const_reg_reg(list,OP_SHL,OS_INT,paraloc.shiftval,paraloc.register,paraloc.register)
+               { in case the original size was 3 or 5/6/7 bytes, the value was
+                 shifted to the top of the to 4 resp. 8 byte register on the
+                 caller side and needs to be stored with those bytes at the
+                 start of the reference -> don't shift right }
+               else if (paraloc.shiftval<0) and
+                       ((-paraloc.shiftval) in [1,2,4]) then
+                 begin
+                   a_op_const_reg_reg(list,OP_SHR,OS_INT,-paraloc.shiftval,paraloc.register,paraloc.register);
+                   { convert to a register of 1/2/4 bytes in size, since the
+                     original register had to be made larger to be able to hold
+                     the shifted value }
+                   cgsize:=int_cgsize(tcgsize2size[OS_INT]-(-paraloc.shiftval div 8));
+                   hreg:=getintregister(list,cgsize);
+                   a_load_reg_reg(list,OS_INT,cgsize,paraloc.register,hreg);
+                 end;
+               a_load_reg_ref(list,paraloc.size,cgsize,hreg,ref);
+             end;
+           LOC_MMREGISTER :
+             begin
+               case paraloc.size of
+                 OS_F32,
+                 OS_F64,
+                 OS_F128:
+                   a_loadmm_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref,mms_movescalar);
+                 OS_M8..OS_M128,
+                 OS_MS8..OS_MS128:
+                   a_loadmm_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref,nil);
+                 else
+                   internalerror(2010053102);
+               end;
+             end;
+           LOC_FPUREGISTER :
+             a_loadfpu_reg_ref(list,paraloc.size,paraloc.size,paraloc.register,ref);
+           LOC_REFERENCE :
+             begin
+               reference_reset_base(href,paraloc.reference.index,paraloc.reference.offset,align);
+               { use concatcopy, because it can also be a float which fails when
+                 load_ref_ref is used. Don't copy data when the references are equal }
+               if not((href.base=ref.base) and (href.offset=ref.offset)) then
+                 g_concatcopy(list,href,ref,sizeleft);
+             end;
+           else
+             internalerror(2002081302);
+         end;
       end;
 
 
@@ -1380,8 +1182,6 @@ implementation
                    a_load_reg_reg(list,paraloc.size,regsize,paraloc.register,reg);
                  R_MMREGISTER:
                    a_loadmm_intreg_reg(list,paraloc.size,regsize,paraloc.register,reg,mms_movescalar);
-                 R_FPUREGISTER:
-                   a_loadfpu_intreg_reg(list,paraloc.size,regsize,paraloc.register,reg);
                  else
                    internalerror(2009112422);
                end;
@@ -1411,17 +1211,10 @@ implementation
                end;
              end;
            LOC_FPUREGISTER :
-             begin
-               case getregtype(reg) of
-                 R_FPUREGISTER:
-                   a_loadfpu_reg_reg(list,paraloc.size,regsize,paraloc.register,reg)
-                 else
-                   internalerror(2015031401);
-                 end;
-             end;
+             a_loadfpu_reg_reg(list,paraloc.size,regsize,paraloc.register,reg);
            LOC_REFERENCE :
              begin
-               reference_reset_base(href,paraloc.reference.index,paraloc.reference.offset,ctempposinvalid,align,[]);
+               reference_reset_base(href,paraloc.reference.index,paraloc.reference.offset,align);
                case getregtype(reg) of
                  R_ADDRESSREGISTER,
                  R_INTREGISTER :
@@ -1654,8 +1447,6 @@ implementation
             a_load_reg_reg(list,loc.size,tosize,loc.register,reg);
           LOC_CONSTANT:
             a_load_const_reg(list,tosize,loc.value,reg);
-          LOC_MMREGISTER,LOC_CMMREGISTER:
-            a_loadmm_reg_intreg(list,loc.size,tosize,loc.register,reg,mms_movescalar);
           else
             internalerror(200109092);
         end;
@@ -1731,12 +1522,6 @@ implementation
                 if a=0 then
                   op:=OP_MOVE;
             end;
-          OP_XOR :
-            begin
-              { xor with zero returns same result }
-              if a = 0 then
-                op:=OP_NONE;
-            end;
           OP_DIV :
             begin
               { division by 1 returns result }
@@ -1771,26 +1556,11 @@ implementation
                if a = 0 then
                  op:=OP_NONE;
             end;
-        OP_SAR,OP_SHL,OP_SHR:
+        OP_SAR,OP_SHL,OP_SHR,OP_ROL,OP_ROR:
            begin
-             if a = 0 then
-               op:=OP_NONE;
+              if a = 0 then
+                op:=OP_NONE;
            end;
-        OP_ROL,OP_ROR:
-          begin
-            case size of
-              OS_64,OS_S64:
-                a:=a and 63;
-              OS_32,OS_S32:
-                a:=a and 31;
-              OS_16,OS_S16:
-                a:=a and 15;
-              OS_8,OS_S8:
-                a:=a and 7;
-            end;
-            if a = 0 then
-              op:=OP_NONE;
-          end;
         end;
       end;
 
@@ -1850,7 +1620,7 @@ implementation
             LOC_REFERENCE,LOC_CREFERENCE:
               begin
                 cgpara.check_simple_location;
-                reference_reset_base(ref,cgpara.location^.reference.index,cgpara.location^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
+                reference_reset_base(ref,cgpara.location^.reference.index,cgpara.location^.reference.offset,cgpara.alignment);
                 a_loadfpu_reg_ref(list,size,size,r,ref);
               end;
             LOC_REGISTER,LOC_CREGISTER:
@@ -1871,27 +1641,18 @@ implementation
       var
          href : treference;
          hsize: tcgsize;
-         paraloc: PCGParaLocation;
       begin
          case cgpara.location^.loc of
           LOC_FPUREGISTER,LOC_CFPUREGISTER:
             begin
+              cgpara.check_simple_location;
               paramanager.alloccgpara(list,cgpara);
-              paraloc:=cgpara.location;
-              href:=ref;
-              while assigned(paraloc) do
-                begin
-                  if not(paraloc^.loc in [LOC_FPUREGISTER,LOC_CFPUREGISTER]) then
-                    internalerror(2015031501);
-                  a_loadfpu_ref_reg(list,paraloc^.size,paraloc^.size,href,paraloc^.register);
-                  inc(href.offset,tcgsize2size[paraloc^.size]);
-                  paraloc:=paraloc^.next;
-                end;
+              a_loadfpu_ref_reg(list,size,size,ref,cgpara.location^.register);
             end;
           LOC_REFERENCE,LOC_CREFERENCE:
             begin
               cgpara.check_simple_location;
-              reference_reset_base(href,cgpara.location^.reference.index,cgpara.location^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
+              reference_reset_base(href,cgpara.location^.reference.index,cgpara.location^.reference.offset,cgpara.alignment);
               { concatcopy should choose the best way to copy the data }
               g_concatcopy(list,ref,href,tcgsize2size[size]);
             end;
@@ -1912,21 +1673,6 @@ implementation
           else
             internalerror(200402201);
         end;
-      end;
-
-
-    procedure tcg.a_loadfpu_intreg_reg(list : TAsmList; fromsize,tosize : tcgsize; intreg,fpureg : tregister);
-      var
-        tmpref: treference;
-      begin
-        if not(tcgsize2size[fromsize] in [4,8]) or
-           not(tcgsize2size[tosize] in [4,8]) or
-           (tcgsize2size[fromsize]<>tcgsize2size[tosize]) then
-          internalerror(2017070902);
-        tg.gettemp(list,tcgsize2size[fromsize],tcgsize2size[fromsize],tt_normal,tmpref);
-        a_load_reg_ref(list,fromsize,fromsize,intreg,tmpref);
-        a_loadfpu_ref_reg(list,tosize,tosize,tmpref,fpureg);
-        tg.ungettemp(list,tmpref);
       end;
 
 
@@ -1960,14 +1706,7 @@ implementation
       begin
         tmpreg:=getintregister(list,size);
         a_load_ref_reg(list,size,size,ref,tmpreg);
-        if op in [OP_NEG,OP_NOT] then
-          begin
-            if reg<>NR_NO then
-              internalerror(2017040901);
-            a_op_reg_reg(list,op,size,tmpreg,tmpreg);
-          end
-        else
-          a_op_reg_reg(list,op,size,reg,tmpreg);
+        a_op_reg_reg(list,op,size,reg,tmpreg);
         a_load_reg_ref(list,size,size,tmpreg,ref);
       end;
 
@@ -2009,22 +1748,6 @@ implementation
       end;
 
 
-    procedure tcg.a_op_loc_reg(list : TAsmList; Op : TOpCG; size: TCGSize; const loc : tlocation; reg : tregister);
-
-      begin
-        case loc.loc of
-          LOC_REGISTER, LOC_CREGISTER:
-            a_op_reg_reg(list,op,size,loc.register,reg);
-          LOC_REFERENCE, LOC_CREFERENCE:
-            a_op_ref_reg(list,op,size,loc.reference,reg);
-          LOC_CONSTANT:
-            a_op_const_reg(list,op,size,loc.value,reg);
-          else
-            internalerror(2018031101);
-        end;
-      end;
-
-
     procedure tcg.a_op_ref_loc(list : TAsmList; Op: TOpCG; const ref: TReference; const loc: tlocation);
 
       var
@@ -2049,72 +1772,6 @@ implementation
     procedure Tcg.a_op_const_reg_reg(list:TAsmList;op:Topcg;size:Tcgsize;
                                      a:tcgint;src,dst:Tregister);
     begin
-      optimize_op_const(size, op, a);
-      case op of
-        OP_NONE:
-          begin
-            if src <> dst then
-              a_load_reg_reg(list, size, size, src, dst);
-            exit;
-          end;
-        OP_MOVE:
-          begin
-            a_load_const_reg(list, size, a, dst);
-            exit;
-          end;
-{$ifdef cpu8bitalu}
-        OP_SHL:
-          begin
-            if a=8 then
-              case size of
-                OS_S16,OS_16:
-                  begin
-                    a_load_reg_reg(list,OS_8,OS_8,src,GetNextReg(dst));
-                    a_load_const_reg(list,OS_8,0,dst);
-                    exit;
-                  end;
-              end;
-          end;
-        OP_SHR:
-          begin
-            if a=8 then
-              case size of
-                OS_S16,OS_16:
-                  begin
-                    a_load_reg_reg(list,OS_8,OS_8,GetNextReg(src),dst);
-                    a_load_const_reg(list,OS_8,0,GetNextReg(dst));
-                    exit;
-                  end;
-              end;
-          end;
-{$endif cpu8bitalu}
-{$ifdef cpu16bitalu}
-        OP_SHL:
-          begin
-            if a=16 then
-              case size of
-                OS_S32,OS_32:
-                  begin
-                    a_load_reg_reg(list,OS_16,OS_16,src,GetNextReg(dst));
-                    a_load_const_reg(list,OS_16,0,dst);
-                    exit;
-                  end;
-              end;
-          end;
-        OP_SHR:
-          begin
-            if a=16 then
-              case size of
-                OS_S32,OS_32:
-                  begin
-                    a_load_reg_reg(list,OS_16,OS_16,GetNextReg(src),dst);
-                    a_load_const_reg(list,OS_16,0,GetNextReg(dst));
-                    exit;
-                  end;
-              end;
-          end;
-{$endif cpu16bitalu}
-      end;
       a_load_reg_reg(list,size,size,src,dst);
       a_op_const_reg(list,op,size,a,dst);
     end;
@@ -2305,7 +1962,7 @@ implementation
             a_loadmm_reg_reg(list,size,cgpara.location^.size,reg,cgpara.location^.register,shuffle);
           LOC_REFERENCE,LOC_CREFERENCE:
             begin
-              reference_reset_base(href,cgpara.location^.reference.index,cgpara.location^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
+              reference_reset_base(href,cgpara.location^.reference.index,cgpara.location^.reference.offset,cgpara.alignment);
               a_loadmm_reg_ref(list,size,cgpara.location^.size,reg,href,shuffle);
             end;
           LOC_REGISTER,LOC_CREGISTER:
@@ -2346,7 +2003,7 @@ implementation
                     begin
                       if not(cgpara.location^.next^.size in [OS_32,OS_S32]) then
                         internalerror(2009112911);
-                      reference_reset_base(href,cgpara.location^.next^.reference.index,cgpara.location^.next^.reference.offset,ctempposinvalid,cgpara.alignment,[]);
+                      reference_reset_base(href,cgpara.location^.next^.reference.index,cgpara.location^.next^.reference.offset,cgpara.alignment);
                       a_load_reg_ref(list,OS_32,cgpara.location^.next^.size,tmpreg,href);
                     end;
                 end
@@ -2525,6 +2182,52 @@ implementation
 {$endif cpuflags}
 
 
+    procedure tcg.g_maybe_testvmt(list : TAsmList;reg:tregister;objdef:tobjectdef);
+      var
+        hrefvmt : treference;
+        cgpara1,cgpara2 : TCGPara;
+        pd: tprocdef;
+      begin
+        cgpara1.init;
+        cgpara2.init;
+        if (cs_check_object in current_settings.localswitches) then
+         begin
+           pd:=search_system_proc('fpc_check_object_ext');
+           paramanager.getintparaloc(pd,1,cgpara1);
+           paramanager.getintparaloc(pd,2,cgpara2);
+           reference_reset_symbol(hrefvmt,current_asmdata.RefAsmSymbol(objdef.vmt_mangledname,AT_DATA),0,sizeof(pint));
+           if pd.is_pushleftright then
+             begin
+               a_load_reg_cgpara(list,OS_ADDR,reg,cgpara1);
+               a_loadaddr_ref_cgpara(list,hrefvmt,cgpara2);
+             end
+           else
+             begin
+               a_loadaddr_ref_cgpara(list,hrefvmt,cgpara2);
+               a_load_reg_cgpara(list,OS_ADDR,reg,cgpara1);
+             end;
+           paramanager.freecgpara(list,cgpara1);
+           paramanager.freecgpara(list,cgpara2);
+           allocallcpuregisters(list);
+           a_call_name(list,'fpc_check_object_ext',false);
+           deallocallcpuregisters(list);
+         end
+        else
+         if (cs_check_range in current_settings.localswitches) then
+          begin
+            pd:=search_system_proc('fpc_check_object');
+            paramanager.getintparaloc(pd,1,cgpara1);
+            a_load_reg_cgpara(list,OS_ADDR,reg,cgpara1);
+            paramanager.freecgpara(list,cgpara1);
+            allocallcpuregisters(list);
+            a_call_name(list,'fpc_check_object',false);
+            deallocallcpuregisters(list);
+          end;
+        cgpara1.done;
+        cgpara2.done;
+      end;
+
+
 {*****************************************************************************
                             Entry/Exit Code Functions
 *****************************************************************************}
@@ -2535,21 +2238,15 @@ implementation
         href : treference;
         size : longint;
         r : integer;
-        regs_to_save_int,
-        regs_to_save_address,
-        regs_to_save_mm : tcpuregisterarray;
       begin
-        regs_to_save_int:=paramanager.get_saved_registers_int(current_procinfo.procdef.proccalloption);
-        regs_to_save_address:=paramanager.get_saved_registers_address(current_procinfo.procdef.proccalloption);
-        regs_to_save_mm:=paramanager.get_saved_registers_mm(current_procinfo.procdef.proccalloption);
         { calculate temp. size }
         size:=0;
-        for r:=low(regs_to_save_int) to high(regs_to_save_int) do
-          if regs_to_save_int[r] in rg[R_INTREGISTER].used_in_proc then
+        for r:=low(saved_standard_registers) to high(saved_standard_registers) do
+          if saved_standard_registers[r] in rg[R_INTREGISTER].used_in_proc then
             inc(size,sizeof(aint));
         if uses_registers(R_ADDRESSREGISTER) then
-          for r:=low(regs_to_save_int) to high(regs_to_save_int) do
-            if regs_to_save_int[r] in rg[R_ADDRESSREGISTER].used_in_proc then
+          for r:=low(saved_address_registers) to high(saved_address_registers) do
+            if saved_address_registers[r] in rg[R_ADDRESSREGISTER].used_in_proc then
               inc(size,sizeof(aint));
 
         { mm registers }
@@ -2560,8 +2257,8 @@ implementation
               of the temp is smaller than needed for an OS_VECTOR }
             inc(size,tcgsize2size[OS_VECTOR]);
 
-            for r:=low(regs_to_save_mm) to high(regs_to_save_mm) do
-              if regs_to_save_mm[r] in rg[R_MMREGISTER].used_in_proc then
+            for r:=low(saved_mm_registers) to high(saved_mm_registers) do
+              if saved_mm_registers[r] in rg[R_MMREGISTER].used_in_proc then
                 inc(size,tcgsize2size[OS_VECTOR]);
           end;
 
@@ -2572,25 +2269,25 @@ implementation
 
             { Copy registers to temp }
             href:=current_procinfo.save_regs_ref;
-            for r:=low(regs_to_save_int) to high(regs_to_save_int) do
+            for r:=low(saved_standard_registers) to high(saved_standard_registers) do
               begin
-                if regs_to_save_int[r] in rg[R_INTREGISTER].used_in_proc then
+                if saved_standard_registers[r] in rg[R_INTREGISTER].used_in_proc then
                   begin
-                    a_load_reg_ref(list,OS_ADDR,OS_ADDR,newreg(R_INTREGISTER,regs_to_save_int[r],R_SUBWHOLE),href);
+                    a_load_reg_ref(list,OS_ADDR,OS_ADDR,newreg(R_INTREGISTER,saved_standard_registers[r],R_SUBWHOLE),href);
                     inc(href.offset,sizeof(aint));
                   end;
-                include(rg[R_INTREGISTER].preserved_by_proc,regs_to_save_int[r]);
+                include(rg[R_INTREGISTER].preserved_by_proc,saved_standard_registers[r]);
               end;
 
             if uses_registers(R_ADDRESSREGISTER) then
-              for r:=low(regs_to_save_address) to high(regs_to_save_address) do
+              for r:=low(saved_address_registers) to high(saved_address_registers) do
                 begin
-                  if regs_to_save_address[r] in rg[R_ADDRESSREGISTER].used_in_proc then
+                  if saved_address_registers[r] in rg[R_ADDRESSREGISTER].used_in_proc then
                     begin
-                      a_load_reg_ref(list,OS_ADDR,OS_ADDR,newreg(R_ADDRESSREGISTER,regs_to_save_address[r],R_SUBWHOLE),href);
+                      a_load_reg_ref(list,OS_ADDR,OS_ADDR,newreg(R_ADDRESSREGISTER,saved_address_registers[r],R_SUBWHOLE),href);
                       inc(href.offset,sizeof(aint));
                     end;
-                  include(rg[R_ADDRESSREGISTER].preserved_by_proc,regs_to_save_address[r]);
+                  include(rg[R_ADDRESSREGISTER].preserved_by_proc,saved_address_registers[r]);
                 end;
 
             if uses_registers(R_MMREGISTER) then
@@ -2598,20 +2295,20 @@ implementation
                 if (href.offset mod tcgsize2size[OS_VECTOR])<>0 then
                   inc(href.offset,tcgsize2size[OS_VECTOR]-(href.offset mod tcgsize2size[OS_VECTOR]));
 
-                for r:=low(regs_to_save_mm) to high(regs_to_save_mm) do
+                for r:=low(saved_mm_registers) to high(saved_mm_registers) do
                   begin
                     { the array has to be declared even if no MM registers are saved
                       (such as with SSE on i386), and since 0-element arrays don't
                       exist, they contain a single RS_INVALID element in that case
                     }
-                    if regs_to_save_mm[r]<>RS_INVALID then
+                    if saved_mm_registers[r]<>RS_INVALID then
                       begin
-                        if regs_to_save_mm[r] in rg[R_MMREGISTER].used_in_proc then
+                        if saved_mm_registers[r] in rg[R_MMREGISTER].used_in_proc then
                           begin
-                            a_loadmm_reg_ref(list,OS_VECTOR,OS_VECTOR,newreg(R_MMREGISTER,regs_to_save_mm[r],R_SUBMMWHOLE),href,nil);
+                            a_loadmm_reg_ref(list,OS_VECTOR,OS_VECTOR,newreg(R_MMREGISTER,saved_mm_registers[r],R_SUBMMWHOLE),href,nil);
                             inc(href.offset,tcgsize2size[OS_VECTOR]);
                           end;
-                        include(rg[R_MMREGISTER].preserved_by_proc,regs_to_save_mm[r]);
+                        include(rg[R_MMREGISTER].preserved_by_proc,saved_mm_registers[r]);
                       end;
                   end;
               end;
@@ -2624,21 +2321,15 @@ implementation
         href     : treference;
         r        : integer;
         hreg     : tregister;
-        regs_to_save_int,
-        regs_to_save_address,
-        regs_to_save_mm : tcpuregisterarray;
       begin
         if not(pi_has_saved_regs in current_procinfo.flags) then
           exit;
-        regs_to_save_int:=paramanager.get_saved_registers_int(current_procinfo.procdef.proccalloption);
-        regs_to_save_address:=paramanager.get_saved_registers_address(current_procinfo.procdef.proccalloption);
-        regs_to_save_mm:=paramanager.get_saved_registers_mm(current_procinfo.procdef.proccalloption);
         { Copy registers from temp }
         href:=current_procinfo.save_regs_ref;
-        for r:=low(regs_to_save_int) to high(regs_to_save_int) do
-          if regs_to_save_int[r] in rg[R_INTREGISTER].used_in_proc then
+        for r:=low(saved_standard_registers) to high(saved_standard_registers) do
+          if saved_standard_registers[r] in rg[R_INTREGISTER].used_in_proc then
             begin
-              hreg:=newreg(R_INTREGISTER,regs_to_save_int[r],R_SUBWHOLE);
+              hreg:=newreg(R_INTREGISTER,saved_standard_registers[r],R_SUBWHOLE);
               { Allocate register so the optimizer does not remove the load }
               a_reg_alloc(list,hreg);
               a_load_ref_reg(list,OS_ADDR,OS_ADDR,href,hreg);
@@ -2646,10 +2337,10 @@ implementation
             end;
 
         if uses_registers(R_ADDRESSREGISTER) then
-          for r:=low(regs_to_save_address) to high(regs_to_save_address) do
-            if regs_to_save_address[r] in rg[R_ADDRESSREGISTER].used_in_proc then
+          for r:=low(saved_address_registers) to high(saved_address_registers) do
+            if saved_address_registers[r] in rg[R_ADDRESSREGISTER].used_in_proc then
               begin
-                hreg:=newreg(R_ADDRESSREGISTER,regs_to_save_address[r],R_SUBWHOLE);
+                hreg:=newreg(R_ADDRESSREGISTER,saved_address_registers[r],R_SUBWHOLE);
                 { Allocate register so the optimizer does not remove the load }
                 a_reg_alloc(list,hreg);
                 a_load_ref_reg(list,OS_ADDR,OS_ADDR,href,hreg);
@@ -2661,11 +2352,11 @@ implementation
             if (href.offset mod tcgsize2size[OS_VECTOR])<>0 then
               inc(href.offset,tcgsize2size[OS_VECTOR]-(href.offset mod tcgsize2size[OS_VECTOR]));
 
-            for r:=low(regs_to_save_mm) to high(regs_to_save_mm) do
+            for r:=low(saved_mm_registers) to high(saved_mm_registers) do
               begin
-                if regs_to_save_mm[r] in rg[R_MMREGISTER].used_in_proc then
+                if saved_mm_registers[r] in rg[R_MMREGISTER].used_in_proc then
                   begin
-                    hreg:=newreg(R_MMREGISTER,regs_to_save_mm[r],R_SUBMMWHOLE);
+                    hreg:=newreg(R_MMREGISTER,saved_mm_registers[r],R_SUBMMWHOLE);
                     { Allocate register so the optimizer does not remove the load }
                     a_reg_alloc(list,hreg);
                     a_loadmm_ref_reg(list,OS_VECTOR,OS_VECTOR,href,hreg,nil);
@@ -2679,6 +2370,25 @@ implementation
 
     procedure tcg.g_profilecode(list : TAsmList);
       begin
+      end;
+
+
+    procedure tcg.g_exception_reason_save(list : TAsmList; const href : treference);
+      begin
+        a_load_reg_ref(list, OS_INT, OS_INT, NR_FUNCTION_RESULT_REG, href);
+      end;
+
+
+    procedure tcg.g_exception_reason_save_const(list : TAsmList; const href : treference; a: tcgint);
+      begin
+        a_load_const_ref(list, OS_INT, a, href);
+      end;
+
+
+    procedure tcg.g_exception_reason_load(list : TAsmList; const href : treference);
+      begin
+        a_reg_alloc(list,NR_FUNCTION_RESULT_REG);
+        a_load_ref_reg(list, OS_INT, OS_INT, href, NR_FUNCTION_RESULT_REG);
       end;
 
 
@@ -2705,7 +2415,7 @@ implementation
                   begin
                     { offset in the wrapper needs to be adjusted for the stored
                       return address }
-                    reference_reset_base(href,reference.index,reference.offset+sizeof(pint),ctempposinvalid,sizeof(pint),[]);
+                    reference_reset_base(href,reference.index,reference.offset+sizeof(pint),sizeof(pint));
                     a_op_const_ref(list,OP_SUB,size,ioffset,href);
                   end
                 else
@@ -2713,6 +2423,12 @@ implementation
               end;
               paraloc:=next;
             end;
+      end;
+
+
+    procedure tcg.g_external_wrapper(list : TAsmList; procdef: tprocdef; const externalname: string);
+      begin
+        a_jmp_name(list,externalname);
       end;
 
 
@@ -2727,7 +2443,6 @@ implementation
         l: tasmsymbol;
         ref: treference;
         nlsymname: string;
-        symtyp: TAsmsymtype;
       begin
         result := NR_NO;
         case target_info.system of
@@ -2741,17 +2456,13 @@ implementation
               l:=current_asmdata.getasmsymbol(nlsymname);
               if not(assigned(l)) then
                 begin
-                  if is_data in flags then
-                    symtyp:=AT_DATA
-                  else
-                    symtyp:=AT_FUNCTION;
                   new_section(current_asmdata.asmlists[al_picdata],sec_data_nonlazy,'',sizeof(pint));
-                  l:=current_asmdata.DefineAsmSymbol(nlsymname,AB_LOCAL,AT_DATA,voidpointertype);
+                  l:=current_asmdata.DefineAsmSymbol(nlsymname,AB_LOCAL,AT_DATA);
                   current_asmdata.asmlists[al_picdata].concat(tai_symbol.create(l,0));
                   if not(is_weak in flags) then
-                    current_asmdata.asmlists[al_picdata].concat(tai_directive.Create(asd_indirect_symbol,current_asmdata.RefAsmSymbol(symname,symtyp).Name))
+                    current_asmdata.asmlists[al_picdata].concat(tai_directive.Create(asd_indirect_symbol,current_asmdata.RefAsmSymbol(symname).Name))
                   else
-                    current_asmdata.asmlists[al_picdata].concat(tai_directive.Create(asd_indirect_symbol,current_asmdata.WeakRefAsmSymbol(symname,symtyp).Name));
+                    current_asmdata.asmlists[al_picdata].concat(tai_directive.Create(asd_indirect_symbol,current_asmdata.WeakRefAsmSymbol(symname).Name));
 {$ifdef cpu64bitaddr}
                   current_asmdata.asmlists[al_picdata].concat(tai_const.create_64bit(0));
 {$else cpu64bitaddr}
@@ -2759,7 +2470,7 @@ implementation
 {$endif cpu64bitaddr}
                 end;
               result := getaddressregister(list);
-              reference_reset_symbol(ref,l,0,sizeof(pint),[]);
+              reference_reset_symbol(ref,l,0,sizeof(pint));
               { a_load_ref_reg will turn this into a pic-load if needed }
               a_load_ref_reg(list,OS_ADDR,OS_ADDR,ref,result);
             end;
@@ -2814,7 +2525,7 @@ implementation
       end;
 
 
-    procedure tcg.a_bit_scan_reg_reg(list: TAsmList; reverse: boolean; srcsize, dstsize: tcgsize; src, dst: TRegister);
+    procedure tcg.a_bit_scan_reg_reg(list: TAsmList; reverse: boolean; size: tcgsize; src, dst: TRegister);
       begin
         internalerror(2014070601);
       end;

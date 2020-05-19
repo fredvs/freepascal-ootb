@@ -30,7 +30,6 @@ Unit raarmgas;
       cpubase;
 
     type
-
       tarmattreader = class(tattreader)
         actoppostfix : TOpPostfix;
         actwideformat : boolean;
@@ -46,13 +45,6 @@ Unit raarmgas;
         procedure ReadSym(oper : tarmoperand);
         procedure ConvertCalljmp(instr : tarminstruction);
         procedure HandleTargetDirective; override;
-      protected
-        function is_unified: boolean; virtual;
-      end;
-
-      tarmunifiedattreader = class(tarmattreader)
-      protected
-        function is_unified: boolean; override;
       end;
 
 
@@ -62,30 +54,24 @@ Unit raarmgas;
       { helpers }
       cutils,
       { global }
-      globtype,globals,verbose,
+      globtype,verbose,
       systems,aasmbase,aasmtai,aasmdata,aasmcpu,
       { symtable }
-      symconst,symsym,symdef,
+      symconst,symsym,
       procinfo,
       rabase,rautils,
-      cgbase,cgutils,paramgr;
-
-
-    function tarmunifiedattreader.is_unified: boolean;
-      begin
-        result:=true;
-      end;
+      cgbase,cgutils;
 
 
     function tarmattreader.is_register(const s:string):boolean;
       type
         treg2str = record
-          name : string[3];
+          name : string[2];
           reg : tregister;
         end;
 
       const
-        extraregs : array[0..19+16] of treg2str = (
+        extraregs : array[0..19] of treg2str = (
           (name: 'A1'; reg : NR_R0),
           (name: 'A2'; reg : NR_R1),
           (name: 'A3'; reg : NR_R2),
@@ -105,25 +91,7 @@ Unit raarmgas;
           (name: 'IP'; reg : NR_R12),
           (name: 'SP'; reg : NR_R13),
           (name: 'LR'; reg : NR_R14),
-          (name: 'PC'; reg : NR_R15),
-
-          (name: 'C0'; reg : NR_CR0),
-          (name: 'C1'; reg : NR_CR1),
-          (name: 'C2'; reg : NR_CR2),
-          (name: 'C3'; reg : NR_CR3),
-          (name: 'C4'; reg : NR_CR4),
-          (name: 'C5'; reg : NR_CR5),
-          (name: 'C6'; reg : NR_CR6),
-          (name: 'C7'; reg : NR_CR7),
-          (name: 'C8'; reg : NR_CR8),
-          (name: 'C9'; reg : NR_CR9),
-          (name: 'C10'; reg : NR_CR10),
-          (name: 'C11'; reg : NR_CR11),
-          (name: 'C12'; reg : NR_CR12),
-          (name: 'C13'; reg : NR_CR13),
-          (name: 'C14'; reg : NR_CR14),
-          (name: 'C15'; reg : NR_CR15)
-          );
+          (name: 'PC'; reg : NR_R15));
 
       var
         i : longint;
@@ -133,7 +101,7 @@ Unit raarmgas;
         { reg found?
           possible aliases are always 2 char
         }
-        if result or (not (length(s) in [2,3])) then
+        if result or (length(s)<>2) then
           exit;
         for i:=low(extraregs) to high(extraregs) do
           begin
@@ -149,21 +117,19 @@ Unit raarmgas;
 
     function tarmattreader.is_targetdirective(const s: string): boolean;
       begin
-        case s of
-          '.thumb_func',
-          '.code',
-          '.thumb_set':
-            result:=true
-          else
-            Result:=inherited is_targetdirective(s);
-        end;
+        if s = '.thumb_func' then
+          result:=true
+        else if s='.thumb_set' then
+          result:=true
+        else
+          Result:=inherited is_targetdirective(s);
       end;
 
 
     procedure tarmattreader.ReadSym(oper : tarmoperand);
       var
          tempstr, mangledname : string;
-         typesize,l,k : tcgint;
+         typesize,l,k : longint;
       begin
         tempstr:=actasmpattern;
         Consume(AS_ID);
@@ -275,9 +241,7 @@ Unit raarmgas;
                           do_error;
                         oper.opr.ref.shiftimm := shift;
                         test_end(require_rbracket);
-                      end
-                    else
-                      test_end(require_rbracket);
+                      end;
                    end
                  else
                    begin
@@ -310,7 +274,7 @@ Unit raarmgas;
       procedure read_index(require_rbracket : boolean);
         var
           recname : string;
-          o_int,s_int : tcgint;
+          o_int,s_int : aint;
         begin
           case actasmtoken of
             AS_REGISTER :
@@ -564,7 +528,7 @@ Unit raarmgas;
             else if (actasmpattern='ROR') then
               handlepara(SM_ROR)
             else if (actasmpattern='RRX') then
-              handlepara(SM_RRX)
+              handlepara(SM_ROR)
             else
               result:=false;
           end
@@ -576,7 +540,7 @@ Unit raarmgas;
     Procedure tarmattreader.BuildOperand(oper : tarmoperand);
       var
         expr : string;
-        typesize,l : tcgint;
+        typesize,l : longint;
 
 
         procedure AddLabelOperand(hl:tasmlabel);
@@ -607,12 +571,11 @@ Unit raarmgas;
             hasdot  : boolean;
             l,
             toffset,
-            tsize   : tcgint;
+            tsize   : longint;
           begin
             if not(actasmtoken in [AS_DOT,AS_PLUS,AS_MINUS]) then
              exit;
             l:=0;
-            mangledname:='';
             hasdot:=(actasmtoken=AS_DOT);
             if hasdot then
               begin
@@ -634,8 +597,10 @@ Unit raarmgas;
                   { don't allow direct access to fields of parameters, because that
                     will generate buggy code. Allow it only for explicit typecasting }
                   if hasdot and
-                     (not oper.hastype) then
-                     checklocalsubscript(oper.opr.localsym);
+                     (not oper.hastype) and
+                     (tabstractnormalvarsym(oper.opr.localsym).owner.symtabletype=parasymtable) and
+                     (current_procinfo.procdef.proccalloption<>pocall_register) then
+                    Message(asmr_e_cannot_access_field_directly_for_parameters);
                   inc(oper.opr.localsymofs,l)
                 end;
               OPR_CONSTANT :
@@ -646,7 +611,7 @@ Unit raarmgas;
                     if (oper.opr.val<>0) then
                       Message(asmr_e_wrong_sym_type);
                     oper.opr.typ:=OPR_SYMBOL;
-                    oper.opr.symbol:=current_asmdata.RefAsmSymbol(mangledname,AT_FUNCTION);
+                    oper.opr.symbol:=current_asmdata.RefAsmSymbol(mangledname);
                   end
                 else
                   inc(oper.opr.val,l);
@@ -801,7 +766,7 @@ Unit raarmgas;
           var
             symtype: TAsmsymtype;
             sym: string;
-            val: tcgint;
+            val: aint;
           begin
             case actasmtoken of
               AS_INTNUM,
@@ -812,25 +777,13 @@ Unit raarmgas;
                   if symtype=AT_NONE then
                     sym:='';
 
-                  reference_reset(oper.opr.ref,4,[]);
+                  reference_reset(oper.opr.ref,4);
                   oper.opr.ref.base:=NR_PC;
                   oper.opr.ref.symbol:=GetConstLabel(sym,val);
                 end;
             end;
           end;
 
-
-      function getregsetindex(reg: tregister): integer;
-        begin
-          if getsubreg(reg)=R_SUBFS then
-            begin
-              result:=getsupreg(reg)*2;
-              if result>32 then
-                result:=result-63;
-            end
-          else
-            result:=getsupreg(reg);
-        end;
 
       var
         tempreg : tregister;
@@ -1005,7 +958,7 @@ Unit raarmgas;
                   oper.opr.typ:=OPR_REGISTER;
                   oper.opr.reg:=tempreg;
                 end
-              else if (actasmtoken=AS_NOT) and (actopcode in [A_LDM,A_STM,A_FLDM,A_FSTM,A_VLDM,A_VSTM,A_SRS,A_RFE]) then
+              else if (actasmtoken=AS_NOT) and (actopcode in [A_LDM,A_STM,A_FLDM,A_FSTM]) then
                 begin
                   consume(AS_NOT);
                   oper.opr.typ:=OPR_REFERENCE;
@@ -1023,11 +976,11 @@ Unit raarmgas;
               registerset:=[];
               regtype:=R_INVALIDREGISTER;
               subreg:=R_SUBNONE;
-              while actasmtoken<>AS_RSBRACKET do
+              while true do
                 begin
                   if actasmtoken=AS_REGISTER then
                     begin
-                      include(registerset,getregsetindex(actasmregister));
+                      include(registerset,getsupreg(actasmregister));
                       if regtype<>R_INVALIDREGISTER then
                         begin
                           if (getregtype(actasmregister)<>regtype) or
@@ -1044,7 +997,7 @@ Unit raarmgas;
                       if actasmtoken=AS_MINUS then
                         begin
                           consume(AS_MINUS);
-                          for ireg:=getregsetindex(tempreg) to getregsetindex(actasmregister) do
+                          for ireg:=getsupreg(tempreg) to getsupreg(actasmregister) do
                             include(registerset,ireg);
                           consume(AS_REGISTER);
                         end;
@@ -1184,19 +1137,8 @@ Unit raarmgas;
           case actasmtoken of
             AS_COMMA: { Operand delimiter }
               Begin
-                if ((instr.opcode in [A_MOV,A_MVN,A_CMP,A_CMN,A_TST,A_TEQ,
-                                      A_UXTB,A_UXTH,A_UXTB16,
-                                      A_SXTB,A_SXTH,A_SXTB16]) and
-                    (operandnum=2)) or
-                  ((operandnum=3) and not(instr.opcode in [A_UMLAL,A_UMULL,A_SMLAL,A_SMULL,A_MLA,A_UMAAL,A_MLS,
-                                                           A_SMLABB,A_SMLABT,A_SMLATB,A_SMLATT,A_SMMLA,A_SMMLS,A_SMLAD,A_SMLALD,A_SMLSD,
-                                                           A_SMLALBB,A_SMLALBT,A_SMLALTB,A_SMLALTT,A_SMLSLD,
-                                                           A_SMLAWB,A_SMLAWT,
-                                                           A_MRC,A_MCR,A_MCRR,A_MRRC,A_MRC2,A_MCR2,A_MCRR2,A_MRRC2,
-                                                           A_STREXD,A_STRD,
-                                                           A_USADA8,
-                                                           A_VMOV,
-                                                           A_SBFX,A_UBFX,A_BFI])) then
+                if ((instr.opcode in [A_MOV, A_MVN, A_CMP, A_CMN, A_TST, A_TEQ]) and (operandnum=2)) or
+                  ((operandnum=3) and not(instr.opcode in [A_UMLAL,A_UMULL,A_SMLAL,A_SMULL,A_MLA,A_MRC,A_MCR,A_MCRR,A_MRRC])) then
                   begin
                     Consume(AS_COMMA);
                     if not(TryBuildShifterOp(instr.Operands[operandnum+1] as tarmoperand)) then
@@ -1218,8 +1160,7 @@ Unit raarmgas;
                 break;
               end;
           else
-            if ((instr.opcode = A_MRS) and (operandnum = 2)) or
-               ((instr.opcode = A_MSR) and (operandnum = 1)) then
+            if (instr.opcode = A_MSR) and (operandnum = 1) then
               BuildSpecialreg(instr.Operands[operandnum] as tarmoperand)
             else
               BuildOperand(instr.Operands[operandnum] as tarmoperand);
@@ -1233,34 +1174,25 @@ Unit raarmgas;
 
       const
         { sorted by length so longer postfixes will match first }
-        postfix2strsorted : array[1..70] of string[9] = (
-          '.F32.S32','.F32.U32','.S32.F32','.U32.F32','.F64.S32','.F64.U32','.S32.F64','.U32.F64',
-          '.F32.S16','.F32.U16','.S16.F32','.U16.F32','.F64.S16','.F64.U16','.S16.F64','.U16.F64',
-          '.F32.F64','.F64.F32',
-          '.I16','.I32','.I64','.S16','.S32','.S64','.U16','.U32','.U64','.F32','.F64',
-          'IAD','DBD','FDD','EAD','IAS','DBS','FDS','EAS','IAX','DBX','FDX','EAX',
-          '.16','.32','.64','.I8','.S8','.U8','.P8',
-          'EP','SB','BT','SH','IA','IB','DA','DB','FD','FA','ED','EA',
-          '.8','S','D','E','P','X','R','B','H','T');
+        postfix2strsorted : array[1..31] of string[3] = (
+          'IAD','DBD','FDD','EAD',
+          'IAS','DBS','FDS','EAS',
+          'IAX','DBX','FDX','EAX',
+          'EP','SB','BT','SH',
+          'IA','IB','DA','DB','FD','FA','ED','EA',
+          'B','D','E','P','T','H','S');
 
-        postfixsorted : array[1..70] of TOpPostfix = (
-          PF_F32S32,PF_F32U32,PF_S32F32,PF_U32F32,PF_F64S32,PF_F64U32,PF_S32F64,PF_U32F64,
-          PF_F32S16,PF_F32U16,PF_S16F32,PF_U16F32,PF_F64S16,PF_F64U16,PF_S16F64,PF_U16F64,
-          PF_F32F64,PF_F64F32,
-          PF_I16,PF_I32,
-          PF_I64,PF_S16,PF_S32,PF_S64,PF_U16,PF_U32,PF_U64,PF_F32,
-          PF_F64,PF_IAD,PF_DBD,PF_FDD,PF_EAD,
-          PF_IAS,PF_DBS,PF_FDS,PF_EAS,PF_IAX,
-          PF_DBX,PF_FDX,PF_EAX,PF_16,PF_32,
-          PF_64,PF_I8,PF_S8,PF_U8,PF_P8,
-          PF_EP,PF_SB,PF_BT,PF_SH,PF_IA,
-          PF_IB,PF_DA,PF_DB,PF_FD,PF_FA,
-          PF_ED,PF_EA,PF_8,PF_S,PF_D,PF_E,
-          PF_P,PF_X,PF_R,PF_B,PF_H,PF_T);
+        postfixsorted : array[1..31] of TOpPostfix = (
+          PF_IAD,PF_DBD,PF_FDD,PF_EAD,
+          PF_IAS,PF_DBS,PF_FDS,PF_EAS,
+          PF_IAX,PF_DBX,PF_FDX,PF_EAX,
+          PF_EP,PF_SB,PF_BT,PF_SH,
+          PF_IA,PF_IB,PF_DA,PF_DB,PF_FD,PF_FA,PF_ED,PF_EA,
+          PF_B,PF_D,PF_E,PF_P,PF_T,PF_H,PF_S);
 
       var
-        j, j2 : longint;
-        hs,hs2 : string;
+        j  : longint;
+        hs : string;
         maxlen : longint;
         icond : tasmcond;
       Begin
@@ -1288,126 +1220,61 @@ Unit raarmgas;
                   end;
               end;
           end;
-        maxlen:=min(length(hs),6);
+        maxlen:=max(length(hs),5);
         actopcode:=A_NONE;
-        j2:=maxlen;
-        hs2:=hs;
-        while j2>=1 do
+        for j:=maxlen downto 1 do
           begin
-            hs:=hs2;
-            while j2>=1 do
+            actopcode:=tasmop(PtrUInt(iasmops.Find(copy(hs,1,j))));
+            if actopcode<>A_NONE then
               begin
-                actopcode:=tasmop(PtrUInt(iasmops.Find(copy(hs,1,j2))));
-                if actopcode<>A_NONE then
+                actasmtoken:=AS_OPCODE;
+                { strip op code }
+                delete(hs,1,j);
+                break;
+              end;
+          end;
+        if actopcode=A_NONE then
+          exit;
+
+        { search for condition, conditions are always 2 chars }
+        if length(hs)>1 then
+          begin
+            for icond:=low(tasmcond) to high(tasmcond) do
+              begin
+                if copy(hs,1,2)=uppercond2str[icond] then
                   begin
-                    actasmtoken:=AS_OPCODE;
-                    { strip op code }
-                    delete(hs,1,j2);
-                    dec(j2);
+                    actcondition:=icond;
+                    { strip condition }
+                    delete(hs,1,2);
                     break;
                   end;
-                dec(j2);
               end;
-
-            if actopcode=A_NONE then
-              exit;
-
-            if is_unified then
-              begin
-                { check for postfix }
-                if (length(hs)>0) and (actoppostfix=PF_None) then
-                  begin
-                    for j:=low(postfixsorted) to high(postfixsorted) do
-                      begin
-                        if copy(hs,1,length(postfix2strsorted[j]))=postfix2strsorted[j] then
-                          begin
-                            if not ((length(hs)-length(postfix2strsorted[j])) in [0,2,4]) then
-                              continue;
-
-                            actoppostfix:=postfixsorted[j];
-                            { strip postfix }
-                            delete(hs,1,length(postfix2strsorted[j]));
-                            break;
-                          end;
-                      end;
-                  end;
-                { search for condition, conditions are always 2 chars }
-                if length(hs)>1 then
-                  begin
-                    for icond:=low(tasmcond) to high(tasmcond) do
-                      begin
-                        if copy(hs,1,2)=uppercond2str[icond] then
-                          begin
-                            actcondition:=icond;
-                            { strip condition }
-                            delete(hs,1,2);
-                            break;
-                          end;
-                      end;
-                  end;
-                { check for postfix }
-                if (length(hs)>0) and (actoppostfix=PF_None) then
-                  begin
-                    for j:=low(postfixsorted) to high(postfixsorted) do
-                      begin
-                        if copy(hs,1,length(postfix2strsorted[j]))=postfix2strsorted[j] then
-                          begin
-                            if not ((length(hs)-length(postfix2strsorted[j])) = 0) then
-                              continue;
-
-                            actoppostfix:=postfixsorted[j];
-                            { strip postfix }
-                            delete(hs,1,length(postfix2strsorted[j]));
-                            break;
-                          end;
-                      end;
-                  end;
-              end
-            else
-              begin
-                { search for condition, conditions are always 2 chars }
-                if length(hs)>1 then
-                  begin
-                    for icond:=low(tasmcond) to high(tasmcond) do
-                      begin
-                        if copy(hs,1,2)=uppercond2str[icond] then
-                          begin
-                            actcondition:=icond;
-                            { strip condition }
-                            delete(hs,1,2);
-                            break;
-                          end;
-                      end;
-                  end;
-                { check for postfix }
-                if (length(hs)>0) and (actoppostfix=PF_None) then
-                  begin
-                    for j:=low(postfixsorted) to high(postfixsorted) do
-                      begin
-                        if copy(hs,1,length(postfix2strsorted[j]))=postfix2strsorted[j] then
-                          begin
-                            actoppostfix:=postfixsorted[j];
-                            { strip postfix }
-                            delete(hs,1,length(postfix2strsorted[j]));
-                            break;
-                          end;
-                      end;
-                  end;
-              end;
-            { check for format postfix }
-            if length(hs)>0 then
-              begin
-                if copy(hs,1,2) = '.W' then
-                  begin
-                    actwideformat:=true;
-                    delete(hs,1,2);
-                  end;
-              end;
-            { if we stripped all postfixes, it's a valid opcode }
-            is_asmopcode:=length(hs)=0;
-            if is_asmopcode = true then
-              break;
           end;
+        { check for postfix }
+        if length(hs)>0 then
+          begin
+            for j:=low(postfixsorted) to high(postfixsorted) do
+              begin
+                if copy(hs,1,length(postfix2strsorted[j]))=postfix2strsorted[j] then
+                  begin
+                    actoppostfix:=postfixsorted[j];
+                    { strip postfix }
+                    delete(hs,1,length(postfix2strsorted[j]));
+                    break;
+                  end;
+              end;
+          end;
+        { check for format postfix }
+        if length(hs)>0 then
+          begin
+            if upcase(copy(hs,1,2)) = '.W' then
+              begin
+                actwideformat:=true;
+                delete(hs,1,2);
+              end;
+          end;
+        { if we stripped all postfixes, it's a valid opcode }
+        is_asmopcode:=length(hs)=0;
       end;
 
 
@@ -1427,46 +1294,29 @@ Unit raarmgas;
           end;
       end;
 
-
     procedure tarmattreader.HandleTargetDirective;
       var
         symname,
         symval  : String;
-        val     : tcgint;
+        val     : aint;
         symtyp  : TAsmsymtype;
       begin
-        case actasmpattern of
-          '.thumb_set':
-            begin
-              consume(AS_TARGET_DIRECTIVE);
-              BuildConstSymbolExpression(true,false,false, val,symname,symtyp);
-              Consume(AS_COMMA);
-              BuildConstSymbolExpression(true,false,false, val,symval,symtyp);
+        if actasmpattern='.thumb_set' then
+          begin
+            consume(AS_TARGET_DIRECTIVE);
+            BuildConstSymbolExpression(true,false,false, val,symname,symtyp);
+            Consume(AS_COMMA);
+            BuildConstSymbolExpression(true,false,false, val,symval,symtyp);
 
-              curList.concat(tai_symbolpair.create(spk_thumb_set,symname,symval));
-            end;
-          '.code':
-            begin
-              consume(AS_TARGET_DIRECTIVE);
-              val:=BuildConstExpression(false,false);
-              if not(val in [16,32]) then
-                Message(asmr_e_invalid_code_value);
-              curList.concat(tai_directive.create(asd_code,tostr(val)));
-            end;
-          '.thumb_func':
-            begin
-              consume(AS_TARGET_DIRECTIVE);
-              curList.concat(tai_directive.create(asd_thumb_func,''));
-            end
-          else
-            inherited HandleTargetDirective;
-        end;
-      end;
-
-
-    function tarmattreader.is_unified: boolean;
-      begin
-        result:=false;
+            curList.concat(tai_thumb_set.create(symname,symval));
+          end
+        else if actasmpattern='.thumb_func' then
+          begin
+            consume(AS_TARGET_DIRECTIVE);
+            curList.concat(tai_thumb_func.create);
+          end
+        else
+          inherited HandleTargetDirective;
       end;
 
 
@@ -1498,15 +1348,8 @@ const
   asmmode_arm_att_info : tasmmodeinfo =
           (
             id    : asmmode_arm_gas;
-            idtxt : 'DIVIDED';
+            idtxt : 'GAS';
             casmreader : tarmattreader;
-          );
-
-  asmmode_arm_att_unified_info : tasmmodeinfo =
-          (
-            id    : asmmode_arm_gas_unified;
-            idtxt : 'UNIFIED';
-            casmreader : tarmunifiedattreader;
           );
 
   asmmode_arm_standard_info : tasmmodeinfo =
@@ -1518,6 +1361,5 @@ const
 
 initialization
   RegisterAsmMode(asmmode_arm_att_info);
-  RegisterAsmMode(asmmode_arm_att_unified_info);
   RegisterAsmMode(asmmode_arm_standard_info);
 end.

@@ -38,53 +38,51 @@ Type
   ---------------------------------------------------------------------}
 
 
-procedure StreamRead(var F: TTextRec);
+Function StreamRead(var F: TTextRec) : longint;
 
 begin
-  InOutRes:=0;
+  Result:=0;
   With F do
     Try
       Bufend:=GetStream(F).Read(BufPtr^,BufSize);
       BufPos:=0;
     except
-      InOutRes:=100;
+      Result:=100;
     end;
 end;
 
 
-procedure StreamWrite(var F: TTextRec );
+Function StreamWrite(var F: TTextRec ): longint;
 begin
-  InOutRes:=0;
+  Result:=0;
   with F do
     if (BufPos>0) then
       try
         GetStream(F).WriteBuffer(BufPtr^,BufPos);
         BufPos:=0;
       except
-        InOutRes:=101;
+        Result:=101;
       end;
 end;
 
 
-{$PUSH}
-{$WARN 5024 OFF : Parameter "$1" not used}
-Procedure StreamFlush(var F: TTextRec);
+Function StreamFlush(var F: TTextRec): longint;
 
 begin
-  InOutRes:=0;
+  Result:=0;
 end;
 
 
-procedure StreamClose(var F: TTextRec);
+Function StreamClose(var F: TTextRec): longint;
 begin
-  InOutRes:=0;
+  Result:=0;
 end;
-{$POP}
 
-Procedure StreamOpen(var F: TTextRec );
+
+Function StreamOpen(var F: TTextRec ): longint;
 
 begin
-  InOutRes:=0;
+  Result := 0;
   with F do
     begin
     BufPos:=0;
@@ -103,7 +101,7 @@ begin
           Try
             GetStream(F).Seek(0,soFromEnd);
           except
-            InOutRes:=156;
+            Result:=156;
           end;
         end;
     end;
@@ -130,21 +128,19 @@ begin
     end;
   with TTextRec(F) do
     begin
-    
     OpenFunc:=@StreamOpen;
     CloseFunc:=@StreamClose;
-    Case DefaultTextLineBreakStyle Of
-      tlbsLF: LineEnd:=#10;
-      tlbsCRLF: LineEnd:=#13#10;
-      tlbsCR: LineEnd:=#13;
-    End;
+ Case DefaultTextLineBreakStyle Of
+    tlbsLF: TextRec(f).LineEnd := #10;
+    tlbsCRLF: TextRec(f).LineEnd := #13#10;
+    tlbsCR: TextRec(f).LineEnd := #13;
+  End;
     PStream(@UserData)^:=Stream;
     Mode:=fmClosed;
     BufSize:=SizeOf(Buffer);
     BufPtr:=@Buffer;
     Name[0]:=#0;
     end;
-   SetTextCodePage(F,CP_ACP); 
 end;
 
 

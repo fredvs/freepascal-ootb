@@ -304,8 +304,7 @@ destructor TCollection.Destroy;
 begin
   FUpdateCount:=1; // Prevent OnChange
   try
-    if Assigned(FItems) then
-      DoClear;
+    DoClear;
   Finally
     FUpdateCount:=0;
   end;
@@ -325,14 +324,9 @@ Var I : Longint;
 begin
   If Source is TCollection then
     begin
-    BeginUpdate;
-    try
-      Clear;
-      For I:=0 To TCollection(Source).Count-1 do
-       Add.Assign(TCollection(Source).Items[I]);
-    finally
-      EndUpdate;
-    end;
+    Clear;
+    For I:=0 To TCollection(Source).Count-1 do
+     Add.Assign(TCollection(Source).Items[I]);
     exit;
     end
   else
@@ -432,11 +426,6 @@ begin
   FItems.Exchange(Index1,Index2);
   if FUpdateCount = 0 then
     FPONotifyObservers(Self,ooChange,Nil);
-end;
-
-procedure TCollection.Move(const Index1, index2: integer);
-begin
-  Items[Index1].Index:=Index2;
 end;
 
 

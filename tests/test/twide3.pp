@@ -1,35 +1,15 @@
-{ %skiptarget=win32,win64,wince,os2,emx,go32v2,msdos }
+{ %skiptarget=win32,win64,wince }
 { This test is only useful if the local codepage is utf-8 which
-  usually not the case on windows (and never can be the case on OS/2)
+  usually not the case on windows
 }
 {$codepage utf-8}
 
 {$mode objfpc}
-{$ifdef go32v2}
-  {$define USE_INTERNAL_UNICODE}
-{$endif}
-
-{$ifdef USE_INTERNAL_UNICODE}
-  {$define USE_FPWIDESTRING_UNIT}
-  {$define USE_UNICODEDUCET_UNIT}
-  {$define USE_CPALL_UNIT}
-{$endif}
 
 uses
-{$ifndef USE_INTERNAL_UNICODE}
-  {$ifdef unix}
-    {$ifdef darwin}iosxwstr{$else}cwstring{$endif},
-  {$endif}
-{$endif ndef USE_INTERNAL_UNICODE}
- {$ifdef USE_UNICODEDUCET_UNIT}
-  unicodeducet,
- {$endif}
- {$ifdef USE_FPWIDESTRING_UNIT}
-  fpwidestring,
- {$endif}
- {$ifdef USE_CPALL_UNIT}
-  cpall,
- {$endif}
+{$ifdef unix}
+  cwstring,
+{$endif}
   SysUtils;
 
 {$i+}
@@ -47,7 +27,7 @@ begin
   writeln(t,'łóżka');
   close(t);
   reset(t);
-
+  
   try
     read(t,wc);
     if wc<>'ł' then
@@ -57,7 +37,7 @@ begin
 //    erase(t);
     raise;
   end;
-
+    
   reset(t);
   try
     readln(t,a);

@@ -33,13 +33,8 @@ begin
       for i:=0 to lines.Count-1 do 
         WriteLn('  ', lines[i]);
       lines.Clear();
-      ini.ReadSectionValues('main', lines,[]);
-      WriteLn('ReadSectionValues (no options):');
-      for i:=0 to lines.Count-1 do
-        WriteLn('  ', lines[i]);
-      lines.Clear();
-      ini.ReadSectionRaw('main', lines);
-      WriteLn('ReadSectionRaw (svn c):');
+      ini.ReadSectionValues('main', lines,[svoIncludeComments]);
+      WriteLn('ReadSectionValues (with comments, no invalid):');
       for i:=0 to lines.Count-1 do
         WriteLn('  ', lines[i]);
       lines.Clear();

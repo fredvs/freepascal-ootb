@@ -20,17 +20,15 @@
 }
 unit chmreader;
 
-{$mode delphi}
+{$mode objfpc}{$H+}
 
 //{$DEFINE CHM_DEBUG}
 { $DEFINE CHM_DEBUG_CHUNKS}
-{define binindex}
-{define nonumber}
+
 interface
 
 uses
-  Generics.Collections, Classes, SysUtils,  Contnrs,
-  chmbase, paslzx, chmFIftiMain, chmsitemap;
+  Classes, SysUtils, Contnrs, chmbase, paslzx, chmFIftiMain, chmsitemap;
 
 type
 
@@ -115,7 +113,6 @@ type
     procedure ReadCommonData;
     function  ReadStringsEntry(APosition: DWord): String;
     function  ReadStringsEntryFromStream ( strm:TStream ) : String;
-    { Return LocalUrl string from #URLSTR }
     function  ReadURLSTR(APosition: DWord): String;
     function  CheckCommonStreams: Boolean;
     procedure ReadWindows(mem:TMemoryStream);
@@ -419,8 +416,6 @@ procedure TChmReader.ReadCommonData;
        end;
      end;
      ReadWindows(FWindows);
-     fWindows.Free;
-     fStrings.Free;
    end;
    procedure ReadContextIds;
    var
@@ -446,8 +441,6 @@ procedure TChmReader.ReadCommonData;
        Str := '/'+ ReadString(fStrings, Offset, True);
        fContextList.AddContext(Value, Str);
      end;
-     fIVB.Free;
-     fStrings.Free;
    end;
 begin
    ReadFromSystem;
@@ -490,8 +483,8 @@ begin
   fURLTBLStream.ReadDWord; // unknown
   fURLTBLStream.ReadDWord; // TOPIC index #
   fURLSTRStream.Position := LEtoN(fURLTBLStream.ReadDWord);
-  fURLSTRStream.ReadDWord; // URL
-  fURLSTRStream.ReadDWord; // FrameName
+  fURLSTRStream.ReadDWord;
+  fURLSTRStream.ReadDWord;
   if fURLSTRStream.Position < fURLSTRStream.Size-1 then
     Result := PChar(fURLSTRStream.Memory+fURLSTRStream.Position);
 end;
@@ -732,7 +725,7 @@ var
   PMGIndex: Integer;
   {$ENDIF}
 begin
-  if not assigned(ForEach) then Exit;
+  if ForEach = nil then Exit;
   ChunkStream := TMemoryStream.Create;
   {$IFDEF CHM_DEBUG_CHUNKS}
   WriteLn('ChunkCount = ',fDirectoryHeader.DirectoryChunkCount);
@@ -973,12 +966,6 @@ begin
     fTOPICSStream.ReadDWord;
     TopicTitleOffset := LEtoN(fTOPICSStream.ReadDWord);
     TopicURLTBLOffset := LEtoN(fTOPICSStream.ReadDWord);
-    {$ifdef binindex}
-    {$ifndef nonumber}
-    writeln('titleid:',TopicTitleOffset);
-    writeln('urlid  :',TopicURLTBLOffset);
-    {$endif}
-    {$endif}
     if TopicTitleOffset <> $FFFFFFFF then
       ATitle := ReadStringsEntry(TopicTitleOffset);
      //WriteLn('Got a title: ', ATitle);
@@ -1025,10 +1012,6 @@ begin
   result:=head<tail;
 
   n:=head-oldhead;
-
-  pw:=pword(@oldhead[n]);
-  if (n>1) and (pw[-1]=0) then
-    dec(n,2); // remove trailing #0
   setlength(ws,n div sizeof(widechar));
   move(oldhead^,ws[1],n);
   for n:=1 to length(ws) do
@@ -1036,15 +1019,10 @@ begin
   readv:=ws; // force conversion for now, and hope it doesn't require cwstring
 end;
 
-
-Type TLookupRec = record
-                   item : TChmSiteMapItems;
-                   depth : integer;
-                   end;
-     TLookupDict = TDictionary<string,TLookupRec>;
 function TChmReader.GetIndexSitemap(ForceXML:boolean=false): TChmSiteMap;
 var Index   : TMemoryStream;
-
+    sitemap : TChmSiteMap;
+    Item    : TChmSiteMapItem;
 
 function  AbortAndTryTextual:tchmsitemap;
 
@@ -1062,48 +1040,67 @@ begin
       result:=nil;
 end;
 
-var
-   parentitem:TChmSiteMapItems;
-   itemstack :TObjectList;
-   lookup  : TLookupDict;
-   curitemdepth : integer;
-   sitemap : TChmSiteMap;
-
-function getitem(anentrydepth:integer):Tchmsitemapitems;
+procedure createentry(Name:ansistring;CharIndex:integer;Topic,Title:ansistring);
+var litem : TChmSiteMapItem;
+    shortname : ansistring;
+    longpart  : ansistring;
 begin
-   if anentrydepth<itemstack.count then
-     result:=tchmsitemapitems(itemstack[anentrydepth])
-   else
-     begin
-       {$ifdef binindex}
-         writeln('pop from emptystack at ',anentrydepth,' ',itemstack.count);
-       {$endif}
-       result:=tchmsitemapitems(itemstack[itemstack.Count-1]);
-     end;
-end;
-
-procedure pushitem(anentrydepth:integer;anitem:tchmsitemapitem);
-begin
-
- if anentrydepth<itemstack.count then
-   itemstack[anentrydepth]:=anitem.children
+ if charindex=0 then
+   begin
+     item:=sitemap.items.NewItem;
+     item.keyword:=Name;
+     item.local:=topic;
+     item.text:=title;
+   end
  else
-   if anentrydepth=itemstack.count then
-     itemstack.add(anitem.Children)
-   else
-     begin
-       {$ifdef binindex}
-         writeln('push more than 1 larger ' ,anentrydepth,' ',itemstack.count);
-       {$endif}
-       itemstack.add(anitem.Children)
-     end;
+   begin
+     shortname:=copy(name,1,charindex-2);
+     longpart:=copy(name,charindex,length(name)-charindex+1);
+     if assigned(item) and (shortname=item.text) then
+       begin
+         litem:=item.children.newitem;
+         litem.local:=topic;
+         litem.keyword :=longpart; // recursively split this? No examples.
+         litem.text:=title;
+       end
+      else
+       begin
+         item:=sitemap.items.NewItem;
+         item.keyword:=shortname;
+         item.local:=topic;
+         item.text:=title;
+         litem:=item.children.newitem;
+         litem.keyword:=longpart;
+         litem.local:=topic;
+         litem.text :=Title; // recursively split this? No examples.
+       end;
+   end;
 end;
+
 procedure parselistingblock(p:pbyte);
 var
+    itemstack:TObjectStack;
+    curitemdepth : integer;
+    parentitem:TChmSiteMap;
 
-    Item    : TChmSiteMapItem;
+procedure updateparentitem(entrydepth:integer);
+begin
+  if entrydepth>curitemdepth then
+    begin
+      if curitemdepth<>0 then
+        itemstack.push(parentitem);
+      curitemdepth:=entrydepth;
+    end
+  else
+   if entrydepth>curitemdepth then
+    begin
+      if curitemdepth<>0 then
+        itemstack.push(parentitem);
+      curitemdepth:=entrydepth;
+    end
+end;
 
-    hdr:PBTreeBlockHeader;
+var hdr:PBTreeBlockHeader;
     head,tail : pbyte;
     isseealso,
     entrydepth,
@@ -1114,41 +1111,8 @@ var
     CharIndex,
     ind:integer;
     seealsostr,
-    s,
+    topic,
     Name : AnsiString;
-    path,
-    shortname : AnsiString;
-    anitem:TChmSiteMapItems;
-    litem : TChmSiteMapItem;
-    lookupitem : TLookupRec;
-
-function readvalue:string;
-begin
-  if head<tail Then
-    begin
-      ind:=LEToN(plongint(head)^);
-
-      result:=lookuptopicbyid(ind,title);
-      {$ifdef binindex}
-        writeln(i:3,' topic: ' {$ifndef nonumber},'  (',ind,')' {$endif});
-        writeln('    title: ',title);
-        writeln('    result: ',result);
-      {$endif}
-      inc(head,4);
-    end;
-end;
-
-procedure dumpstack;
-var fp : TChmSiteMapItems;
-     ix : Integer;
-begin
-  for ix:=0 to itemstack.Count-1 do
-    begin
-      fp :=TChmSiteMapItems(itemstack[ix]);
-      writeln(ix:3,' ',fp.parentname);
-    end;
-end;
-
 begin
   //setlength (curitem,10);
   hdr:=PBTreeBlockHeader(p);
@@ -1157,21 +1121,17 @@ begin
   hdr^.IndexOfPrevBlock:=LEToN(hdr^.IndexOfPrevBlock);
   hdr^.IndexOfNextBlock:=LEToN(hdr^.IndexOfNextBlock);
 
-  {$ifdef binindex}
-  writeln('hdr:',hdr^.length);
-  {$endif}
   tail:=p+(2048-hdr^.length);
   head:=p+sizeof(TBtreeBlockHeader);
 
+  itemstack:=TObjectStack.create;
   {$ifdef binindex}
-  {$ifndef nonumber}
   writeln('previndex  : ',hdr^.IndexOfPrevBlock);
   writeln('nextindex  : ',hdr^.IndexOfNextBlock);
   {$endif}
-  {$endif}
+  curitemdepth:=0;
   while head<tail do
     begin
-      //writeln(tail-head);
       if not ReadWCharString(Head,Tail,Name) Then
         Break;
       {$ifdef binindex}
@@ -1184,75 +1144,6 @@ begin
       IsSeealso:=LEToN(PE^.isseealso);
       EntryDepth:=LEToN(PE^.entrydepth);
       CharIndex:=LEToN(PE^.CharIndex);
-      Path:='';
-
-      if charindex<>0 then
-        begin
-          Path:=Trim(Copy(Name,1,charindex-2));
-          Shortname:=trim(copy(Name,charindex,Length(Name)-Charindex+1));
-        end
-      else
-        shortname:=name;
-      {$ifdef binindex}
-      writeln('depth:', curitemdepth, ' ' ,entrydepth);
-      {$endif}
-      if curitemdepth=entrydepth then // same level, so of same parent
-         begin
-           item:=parentitem.newitem;
-           pushitem(entrydepth+1,item);
-         end
-      else
-        if curitemdepth=entrydepth-1 then // new child, one lower.
-          begin
-            parentitem:=getitem(entrydepth);
-            item:=parentitem.newitem;
-            pushitem(entrydepth+1,item);
-          end
-        else
-         if entrydepth<curitemdepth then
-          begin
-            parentitem:=getitem(entrydepth);
-            {$ifdef binindex}
-            writeln('bingo!', parentitem.parentname);
-            dumpstack;
-            {$endif}
-            item:=parentitem.newitem;
-            pushitem(entrydepth+1,item);
-          end;
-
-      curitemdepth:=entrydepth;
-      {$ifdef binindex}
-      writeln('lookup:', Name, ' = ', path,' = ',shortname);
-      {$endif}
-
-    (*  if lookup.trygetvalue(path,lookupitem) then
-        begin
-//          if lookupitem.item<>parentitem then
-//             writeln('mismatch: ',lookupitem.item.item[0].name,' ',name);
-{          if curitemdepth<entrydepth then
-            begin
-              writeln('lookup ok!',curitemdepth,' ' ,entrydepth);
-              curitemdepth:=entrydepth;
-            end
-          else
-           begin
-             writeln('lookup odd!',curitemdepth,' ' ,entrydepth);
-           end;
-          curitemdepth:=lookupitem.depth+1;
-          parentitem:=lookupitem.item;}
-        end
-      else
-        begin
- //            parentitem:=sitemap.Items;
-          if not curitemdepth=entrydepth then
-             writeln('no lookup odd!',curitemdepth,' ' ,entrydepth);
-        end;  *)
-{      item:=parentitem.newitem;}
-      lookupitem.item:=item.children;
-      lookupitem.depth:=entrydepth;
-      lookup.addorsetvalue(name,lookupitem);
-      item.AddName(Shortname);
-
       {$ifdef binindex}
         Writeln('seealso   :  ',IsSeeAlso);
         Writeln('entrydepth:  ',EntryDepth);
@@ -1273,7 +1164,7 @@ begin
           {$ifdef binindex}
             writeln('seealso: ',seealsostr);
           {$endif}
-          item.AddSeeAlso(seealsostr);
+
         end
       else
         begin
@@ -1285,13 +1176,21 @@ begin
 
             for i:=0 to nrpairs-1 do
               begin
-               s:=readvalue;
-             //  if not ((i=0) and (title=shortname)) then
-               item.addname(title);
-               item.addlocal(s);
+                if head<tail Then
+                  begin
+                    ind:=LEToN(plongint(head)^);
+                    topic:=lookuptopicbyid(ind,title);
+                    {$ifdef binindex}
+                      writeln(i:3,' topic: ',topic);
+                      writeln('    title: ',title);
+                    {$endif}
+                    inc(head,4);
+                  end;
               end;
           end;
          end;
+      if nrpairs<>0 Then
+        createentry(Name,CharIndex,Topic,Title);
       inc(head,4); // always 1
       {$ifdef binindex}
         if head<tail then
@@ -1299,16 +1198,15 @@ begin
       {$endif}
       inc(head,4); // zero based index (13 higher than last
     end;
+  ItemStack.Free;
 end;
 
 var TryTextual : boolean;
     BHdr       : TBTreeHeader;
     block      : Array[0..2047] of Byte;
     i          : Integer;
-
 begin
    Result := nil;  SiteMap:=Nil;
-   lookup:=TDictionary<string,TLookupRec>.create;
    // First Try Binary
    Index := GetObject('/$WWKeywordLinks/BTree');
    if (Index = nil) or ForceXML then
@@ -1322,12 +1220,9 @@ begin
      Exit;
    end;
    SiteMap:=TChmSitemap.Create(StIndex);
-   itemstack :=TObjectList.create(false);
-   //Item   :=Nil;  // cached last created item, in case we need to make
+   Item   :=Nil;  // cached last created item, in case we need to make
                   // a child.
-   parentitem:=sitemap.Items;
-   itemstack.add(parentitem); // level 0
-   curitemdepth:=0;
+
    TryTextual:=True;
    BHdr.LastLstBlock:=0;
    if LoadBtreeHeader(index,BHdr) and (BHdr.LastLstBlock>=0) Then
@@ -1336,7 +1231,7 @@ begin
          begin
            for i:=0 to BHdr.lastlstblock do
              begin
-               if (index.size-index.position)>=defblocksize then // skips last incomplete block?
+               if (index.size-index.position)>=defblocksize then
                  begin
                    Index.read(block,defblocksize);
                    parselistingblock(@block)
@@ -1352,7 +1247,6 @@ begin
       Result:=AbortAndTryTextual;
     end
   else Index.Free;
-  lookup.free;
 end;
 
 function TChmReader.GetTOCSitemap(ForceXML:boolean=false): TChmSiteMap;
@@ -1362,19 +1256,19 @@ function TChmReader.GetTOCSitemap(ForceXML:boolean=false): TChmSiteMap;
       Item: TChmSiteMapItem;
       NextEntry: DWord;
       TopicsIndex: DWord;
-      Title, Local : String;
+      Title: String;
     begin
       Toc.Position:= AItemOffset + 4;
       Item := SiteMapITems.NewItem;
       Props := LEtoN(TOC.ReadDWord);
       if (Props and TOC_ENTRY_HAS_LOCAL) = 0 then
-        Item.AddName(ReadStringsEntry(LEtoN(TOC.ReadDWord)))
+        Item.Text:= ReadStringsEntry(LEtoN(TOC.ReadDWord))
       else
       begin
         TopicsIndex := LEtoN(TOC.ReadDWord);
-        Local:=LookupTopicByID(TopicsIndex, Title);
-        Item.AddName(Title);
-        Item.AddLocal(Local);
+        Item.Local := LookupTopicByID(TopicsIndex, Title);
+        Item.Text := Title;
+
       end;
       TOC.ReadDWord;
       Result := LEtoN(TOC.ReadDWord);
@@ -1813,7 +1707,7 @@ var
   X: Integer;
 begin
   fOnOpenNewFile := AValue;
-  if not assigned(AValue)  then exit;
+  if AValue = nil then exit;
   for X := 0 to fUnNotifiedFiles.Count-1 do
     AValue(Self, X);
   fUnNotifiedFiles.Clear;

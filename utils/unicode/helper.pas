@@ -42,7 +42,7 @@ const
   SLicenseText =
     '    {   Unicode implementation tables. ' + sLineBreak +
     ' ' + sLineBreak +
-    '        Copyright (c) 2013 - 2017 by Inoussa OUEDRAOGO ' + sLineBreak +
+    '        Copyright (c) 2013 by Inoussa OUEDRAOGO ' + sLineBreak +
     ' ' + sLineBreak +
     '        Permission is hereby granted, free of charge, to any person ' + sLineBreak +
     '        obtaining a copy of the Unicode data files and any associated ' + sLineBreak +
@@ -232,39 +232,35 @@ type
   end;
   TPropListLineRecArray = array of TPropListLineRec;
 
-  { TUCA_WeightRec }
-
   TUCA_WeightRec = packed record
-  public
     Weights  : array[0..3] of Cardinal;
     Variable : Boolean;
-  public
-    class operator Equal(a, b: TUCA_WeightRec): Boolean;{$ifdef USE_INLINE}inline;{$ENDIF}
   end;
   TUCA_WeightRecArray = array of TUCA_WeightRec;
 
-  PUCA_LineContextItemRec = ^TUCA_LineContextItemRec;
   TUCA_LineContextItemRec = X_PACKED record
   public
     CodePoints : TUnicodeCodePointArray;
     Weights    : TUCA_WeightRecArray;
   public
     procedure Clear();
-    procedure Assign(ASource : PUCA_LineContextItemRec);
+    procedure Assign(ASource : TUCA_LineContextItemRec);
     function Clone() : TUCA_LineContextItemRec;
   end;
+  PUCA_LineContextItemRec = ^TUCA_LineContextItemRec;
 
-  PUCA_LineContextRec = ^TUCA_LineContextRec;
   TUCA_LineContextRec = X_PACKED record
   public
     Data : array of TUCA_LineContextItemRec;
   public
     procedure Clear();
-    procedure Assign(ASource : PUCA_LineContextRec);
+    procedure Assign(ASource : TUCA_LineContextRec);
     function Clone() : TUCA_LineContextRec;
   end;
+  PUCA_LineContextRec = ^TUCA_LineContextRec;
 
-  PUCA_LineRec = ^TUCA_LineRec;
+  { TUCA_LineRec }
+
   TUCA_LineRec = X_PACKED record
   public
     CodePoints : TUnicodeCodePointArray;
@@ -275,10 +271,11 @@ type
     Stored     : Boolean;
   public
     procedure Clear();
-    procedure Assign(ASource : PUCA_LineRec);
+    procedure Assign(ASource : TUCA_LineRec);
     function Clone() : TUCA_LineRec;
     function HasContext() : Boolean;
   end;
+  PUCA_LineRec = ^TUCA_LineRec;
   TUCA_VariableKind = (
     ucaShifted, ucaNonIgnorable, ucaBlanked, ucaShiftedTrimmed,
     ucaIgnoreSP
@@ -662,13 +659,11 @@ type
   );
 
 type
-  TCollationName = array[0..(128-1)] of Byte;
-  TCollationVersion = TCollationName;
+  TCollationName = string[128];
   TSerializedCollationHeader = packed record
     Base               : TCollationName;
-    Version            : TCollationVersion;
+    Version            : TCollationName;
     CollationName      : TCollationName;
-    CollationAliases   : TCollationName; // ";" separated
     VariableWeight     : Byte;
     Backwards          : Byte;
     BMP_Table1Length   : DWord;
@@ -678,14 +673,9 @@ type
     PropCount          : DWord;
     VariableLowLimit   : Word;
     VariableHighLimit  : Word;
-    NoNormalization    : Byte;
-    Strength           : Byte;
     ChangedFields      : Byte;
   end;
   PSerializedCollationHeader = ^TSerializedCollationHeader;
-
-  procedure StringToByteArray(AStr : UnicodeString; var ABuffer : array of Byte);overload;
-  procedure StringToByteArray(AStr : UnicodeString; ABuffer : PByte; const ABufferLength : Integer);overload;
 
   procedure ReverseRecordBytes(var AItem : TSerializedCollationHeader);
   procedure ReverseBytes(var AData; const ALength : Integer);
@@ -911,52 +901,6 @@ end;
 class operator TUInt24Rec.LessThanOrEqual(a: Cardinal; b: TUInt24Rec): Boolean;
 begin
   Result := a <= Cardinal(b);
-end;
-
-{ TUCA_WeightRec }
-
-class operator TUCA_WeightRec.Equal(a, b : TUCA_WeightRec) : Boolean;
-begin
-  Result := (a.Weights[0] = b.Weights[0]) and (a.Weights[1] = b.Weights[1]) and
-            (a.Weights[2] = b.Weights[2]) and (a.Weights[3] = b.Weights[3]) and
-            (a.Variable = b.Variable);
-end;
-
-procedure StringToByteArray(AStr : UnicodeString; var ABuffer : array of Byte);
-begin
-  StringToByteArray(AStr,@(ABuffer[Low(ABuffer)]),Length(ABuffer));
-end;
-
-procedure StringToByteArray(AStr : UnicodeString; ABuffer : PByte; const ABufferLength : Integer);
-var
-  c, i, bl : Integer;
-  ps : PWord;
-  pb : PByte;
-begin
-  if (ABufferLength < 1) then
-    exit;
-  c := Length(AStr);
-  if (c > ABufferLength) then
-    c := ABufferLength;
-  bl := 0;
-  pb := ABuffer;
-  if (c > 0) then begin
-    ps := PWord(@AStr[1]);
-    for i := 1 to c do begin
-      if (ps^ <= High(Byte)) then begin
-        pb^ := ps^;
-        bl := bl+1;
-        Inc(pb);
-      end;
-      Inc(ps);
-    end;
-  end;
-  if (bl < ABufferLength) then begin
-    for i := bl+1 to ABufferLength do begin
-      pb^:= 0;
-      Inc(pb);
-    end;
-  end;
 end;
 
 function GenerateEndianIncludeFileName(
@@ -3011,7 +2955,7 @@ begin
   locIndex := CreateIndex(ABook);
   i := Length(ABook^.Lines);
   i := 30 * i * (SizeOf(TUCA_PropItemRec) + SizeOf(TUCA_PropWeights));
-  AProps := AllocMem(SizeOf(TUCA_PropBook));
+  AProps := AllocMem(SizeOf(TUCA_DataBook));
   AProps^.ItemSize := i;
   AProps^.Items := AllocMem(i);
   propIndexCount := 0;
@@ -3105,8 +3049,7 @@ begin
         MaxSize := size;
     end;
   end;
-  //c := Int64(PtrUInt(p)) - Int64(PtrUInt(AProps^.Items));
-  c := UInt64(PtrUInt(p)) - UInt64(PtrUInt(AProps^.Items));
+  c := Int64(PtrUInt(p)) - Int64(PtrUInt(AProps^.Items));
   ReAllocMem(AProps^.Items,c);
   AProps^.ItemSize := c;
   SetLength(AProps^.Index,propIndexCount);
@@ -3139,7 +3082,6 @@ begin
   ABook := nil;
   p^.Index := nil;
   FreeMem(p^.Items,p^.ItemSize);
-  FreeMem(p^.ItemsOtherEndian,p^.ItemSize);
   FreeMem(p,SizeOf(p^));
 end;
 
@@ -3317,7 +3259,7 @@ procedure GenerateUCA_Head(
 
 begin
   AddLine('const');
-  //AddLine('  VERSION_STRING = ' + QuotedStr(ABook^.Version) + ';');
+  AddLine('  VERSION_STRING = ' + QuotedStr(ABook^.Version) + ';');
   AddLine('  VARIABLE_LOW_LIMIT = ' + IntToStr(AProps^.VariableLowLimit) + ';');
   AddLine('  VARIABLE_HIGH_LIMIT = ' + IntToStr(AProps^.VariableHighLimit) + ';');
   AddLine('  VARIABLE_WEIGHT = ' + IntToStr(Ord(ABook^.VariableWeight)) + ';');
@@ -3892,24 +3834,20 @@ begin
   Data := nil
 end;
 
-procedure TUCA_LineContextRec.Assign(ASource : PUCA_LineContextRec);
+procedure TUCA_LineContextRec.Assign(ASource : TUCA_LineContextRec);
 var
   c, i : Integer;
 begin
-  if (ASource = nil) then begin
-    Clear();
-    exit;
-  end;
-  c := Length(ASource^.Data);
+  c := Length(ASource.Data);
   SetLength(Self.Data,c);
   for i := 0 to c-1 do
-    Self.Data[i].Assign(@ASource^.Data[i]);
+    Self.Data[i].Assign(ASource.Data[i]);
 end;
 
 function TUCA_LineContextRec.Clone : TUCA_LineContextRec;
 begin
   Result.Clear();
-  Result.Assign(@Self);
+  Result.Assign(Self);
 end;
 
 { TUCA_LineContextItemRec }
@@ -3920,20 +3858,16 @@ begin
   Weights := nil;
 end;
 
-procedure TUCA_LineContextItemRec.Assign(ASource : PUCA_LineContextItemRec);
+procedure TUCA_LineContextItemRec.Assign(ASource : TUCA_LineContextItemRec);
 begin
-  if (ASource = nil) then begin
-    Clear();
-    exit;
-  end;
-  Self.CodePoints := Copy(ASource^.CodePoints);
-  Self.Weights := Copy(ASource^.Weights);
+  Self.CodePoints := Copy(ASource.CodePoints);
+  Self.Weights := Copy(ASource.Weights);
 end;
 
 function TUCA_LineContextItemRec.Clone() : TUCA_LineContextItemRec;
 begin
   Result.Clear();
-  Result.Assign(@Self);
+  Result.Assign(Self);
 end;
 
 { TUCA_LineRec }
@@ -3947,23 +3881,19 @@ begin
   Context.Clear();
 end;
 
-procedure TUCA_LineRec.Assign(ASource : PUCA_LineRec);
+procedure TUCA_LineRec.Assign(ASource : TUCA_LineRec);
 begin
-  if (ASource = nil) then begin
-    Clear();
-    exit;
-  end;
-  Self.CodePoints := Copy(ASource^.CodePoints);
-  Self.Weights := Copy(ASource^.Weights);
-  Self.Deleted := ASource^.Deleted;
-  Self.Stored := ASource^.Stored;
-  Self.Context.Assign(@ASource^.Context);
+  Self.CodePoints := Copy(ASource.CodePoints);
+  Self.Weights := Copy(ASource.Weights);
+  Self.Deleted := ASource.Deleted;
+  Self.Stored := ASource.Stored;
+  Self.Context.Assign(ASource.Context);
 end;
 
 function TUCA_LineRec.Clone : TUCA_LineRec;
 begin
   Result.Clear();
-  Result.Assign(@Self);
+  Result.Assign(Self);
 end;
 
 function TUCA_LineRec.HasContext() : Boolean;
@@ -4843,7 +4773,7 @@ var
   items : array of Cardinal;
   p : PUCA_LineRec;
   pw : ^TUCA_WeightRec;
-  newValue : Int64;
+  newValue : Cardinal;
 begin
   c := ALinesLength;
   if (c < 1) then

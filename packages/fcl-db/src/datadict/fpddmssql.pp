@@ -13,7 +13,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-unit FPDDMSSQL;
+unit fpddmssql;
 
 {$mode objfpc}{$H+}
 

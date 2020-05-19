@@ -59,8 +59,7 @@ unit cpunode;
        { these are not really nodes }
        n8086util,n8086tcon,tgcpu,
        { symtable }
-       symcpu,
-       aasmdef
+       symcpu
        ;
 
 end.

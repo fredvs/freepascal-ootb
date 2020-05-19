@@ -322,27 +322,27 @@ end;
 
 function FileEOF(stream: FileHand): Boolean;
 begin
-  FileEOF := FileControl(fileOpGetEOFStatus, stream, nil, nil) = fileErrEOF;
+  FileEOF := FileControl(fileOpGetEOFStatus, stream, nil, Longint(nil)) = fileErrEOF;
 end;
 
 function FileError(stream: FileHand): Err;
 begin
-  FileError := FileControl(fileOpGetIOErrorStatus, stream, nil, nil);
+  FileError := FileControl(fileOpGetIOErrorStatus, stream, nil, Longint(nil));
 end;
 
 function FileClearerr(stream: FileHand): Err;
 begin
-  FileClearerr := FileControl(fileOpClearError, stream, nil, nil);
+  FileClearerr := FileControl(fileOpClearError, stream, nil, Longint(nil));
 end;
 
 function FileGetLastError(stream: FileHand): Err;
 begin
-  FileGetLastError := FileControl(fileOpGetLastError, stream, nil, nil);
+  FileGetLastError := FileControl(fileOpGetLastError, stream, nil, Longint(nil));
 end;
 
 function FileFlush(stream: FileHand): Err;
 begin
-  FileFlush := FileControl(fileOpFlush, stream, nil, nil);
+  FileFlush := FileControl(fileOpFlush, stream, nil, Longint(nil));
 end;
 
 end.

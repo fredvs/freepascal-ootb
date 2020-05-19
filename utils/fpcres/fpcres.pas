@@ -73,7 +73,7 @@ begin
   writeln('                         i386, x86_64, arm (coff)');
   writeln('                         i386, x86_64, powerpc, powerpc64, arm, armeb, m68k,');
   writeln('                         sparc, alpha, ia64, mips, mipsel (elf)');
-  writeln('                         i386, x86_64, powerpc, powerpc64, arm, aarch64 (mach-o)');
+  writeln('                         i386, x86_64, powerpc, powerpc64, arm (mach-o)');
   writeln('                         bigendian, littleendian (external)');
   writeln('  --subarch, -s <name> Set object file sub-architecture. Supported values:');
   writeln('                         arm: all, v4t, v6, v5tej, xscale, v7');
@@ -252,8 +252,6 @@ begin
     mtia64 : Result.MachineType:=emtia64;
     mtmips : Result.MachineType:=emtmips;
     mtmipsel : Result.MachineType:=emtmipsel;
-    mtppc64le : Result.MachineType:=emtppc64le;
-    mtaarch64 : Result.MachineType:=emtaarch64;
   end;
 end;
 
@@ -313,11 +311,6 @@ begin
       begin
         Result.MachineType:=mmtarm;
         MachOSubMachineType.fArmSubType:=ArmSubMachine2MachOSubMachine[CurrentTarget.submachine.subarm];
-      end;
-    mtaarch64 :
-      begin
-        Result.MachineType:=mmtarm64;
-        MachOSubMachineType.fArm64SubType:=msmaarch64_all;
       end;
   end;
   Result.SubMachineType:=MachOSubMachineType;

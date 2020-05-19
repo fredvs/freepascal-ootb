@@ -1,6 +1,31 @@
-{ Parsed from AppKit.framework NSErrors.h }
+{ Parsed from Appkit.framework NSErrors.h }
+
+{$ifdef TYPES}
+{$ifndef NSERRORS_PAS_T}
+{$define NSERRORS_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSERRORS_PAS_R}
+{$define NSERRORS_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSERRORS_PAS_F}
+{$define NSERRORS_PAS_F}
+
+{$endif}
+{$endif}
 
 {$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSERRORS_PAS_S}
+{$define NSERRORS_PAS_S}
+
+{ External string constants }
 var
   NSTextLineTooLongException: NSString; cvar; external;
   NSTextNoSelectionException: NSString; cvar; external;
@@ -38,5 +63,6 @@ var
   NSNibLoadingException: NSString; cvar; external;
   NSBrowserIllegalDelegateException: NSString; cvar; external;
   NSAccessibilityException: NSString; cvar; external;
-{$endif}
 
+{$endif}
+{$endif}

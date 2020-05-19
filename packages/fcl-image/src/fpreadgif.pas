@@ -211,10 +211,7 @@ begin
     // skip extensions
     Repeat
       Introducer:=SkipBlock(Stream);
-    until (Introducer = $2C) or (Introducer = $3B) or (Stream.Position>=Stream.Size);
-    
-    if Stream.Position>=Stream.Size then 
-      Exit;
+    until (Introducer = $2C) or (Introducer = $3B);
 
     // descriptor
     Stream.Read(FDescriptor, SizeOf(FDescriptor));
@@ -301,10 +298,7 @@ begin
         Stream.Seek(B, soFromCurrent);
         CodeMask := (1 shl CodeSize) - 1;
       end;
-    until (B = 0)  or (Stream.Position>=Stream.Size);
-    
-   { if Stream.Position>=Stream.Size then 
-      Exit(False); }
+    until B = 0;
 
     Progress(psRunning, trunc(100.0 * (Stream.position / Stream.size)),
              False, Rect(0,0,0,0), '', ContProgress);
@@ -321,11 +315,7 @@ begin
          Stream.ReadBuffer(SourcePtr^, B);
          Inc(SourcePtr,B);
       end;
-    until (B = 0) or (Stream.Position>=Stream.Size);
-    
-   { if Stream.Position>=Stream.Size then
-       Exit(False); }
-              
+    until B = 0;
 
     Progress(psRunning, trunc(100.0 * (Stream.position / Stream.size)),
              False, Rect(0,0,0,0), '', ContProgress);
@@ -483,23 +473,17 @@ begin
 end;
 
 function TFPReaderGif.InternalCheck(Stream: TStream): boolean;
-
 var
   OldPos: Int64;
-  n: Int64;
-  
 begin
-  Result:=False;
-  if Stream = nil then
-    exit;
-  OldPos:=Stream.Position;
   try
-    n := SizeOf(FHeader);
-    Result:=(Stream.Read(FHeader,n)=n)
-            and (FHeader.Signature = 'GIF') 
-            and ((FHeader.Version = '87a') or (FHeader.Version = '89a'));
-  finally
-    Stream.Position := OldPos;
+    OldPos:=Stream.Position;
+    Stream.Read(FHeader,SizeOf(FHeader));
+    Result:=(FHeader.Signature = 'GIF') and
+            ((FHeader.Version = '87a') or (FHeader.Version = '89a'));
+    Stream.Position:=OldPos;
+  except
+    Result:=False;
   end;
 end;
 

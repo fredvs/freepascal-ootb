@@ -200,8 +200,6 @@ type
     Procedure TestTokenSeriesComments;
     Procedure TestTokenSeriesNoComments;
     Procedure TestDefine0;
-    procedure TestDefine0Spaces;
-    procedure TestDefine0Spaces2;
     procedure TestDefine01;
     Procedure TestDefine1;
     Procedure TestDefine2;
@@ -243,8 +241,6 @@ type
     procedure TestIFDefinedElseIf;
     procedure TestIfError;
     Procedure TestModeSwitch;
-    Procedure TestOperatorIdentifier;
-    Procedure TestUTF8BOM;
   end;
 
 implementation
@@ -449,7 +445,8 @@ begin
     if (tk=tkLineEnding) and not (t in [tkEOF,tkLineEnding]) then
       tk:=FScanner.FetchToken;
     AssertEquals('EOF reached.',tkEOF,FScanner.FetchToken);
-    end;
+    end
+
 end;
 
 procedure TTestScanner.TestToken(t: TToken; const ASource: String;
@@ -465,7 +462,7 @@ begin
     DoTestToken(t,S);
     end;
   DoTestToken(t,UpperCase(ASource));
-  DoTestToken(t,LowerCase(ASource),CheckEOF);
+  DoTestToken(t,LowerCase(ASource));
 end;
 
 procedure TTestScanner.TestTokens(t: array of TToken; const ASource: String;
@@ -1121,7 +1118,6 @@ end;
 procedure TTestScanner.TestOperator;
 
 begin
-  Scanner.SetTokenOption(toOperatorToken);
   TestToken(tkoperator,'operator');
 end;
 
@@ -1374,25 +1370,15 @@ end;
 procedure TTestScanner.TestDefine0;
 begin
   TestTokens([tkComment],'{$DEFINE NEVER}');
-  AssertTrue('Define not defined', FSCanner.Defines.IndexOf('NEVER')<>-1);
-end;
-
-procedure TTestScanner.TestDefine0Spaces;
-begin
-  TestTokens([tkComment],'{$DEFINE  NEVER}');
-  AssertTrue('Define not defined',FSCanner.Defines.IndexOf('NEVER')<>-1);
-end;
-
-procedure TTestScanner.TestDefine0Spaces2;
-begin
-  TestTokens([tkComment],'{$DEFINE NEVER }');
-  AssertTrue('Define not defined',FSCanner.Defines.IndexOf('NEVER')<>-1);
+  If FSCanner.Defines.IndexOf('NEVER')=-1 then
+    Fail('Define not defined');
 end;
 
 procedure TTestScanner.TestDefine01;
 begin
   TestTokens([tkComment],'(*$DEFINE NEVER*)');
-  AssertTrue('Define not defined',FSCanner.Defines.IndexOf('NEVER')<>-1);
+  If FSCanner.Defines.IndexOf('NEVER')=-1 then
+    Fail('Define not defined');
 end;
 
 procedure TTestScanner.TestDefine1;
@@ -1404,7 +1390,7 @@ procedure TTestScanner.TestDefine2;
 
 begin
   FSCanner.Defines.Add('ALWAYS');
-  TestTokens([tkComment,tkWhitespace,tkOf,tkWhitespace,tkcomment],'{$IFDEF ALWAYS comment} of {$ENDIF}');
+  TestTokens([tkComment,tkWhitespace,tkOf,tkWhitespace,tkcomment],'{$IFDEF ALWAYS} of {$ENDIF}');
 end;
 
 procedure TTestScanner.TestDefine21;
@@ -1730,25 +1716,13 @@ begin
       if SModeSwitchNames[M]<>'' then
         begin
         Scanner.CurrentModeSwitches:=[];
-        NewSource('{$MODESWITCH '+SModeSwitchNames[M]+C+'}');
+        NewSource('{$MODESWITCH '+SModeSwitchNames[M]+' '+C+'}');
         While not (Scanner.FetchToken=tkEOF) do;
         if C in [' ','+'] then
           AssertTrue(SModeSwitchNames[M]+C+' sets '+GetEnumName(TypeInfo(TModeSwitch),Ord(M)),M in Scanner.CurrentModeSwitches)
         else
           AssertFalse(SModeSwitchNames[M]+C+' removes '+GetEnumName(TypeInfo(TModeSwitch),Ord(M)),M in Scanner.CurrentModeSwitches);
         end;
-end;
-
-procedure TTestScanner.TestOperatorIdentifier;
-begin
-  Scanner.SetNonToken(tkoperator);
-  TestToken(tkidentifier,'operator',True);
-end;
-
-procedure TTestScanner.TestUTF8BOM;
-
-begin
-  DoTestToken(tkLineEnding,#$EF+#$BB+#$BF);
 end;
 
 initialization

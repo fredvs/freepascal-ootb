@@ -45,9 +45,6 @@ endif
 ifdef UNITDIR_FPMAKE_FPMKUNIT
 override COMPILER_FPMAKE_UNITDIR=$(UNITDIR_FPMAKE_FPMKUNIT)
 endif
-ifdef INSTALL_LIBDIR
-FPMAKE_INSTALL_OPT+=--libinstalldir=$(INSTALL_LIBDIR)
-endif
 
 SUB_FPMAKE_SRCS=$(wildcard */fpmake.pp)
 
@@ -67,7 +64,7 @@ FPMAKE_OPT+=$(addprefix -o ,$(FPCOPT))
 FPMAKE_OPT+=--compiler=$(FPC)
 FPMAKE_OPT+=-bu
 ifndef BUILDFULLNATIVE
-FPMAKE_OPT+=-scp
+FPMAKE_OPT+=-sp
 endif
 .NOTPARALLEL:
 

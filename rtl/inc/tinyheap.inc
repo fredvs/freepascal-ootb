@@ -60,8 +60,6 @@
 
       TinyHeapAllocGranularity = sizeof(TTinyHeapBlock);
 
-    procedure RegisterTinyHeapBlock(AAddress: Pointer; ASize:{$ifdef FPC_TINYHEAP_HUGE}LongInt{$else}PtrUInt{$endif}); forward;
-
     function EncodeTinyHeapFreeBlockSize(Size: PtrUInt): TTinyHeapFreeBlockSize; inline;
       begin
 {$ifdef FPC_TINYHEAP_HUGE}
@@ -88,13 +86,13 @@
         FindSize := PTinyHeapMemBlockSize(p)[-1];
       end;
 
-    function SysGetMem(Size: ptruint): pointer;
+    function SysTinyGetMem(Size: ptruint): pointer;
       var
         p, prev, p2: PTinyHeapBlock;
         AllocSize, RestSize: ptruint;
       begin
 {$ifdef DEBUG_TINY_HEAP}
-        Write('SysGetMem(', Size, ')=');
+        Write('SysTinyGetMem(', Size, ')=');
 {$endif DEBUG_TINY_HEAP}
         AllocSize := align(size+sizeof(TTinyHeapMemBlockSize), TinyHeapAllocGranularity);
 
@@ -142,41 +140,11 @@
           begin
             { p=HeapPtr }
             if PtrUInt(TTinyHeapPointerArithmeticType(HeapEnd)-TTinyHeapPointerArithmeticType(HeapPtr))<AllocSize then
-              begin
-                 { align to 16 bytes }
-                 AllocSize:= (AllocSize + $f) and (not $f);
-                 p:=SysOSAlloc(AllocSize);
-                 if assigned(p) then
-                   begin
-                     { This needs toi be fixed because
-                       HeapEnd and HeapSize are not updated correctly
-                     if p > HeapPtr then
-                       begin
-                         prev:=HeapPtr;
-                         HeapPtr:=p;
-                       end
-                     else }
-                       begin
-{$ifdef DEBUG_TINY_HEAP}
-                         Writeln('SysAlloc returned: ',HexStr(p));
-{$endif DEBUG_TINY_HEAP}
-                         RegisterTinyHeapBlock(p,AllocSize);
-                         { Recursive call }
-                         SysGetMem:=SysGetMem(Size);
-                         exit;
-                       end;
-                   end
-                 else
-                   begin
-                     if ReturnNilIfGrowHeapFails then
-                       begin
-                         Result := nil;
-                         exit;
-                       end
-                     else
-                       HandleError(203);
-                   end;
-              end;
+              if ReturnNilIfGrowHeapFails then
+                Result := nil
+              else
+                 HandleError(203);
+
             result := @PTinyHeapMemBlockSize(HeapPtr)[1];
             PTinyHeapMemBlockSize(HeapPtr)^ := size;
 
@@ -250,51 +218,46 @@
           end;
       end;
 
-    function SysFreeMem(p: Pointer): ptruint;
+    function SysTinyFreeMem(Addr: Pointer): ptruint;
       var
         sz: ptruint;
       begin
 {$ifdef DEBUG_TINY_HEAP}
-        Writeln('SysFreeMem(', HexStr(p), ')');
+        Writeln('SysTinyFreeMem(', HexStr(Addr), ')');
 {$endif DEBUG_TINY_HEAP}
-        if p=nil then
+        if addr=nil then
           begin
             result:=0;
             exit;
           end;
-        if (TTinyHeapPointerArithmeticType(p) < TTinyHeapPointerArithmeticType(HeapOrg)) or
-           (TTinyHeapPointerArithmeticType(p) >= TTinyHeapPointerArithmeticType(HeapPtr)) then
+        if (TTinyHeapPointerArithmeticType(addr) < TTinyHeapPointerArithmeticType(HeapOrg)) or
+           (TTinyHeapPointerArithmeticType(addr) >= TTinyHeapPointerArithmeticType(HeapPtr)) then
           HandleError(204);
-        sz := Align(FindSize(p)+SizeOf(TTinyHeapMemBlockSize), TinyHeapAllocGranularity);
+        sz := Align(FindSize(addr)+SizeOf(TTinyHeapMemBlockSize), TinyHeapAllocGranularity);
 
-        InternalTinyFreeMem(@PTinyHeapMemBlockSize(p)[-1], sz);
-
+        InternalTinyFreeMem(@PTinyHeapMemBlockSize(addr)[-1], sz);
+        
         result := sz;
       end;
 
-    function SysFreeMemSize(p: Pointer; Size: Ptruint): ptruint;
+    function SysTinyFreeMemSize(Addr: Pointer; Size: Ptruint): ptruint;
       begin
-        result := SysFreeMem(p);
+        result := SysTinyFreeMem(addr);
       end;
 
-    function SysMemSize(p: pointer): ptruint;
+    function SysTinyMemSize(p: pointer): ptruint;
       begin
         result := findsize(p);
       end;
 
-    function SysTryResizeMem(var p: pointer; size: ptruint) : boolean;
+    function SysTinyAllocMem(size: ptruint): pointer;
       begin
-        result := false;
-      end;
-
-    function SysAllocMem(size: ptruint): pointer;
-      begin
-        result := SysGetMem(size);
+        result := SysTinyGetMem(size);
         if result<>nil then
-          FillChar(result^,SysMemSize(result),0);
+          FillChar(result^,SysTinyMemSize(result),0);
       end;
 
-    function SysReAllocMem(var p: pointer; size: ptruint):pointer;
+    function SysTinyReAllocMem(var p: pointer; size: ptruint):pointer;
       var
         oldsize, OldAllocSize, NewAllocSize: ptruint;
         after_block, before_block, before_before_block: PTinyHeapBlock;
@@ -302,11 +265,11 @@
         new_after_block: PTinyHeapBlock;
       begin
 {$ifdef DEBUG_TINY_HEAP}
-        Write('SysReAllocMem(', HexStr(p), ',', size, ')=');
+        Write('SysTinyReAllocMem(', HexStr(p), ',', size, ')=');
 {$endif DEBUG_TINY_HEAP}
         if size=0 then
           begin
-            SysFreeMem(p);
+            SysTinyFreeMem(p);
             result := nil;
             p := nil;
           end
@@ -448,7 +411,7 @@
                               oldsize := size;
                             move(pbyte(p)^, pbyte(result)^, oldsize);
                           end;
-                        SysFreeMem(p);
+                        SysTinyFreeMem(p);
                         p := result;
                       end;
                   end;
@@ -504,7 +467,7 @@
         FreeList := p;
       end;
 
-    procedure InternalTinyAlign(var AAddress: Pointer; var ASize: {$ifdef FPC_TINYHEAP_HUGE}LongInt{$else}PtrUInt{$endif});
+    procedure InternalTinyAlign(var AAddress: Pointer; ASize: PtrUInt);
       var
         alignment_inc: smallint;
       begin
@@ -517,13 +480,12 @@
     { Strongly simplified version of RegisterTinyHeapBlock, which can be used when
       the heap is only a single contiguous memory block. If you want to add
       multiple blocks to the heap, you should use RegisterTinyHeapBlock instead. }
-    procedure RegisterTinyHeapBlock_Simple(AAddress: Pointer; ASize:{$ifdef FPC_TINYHEAP_HUGE}LongInt{$else}PtrUInt{$endif});
+    procedure RegisterTinyHeapBlock_Simple(AAddress: Pointer; ASize: PtrUInt);
       begin
 {$ifdef DEBUG_TINY_HEAP}
         Writeln('RegisterTinyHeapBlock_Simple(', HexStr(AAddress), ',', ASize, ')');
 {$endif DEBUG_TINY_HEAP}
         InternalTinyAlign(AAddress, ASize);
-        HeapSize:=HeapSize + ASize;
         HeapOrg:=AAddress;
         HeapPtr:=AAddress;
         FreeList:=AAddress;
@@ -533,7 +495,7 @@
     { Strongly simplified version of RegisterTinyHeapBlock, which can be used when
       the heap is only a single contiguous memory block and the address and size
       are already aligned on a TinyHeapAllocGranularity boundary. }
-    procedure RegisterTinyHeapBlock_Simple_Prealigned(AAddress: Pointer; ASize: {$ifdef FPC_TINYHEAP_HUGE}LongInt{$else}PtrUInt{$endif});
+    procedure RegisterTinyHeapBlock_Simple_Prealigned(AAddress: Pointer; ASize: PtrUInt);
       begin
 {$ifdef DEBUG_TINY_HEAP}
         Writeln('RegisterTinyHeapBlock_Simple_Prealigned(', HexStr(AAddress), ',', ASize, ')');
@@ -541,11 +503,10 @@
         HeapOrg:=AAddress;
         HeapPtr:=AAddress;
         FreeList:=AAddress;
-        HeapSize:=HeapSize + ASize;
         HeapEnd:=Pointer(TTinyHeapPointerArithmeticType(AAddress)+ASize);
       end;
 
-    procedure RegisterTinyHeapBlock(AAddress: pointer; ASize: {$ifdef FPC_TINYHEAP_HUGE}LongInt{$else}PtrUInt{$endif});
+    procedure RegisterTinyHeapBlock(AAddress: pointer; ASize: ptruint);
       var
         alignment_inc: smallint;
         p: PTinyHeapBlock;
@@ -554,7 +515,6 @@
         Writeln('RegisterTinyHeapBlock(', HexStr(AAddress), ',', ASize, ')');
 {$endif DEBUG_TINY_HEAP}
         InternalTinyAlign(AAddress, ASize);
-        HeapSize:=HeapSize + ASize;
         if HeapOrg=nil then
           begin
             HeapOrg:=AAddress;
@@ -577,7 +537,7 @@
                         p:=FreeList;
                         while p^.Next<>HeapPtr do
                           p:=p^.Next;
-                        PTinyHeapBlock(p)^.Next:=AAddress;
+                        PTinyHeapBlock(HeapPtr)^.Next:=AAddress;
                       end;
                   end
                 else
@@ -595,43 +555,19 @@
           end;
       end;
 
-
-   function SysGetFPCHeapStatus : TFPCHeapStatus;
-   {
-     TFPCHeapStatus = record
-
-      MaxHeapSize,
-      MaxHeapUsed,
-      CurrHeapSize,
-      CurrHeapUsed,
-      CurrHeapFree  : ptruint;
-    end;
-   }
-     begin
-       SysGetFPCHeapStatus.MaxHeapSize:=MaxAvail;
-       { How can we compute this? }
-       SysGetFPCHeapStatus.MaxHeapUsed:=0;
-       SysGetFPCHeapStatus.CurrHeapFree:=MemAvail;
-       SysGetFPCHeapStatus.CurrHeapUsed:=HeapSize-SysGetFPCHeapStatus.CurrHeapFree;
-       SysGetFPCHeapStatus.CurrHeapSize:=HeapSize;
-     end;
-
-    function SysGetHeapStatus : THeapStatus;
-      begin
-        SysGetHeapStatus.TotalAddrSpace:= HeapSize;
-        SysGetHeapStatus.TotalUncommitted:= 0;
-        SysGetHeapStatus.TotalCommitted:= 0;
-        SysGetHeapStatus.TotalAllocated:= HeapSize-MemAvail;
-        SysGetHeapStatus.TotalFree:= MemAvail;
-        SysGetHeapStatus.FreeSmall:= 0;
-        SysGetHeapStatus.FreeBig:= 0;
-        SysGetHeapStatus.Unused:= 0;
-        SysGetHeapStatus.Overhead:= 0;
-        SysGetHeapStatus.HeapErrorCode:= 0;
-      end;
-
-   procedure FinalizeHeap;
-   begin
-   end;
-
+    const
+      TinyHeapMemoryManager: TMemoryManager = (
+        NeedLock: false;  // Obsolete
+        GetMem: @SysTinyGetMem;
+        FreeMem: @SysTinyFreeMem;
+        FreeMemSize: @SysTinyFreeMemSize;
+        AllocMem: @SysTinyAllocMem;
+        ReAllocMem: @SysTinyReAllocMem;
+        MemSize: @SysTinyMemSize;
+        InitThread: nil;
+        DoneThread: nil;
+        RelocateHeap: nil;
+        GetHeapStatus: nil;
+        GetFPCHeapStatus: nil;
+      );
 

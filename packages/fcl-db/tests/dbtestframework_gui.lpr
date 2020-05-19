@@ -26,7 +26,6 @@ uses
   SdfDSToolsUnit,
 {$IFDEF TEST_SQLITE3DS}
   Sqlite3DSToolsUnit,
-  TestSpecificTSqlite3Dataset,
 {$ENDIF}
   // DB unittest
   TestBasics,

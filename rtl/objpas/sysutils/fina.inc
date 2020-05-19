@@ -131,7 +131,6 @@ begin
     Result := '';
 end;
 
-{$ifndef HASEXTRACTSHORTPATHNAME}
 function ExtractShortPathName(Const FileName : PathStr) : PathStr;
 {$if defined(MSWINDOWS) and not defined(SYSUTILSUNICODE)}
 var
@@ -152,7 +151,6 @@ begin
   Result:=FileName;
 {$endif MSWindows}
 end;
-{$endif HASEXTRACTSHORTPATHNAME}
 
 {$DEFINE FPC_FEXPAND_SYSUTILS}
 {$I fexpand.inc}

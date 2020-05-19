@@ -41,13 +41,13 @@ unit tgcpu;
        ttgjvm = class(ttgobj)
         protected
          procedure getimplicitobjtemp(list: TAsmList; def: tdef; temptype: ttemptype; out ref: treference);
-         function getifspecialtemp(list: TAsmList; def: tdef; forcesize: asizeint; temptype: ttemptype; out ref: treference): boolean;
-         procedure alloctemp(list: TAsmList; size: asizeint; alignment: shortint; temptype: ttemptype; def: tdef; fini: boolean; out ref: treference); override;
+         function getifspecialtemp(list: TAsmList; def: tdef; forcesize: aint; temptype: ttemptype; out ref: treference): boolean;
+         procedure alloctemp(list: TAsmList; size, alignment: longint; temptype: ttemptype; def: tdef; out ref: treference); override;
         public
-         procedure setfirsttemp(l : asizeint); override;
-         procedure getlocal(list: TAsmList; size: asizeint; alignment: shortint; def: tdef; var ref: treference); override;
+         procedure setfirsttemp(l : longint); override;
+         procedure getlocal(list: TAsmList; size: longint; alignment: shortint; def: tdef; var ref: treference); override;
          procedure gethltemp(list: TAsmList; def: tdef; forcesize: asizeint; temptype: ttemptype; out ref: treference); override;
-         procedure gethltempmanaged(list: TAsmList; def: tdef; temptype: ttemptype; out ref: treference); override;
+         procedure gethltemptyped(list: TAsmList; def: tdef; temptype: ttemptype; out ref: treference); override;
        end;
 
   implementation
@@ -55,8 +55,8 @@ unit tgcpu;
     uses
        verbose,
        cgbase,
-       symconst,symtable,symdef,symsym,symcpu,defutil,
-       cpubase,aasmbase,aasmcpu,
+       symconst,symdef,symsym,symcpu,defutil,
+       cpubase,aasmcpu,
        hlcgobj,hlcgcpu;
 
 
@@ -68,7 +68,7 @@ unit tgcpu;
         pd: tprocdef;
       begin
         gettemp(list,java_jlobject.size,java_jlobject.alignment,temptype,ref);
-        list.concat(taicpu.op_sym(a_new,current_asmdata.RefAsmSymbol(tabstractrecorddef(def).jvm_full_typename(true),AT_METADATA)));
+        list.concat(taicpu.op_sym(a_new,current_asmdata.RefAsmSymbol(tabstractrecorddef(def).jvm_full_typename(true))));
         { the constructor doesn't return anything, so put a duplicate of the
           self pointer on the evaluation stack for use as function result
           after the constructor has run }
@@ -85,14 +85,14 @@ unit tgcpu;
           end
         else
           internalerror(2011060301);
-        hlcg.a_call_name(list,pd,pd.mangledname,[],nil,false);
+        hlcg.a_call_name(list,pd,pd.mangledname,nil,false);
         thlcgjvm(hlcg).decstack(list,1);
         { store reference to instance }
         thlcgjvm(hlcg).a_load_stack_ref(list,java_jlobject,ref,0);
       end;
 
 
-    function ttgjvm.getifspecialtemp(list: TAsmList; def: tdef; forcesize: asizeint; temptype: ttemptype; out ref: treference): boolean;
+    function ttgjvm.getifspecialtemp(list: TAsmList; def: tdef; forcesize: aint; temptype: ttemptype; out ref: treference): boolean;
       var
         eledef: tdef;
         ndim: longint;
@@ -135,7 +135,7 @@ unit tgcpu;
               if tsetdef(def).elementdef.typ=enumdef then
                 begin
                   { load enum class type }
-                  list.concat(taicpu.op_sym(a_ldc,current_asmdata.RefAsmSymbol(tcpuenumdef(tenumdef(tsetdef(def).elementdef).getbasedef).classdef.jvm_full_typename(true),AT_METADATA)));
+                  list.concat(taicpu.op_sym(a_ldc,current_asmdata.RefAsmSymbol(tcpuenumdef(tenumdef(tsetdef(def).elementdef).getbasedef).classdef.jvm_full_typename(true))));
                   thlcgjvm(hlcg).incstack(current_asmdata.CurrAsmList,1);
                   { call tenumset.noneOf() class method }
                   sym:=tsym(tobjectdef(java_juenumset).symtable.find('NONEOF'));
@@ -145,14 +145,14 @@ unit tgcpu;
                       if tprocsym(sym).procdeflist.Count<>1 then
                         internalerror(2011062801);
                       pd:=tprocdef(tprocsym(sym).procdeflist[0]);
-                      hlcg.a_call_name(list,pd,pd.mangledname,[],nil,false);
+                      hlcg.a_call_name(list,pd,pd.mangledname,nil,false);
                     end;
                   { static calls method replaces parameter with set instance
                     -> no change in stack height }
                 end
               else
                 begin
-                  list.concat(taicpu.op_sym(a_new,current_asmdata.RefAsmSymbol(java_jubitset.jvm_full_typename(true),AT_METADATA)));
+                  list.concat(taicpu.op_sym(a_new,current_asmdata.RefAsmSymbol(java_jubitset.jvm_full_typename(true))));
                   { the constructor doesn't return anything, so put a duplicate of the
                     self pointer on the evaluation stack for use as function result
                     after the constructor has run }
@@ -169,7 +169,7 @@ unit tgcpu;
                     end
                   else
                     internalerror(2011062803);
-                  hlcg.a_call_name(list,pd,pd.mangledname,[],nil,false);
+                  hlcg.a_call_name(list,pd,pd.mangledname,nil,false);
                   { duplicate self pointer is removed }
                   thlcgjvm(hlcg).decstack(list,1);
                 end;
@@ -202,7 +202,7 @@ unit tgcpu;
                       if tprocsym(sym).procdeflist.Count<>1 then
                         internalerror(2011052404);
                       pd:=tprocdef(tprocsym(sym).procdeflist[0]);
-                      hlcg.a_call_name(list,pd,pd.mangledname,[],nil,false);
+                      hlcg.a_call_name(list,pd,pd.mangledname,nil,false);
                     end;
                   { static calls method replaces parameter with string instance
                     -> no change in stack height }
@@ -211,23 +211,11 @@ unit tgcpu;
                   result:=true;
                 end;
             end;
-          filedef:
-            begin
-              case tfiledef(def).filetyp of
-                ft_text:
-                  result:=getifspecialtemp(list,search_system_type('TEXTREC').typedef,forcesize,temptype,ref);
-                ft_typed,
-                ft_untyped:
-                  result:=getifspecialtemp(list,search_system_type('FILEREC').typedef,forcesize,temptype,ref);
-                else
-                  internalerror(2015091405);
-              end;
-            end;
         end;
       end;
 
 
-    procedure ttgjvm.alloctemp(list: TAsmList; size: asizeint; alignment: shortint; temptype: ttemptype; def: tdef; fini: boolean; out ref: treference);
+    procedure ttgjvm.alloctemp(list: TAsmList; size, alignment: longint; temptype: ttemptype; def: tdef; out ref: treference);
       begin
         { the JVM only supports 1 slot (= 4 bytes in FPC) and 2 slot (= 8 bytes in
           FPC) temps on the stack. double and int64 are 2 slots, the rest is one slot.
@@ -239,18 +227,18 @@ unit tgcpu;
           internalerror(2010121401);
         { don't pass on "def", since we don't care if a slot is used again for a
           different type }
-        inherited alloctemp(list, size shr 2, 1, temptype, nil, false, ref);
+        inherited alloctemp(list, size shr 2, 1, temptype, nil,ref);
       end;
 
 
-    procedure ttgjvm.setfirsttemp(l: asizeint);
+    procedure ttgjvm.setfirsttemp(l: longint);
       begin
         firsttemp:=l;
         lasttemp:=l;
       end;
 
 
-    procedure ttgjvm.getlocal(list: TAsmList; size: asizeint; alignment: shortint; def: tdef; var ref: treference);
+    procedure ttgjvm.getlocal(list: TAsmList; size: longint; alignment: shortint; def: tdef; var ref: treference);
       begin
         if not getifspecialtemp(list,def,size,tt_persistent,ref) then
           inherited;
@@ -263,7 +251,7 @@ unit tgcpu;
           inherited;
       end;
 
-    procedure ttgjvm.gethltempmanaged(list: TAsmList; def: tdef; temptype: ttemptype; out ref: treference);
+    procedure ttgjvm.gethltemptyped(list: TAsmList; def: tdef; temptype: ttemptype; out ref: treference);
       begin
         gethltemp(list,def,def.size,temptype,ref);
       end;

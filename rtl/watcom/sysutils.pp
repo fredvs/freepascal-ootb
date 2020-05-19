@@ -36,8 +36,6 @@ uses
 { OS has an ansistring/single byte environment variable API }
 {$define SYSUTILS_HAS_ANSISTR_ENVVAR_IMPL}
 
-{$DEFINE executeprocuni} (* Only 1 byte version of ExecuteProcess is provided by the OS *)
-
 { Include platform independent interface part }
 {$i sysutilh.inc}
 
@@ -295,13 +293,7 @@ begin
 end;
 
 
-function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
-begin
-  Result := False;
-end;
-
-
-function FileExists (const FileName: RawByteString; FollowLink : Boolean): boolean;
+function FileExists (const FileName: RawByteString): boolean;
 var
   L: longint;
 begin
@@ -317,7 +309,7 @@ begin
 end;
 
 
-function DirectoryExists (const Directory: RawByteString; FollowLink : Boolean): boolean;
+function DirectoryExists (const Directory: RawByteString): boolean;
 var
   L: longint;
 begin
@@ -390,11 +382,11 @@ begin
 end;
 
 
-Procedure InternalFindClose(var Handle: longint);
+Procedure InternalFindClose(var Handle: Pointer);
 var
   Sr: PSearchRec;
 begin
-  Sr := PSearchRec(PtrUint(Handle));
+  Sr := PSearchRec(Handle);
   if Sr <> nil then
     begin
       //!! Dispose(Sr);
@@ -515,7 +507,7 @@ var
   OldSystemFileName, NewSystemFileName: RawByteString;
 begin
   OldSystemFileName:=ToSingleByteFileSystemEncodedFileName(OldName);
-  NewSystemFileName:=ToSingleByteFileSystemEncodedFileName(NewName);
+  NewSystemFileName:=ToSingleByteFileSystemEncodedFileName(NewFile);
   StringToTB(OldSystemFileName + #0 + NewSystemFileName);
   Regs.Edx := tb_offset;
   Regs.Ds := tb_segment;
@@ -653,6 +645,10 @@ end ;
                               Misc Functions
 ****************************************************************************}
 
+procedure Beep;
+begin
+end;
+
 
 {****************************************************************************
                               Locale Functions
@@ -783,10 +779,11 @@ begin
 end;
 
 
-function ExecuteProcess(Const Path: RawByteString; Const ComLine: RawByteString;Flags:TExecuteFlags=[]):integer;
+function ExecuteProcess(Const Path: AnsiString; Const ComLine: AnsiString;Flags:TExecuteFlags=[]):integer;
+
 var
   e : EOSError;
-  CommandLine: RawByteString;
+  CommandLine: AnsiString;
 
 begin
   dos.exec(path,comline);
@@ -805,11 +802,11 @@ begin
 end;
 
 
-function ExecuteProcess (const Path: RawByteString;
-                                  const ComLine: array of RawByteString;Flags:TExecuteFlags=[]): integer;
+function ExecuteProcess (const Path: AnsiString;
+                                  const ComLine: array of AnsiString;Flags:TExecuteFlags=[]): integer;
 
 var
-  CommandLine: RawByteString;
+  CommandLine: AnsiString;
   I: integer;
 
 begin
@@ -898,6 +895,5 @@ Initialization
   InitInternational;    { Initialize internationalization settings }
   InitDelay;
 Finalization
-  FreeTerminateProcs;
   DoneExceptions;
 end.

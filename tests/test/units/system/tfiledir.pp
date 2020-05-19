@@ -1,38 +1,14 @@
 {$codepage utf8}
 {$mode objfpc}{$h+}
 
-{$ifdef go32v2}
-  {$define USE_INTERNAL_UNICODE}
-{$endif}
-
-{$ifdef USE_INTERNAL_UNICODE}
-  {$define USE_FPWIDESTRING_UNIT}
-  {$define USE_UNICODEDUCET_UNIT}
-  {$define USE_CPALL_UNIT}
-{$endif}
-
 uses
 {$ifdef unix}
-  {$ifndef USE_INTERNAL_UNICODE}
-    {$ifdef darwin}iosxwstr{$else}cwstring{$endif},
-  {$endif ndef USE_INTERNAL_UNICODE}
+  cwstring,
 {$endif}
- {$ifdef USE_UNICODEDUCET_UNIT}
-  unicodeducet,
- {$endif}
- {$ifdef USE_FPWIDESTRING_UNIT}
-  fpwidestring,
- {$endif}
- {$ifdef USE_CPALL_UNIT}
-  cpall,
- {$endif}
   sysutils;
 
-const
-  RusCP = {$ifdef android} 1251 {$else} 866 {$endif};
-
 type
-  tcpstrRusCP = type ansistring(RusCP);
+  tcpstr866 = type ansistring(866);
 
 procedure error(const s: string);
 begin
@@ -51,7 +27,7 @@ end;
 procedure testsinglebyte;
 var
   u, u2,u3: utf8string;
-  c,c2,c3: tcpstrRusCP;
+  c,c2,c3: tcpstr866;
   f: file;
 begin
   u:='‹≈©◊';
@@ -78,40 +54,35 @@ begin
     Error('Removing utf8string dir');
 
   c:='Русская';
-  setcodepage(rawbytestring(c),RusCP);
+  setcodepage(rawbytestring(c),866);
   assign(f,c);
   rewrite(f);
   if ioresult<>0 then
-    Error('Creating cp'+IntToStr(RusCP)+' file');
+    Error('Creating cp866 file');
   close(f);
   if ioresult<>0 then
-    Error('Closing cp'+IntToStr(RusCP)+' file');
+    Error('Closing cp866 file');
   c2:='кая';
-  setcodepage(rawbytestring(c2),RusCP);
+  setcodepage(rawbytestring(c2),866);
   mkdir(c2);
   if ioresult<>0 then
-    Error('Creating cp'+IntToStr(RusCP)+' dir');
+    Error('Creating cp866 dir');
   c3:=c2+'/Русская1';
-  setcodepage(rawbytestring(c3),RusCP);
+  setcodepage(rawbytestring(c3),866);
   rename(f,c3);
   if ioresult<>0 then
-    Error('Renaming cp'+IntToStr(RusCP)+' file');
+    Error('Renaming cp866 file');
   erase(f);
   if ioresult<>0 then
-    Error('Erasing cp'+IntToStr(RusCP)+' file');
+    Error('Erasing cp866 file');
   rmdir(c2);
   if ioresult<>0 then
-    Error('Removing cp'+IntToStr(RusCP)+' dir');
+    Error('Removing cp866 dir');
 end;
 
 
 begin
-{ Changing the DefaultFileSystemCodepage without instructing the operating
-  system to expect UTF-8 parameters to its API functions (if that is possible
-  for the particular operating system at all) is wrong and it cannot work
-  correctly on any operating system not using UTF-8 without this setting anyway
-  and not providing direct possibility of Unicode (UTF-16) parameters }
-{DefaultFileSystemCodePage:=CP_UTF8;}
+  DefaultFileSystemCodePage:=CP_UTF8;
   testsinglebyte;
 //  testtwobyte;
 end.

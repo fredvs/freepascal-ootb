@@ -173,13 +173,8 @@ TYPE
 {                        BIT SWITCHED TYPE CONSTANTS                        }
 {---------------------------------------------------------------------------}
 TYPE
-{$ifdef CPU16}
-   Sw_Word    = Word;
-   Sw_Integer = SmallInt;
-{$else CPU16}
    Sw_Word    = Cardinal;                             { Long Word now }
    Sw_Integer = LongInt;                              { Long integer now }
-{$endif CPU16}
 
 {***************************************************************************}
 {                        PUBLIC RECORD DEFINITIONS                          }
@@ -739,23 +734,17 @@ CONST
                                 IMPLEMENTATION
 {<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>}
 
+Uses dos;
 
 {***************************************************************************}
 {                      HELPER ROUTINES FOR CALLING                          }
 {***************************************************************************}
 
 type
-{$ifdef cpui8086}
-  VoidLocal = function(_BP: Word): pointer;
-  PointerLocal = function(_BP: Word; Param1: pointer): pointer;
-  VoidMethodLocal = function(_BP: Word): pointer;
-  PointerMethodLocal = function(_BP: Word; Param1: pointer): pointer;
-{$else cpui8086}
   VoidLocal = function(_EBP: Pointer): pointer;
   PointerLocal = function(_EBP: Pointer; Param1: pointer): pointer;
   VoidMethodLocal = function(_EBP: Pointer): pointer;
   PointerMethodLocal = function(_EBP: Pointer; Param1: pointer): pointer;
-{$endif cpui8086}
   VoidConstructor = function(VMT: pointer; Obj: pointer): pointer;
   PointerConstructor = function(VMT: pointer; Obj: pointer; Param1: pointer): pointer;
   VoidMethod = function(Obj: pointer): pointer;
@@ -798,41 +787,25 @@ end;
 
 function CallVoidLocal(Func: codepointer; Frame: Pointer): pointer;inline;
 begin
-{$ifdef cpui8086}
-  CallVoidLocal := VoidLocal(Func)(Ofs(Frame^))
-{$else cpui8086}
   CallVoidLocal := VoidLocal(Func)(Frame)
-{$endif cpui8086}
 end;
 
 
 function CallPointerLocal(Func: codepointer; Frame: Pointer; Param1: pointer): pointer;inline;
 begin
-{$ifdef cpui8086}
-  CallPointerLocal := PointerLocal(Func)(Ofs(Frame^), Param1)
-{$else cpui8086}
   CallPointerLocal := PointerLocal(Func)(Frame, Param1)
-{$endif cpui8086}
 end;
 
 
 function CallVoidMethodLocal(Func: codepointer; Frame: Pointer; Obj: pointer): pointer;inline;
 begin
-{$ifdef cpui8086}
-  CallVoidMethodLocal := VoidMethodLocal(Func)(Ofs(Frame^))
-{$else cpui8086}
   CallVoidMethodLocal := VoidMethodLocal(Func)(Frame)
-{$endif cpui8086}
 end;
 
 
 function CallPointerMethodLocal(Func: codepointer; Frame: Pointer; Obj: pointer; Param1: pointer): pointer;inline;
 begin
-{$ifdef cpui8086}
-  CallPointerMethodLocal := PointerMethodLocal(Func)(Ofs(Frame^), Param1)
-{$else cpui8086}
   CallPointerMethodLocal := PointerMethodLocal(Func)(Frame, Param1)
-{$endif cpui8086}
 end;
 
 
@@ -1013,8 +986,8 @@ TYPE
    PVMT=^VMT;
    PPVMT=^PVMT;
    VMT=RECORD
-     Size,NegSize:SizeInt;
-     ParentLink:PPVMT;
+     Size,NegSize:Longint;
+     ParentLink:PVMT;
    END;
 VAR SP:PPVMT; Q:PVMT;
 BEGIN
@@ -1026,10 +999,7 @@ BEGIN
        Is_Object:=True;
        Break;
      End;
-     IF Q^.Parentlink<>Nil THEN
-       Q:=Q^.Parentlink^
-     ELSE
-       Q:=Nil;
+     Q:=Q^.Parentlink;
    End;
 END;
 

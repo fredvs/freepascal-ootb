@@ -1,4 +1,4 @@
-{ %target=linux,freebsd,haiku }
+{ %target=linux,freebsd }
 
 { Source provided for Free Pascal Bug Report 3257 }
 { Submitted by "peter green" on  2004-08-18 }

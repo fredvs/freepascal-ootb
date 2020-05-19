@@ -8,7 +8,6 @@
   add_fppkg_util(ADirectory+IncludeTrailingPathDelimiter('fppkg'));
   add_fprcp(ADirectory+IncludeTrailingPathDelimiter('fprcp'));
   add_h2pas(ADirectory+IncludeTrailingPathDelimiter('h2pas'));
-  add_json2pas(ADirectory+IncludeTrailingPathDelimiter('json2pas'));
   add_importtl(ADirectory+IncludeTrailingPathDelimiter('importtl'));
   add_instantfpc(ADirectory+IncludeTrailingPathDelimiter('instantfpc'));
   add_pas2fpm(ADirectory+IncludeTrailingPathDelimiter('pas2fpm'));
@@ -17,4 +16,3 @@
   add_rmwait(ADirectory+IncludeTrailingPathDelimiter('rmwait'));
   add_tply(ADirectory+IncludeTrailingPathDelimiter('tply'));
   add_unicode(ADirectory+IncludeTrailingPathDelimiter('unicode'));
-  add_pas2js(ADirectory+IncludeTrailingPathDelimiter('pas2js'));

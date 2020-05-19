@@ -13,7 +13,7 @@
 
  **********************************************************************}
  
-unit FPIndexer;
+unit fpIndexer;
 
 {$mode objfpc}{$H+}
 
@@ -28,11 +28,9 @@ type
   TWordTokenType = (wtOr, wtAnd, wtWord);
 
   TWordToken = record
-    Value: UTF8String;
+    Value: string;
     TokenType: TWordTokenType;
   end;
-
-  TUTF8StringArray = Array of UTF8String;
 
   TIgnoreListDef = class;
 
@@ -43,15 +41,17 @@ type
     FCount: integer;
     FWildCardChar: char;
     WordList: array of TWordToken;
-    procedure AddToken(AValue: UTF8String; ATokenType: TWordTokenType);
-    function GetSearchWordQuery: UTF8String;
+
+    procedure AddToken(AValue: string; ATokenType: TWordTokenType);
+    function GetSearchWordQuery: string;
     function GetToken(index: integer): TWordToken;
     procedure SetCount(AValue: integer);
   public
-    constructor Create(ASearchWords: UTF8String);
+    constructor Create(ASearchWords: string);
+
     property Count: integer read FCount write SetCount;
     property WildCardChar: char read FWildCardChar write FWildCardChar;
-    property SearchWordQuery: UTF8String read GetSearchWordQuery;
+    property SearchWordQuery: string read GetSearchWordQuery;
     property Token[index: integer]: TWordToken read GetToken;
   end;
 
@@ -59,20 +59,19 @@ type
   TSearchOptions = set of TSearchOption;
 
   TSearchWordData = record
-    Context: UTF8String;
+    Context: string;
     FileDate: TDateTime;
-    Language: UTF8String;
+    Language: string;
     Position: int64;
     Rank: integer;
-    SearchWord: UTF8String;
-    URL: UTF8String;
+    SearchWord: string;
+    URL: string;
   end;
 
   TFPSearch = class;
 
   { TCustomIndexDB }
 
-  TAvailableMatch = (amAll,amExact,amContains,amStartsWith);
   TCustomIndexDB = class(TComponent)
   public
     procedure CreateDB; virtual; abstract;
@@ -81,15 +80,14 @@ type
     procedure CompactDB; virtual; abstract;
     procedure BeginTrans; virtual; abstract;
     procedure CommitTrans; virtual; abstract;
-    procedure DeleteWordsFromFile(URL: UTF8String); virtual; abstract;
+    procedure DeleteWordsFromFile(URL: string); virtual; abstract;
     procedure AddSearchData(ASearchData: TSearchWordData); virtual; abstract;
     procedure FindSearchData(SearchWord: TWordParser; FPSearch: TFPSearch; SearchOptions: TSearchOptions); virtual; abstract;
-    Function GetAvailableWords(out aList : TUTF8StringArray; aContaining : UTF8String; Partial : TAvailableMatch) : integer;virtual; abstract;
     procedure CreateIndexerTables; virtual; abstract;
   end;
 
   TDatabaseID = record
-    Name: UTF8String;
+    Name: string;
     ID: integer;
   end;
 
@@ -116,10 +114,10 @@ const
     itMatches, itMatches, itMatches, itMatches, itMatches, itMatches,
     itLanguages, itLanguages,
     itFiles, itFiles, itFiles, itFiles, itFiles, itFiles);
-  SearchTermParam = 'SearchTerm';
-  DefaultTableNames: array[TIndexTable] of UTF8String = ('WORDS', 'FILELANGUAGES', 'FILENAMES', 'WORDMATCHES');
-  DefaultIndexNames: array[TIndexIndex] of UTF8String = ('I_WORDS', 'I_WORDMATCHES', 'I_FILELANGUAGES', 'I_FILENAMES');
-  DefaultFieldNames: array[TIndexField] of UTF8String = (
+
+  DefaultTableNames: array[TIndexTable] of string = ('WORDS', 'FILELANGUAGES', 'FILENAMES', 'WORDMATCHES');
+  DefaultIndexNames: array[TIndexIndex] of string = ('I_WORDS', 'I_WORDMATCHES', 'I_FILELANGUAGES', 'I_FILENAMES');
+  DefaultFieldNames: array[TIndexField] of string = (
     'W_ID', 'W_WORD',
     'WM_ID', 'WM_WORD_FK', 'WM_FILE_FK', 'WM_LANGUAGE_FK', 'WM_POSITION', 'WM_CONTEXT',
     'FL_ID', 'FL_NAME',
@@ -128,7 +126,7 @@ const
   ForeignKeyTargets: array[TIndexForeignKey] of TIndexTable = (itLanguages, itWords, itFiles, itLanguages);
   ForeignKeyFields: array[TIndexForeignKey] of TIndexField = (ifFilesLanguageID, ifMatchesWordID, ifMatchesFileID, ifMatchesLanguageID);
   ForeignKeyTargetFields: array[TIndexForeignKey] of TIndexField = (ifLanguagesID, ifWordsID, ifFilesID, ifLanguagesID);
-  DefaultForeignKeyNames: array[TIndexForeignKey] of UTF8String = ('R_FILES_LANGUAGE', 'R_MATCHES_WORD', 'R_MATCHES_FILE', 'R_MATCHES_LANGUAGE');
+  DefaultForeignKeyNames: array[TIndexForeignKey] of string = ('R_FILES_LANGUAGE', 'R_MATCHES_WORD', 'R_MATCHES_FILE', 'R_MATCHES_LANGUAGE');
   IdFieldType = 'BIGINT NOT NULL';
   PrimaryFieldType = IdFieldType + ' PRIMARY KEY';
   PosFieldType = 'BIGINT';
@@ -136,7 +134,7 @@ const
   TextFieldType = 'VARCHAR(100) NOT NULL';
   LargeTextFieldType = 'VARCHAR(255) NOT NULL';
   TimeStampFieldType = 'TIMESTAMP';
-  DefaultFieldTypes: array[TIndexField] of UTF8String = (
+  DefaultFieldTypes: array[TIndexField] of string = (
     PrimaryFieldType, TextFieldType, PrimaryFieldType, IdFieldType, IdFieldType,
     IdFieldType, PosFieldType, LargeTextFieldType, PrimaryFieldType, TextFieldType,
     PrimaryFieldType, LargeTextFieldType, FlagFieldType, FlagFieldType, TimeStampFieldType,
@@ -148,34 +146,32 @@ type
 
   TSQLIndexDB = class(TCustomIndexDB)
   protected
-    function CreateForeignKey(const ForeignKey: TIndexForeignKey; ForCreate: boolean = False): UTF8String;
-    function CreateIndexSQL(const AIndexName, ATableName: UTF8String; const AFieldList: array of UTF8String): UTF8String; virtual;
-    function CreateTableIndex(IndexType: TIndexIndex): UTF8String; virtual;
-    function CreateTableSQL(const TableType: TIndexTable): UTF8String; virtual;
-    function DeleteWordsSQL(UseParams: boolean = True): UTF8String; virtual;
-    function DropTableSQl(TableType: TIndexTable): UTF8String; virtual;
-    function GetFieldName(FieldType: TIndexField): UTF8String; virtual;
-    function GetFieldType(FieldType: TIndexField): UTF8String; virtual;
-    function GetForeignKeyName(ForeignKey: TIndexForeignKey): UTF8String; virtual;
-    function GetIndexName(IndexType: TIndexIndex): UTF8String; virtual;
-    function GetLanguageSQL(UseParams: boolean = True): UTF8String; virtual;
-    function GetMatchSQL(SearchOptions: TSearchOptions; SearchWord: TWordParser; UseParams: boolean = True): UTF8String; virtual;
-    function GetSearchFileSQL(UseParams: boolean = True): UTF8String; virtual;
-    function GetSearchSQL(ATable: TIndexTable; IDField, SearchField: TINdexField; UseParams: boolean = True): UTF8String; virtual;
-    function GetTableName(TableType: TIndexTable): UTF8String; virtual;
-    function GetUrlSQL(UseParams: boolean = True): UTF8String; virtual;
-    function GetWordSQL(UseParams: boolean = True): UTF8String; virtual;
-    function InsertSQL(const TableType: TIndexTable; UseParams: boolean = True): UTF8String; virtual;
-    Function AvailableWordsSQL(aContaining : UTF8String; Partial : TAvailableMatch) : UTF8String; virtual;
+    function CreateForeignKey(const ForeignKey: TIndexForeignKey; ForCreate: boolean = False): string;
+    function CreateIndexSQL(const AIndexName, ATableName: string; const AFieldList: array of string): string; virtual;
+    function CreateTableIndex(IndexType: TIndexIndex): string; virtual;
+    function CreateTableSQL(const TableType: TIndexTable): string; virtual;
+    function DeleteWordsSQL(UseParams: boolean = True): string; virtual;
+    function DropTableSQl(TableType: TIndexTable): string; virtual;
+    function GetFieldName(FieldType: TIndexField): string; virtual;
+    function GetFieldType(FieldType: TIndexField): string; virtual;
+    function GetForeignKeyName(ForeignKey: TIndexForeignKey): string; virtual;
+    function GetIndexName(IndexType: TIndexIndex): string; virtual;
+    function GetLanguageSQL(UseParams: boolean = True): string; virtual;
+    function GetMatchSQL(SearchOptions: TSearchOptions; SearchWord: TWordParser; UseParams: boolean = True): string; virtual;
+    function GetSearchFileSQL(UseParams: boolean = True): string; virtual;
+    function GetSearchSQL(ATable: TIndexTable; IDField, SearchField: TINdexField; UseParams: boolean = True): string; virtual;
+    function GetTableName(TableType: TIndexTable): string; virtual;
+    function GetUrlSQL(UseParams: boolean = True): string; virtual;
+    function GetWordSQL(UseParams: boolean = True): string; virtual;
+    function InsertSQL(const TableType: TIndexTable; UseParams: boolean = True): string; virtual;
     procedure FinishCreateTable(const TableType: TIndexTable); virtual;
-    procedure FinishDropTable(const TableType: TIndexTable); virtual;
   protected
     class function AllowForeignKeyInTable: boolean; virtual;
-    procedure Execute(const sql: UTF8String; ignoreErrors: boolean = True); virtual; abstract;
-    function GetURLID(const URL: UTF8String; ATimeStamp: TDateTime; ALanguageID: int64; DoCreate: boolean = True): int64; virtual; abstract;
+    procedure Execute(const sql: string; ignoreErrors: boolean = True); virtual; abstract;
+    function GetURLID(const URL: string; ATimeStamp: TDateTime; ALanguageID: int64; DoCreate: boolean = True): int64; virtual; abstract;
   public
     procedure CreateIndexerTables; override;
-    procedure DeleteWordsFromFile(URL: UTF8String); override;
+    procedure DeleteWordsFromFile(URL: string); override;
   end;
 
   TCustomFileReader = class;
@@ -185,30 +181,28 @@ type
 
   TCustomFileReader = class
   private
-    FCodePage: TSystemCodePage;
     FCount: integer;
     FDetectLanguage: boolean;
     FIgnoreNumeric: boolean;
-    FLanguage: UTF8String;
+    FLanguage: string;
     FOnAdd: TOnSearchWordEvent;
     FSearchWord: array of TSearchWordData;
     FStream: TStream;
     FStreamPos: integer;
-    FURL: UTF8String;
     FUseIgnoreList: boolean;
     FIgnoreListDef: TIgnoreListDef;
     FNoListFound: boolean;
     FTokenStartPos: integer;
-    FContext: UTF8String;
+    FContext: string;
     function GetCapacity: integer;
     function GetSearchWord(index: integer): TSearchWordData;
     procedure SetCapacity(AValue: integer);
     procedure SetStream(AValue: TStream);
     procedure SetStreamPos(AValue: integer);
   protected
-    function AllowedToken(token: UTF8String): boolean; virtual;
-    function GetToken: UTF8String; virtual;
-    function GetContext: UTF8String;
+    function AllowedToken(token: string): boolean; virtual;
+    function GetToken: string; virtual;
+    function GetContext: string;
     function AllowWord(var ASearchWord: TSearchWordData): boolean;
     procedure Add(var ASearchWord: TSearchWordData);
     procedure DoDetectLanguage;
@@ -216,10 +210,10 @@ type
     property StreamPos: integer read FStreamPos write SetStreamPos;
     property TokenStartPos: integer read FTokenStartPos;
   public
-    Constructor Create(Const aURL : UTF8String; aCodePage : TSystemCodePage); virtual;
-    Destructor Destroy; override;
+    constructor Create;
+    destructor Destroy; override;
     property DetectLanguage: boolean read FDetectLanguage write FDetectLanguage;
-    property Language: UTF8String read FLanguage write FLanguage;
+    property Language: string read FLanguage write FLanguage;
     procedure LoadFromStream(FileStream: TStream); virtual;
     property SearchWord[index: integer]: TSearchWordData read GetSearchWord;
     property Count: integer read FCount;
@@ -227,8 +221,6 @@ type
     property OnAddSearchWord: TOnSearchWordEvent read FOnAdd write FOnAdd;
     property UseIgnoreList: boolean read FUseIgnoreList write FUseIgnoreList;
     property IgnoreNumeric: boolean read FIgnoreNumeric write FIgnoreNumeric;
-    Property CodePage : TSystemCodePage Read FCodePage Write FCodePage;
-    Property URL : UTF8String Read FURL Write FURL;
   end;
 
   TCustomFileReaderClass = class of TCustomFileReader;
@@ -237,83 +229,78 @@ type
   TAddWordStub = class(TObject)
   private
     FCount: int64;
-    FURL: UTF8String;
+    FURL: string;
     FDateTime: TDateTime;
     FDatabase: TCustomIndexDB;
   public
-    constructor Create(const AURL: UTF8String; const ADateTime: TDateTime; ADatabase: TCustomIndexDB);
+    constructor Create(const AURL: string; const ADateTime: TDateTime; ADatabase: TCustomIndexDB);
     procedure DoAddWord(AReader: TCustomFileReader; var AWord: TSearchWordData); virtual;
     property Count: int64 read FCount;
   end;
 
   { TFPIndexer }
 
-  TIndexProgressEvent = procedure(Sender: TObject; const ACurrent, ACount: integer; const AURL: UTF8String) of object;
+  TIndexProgressEvent = procedure(Sender: TObject; const ACurrent, ACount: integer; const AURL: string) of object;
 
   TFPIndexer = class(TComponent)
   private
-    FCodePage: TSystemCodePage;
     FCommitFiles: boolean;
     FDatabase: TCustomIndexDB;
     FDetectLanguage: boolean;
     FErrorCount: int64;
-    FExcludeFileMask: UTF8String;
-    FFileMask: UTF8String;
+    FExcludeFileMask: string;
+    FFileMask: string;
     FIgnoreNumeric: boolean;
-    FLanguage: UTF8String;
+    FLanguage: string;
     FOnProgress: TIndexProgressEvent;
-    FSearchPath: UTF8String;
+    FSearchPath: string;
     FSearchRecursive: boolean;
-    FStripPath: String;
     FUseIgnoreList: boolean;
     ExcludeMaskPatternList: TStrings;
     MaskPatternList: TStrings;
     procedure SetDatabase(AValue: TCustomIndexDB);
-    procedure SetExcludeFileMask(AValue: UTF8String);
-    procedure SetFileMask(AValue: UTF8String);
-    procedure SetSearchPath(AValue: UTF8String);
+    procedure SetExcludeFileMask(AValue: string);
+    procedure SetFileMask(AValue: string);
+    procedure SetSearchPath(AValue: string);
   protected
-    function DoCodePageConversion(aCodePage: TSystemCodePage; S: TStream): TStream; virtual;
-    function DoIndexStream(const AURL: UTF8String; ADateTime: TDateTime; S: TStream; Reader: TCustomFileReader): int64; virtual;
-    procedure DoProgress(const ACurrent, ACount: integer; const URL: UTF8String); virtual;
-    procedure SearchFiles(const PathName, FileName: UTF8String; const Recursive: boolean; AList: TStrings); virtual;
-    procedure ExcludeFiles(const ExcludeMask: UTF8String; AList: TStrings); virtual;
+    procedure DoProgress(const ACurrent, ACount: integer; const URL: string); virtual;
+    procedure SearchFiles(const PathName, FileName: string; const Recursive: boolean; AList: TStrings); virtual;
+    procedure ExcludeFiles(const ExcludeMask: string; AList: TStrings); virtual;
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent); overload;
     destructor Destroy; override;
-    function IndexStream(const AURL: UTF8String; ADateTime: TDateTime; S: TStream; Reader: TCustomFileReader): int64;
-    function IndexFile(AURL: UTF8String; AllowErrors: boolean; const ALanguage: UTF8String = ''): int64;
+
+    function IndexStream(const AURL: string; ADateTime: TDateTime; S: TStream; Reader: TCustomFileReader): int64; virtual;
+    function IndexFile(AURL: string; AllowErrors: boolean; const ALanguage: string = ''): int64;
     function Execute(AllowErrors: boolean): int64;
     property ErrorCount: int64 read FErrorCount;
-  published
-    property Language: UTF8String read FLanguage write FLanguage;
+    property Language: string read FLanguage write FLanguage;
     property OnProgress: TIndexProgressEvent read FOnProgress write FOnProgress;
     property UseIgnoreList: boolean read FUseIgnoreList write FUseIgnoreList;
     property IgnoreNumeric: boolean read FIgnoreNumeric write FIgnoreNumeric;
     property CommitFiles: boolean read FCommitFiles write FCommitFiles;
+  published
     property Database: TCustomIndexDB read FDatabase write SetDatabase;
-    property ExcludeFileMask: UTF8String read FExcludeFileMask write SetExcludeFileMask;
-    property FileMask: UTF8String read FFileMask write SetFileMask;
-    property SearchPath: UTF8String read FSearchPath write SetSearchPath;
+    property ExcludeFileMask: string read FExcludeFileMask write SetExcludeFileMask;
+    property FileMask: string read FFileMask write SetFileMask;
+    property SearchPath: string read FSearchPath write SetSearchPath;
     property SearchRecursive: boolean read FSearchRecursive write FSearchRecursive;
     property DetectLanguage: boolean read FDetectLanguage write FDetectLanguage;
-    Property CodePage : TSystemCodePage Read FCodePage Write FCodePage;
-    Property StripPath : String Read FStripPath Write FStripPath;
   end;
 
   { TFileReaderDef }
 
   TFileReaderDef = class(TCollectionItem)
   private
-    FExtensions, FTypeName, FDefaultExt: UTF8String;
+    FExtensions, FTypeName, FDefaultExt: string;
     FReader: TCustomFileReaderClass;
   public
-    function HandlesExtension(const Ext: UTF8String): boolean; virtual;
-    function CreateReader(const AURL: UTF8String; aCodePage: TSystemCodePage): TCustomFileReader; virtual;
+    function HandlesExtension(const Ext: string): boolean; virtual;
+    function CreateReader(const AURL: string): TCustomFileReader; virtual;
     procedure DisposeReader(AReader: TCustomFileReader); virtual;
-    property Extensions: UTF8String read FExtensions write FExtensions;
-    property TypeName: UTF8String read FTypeName write FTypeName;
-    property DefaultExt: UTF8String read FDefaultExt write FDefaultExt;
+    property Extensions: string read FExtensions write FExtensions;
+    property TypeName: string read FTypeName write FTypeName;
+    property DefaultExt: string read FDefaultExt write FDefaultExt;
     property Reader: TCustomFileReaderClass read FReader write FReader;
   end;
 
@@ -324,8 +311,8 @@ type
     function GetD(AIndex: integer): TFileReaderDef;
     procedure SetD(AIndex: integer; AValue: TFileReaderDef);
   public
-    function AddFileReader(const ATypeName: UTF8String): TFileReaderDef;
-    function IndexOfTypeName(const ATypeName: UTF8String): integer;
+    function AddFileReader(const ATypeName: string): TFileReaderDef;
+    function IndexOfTypeName(const ATypeName: string): integer;
     property Defs[AIndex: integer]: TFileReaderDef read GetD write SetD; default;
   end;
 
@@ -335,27 +322,28 @@ type
   private
     FData: TFileReaderDefs;
     function GetCount: integer;
-    function GetData(const ATypeName: UTF8String): TFileReaderDef;
+    function GetData(const ATypeName: string): TFileReaderDef;
     function GetData(index: integer): TFileReaderDef;
-    function GetDefExt(const TypeName: UTF8String): UTF8String;
-    function GetExt(const TypeName: UTF8String): UTF8String;
-    function GetReader(const TypeName: UTF8String): TCustomFileReaderClass;
-    function GetTypeName(index: integer): UTF8String;
+    function GetDefExt(const TypeName: string): string;
+    function GetExt(const TypeName: string): string;
+    function GetReader(const TypeName: string): TCustomFileReaderClass;
+    function GetTypeName(index: integer): string;
   protected
     function CreateFileReaderDefs: TFileReaderDefs; virtual;
   public
     constructor Create;
     destructor Destroy; override;
-    function GetDefsForExtension(const Extension: UTF8String; List: TStrings): integer;
-    procedure RegisterFileReader(const ATypeName, TheExtensions: UTF8String; AReader: TCustomFileReaderClass);
+    function GetDefsForExtension(const Extension: string; List: TStrings): integer;
+    procedure RegisterFileReader(const ATypeName, TheExtensions: string; AReader: TCustomFileReaderClass);
     property Count: integer read GetCount;
-    property DefaultExtension[const TypeName: UTF8String]: UTF8String read GetDefExt;
-    property Extensions[const TypeName: UTF8String]: UTF8String read GetExt;
-    property FileReader[const TypeName: UTF8String]: TCustomFileReaderClass read GetReader;
-    property TypeNames[index: integer]: UTF8String read GetTypeName;
+    property DefaultExtension[const TypeName: string]: string read GetDefExt;
+    property Extensions[const TypeName: string]: string read GetExt;
+    property FileReader[const TypeName: string]: TCustomFileReaderClass read GetReader;
+    property TypeNames[index: integer]: string read GetTypeName;
   end;
 
   { TFPSearch }
+
   TFPSearch = class (TComponent)
   private
     FCount: integer;
@@ -380,8 +368,7 @@ type
     property RankedCount: integer read FRankedCount write SetRankedCount;
     property Results[index: integer]: TSearchWordData read GetResults;
     property RankedResults[index: integer]: TSearchWordData read GetRankedResults;
-    procedure SetSearchWord(AValue: UTF8String);
-    Function GetAvailableWords(out aList : TUTF8StringArray; aContaining : UTF8String; Partial : TAvailableMatch) : Integer;
+    procedure SetSearchWord(AValue: string);
   published
     property Database: TCustomIndexDB read FDatabase write SetDatabase;
     property Options: TSearchOptions read FOptions write FOptions;
@@ -392,7 +379,7 @@ type
 
   TIgnoreListDef = class(TCollectionItem)
   private
-    FLanguage: UTF8String;
+    FLanguage: string;
     FList: TStrings;
     procedure SetStrings(AValue: TStrings);
   public
@@ -400,9 +387,9 @@ type
     destructor Destroy; override;
     procedure BeginLoading;
     procedure EndLoading;
-    function IgnoreWord(const AWord: UTF8String): boolean;
+    function IgnoreWord(const AWord: string): boolean;
     property List: TStrings read FList write SetStrings;
-    property Language: UTF8String read FLanguage write FLanguage;
+    property Language: string read FLanguage write FLanguage;
   end;
 
   { TIgnoreLists }
@@ -412,10 +399,10 @@ type
     function getL(AIndex: integer): TIgnoreListDef;
     procedure SetL(AIndex: integer; AValue: TIgnoreListDef);
   public
-    function IndexOfLanguage(const ALanguage: UTF8String): integer;
-    function FindLanguage(const ALanguage: UTF8String): TIgnoreListDef;
-    function LanguageByName(const ALanguage: UTF8String): TIgnoreListDef;
-    function AddLanguage(const ALanguage: UTF8String): TIgnoreListDef;
+    function IndexOfLanguage(const ALanguage: string): integer;
+    function FindLanguage(const ALanguage: string): TIgnoreListDef;
+    function LanguageByName(const ALanguage: string): TIgnoreListDef;
+    function AddLanguage(const ALanguage: string): TIgnoreListDef;
     property Lists[AIndex: integer]: TIgnoreListDef read getL write SetL; default;
   end;
 
@@ -427,8 +414,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure RegisterIgnoreWords(const ALanguage: UTF8String; AList: TStrings);
-    procedure LoadIgnoreWordsFromFile(const ALanguage, AFileName: UTF8String);
+    procedure RegisterIgnoreWords(const ALanguage: string; AList: TStrings);
+    procedure LoadIgnoreWordsFromFile(const ALanguage, AFileName: string);
     property Lists: TIgnoreLists read FLists;
   end;
 
@@ -438,10 +425,10 @@ var
   FileHandlers: TFileHandlersManager;
   IgnoreListManager: TIgnoreListManager;
 
-function DateToISO8601(DateTime: TDateTime): UTF8String;
-function ISO8601ToDate(DateTime: UTF8String): TDateTime;
+function DateToISO8601(DateTime: TDateTime): string;
+function ISO8601ToDate(DateTime: string): TDateTime;
 
-function QuoteString(S: UTF8String): UTF8String;
+function QuoteString(S: string): string;
 
 implementation
 
@@ -454,13 +441,13 @@ uses
 resourcestring
   SErrNoSuchLanguage = 'Unknown language : "%s".';
 
-function DateToISO8601(DateTime: TDateTime): UTF8String;
+function DateToISO8601(DateTime: TDateTime): string;
 begin
   Result := FormatDateTime('yyyy-mm-dd', DateTime) + 'T' +
             FormatDateTime('hh:mm:ss', DateTime)
 end;
 
-function ISO8601ToDate(DateTime: UTF8String): TDateTime;
+function ISO8601ToDate(DateTime: string): TDateTime;
 begin
   Result := EncodeDate(StrToInt(copy(DateTime, 1, 4)),
                        StrToInt(copy(DateTime, 6, 2)),
@@ -471,12 +458,12 @@ begin
                        0);
 end;
 
-function QuoteString(S: UTF8String): UTF8String;
+function QuoteString(S: string): string;
 begin
   Result := '''' + S + '''';
 end;
 
-function CalcDefExt(TheExtensions: UTF8String): UTF8String;
+function CalcDefExt(TheExtensions: string): string;
 var
   p: integer;
 begin
@@ -501,7 +488,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TIgnoreListManager.RegisterIgnoreWords(const ALanguage: UTF8String; AList: TStrings);
+procedure TIgnoreListManager.RegisterIgnoreWords(const ALanguage: string; AList: TStrings);
 
 var
   L: TIgnoreListDef;
@@ -520,7 +507,7 @@ begin
   end;
 end;
 
-procedure TIgnoreListManager.LoadIgnoreWordsFromFile(const ALanguage, AFileName: UTF8String);
+procedure TIgnoreListManager.LoadIgnoreWordsFromFile(const ALanguage, AFileName: string);
 
 var
   L: TStringList;
@@ -547,14 +534,14 @@ begin
   Items[AIndex] := AValue;
 end;
 
-function TIgnoreLists.IndexOfLanguage(const ALanguage: UTF8String): integer;
+function TIgnoreLists.IndexOfLanguage(const ALanguage: string): integer;
 begin
   Result := Count - 1;
   while (Result >= 0) and (CompareText(ALanguage, GetL(Result).Language) <> 0) do
     Dec(Result);
 end;
 
-function TIgnoreLists.FindLanguage(const ALanguage: UTF8String): TIgnoreListDef;
+function TIgnoreLists.FindLanguage(const ALanguage: string): TIgnoreListDef;
 
 var
   i: integer;
@@ -567,14 +554,14 @@ begin
     Result := GetL(I);
 end;
 
-function TIgnoreLists.LanguageByName(const ALanguage: UTF8String): TIgnoreListDef;
+function TIgnoreLists.LanguageByName(const ALanguage: string): TIgnoreListDef;
 begin
   Result := FindLanguage(Alanguage);
   if (Result = nil) then
     raise EFPIndexer.CreateFmt(SErrNoSuchLanguage, [ALanguage]);
 end;
 
-function TIgnoreLists.AddLanguage(const ALanguage: UTF8String): TIgnoreListDef;
+function TIgnoreLists.AddLanguage(const ALanguage: string): TIgnoreListDef;
 begin
   Result := Add as TIgnoreListDef;
   Result.Language := ALanguage;
@@ -611,7 +598,7 @@ begin
   TStringList(FList).Sorted := True;
 end;
 
-function TIgnoreListDef.IgnoreWord(const AWord: UTF8String): boolean;
+function TIgnoreListDef.IgnoreWord(const AWord: string): boolean;
 begin
   Result := FList.IndexOf(AWord) <> -1;
 end;
@@ -623,14 +610,14 @@ begin
   // Do nothing
 end;
 
-function TFileReaderDef.HandlesExtension(const Ext: UTF8String): boolean;
+function TFileReaderDef.HandlesExtension(const Ext: string): boolean;
 begin
   Result := Pos(lowercase(ext) + ';', FExtensions + ';') <> 0;
 end;
 
-function TFileReaderDef.CreateReader(const AURL: UTF8String; aCodePage : TSystemCodePage): TCustomFileReader;
+function TFileReaderDef.CreateReader(const AURL: string): TCustomFileReader;
 begin
-  Result := FReader.Create(aURL,aCodePage);
+  Result := FReader.Create;
 end;
 
 procedure TFileReaderDef.DisposeReader(AReader: TCustomFileReader);
@@ -650,13 +637,13 @@ begin
   Items[AIndex] := AValue;
 end;
 
-function TFileReaderDefs.AddFileReader(const ATypeName: UTF8String): TFileReaderDef;
+function TFileReaderDefs.AddFileReader(const ATypeName: string): TFileReaderDef;
 begin
   Result := Add as TFileReaderDef;
   Result.FTypeName := ATypeName;
 end;
 
-function TFileReaderDefs.IndexOfTypeName(const ATypeName: UTF8String): integer;
+function TFileReaderDefs.IndexOfTypeName(const ATypeName: string): integer;
 begin
   Result := Count - 1;
   while (Result >= 0) and (CompareText(AtypeName, GetD(Result).TypeName) <> 0) do
@@ -666,7 +653,7 @@ end;
 
 { TWordParser }
 
-procedure TWordParser.AddToken(AValue: UTF8String; ATokenType: TWordTokenType);
+procedure TWordParser.AddToken(AValue: string; ATokenType: TWordTokenType);
 begin
   Count := Count + 1;
 
@@ -682,12 +669,10 @@ begin
   WordList[FCount - 1].TokenType := ATokenType;
 end;
 
-function TWordParser.GetSearchWordQuery: UTF8String;
-
+function TWordParser.GetSearchWordQuery: string;
 var
-  s: UTF8String;
+  s: string;
   i: integer;
-
 begin
   s := '';
   for i := 0 to FCount - 1 do
@@ -695,15 +680,16 @@ begin
       s := S+WordList[i].Value
     else
       s := S+WordList[i].Value + ' ';
+
   //replace wildcard '*' with the SQL variant '%'
   Result := StringReplace(s, '*', WildCardChar, [rfReplaceAll, rfIgnoreCase]);
 end;
 
 function TWordParser.GetToken(index: integer): TWordToken;
 begin
-  Result:=Default(TWordToken);
   if (index >= 0) and (index < FCount) then
     Result := WordList[index];
+
   Result.Value := StringReplace(Result.Value, '*', WildCardChar, [rfReplaceAll, rfIgnoreCase]);
 end;
 
@@ -712,22 +698,28 @@ begin
   if FCount = AValue then
     Exit;
   FCount := AValue;
+
   SetLength(WordList, FCount);
 end;
 
-constructor TWordParser.Create(ASearchWords: UTF8String);
+constructor TWordParser.Create(ASearchWords: string);
 var
   list: TStringList;
   i: integer;
 begin
   //erase list
   FCount := 0;
+
   FWildCardChar := '%';
+
   list := TStringList.Create;
+
   try
     list.Delimiter := ' ';
     list.StrictDelimiter := True;
+
     list.DelimitedText := LowerCase(ASearchWords);
+
     //create the search clause
     for i := 0 to list.Count - 1 do
     begin
@@ -807,6 +799,7 @@ procedure TFPSearch.SetRankedCount(AValue: integer);
 begin
   if FRankedCount = AValue then
     Exit;
+
   FRankedCount := AValue;
   SetLength(RankedList, AValue);
 end;
@@ -819,21 +812,17 @@ begin
     FCount := index;
     SetLength(ResultList, FCount + 1);
   end;
+
   ResultList[index] := AValue;
 end;
 
-procedure TFPSearch.SetSearchWord(AValue: UTF8String);
+procedure TFPSearch.SetSearchWord(AValue: string);
 begin
   if Assigned(FSearchWord) then
     FreeAndNil(FSearchWord);
+
   FSearchWord := TWordParser.Create(AValue);
   FSearchWord.WildCardChar := '%';   //should come from DataBase
-end;
-
-Function TFPSearch.GetAvailableWords(out aList : TUTF8StringArray; aContaining: UTF8String; Partial: TAvailableMatch) : Integer;
-begin
-  Database.Connect;
-  Result:=Database.GetAvailableWords(aList, aContaining, Partial);
 end;
 
 function TFPSearch.GetResults(index: integer): TSearchWordData;
@@ -849,6 +838,7 @@ end;
 constructor TFPSearch.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+
   FCount := 0;
   FRankedCount := 0;
 end;
@@ -861,12 +851,14 @@ end;
 function TFPSearch.Execute: int64;
 begin
   Result := 0;
+
   //reset previous searches
   FCount := 0;
   SetLength(ResultList, FCount);
   Database.Connect;
   Database.FindSearchData(SearchWord, Self, Options);
   Result := Count;
+
   //rank the results
   RankResults;
 end;
@@ -889,23 +881,17 @@ begin
 end;
 
 //a very basic tokenizer that only returns numeric and alphanumeric characters
-function TCustomFileReader.GetToken: UTF8String;
-
-Const
-  NonChars = #9#32#10#13#12'|&@#"''(§^!{})-[]*%`=+/.;:,?';
-  NonCharset = [#9,#32,#10,#13,#12,'|','&','@','#',
-               '"','''','(','^','!','{','}',')',
-               '-','[',']','*','%','`','=','+','/',
-               '.',';',':',',','?',
-               '0'..'9'];
+function TCustomFileReader.GetToken: string;
 
 var
-  s: UTF8String;
+  s: string;
   c: char;
-
 begin
+  Result := '';
+
   if not Assigned(Stream) then
     exit;
+
   try
     //writeln('pos:', Stream.Position, ' size:', Stream.Size);
     if Stream.Position >= Stream.Size - 1 then
@@ -916,13 +902,13 @@ begin
       exit;
 
     //eat all invalid characters
-    while (C in NonCharSet) and (Stream.Position < Stream.Size) do
+    while not (C in ['a'..'z', 'A'..'Z', '0'..'9']) and (Stream.Position < Stream.Size) do
       c := Chr(Stream.ReadByte);
     S := c;
     //now read all valid characters from stream and append
     FTokenStartPos := Stream.Position;
     c := Chr(Stream.ReadByte);
-    while (Not (c in NonCharSet)) and (Stream.Position < Stream.Size) do
+    while (c in ['a'..'z', 'A'..'Z', '0'..'9']) and (Stream.Position < Stream.Size) do
     begin
       s :=S+ c;
       c := chr(Stream.ReadByte);
@@ -935,7 +921,7 @@ begin
   end;
 end;
 
-function TCustomFileReader.GetContext: UTF8String;
+function TCustomFileReader.GetContext: string;
 begin
   Result := FContext;
 end;
@@ -966,7 +952,7 @@ begin
   end;
 end;
 
-function TCustomFileReader.AllowedToken(token: UTF8String): boolean;
+function TCustomFileReader.AllowedToken(token: string): boolean;
 begin
   Result := True;
 end;
@@ -1016,7 +1002,7 @@ procedure TCustomFileReader.DoDetectLanguage;
 var
   tc: TFPTextCat;
   i: integer;
-  s: UTF8String = '';
+  s: string = '';
 {$endif}
 begin
 {$ifdef LangDetect}
@@ -1034,14 +1020,11 @@ begin
 {$endif}
 end;
 
-
-constructor TCustomFileReader.Create(const aURL: UTF8String; aCodePage: TSystemCodePage);
+constructor TCustomFileReader.Create;
 begin
   FCount := 0;
   FLanguage := 'unknown';
   FignoreNumeric := True;
-  FCodePage:=aCodePage;
-  FURL:=aURL;
 end;
 
 destructor TCustomFileReader.Destroy;
@@ -1060,7 +1043,7 @@ end;
 
 { TFileHandlersManager }
 
-function TFileHandlersManager.GetReader(const TypeName: UTF8String): TCustomFileReaderClass;
+function TFileHandlersManager.GetReader(const TypeName: string): TCustomFileReaderClass;
 var
   ih: TFileReaderDef;
 begin
@@ -1071,7 +1054,7 @@ begin
     Result := nil;
 end;
 
-function TFileHandlersManager.GetExt(const TypeName: UTF8String): UTF8String;
+function TFileHandlersManager.GetExt(const TypeName: string): string;
 
 var
   ih: TFileReaderDef;
@@ -1083,7 +1066,7 @@ begin
     Result := '';
 end;
 
-function TFileHandlersManager.GetDefExt(const TypeName: UTF8String): UTF8String;
+function TFileHandlersManager.GetDefExt(const TypeName: string): string;
 var
   ih: TFileReaderDef;
 begin
@@ -1094,7 +1077,7 @@ begin
     Result := '';
 end;
 
-function TFileHandlersManager.GetTypeName(index: integer): UTF8String;
+function TFileHandlersManager.GetTypeName(index: integer): string;
 var
   ih: TFileReaderDef;
 begin
@@ -1102,7 +1085,7 @@ begin
   Result := ih.FTypeName;
 end;
 
-function TFileHandlersManager.GetData(const ATypeName: UTF8String): TFileReaderDef;
+function TFileHandlersManager.GetData(const ATypeName: string): TFileReaderDef;
 var
   r: integer;
 begin
@@ -1143,27 +1126,21 @@ begin
   inherited Destroy;
 end;
 
-
-function TFileHandlersManager.GetDefsForExtension(const Extension: UTF8String; List: TStrings): integer;
-
+{$note function result is not set, convert to procedure?}
+function TFileHandlersManager.GetDefsForExtension(const Extension: string; List: TStrings): integer;
 var
   I: integer;
   D: TFileReaderDef;
-
 begin
-  Result:=0;
   for I := 0 to FData.Count - 1 do
   begin
     D := FData[i];
     if D.HandlesExtension(Extension) and (D.Reader <> nil) then
-      begin
       List.AddObject(D.TypeName, D);
-      Inc(Result);
-      end;
   end;
 end;
 
-procedure TFileHandlersManager.RegisterFileReader(const ATypeName, TheExtensions: UTF8String; AReader: TCustomFileReaderClass);
+procedure TFileHandlersManager.RegisterFileReader(const ATypeName, TheExtensions: string; AReader: TCustomFileReaderClass);
 var
   ih: TFileReaderDef;
 begin
@@ -1187,7 +1164,7 @@ end;
 
 { TAddWordStub }
 
-constructor TAddWordStub.Create(const AURL: UTF8String; const ADateTime: TDateTime; ADatabase: TCustomIndexDB);
+constructor TAddWordStub.Create(const AURL: string; const ADateTime: TDateTime; ADatabase: TCustomIndexDB);
 begin
   FURL := AURl;
   FDateTime := ADateTime;
@@ -1215,7 +1192,7 @@ begin
   FDatabase := AValue;
 end;
 
-procedure TFPIndexer.SetExcludeFileMask(AValue: UTF8String);
+procedure TFPIndexer.SetExcludeFileMask(AValue: string);
 begin
   if FExcludeFileMask = AValue then
     exit;
@@ -1224,10 +1201,10 @@ begin
   ExcludeMaskPatternList.DelimitedText := FExcludeFileMask;
 end;
 
-procedure TFPIndexer.SearchFiles(const PathName, FileName: UTF8String; const Recursive: boolean; AList: TStrings);
+procedure TFPIndexer.SearchFiles(const PathName, FileName: string; const Recursive: boolean; AList: TStrings);
 var
   Rec: TSearchRec;
-  Path: UTF8String;
+  Path: string;
 begin
   Path := IncludeTrailingBackslash(PathName);
   try
@@ -1251,7 +1228,7 @@ begin
     end;
 end;
 
-procedure TFPIndexer.ExcludeFiles(const ExcludeMask: UTF8String; AList: TStrings);
+procedure TFPIndexer.ExcludeFiles(const ExcludeMask: string; AList: TStrings);
 var
   i: integer;
 begin
@@ -1260,7 +1237,7 @@ begin
       AList.Delete(i);
 end;
 
-procedure TFPIndexer.SetFileMask(AValue: UTF8String);
+procedure TFPIndexer.SetFileMask(AValue: string);
 begin
   if FFileMask = AValue then
     exit;
@@ -1269,14 +1246,14 @@ begin
   MaskPatternList.DelimitedText := FFileMask;
 end;
 
-procedure TFPIndexer.SetSearchPath(AValue: UTF8String);
+procedure TFPIndexer.SetSearchPath(AValue: string);
 begin
   if FSearchPath = AValue then
     exit;
   FSearchPath := ExtractFilePath(ExpandFileName(IncludeTrailingPathDelimiter(AValue)));
 end;
 
-procedure TFPIndexer.DoProgress(const ACurrent, ACount: integer; const URL: UTF8String);
+procedure TFPIndexer.DoProgress(const ACurrent, ACount: integer; const URL: string);
 begin
   if Assigned(FOnProgress) then
     FOnProgress(Self, ACurrent, ACount, URL);
@@ -1309,22 +1286,18 @@ begin
   inherited Destroy;
 end;
 
-function TFPIndexer.DoIndexStream(const AURL: UTF8String; ADateTime: TDateTime; S: TStream; Reader: TCustomFileReader): int64;
-
-Var
+function TFPIndexer.IndexStream(const AURL: string; ADateTime: TDateTime; S: TStream; Reader: TCustomFileReader): int64;
+var
   i: integer;
   Stub: TAddWordStub;
   AWord: TSearchWordData;
-  U : String;
-
 begin
+  Result := 0;
+  DataBase.DeleteWordsFromFile(AURL);
   // If reader must detect language, the stub cannot be used.
-  U:=AURL;
-  If (StripPath<>'') and (Pos(StripPath,aURL)=1) then
-    Delete(U,1,Length(StripPath));
   if not DetectLanguage then
   begin
-    Stub := TAddWordStub.Create(U, ADateTime, Database);
+    Stub := TAddWordStub.Create(AURL, ADateTime, Database);
     try
       Reader.OnAddSearchWord := @Stub.DoAddWord;
       Reader.LoadFromStream(S);
@@ -1339,7 +1312,7 @@ begin
     for i := 0 to Reader.Count - 1 do
     begin
       AWord := Reader.SearchWord[i];
-      AWord.URL := U;
+      AWord.URL := AURL;
       AWord.FileDate := ADateTime;
       AWord.Language := Reader.Language;
       AWord.SearchWord := LowerCase(AWord.SearchWord);
@@ -1347,60 +1320,22 @@ begin
       Inc(Result);
     end;
   end;
-end;
-
-function TFPIndexer.DoCodePageConversion(aCodePage : TSystemCodePage;S: TStream) : TStream;
-
-Var
-  R : RawByteString;
-
-begin
-  R:='';
-  if (aCodePage=CP_UTF8) then
-    Result:=S
-  else
-    begin
-    SetLength(R,S.Size);
-    SetCodePage(R,aCodePage,false);
-    S.ReadBuffer(R[1],S.Size);
-    SetCodePage(R,CP_UTF8,True);
-    Result:=TStringStream.Create(R,CP_UTF8);
-    end;
-end;
-
-function TFPIndexer.IndexStream(const AURL: UTF8String; ADateTime: TDateTime; S: TStream; Reader: TCustomFileReader): int64;
-
-var
-  CS : TStream;
-
-begin
-  Result := 0;
-  CS:=DoCodePageConversion(Reader.CodePage,S);
-  try
-    DataBase.DeleteWordsFromFile(AURL);
-    Result:=DoIndexStream(aURL,aDateTime,CS,Reader);
-    if CommitFiles then
-      begin
-      Database.CommitTrans;
-      Database.BeginTrans;
-      end;
-  Finally
-    If (CS<>S) then
-      CS.Free;
+  if CommitFiles then
+  begin
+    Database.CommitTrans;
+    Database.BeginTrans;
   end;
 end;
 
-function TFPIndexer.IndexFile(AURL: UTF8String; AllowErrors: boolean; const ALanguage: UTF8String): int64;
-
+function TFPIndexer.IndexFile(AURL: string; AllowErrors: boolean; const ALanguage: string): int64;
 var
-  e: UTF8String;
+  e: string;
   i: integer;
   d: TFileReaderDef;
   reader: TCustomFileReader;
   fs: TFileStream;
   L: TStringList;
   DT: TDateTime;
-
 begin
   Result := 0;
   if not FileExists(AURL) then
@@ -1415,7 +1350,7 @@ begin
     for I := 0 to L.Count - 1 do
     begin
       d := L.Objects[i] as TFileReaderDef;
-      reader := D.CreateReader(AURL,CodePage);
+      reader := D.CreateReader(AURL);
       try
         try
           Reader.IgnoreNumeric := True;
@@ -1456,7 +1391,7 @@ function TFPIndexer.Execute(AllowErrors: boolean): int64;
 var
   m: integer;
   List: TStringList;
-  url: UTF8String;
+  url: string;
 begin
   Result := 0;
   FErrorCount := 0;
@@ -1505,11 +1440,8 @@ begin
   //create a new database
   BeginTrans;
 
-  for t := high(TIndexTable) downto low(TindexTable) do
-    begin
-    Execute(DropTableSQl(t),True);
-    FinishDropTable(T);
-    end;
+  for t := low(TIndexTable) to High(TindexTable) do
+    Execute(DropTableSQl(t));
   CommitTrans;
 
   BeginTrans;
@@ -1541,42 +1473,41 @@ begin
   CommitTrans;
 end;
 
-function TSQLIndexDB.GetTableName(TableType: TIndexTable): UTF8String;
+function TSQLIndexDB.GetTableName(TableType: TIndexTable): string;
 begin
   Result := DefaultTableNames[TableType];
 end;
 
-function TSQLIndexDB.GetIndexName(IndexType: TIndexIndex): UTF8String;
+function TSQLIndexDB.GetIndexName(IndexType: TIndexIndex): string;
 begin
   Result := DefaultIndexNames[IndexType];
 end;
 
-function TSQLIndexDB.GetFieldName(FieldType: TIndexField): UTF8String;
+function TSQLIndexDB.GetFieldName(FieldType: TIndexField): string;
 begin
   Result := DefaultFieldNames[FieldType];
 end;
 
-function TSQLIndexDB.GetForeignKeyName(ForeignKey: TIndexForeignKey): UTF8String;
+function TSQLIndexDB.GetForeignKeyName(ForeignKey: TIndexForeignKey): string;
 begin
   Result := DefaultForeignKeyNames[ForeignKey];
 end;
 
-function TSQLIndexDB.GetFieldType(FieldType: TIndexField): UTF8String;
+function TSQLIndexDB.GetFieldType(FieldType: TIndexField): string;
 begin
   Result := DefaultFieldTypes[FieldType];
 end;
 
-function TSQLIndexDB.DropTableSQl(TableType: TIndexTable): UTF8String;
+function TSQLIndexDB.DropTableSQl(TableType: TIndexTable): string;
 begin
   Result := 'DROP TABLE ' + GetTableName(TableType);
 end;
 
-function TSQLIndexDB.CreateTableSQL(const TableType: TIndexTable): UTF8String;
+function TSQLIndexDB.CreateTableSQL(const TableType: TIndexTable): string;
 var
   f: TIndexField;
   K: TIndexForeignKey;
 begin
-  Result:='';
   for F := Low(TIndexField) to High(TIndexField) do
     if TableFields[F] = TableType then
     begin
@@ -1595,11 +1526,10 @@ begin
   Result := 'CREATE TABLE ' + GetTableName(TableType) + ' (' + Result + ')';
 end;
 
-function TSQLIndexDB.CreateForeignKey(const ForeignKey: TIndexForeignKey; ForCreate: boolean = False): UTF8String;
+function TSQLIndexDB.CreateForeignKey(const ForeignKey: TIndexForeignKey; ForCreate: boolean = False): string;
 var
-  STN, TTN, FKN, FKF, FTK: UTF8String;
+  STN, TTN, FKN, FKF, FTK: string;
 begin
-  Result:='';
   STN := GetTableName(ForeignKeyTables[ForeignKey]);
   TTN := GetTableName(ForeignKeyTargets[ForeignKey]);
   FKN := GetForeignKeyName(Foreignkey);
@@ -1616,15 +1546,10 @@ begin
   // Do nothing
 end;
 
-procedure TSQLIndexDB.FinishDropTable(const TableType: TIndexTable);
-begin
-  // Do nothing
-end;
-
-function TSQLIndexDB.InsertSQL(const TableType: TIndexTable; UseParams: boolean = True): UTF8String;
+function TSQLIndexDB.InsertSQL(const TableType: TIndexTable; UseParams: boolean = True): string;
 var
-  FL: UTF8String = '';
-  VL: UTF8String = '';
+  FL: string = '';
+  VL: string = '';
   F: TIndexField;
 begin
   for F := Low(TIndexField) to High(TIndexField) do
@@ -1644,22 +1569,10 @@ begin
   Result := Format('INSERT INTO %s (%s) VALUES (%s)', [GetTableName(TableType), FL, VL]);
 end;
 
-function TSQLIndexDB.AvailableWordsSQL(aContaining: UTF8String; Partial: TAvailableMatch): UTF8String;
-
-begin
-  Result:=Format('SELECT %s from %s ',[GetFieldName(ifWordsWord),GetTableName(itWords)]);
-  if not ((aContaining='') or (Partial=amAll)) then
-     if Partial = amExact then
-      Result:=Result+Format(' WHERE (%s = :%s)',[GetFieldName(ifWordsWord),SearchTermParam])
-    else
-      Result:=Result+Format(' WHERE (%s LIKE :%s)',[GetFieldName(ifWordsWord),SearchTermParam]);
-end;
-
-function TSQLIndexDB.CreateTableIndex(IndexType: TIndexIndex): UTF8String;
+function TSQLIndexDB.CreateTableIndex(IndexType: TIndexIndex): string;
 var
-  TIN: UTF8String;
+  TIN: string;
 begin
-  Result:='';
   TIN := GetindexName(IndexType);
   case IndexType of
     iiWords: Result := CreateIndexSQL(TIN, GetTableName(itWords), [GetFieldName(ifWordsWord)]);
@@ -1668,7 +1581,7 @@ begin
   end;
 end;
 
-function TSQLIndexDB.CreateIndexSQL(const AIndexName, ATableName: UTF8String; const AFieldList: array of UTF8String): UTF8String;
+function TSQLIndexDB.CreateIndexSQL(const AIndexName, ATableName: string; const AFieldList: array of string): string;
 var
   I: integer;
 begin
@@ -1682,14 +1595,14 @@ begin
   Result := Result + ');';
 end;
 
-function TSQLIndexDB.GetUrlSQL(UseParams: boolean): UTF8String;
+function TSQLIndexDB.GetUrlSQL(UseParams: boolean): string;
 begin
   Result := GetSearchSQL(itFiles, ifFilesID, ifFilesURL, UseParams);
 end;
 
-function TSQLIndexDB.GetSearchSQL(ATable: TIndexTable; IDField, SearchField: TINdexField; UseParams: boolean = True): UTF8String;
+function TSQLIndexDB.GetSearchSQL(ATable: TIndexTable; IDField, SearchField: TINdexField; UseParams: boolean = True): string;
 var
-  IDF, TN, URLF: UTF8String;
+  IDF, TN, URLF: string;
 begin
   TN := GetTableName(ATable);
   IDF := GetFieldName(IDField);
@@ -1702,22 +1615,22 @@ begin
     Result := Result + '%s)';
 end;
 
-function TSQLIndexDB.GetLanguageSQL(UseParams: boolean = True): UTF8String;
+function TSQLIndexDB.GetLanguageSQL(UseParams: boolean = True): string;
 begin
   Result := GetSearchSQL(itLanguages, ifLanguagesID, ifLanguagesName, UseParams);
 end;
 
-function TSQLIndexDB.GetWordSQL(UseParams: boolean = True): UTF8String;
+function TSQLIndexDB.GetWordSQL(UseParams: boolean = True): string;
 begin
   Result := GetSearchSQL(itWords, ifWordsID, ifWordsWord, UseParams);
 end;
 
-function TSQLIndexDB.GetSearchFileSQL(UseParams: boolean = True): UTF8String;
+function TSQLIndexDB.GetSearchFileSQL(UseParams: boolean = True): string;
 begin
   Result := GetSearchSQL(itFiles, ifFilesID, ifFilesURL, UseParams);
 end;
 
-function TSQLIndexDB.DeleteWordsSQL(UseParams: boolean): UTF8String;
+function TSQLIndexDB.DeleteWordsSQL(UseParams: boolean): string;
 begin
   Result := Format('DELETE FROM %s WHERE (%s =', [GetTableName(itMatches), GetFieldName(ifMatchesFileID)]);
   if UseParams then
@@ -1731,9 +1644,9 @@ begin
   Result := False;
 end;
 
-function TSQLIndexDB.GetMatchSQL(SearchOptions: TSearchOptions; SearchWord: TWordParser; UseParams: boolean = True): UTF8String;
+function TSQLIndexDB.GetMatchSQL(SearchOptions: TSearchOptions; SearchWord: TWordParser; UseParams: boolean = True): string;
 var
-  WW, MN, FN, WN, LN: UTF8String;
+  WW, MN, FN, WN, LN: string;
   i: integer;
 begin
   WW := getFieldName(ifWordsWord);
@@ -1770,7 +1683,7 @@ begin
   Result := Result + Format(') ORDER BY %s', [GetFieldName(ifFilesURL)]);
 end;
 
-procedure TSQLIndexDB.DeleteWordsFromFile(URL: UTF8String);
+procedure TSQLIndexDB.DeleteWordsFromFile(URL: string);
 var
   FID: integer;
 begin

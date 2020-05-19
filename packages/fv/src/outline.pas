@@ -27,9 +27,9 @@ type  Pnode=^Tnode;
                              const chars:string):string;
         procedure draw;virtual;
         procedure expandall(node:pointer);
-        function firstthat(test:codepointer):pointer;
+        function firstthat(test:pointer):pointer;
         procedure focused(i:sw_integer);virtual;
-        procedure foreach(action:codepointer);
+        procedure foreach(action:pointer);
         function getchild(node:pointer;i:sw_integer):pointer;virtual;
         function getgraph(level:integer;lines:longint;flags:word):string;
         function getnode(i:sw_integer):pointer;virtual;
@@ -46,7 +46,7 @@ type  Pnode=^Tnode;
         procedure update;
       private
         procedure set_focus(Afocus:sw_integer);
-        function do_recurse(action:codepointer;callerframe:pointer;
+        function do_recurse(action,callerframe:pointer;
                             stop_if_found:boolean):pointer;
       end;
 
@@ -198,7 +198,7 @@ begin
   CreateGraph := Graph;
 end;
 
-function Toutlineviewer.do_recurse(action:codepointer;callerframe:pointer;
+function Toutlineviewer.do_recurse(action,callerframe:pointer;
                                    stop_if_found:boolean):pointer;
 
 var position:sw_integer;
@@ -330,7 +330,7 @@ begin
     end;
 end;
 
-function Toutlineviewer.firstthat(test:codepointer):pointer;
+function Toutlineviewer.firstthat(test:pointer):pointer;
 
 begin
   firstthat:=do_recurse(test,
@@ -352,7 +352,7 @@ begin
   foc:=i;
 end;
 
-procedure Toutlineviewer.foreach(action:codepointer);
+procedure Toutlineviewer.foreach(action:pointer);
 
 begin
   do_recurse(action,

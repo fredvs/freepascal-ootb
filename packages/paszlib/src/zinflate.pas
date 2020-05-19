@@ -1,4 +1,4 @@
-unit  ZInflate;
+unit  zinflate;
 
 {  inflate.c -- zlib interface to inflate modules
    Copyright (C) 1995-1998 Mark Adler

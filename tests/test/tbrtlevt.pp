@@ -1,5 +1,3 @@
-{%skiptarget=$nothread }
-
 {$mode objfpc}
 
 uses
@@ -126,16 +124,11 @@ begin
   { On windows event can not be "abandoned". Skipping this test }
   basiceventdestroy(event);
 {$else}
- {$IFDEF os2}
-  { On OS/2 event can not be "abandoned" either. Skipping this test }
-  basiceventdestroy(event);
- {$ELSE OS2}
   help:=thelper.create(o_waittimeoutabandon);
   sleep(100); // make sure that thread has been started
   basiceventdestroy(event);
   help.waitfor;
   help.free;
- {$ENDIF OS2}
 {$endif}
 
   event := BasicEventCreate(nil,false,false,'bla');

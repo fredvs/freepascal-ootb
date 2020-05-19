@@ -110,10 +110,6 @@ type
   {$define longdouble_is_double}
 {$ifend}
 
-{$if defined(darwin) and defined(cpuaarch64)}
-  {$define longdouble_is_double}
-{$ifend}
-
 {$ifndef FPUNONE}
 {$if defined(longdouble_is_double) or not defined(FPC_HAS_CEXTENDED)}
   clongdouble=double;

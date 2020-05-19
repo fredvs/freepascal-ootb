@@ -1,4 +1,4 @@
-{%skiptarget=$nothread }
+{ %skiptarget=go32v2 }
 
 {$mode objfpc}
 {$s+}

@@ -1,9 +1,3 @@
-{ This test explicity generates calculation with
-  results outside tsub range, so range checks
-  generate errors.
-  Thus, we need an explicit $R- }
-{$R-}
-
 {$mode objfpc}
 
 type

@@ -14,7 +14,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-unit DB;
+unit db;
 
 {$mode objfpc}
 
@@ -42,7 +42,7 @@ type
   PLargeInt= ^LargeInt;
 
 { Auxiliary type }
-  TStringFieldBuffer = Array[0..dsMaxStringSize] of AnsiChar;
+  TStringFieldBuffer = Array[0..dsMaxStringSize] of Char;
 
 { Misc Dataset types }
 
@@ -164,15 +164,13 @@ type
 
   TFieldDef = class(TNamedItem)
   Private
-    FAttributes : TFieldAttributes;
-    FCodePage : TSystemCodePage;
     FDataType : TFieldType;
     FFieldNo : Longint;
     FInternalCalcField : Boolean;
     FPrecision : Longint;
     FRequired : Boolean;
     FSize : Integer;
-    function GetCharSize: Word;
+    FAttributes : TFieldAttributes;
     Function GetFieldClass : TFieldClass;
     procedure SetAttributes(AValue: TFieldAttributes);
     procedure SetDataType(AValue: TFieldType);
@@ -182,17 +180,14 @@ type
   public
     constructor Create(ACollection : TCollection); override;
     constructor Create(AOwner: TFieldDefs; const AName: string;
-      ADataType: TFieldType; ASize: Integer; ARequired: Boolean; AFieldNo: Longint;
-      ACodePage: TSystemCodePage = CP_ACP); overload;
+      ADataType: TFieldType; ASize: Integer; ARequired: Boolean; AFieldNo: Longint); overload;
     destructor Destroy; override;
     procedure Assign(APersistent: TPersistent); override;
     function CreateField(AOwner: TComponent): TField;
     property FieldClass: TFieldClass read GetFieldClass;
     property FieldNo: Longint read FFieldNo;
-    property CharSize: Word read GetCharSize;
     property InternalCalcField: Boolean read FInternalCalcField write FInternalCalcField;
     property Required: Boolean read FRequired write SetRequired;
-    Property Codepage : TSystemCodePage Read FCodePage;
   Published
     property Attributes: TFieldAttributes read FAttributes write SetAttributes default [];
     property DataType: TFieldType read FDataType write SetDataType;
@@ -213,7 +208,6 @@ type
   public
     constructor Create(ADataSet: TDataSet);
 //    destructor Destroy; override;
-    Function Add(const AName: string; ADataType: TFieldType; ASize, APrecision: Integer; ARequired, AReadOnly: Boolean; AFieldNo : Integer; ACodePage:TSystemCodePage) : TFieldDef; overload;
     Function Add(const AName: string; ADataType: TFieldType; ASize: Word; ARequired: Boolean; AFieldNo : Integer) : TFieldDef; overload;
     procedure Add(const AName: string; ADataType: TFieldType; ASize: Word; ARequired: Boolean); overload;
     procedure Add(const AName: string; ADataType: TFieldType; ASize: Word); overload;
@@ -344,9 +338,6 @@ type
     function GetAsVariant: variant; virtual;
     function GetOldValue: variant; virtual;
     function GetAsString: string; virtual;
-    function GetAsAnsiString: AnsiString; virtual;
-    function GetAsUnicodeString: UnicodeString; virtual;
-    function GetAsUTF8String: UTF8String; virtual;
     function GetAsWideString: WideString; virtual;
     function GetCanModify: Boolean; virtual;
     function GetClassDesc: String; virtual;
@@ -373,9 +364,6 @@ type
     procedure SetAsLargeInt(AValue: Largeint); virtual;
     procedure SetAsVariant(const AValue: variant); virtual;
     procedure SetAsString(const AValue: string); virtual;
-    procedure SetAsAnsiString(const AValue: AnsiString); virtual;
-    procedure SetAsUnicodeString(const AValue: UnicodeString); virtual;
-    procedure SetAsUTF8String(const AValue: UTF8String); virtual;
     procedure SetAsWideString(const AValue: WideString); virtual;
     procedure SetDataset(AValue : TDataset); virtual;
     procedure SetDataType(AValue: TFieldType);
@@ -410,9 +398,6 @@ type
     property AsLargeInt: LargeInt read GetAsLargeInt write SetAsLargeInt;
     property AsInteger: Longint read GetAsInteger write SetAsInteger;
     property AsString: string read GetAsString write SetAsString;
-    property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
-    property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
-    property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
     property AsWideString: WideString read GetAsWideString write SetAsWideString;
     property AsVariant: variant read GetAsVariant write SetAsVariant;
     property AttributeSet: string read FAttributeSet write FAttributeSet;
@@ -429,6 +414,7 @@ type
     property FieldNo: Longint read FFieldNo;
     property IsIndexField: Boolean read FIsIndexField;
     property IsNull: Boolean read GetIsNull;
+    property Lookup: Boolean read GetLookup write SetLookup; deprecated;
     property NewValue: Variant read GetNewValue write SetNewValue;
     property Offset: word read FOffset;
     property Size: Integer read FSize write SetSize;
@@ -455,7 +441,6 @@ type
     property LookupDataSet: TDataSet read FLookupDataSet write FLookupDataSet;
     property LookupKeyFields: string read FLookupKeyFields write FLookupKeyFields;
     property LookupResultField: string read FLookupResultField write FLookupResultField;
-    property Lookup: Boolean read GetLookup write SetLookup stored false; deprecated;
     property Origin: string read FOrigin write FOrigin;
     property ProviderFlags : TProviderFlags read FProviderFlags write FProviderFlags;
     property ReadOnly: Boolean read FReadOnly write SetReadOnly;
@@ -471,7 +456,6 @@ type
 
   TStringField = class(TField)
   private
-    FCodePage      : TSystemCodePage;
     FFixedChar     : boolean;
     FTransliterate : Boolean;
   protected
@@ -481,28 +465,22 @@ type
     function GetAsFloat: Double; override;
     function GetAsInteger: Longint; override;
     function GetAsLargeInt: Largeint; override;
-    function GetAsString: String; override;
-    function GetAsAnsiString: AnsiString; override;
-    function GetAsUTF8String: UTF8String; override;
+    function GetAsString: string; override;
     function GetAsVariant: variant; override;
     function GetDataSize: Integer; override;
     function GetDefaultWidth: Longint; override;
     procedure GetText(var AText: string; ADisplayText: Boolean); override;
-    function GetValue(out AValue: RawByteString): Boolean;
+    function GetValue(var AValue: string): Boolean;
     procedure SetAsBoolean(AValue: Boolean); override;
     procedure SetAsDateTime(AValue: TDateTime); override;
     procedure SetAsFloat(AValue: Double); override;
     procedure SetAsInteger(AValue: Longint); override;
     procedure SetAsLargeInt(AValue: Largeint); override;
-    procedure SetAsString(const AValue: String); override;
-    procedure SetAsAnsiString(const AValue: AnsiString); override;
-    procedure SetAsUTF8String(const AValue: UTF8String); override;
+    procedure SetAsString(const AValue: string); override;
     procedure SetVarValue(const AValue: Variant); override;
-    procedure SetValue(AValue: RawByteString);
   public
     constructor Create(AOwner: TComponent); override;
     procedure SetFieldType(AValue: TFieldType); override;
-    property CodePage : TSystemCodePage read FCodePage;
     property FixedChar : Boolean read FFixedChar write FFixedChar;
     property Transliterate: Boolean read FTransliterate write FTransliterate;
     property Value: String read GetAsString write SetAsString;
@@ -517,7 +495,7 @@ type
   protected
     class procedure CheckTypeSize(AValue: Integer); override;
 
-    function GetValue(out AValue: UnicodeString): Boolean;
+    function GetValue(var AValue: WideString): Boolean;
 
     function GetAsString: string; override;
     procedure SetAsString(const AValue: string); override;
@@ -528,15 +506,9 @@ type
     function GetAsWideString: WideString; override;
     procedure SetAsWideString(const AValue: WideString); override;
 
-    function GetAsUnicodeString: UnicodeString; override;
-    procedure SetAsUnicodeString(const AValue: UnicodeString); override;
-
-    function GetAsUTF8String: UTF8String; override;
-    procedure SetAsUTF8String(const AValue: UTF8String); override;
-
     function GetDataSize: Integer; override;
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(aOwner: TComponent); override;
     procedure SetFieldType(AValue: TFieldType); override;
     property Value: WideString read GetAsWideString write SetAsWideString;
   end;
@@ -674,7 +646,7 @@ type
     function GetAsVariant: variant; override;
     function GetAsString: string; override;
     function GetDataSize: Integer; override;
-    procedure GetText(var AText: string; ADisplayText: Boolean); override;
+    procedure GetText(var theText: string; ADisplayText: Boolean); override;
     procedure SetAsBCD(const AValue: TBCD); override;
     procedure SetAsFloat(AValue: Double); override;
     procedure SetAsLargeInt(AValue: LargeInt); override;
@@ -740,7 +712,7 @@ type
     function GetAsString: string; override;
     function GetAsVariant: variant; override;
     function GetDataSize: Integer; override;
-    procedure GetText(var AText: string; ADisplayText: Boolean); override;
+    procedure GetText(var theText: string; ADisplayText: Boolean); override;
     procedure SetAsDateTime(AValue: TDateTime); override;
     procedure SetAsFloat(AValue: Double); override;
     procedure SetAsString(const AValue: string); override;
@@ -777,9 +749,11 @@ type
     function GetAsBytes: TBytes; override;
     function GetAsString: string; override;
     function GetAsVariant: Variant; override;
+    procedure GetText(var TheText: string; ADisplayText: Boolean); override;
     function GetValue(var AValue: TBytes): Boolean;
     procedure SetAsBytes(const AValue: TBytes); override;
     procedure SetAsString(const AValue: string); override;
+    procedure SetText(const AValue: string); override;
     procedure SetVarValue(const AValue: Variant); override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -824,7 +798,7 @@ type
     function GetAsVariant: variant; override;
     function GetDataSize: Integer; override;
     function GetDefaultWidth: Longint; override;
-    procedure GetText(var AText: string; ADisplayText: Boolean); override;
+    procedure GetText(var TheText: string; ADisplayText: Boolean); override;
     procedure SetAsBCD(const AValue: TBCD); override;
     procedure SetAsFloat(AValue: Double); override;
     procedure SetAsInteger(AValue: Longint); override;
@@ -866,7 +840,7 @@ type
     function GetAsVariant: variant; override;
     function GetDataSize: Integer; override;
     function GetDefaultWidth: Longint; override;
-    procedure GetText(var AText: string; ADisplayText: Boolean); override;
+    procedure GetText(var TheText: string; ADisplayText: Boolean); override;
     procedure SetAsBCD(const AValue: TBCD); override;
     procedure SetAsFloat(AValue: Double); override;
     procedure SetAsLargeInt(AValue: LargeInt); override;
@@ -907,17 +881,16 @@ type
     procedure FreeBuffers; override;
     function GetAsBytes: TBytes; override;
     function GetAsString: string; override;
-    function GetAsAnsiString: AnsiString; override;
-    function GetAsUnicodeString: UnicodeString; override;
     function GetAsVariant: Variant; override;
+    function GetAsWideString: WideString; override;
     function GetBlobSize: Longint; virtual;
     function GetIsNull: Boolean; override;
-    procedure GetText(var AText: string; ADisplayText: Boolean); override;
+    procedure GetText(var TheText: string; ADisplayText: Boolean); override;
     procedure SetAsBytes(const AValue: TBytes); override;
     procedure SetAsString(const AValue: string); override;
-    procedure SetAsAnsiString(const AValue: AnsiString); override;
-    procedure SetAsUnicodeString(const AValue: UnicodeString); override;
+    procedure SetText(const AValue: string); override;
     procedure SetVarValue(const AValue: Variant); override;
+    procedure SetAsWideString(const AValue: WideString); override;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Clear; override;
@@ -939,18 +912,11 @@ type
 { TMemoField }
 
   TMemoField = class(TBlobField)
-  private
-    FCodePage: TSystemCodePage;
   protected
-    function GetAsAnsiString: AnsiString; override;
-    procedure SetAsAnsiString(const AValue: AnsiString); override;
-    function GetAsUnicodeString: UnicodeString; override;
-    procedure SetAsUnicodeString(const AValue: UnicodeString); override;
-    function GetAsUTF8String: UTF8String; override;
-    procedure SetAsUTF8String(const AValue: UTF8String); override;
+    function GetAsWideString: WideString; override;
+    procedure SetAsWideString(const AValue: WideString); override;
   public
     constructor Create(AOwner: TComponent); override;
-    property CodePage : TSystemCodePage read FCodePage;
   published
     property Transliterate default True;
   end;
@@ -961,12 +927,9 @@ type
   protected
     function GetAsVariant: Variant; override;
     procedure SetVarValue(const AValue: Variant); override;
+
     function GetAsString: string; override;
     procedure SetAsString(const AValue: string); override;
-    function GetAsAnsiString: AnsiString; override;
-    procedure SetAsAnsiString(const AValue: AnsiString); override;
-    function GetAsUTF8String: UTF8String; override;
-    procedure SetAsUTF8String(const AValue: UTF8String); override;
   public
     constructor Create(aOwner: TComponent); override;
     property Value: WideString read GetAsWideString write SetAsWideString;
@@ -1069,7 +1032,7 @@ type
     Procedure SetItem(Index: Integer; Value: TIndexDef);
   public
     constructor Create(ADataSet: TDataSet); virtual; overload;
-    procedure Add(const Name, Fields: string; Options: TIndexOptions); overload;
+    procedure Add(const Name, Fields: string; Options: TIndexOptions);
     Function AddIndexDef: TIndexDef;
     function Find(const IndexName: string): TIndexDef;
     function FindIndexForFields(const Fields: string): TIndexDef;
@@ -1164,7 +1127,7 @@ type
 
 { TParam }
 
-  TBlobData = TBytes;
+  TBlobData = AnsiString;  // Delphi defines it as alias to TBytes
 
   TParamBinding = array of integer;
 
@@ -1200,10 +1163,6 @@ type
     Function GetAsLargeInt: LargeInt;
     Function GetAsMemo: string;
     Function GetAsString: string;
-    Function GetAsAnsiString: AnsiString;
-    Function GetAsUnicodeString: UnicodeString;
-    Function GetAsUTF8String: UTF8String;
-    Function GetAsWideString: WideString;
     Function GetAsVariant: Variant;
     Function GetAsFMTBCD: TBCD;
     Function GetDisplayName: string; override;
@@ -1222,16 +1181,14 @@ type
     Procedure SetAsMemo(const AValue: string);
     Procedure SetAsSmallInt(AValue: LongInt);
     Procedure SetAsString(const AValue: string);
-    Procedure SetAsAnsiString(const AValue: AnsiString);
-    Procedure SetAsUTF8String(const AValue: UTF8String);
-    Procedure SetAsUnicodeString(const AValue: UnicodeString);
-    Procedure SetAsWideString(const AValue: WideString);
     Procedure SetAsTime(const AValue: TDateTime);
     Procedure SetAsVariant(const AValue: Variant);
     Procedure SetAsWord(AValue: LongInt);
     Procedure SetAsFMTBCD(const AValue: TBCD);
     Procedure SetDataType(AValue: TFieldType);
     Procedure SetText(const AValue: string);
+    function GetAsWideString: WideString;
+    procedure SetAsWideString(const AValue: WideString);
   public
     constructor Create(ACollection: TCollection); overload; override;
     constructor Create(AParams: TParams; AParamType: TParamType); reintroduce; overload;
@@ -1239,7 +1196,7 @@ type
     Procedure AssignField(Field: TField);
     Procedure AssignToField(Field: TField);
     Procedure AssignFieldValue(Field: TField; const AValue: Variant);
-    Procedure AssignFromField(Field : TField);
+    procedure AssignFromField(Field : TField);
     Procedure Clear;
     Procedure GetData(Buffer: Pointer);
     Function  GetDataSize: Integer;
@@ -1248,7 +1205,7 @@ type
     Procedure SetBlobData(Buffer: Pointer; ASize: Integer);
     Procedure SetData(Buffer: Pointer);
     Property AsBCD : Currency read GetAsCurrency write SetAsBCD;
-    Property AsBlob : TBlobData read GetAsBytes write SetAsBlob;
+    Property AsBlob : TBlobData read GetAsString write SetAsBlob;
     Property AsBoolean : Boolean read GetAsBoolean write SetAsBoolean;
     Property AsBytes : TBytes read GetAsBytes write SetAsBytes;
     Property AsCurrency : Currency read GetAsCurrency write SetAsCurrency;
@@ -1260,9 +1217,6 @@ type
     Property AsMemo : string read GetAsMemo write SetAsMemo;
     Property AsSmallInt : LongInt read GetAsInteger write SetAsSmallInt;
     Property AsString : string read GetAsString write SetAsString;
-    Property AsAnsiString : AnsiString read GetAsAnsiString write SetAsAnsiString;
-    Property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
-    Property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
     Property AsTime : TDateTime read GetAsDateTime write SetAsTime;
     Property AsWord : LongInt read GetAsInteger write SetAsWord;
     Property AsFMTBCD: TBCD read GetAsFMTBCD write SetAsFMTBCD;
@@ -1491,8 +1445,6 @@ type
     Procedure DoInsertAppend(DoAppend : Boolean);
     Procedure DoInternalOpen;
     Function  GetBuffer (Index : longint) : TRecordBuffer;
-    function GetDatasourceCount: Integer;
-    function GetDatasources(aIndex : integer): TDatasource;
     Function  GetField (Index : Longint) : TField;
     Procedure RegisterDataSource(ADataSource : TDataSource);
     Procedure RemoveField (Field : TField);
@@ -1564,7 +1516,7 @@ type
     function  GetRecordCount: Longint; virtual;
     function  GetRecNo: Longint; virtual;
     procedure InitFieldDefs; virtual;
-    procedure InitFieldDefsFromFields;
+    procedure InitFieldDefsFromfields;
     procedure InitRecord(Buffer: TRecordBuffer); virtual;
     procedure InternalCancel; virtual;
     procedure InternalEdit; virtual;
@@ -1623,8 +1575,6 @@ type
     procedure SetUniDirectional(const Value: Boolean);
     class function FieldDefsClass : TFieldDefsClass; virtual;
     class function FieldsClass : TFieldsClass; virtual;
-    Property MyDataSources[aIndex : integer] : TDatasource Read GetDatasources;
-    Property MyDataSourceCount : Integer Read GetDatasourceCount;
   protected { abstract methods }
     function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean): TGetResult; virtual; abstract;
     procedure InternalClose; virtual; abstract;
@@ -1903,8 +1853,6 @@ type
     FOnDataChange: TDataChangeEvent;
     FOnUpdateData: TNotifyEvent;
     procedure DistributeEvent(Event: TDataEvent; Info: Ptrint);
-    function GetLink(AIndex : Integer): TDataLink;
-    function GetLinkCount: Integer;
     procedure RegisterDataLink(DataLink: TDataLink);
     Procedure ProcessEvent(Event : TDataEvent; Info : Ptrint);
     procedure SetDataSet(ADataSet: TDataSet);
@@ -1915,13 +1863,11 @@ type
     Procedure DoStateChange; virtual;
     Procedure DoUpdateData;
     property DataLinks: TList read FDataLinks;
-    Property DataLink[AIndex : Integer] : TDataLink Read GetLink;
-    Property DataLinkCount : Integer Read GetLinkCount;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Edit;
-    function IsLinkedTo(ADataset: TDataSet): Boolean;
+    function IsLinkedTo(ADataSet: TDataSet): Boolean;
     property State: TDataSetState read FState;
   published
     property AutoEdit: Boolean read FAutoEdit write FAutoEdit default True;
@@ -1956,7 +1902,7 @@ type
   Private
     FActive        : boolean;
     FDatabase      : TDatabase;
-    FDataSets      : TThreadList;
+    FDataSets      : TList;
     FOpenAfterRead : boolean;
     Function GetDataSetCount : Longint;
     Function GetDataset(Index : longint) : TDBDataset;
@@ -2047,8 +1993,8 @@ type
   private
     FConnected : Boolean;
     FDataBaseName : String;
-    FDataSets : TThreadList;
-    FTransactions : TThreadList;
+    FDataSets : TList;
+    FTransactions : TList;
     FDirectory : String;
     FKeepConnection : Boolean;
     FParams : TStrings;
@@ -2121,7 +2067,7 @@ const
       {ftCursor} varError,
       {ftFixedChar} varOleStr,
       {ftWideString} varOleStr,
-      {ftLargeint} varint64,
+      {ftLargeint} varError,
       {ftADT} varError,
       {ftArray} varError,
       {ftReference} varError,
@@ -2483,19 +2429,14 @@ end;
 Function TIndexDefs.AddIndexDef: TIndexDef;
 
 begin
-  Result := inherited add as TIndexDef;
+//  Result := inherited add as TIndexDef;
+  Result:=TIndexDef.Create(Self,'','',[]);
 end;
 
 procedure TIndexDefs.Add(const Name, Fields: string; Options: TIndexOptions);
 
-Var
-  D : TIndexDef;
-
 begin
-  D:=AddIndexDef;
-  D.Name:=Name;
-  D.Fields:=Fields;
-  D.Options:=Options;
+  TIndexDef.Create(Self,Name,Fields,Options);
 end;
 
 function TIndexDefs.Find(const IndexName: string): TIndexDef;

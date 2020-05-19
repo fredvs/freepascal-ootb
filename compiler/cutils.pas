@@ -42,11 +42,9 @@ interface
     {# Returns the minimal value between @var(a) and @var(b) }
     function min(a,b : longint) : longint;{$ifdef USEINLINE}inline;{$endif}
     function min(a,b : int64) : int64;{$ifdef USEINLINE}inline;{$endif}
-    function min(a,b : qword) : qword;{$ifdef USEINLINE}inline;{$endif}
     {# Returns the maximum value between @var(a) and @var(b) }
     function max(a,b : longint) : longint;{$ifdef USEINLINE}inline;{$endif}
     function max(a,b : int64) : int64;{$ifdef USEINLINE}inline;{$endif}
-    function max(a,b : qword) : qword;{$ifdef USEINLINE}inline;{$endif}
 
     { These functions are intenionally put here and not in the constexp unit.
       Since Tconstexprint may be automatically converted to int, which causes
@@ -60,8 +58,6 @@ interface
 
     {# Return value @var(i) aligned on @var(a) boundary }
     function align(i,a:longint):longint;{$ifdef USEINLINE}inline;{$endif}
-    function align(i,a:int64):int64;{$ifdef USEINLINE}inline;{$endif}
-    function align(i,a:qword):qword;{$ifdef USEINLINE}inline;{$endif}
     { if you have an address aligned using "oldalignment" and add an
       offset of (a multiple of) offset to it, this function calculates
       the new minimally guaranteed alignment
@@ -69,16 +65,12 @@ interface
     function newalignment(oldalignment: longint; offset: int64): longint;
     {# Return @var(b) with the bit order reversed }
     function reverse_byte(b: byte): byte;
-    {# Return @var(w) with the bit order reversed }
-    function reverse_word(w: word): word;
-    {# Return @var(l) with the bit order reversed }
-    function reverse_longword(l: longword): longword;
 
     function next_prime(l: longint): longint;
 
-    function used_align(varalign,minalign,maxalign:longint):longint;
+    function used_align(varalign,minalign,maxalign:shortint):shortint;
     function isbetteralignedthan(new, org, limit: cardinal): boolean;
-    function size_2_align(len : longint) : longint;
+    function size_2_align(len : longint) : shortint;
     function packedbitsloadsize(bitlen: int64) : int64;
     procedure Replace(var s:string;s1:string;const s2:string);
     procedure Replace(var s:AnsiString;s1:string;const s2:AnsiString);
@@ -111,11 +103,7 @@ interface
        exponent value is returned in power.
     }
     function ispowerof2(value : int64;out power : longint) : boolean;
-    function ispowerof2(const value : Tconstexprint;out power : longint) : boolean;
-    {# Returns true if abs(value) is a power of 2, the actual
-       exponent value is returned in power.
-    }
-    function isabspowerof2(const value : Tconstexprint;out power : longint) : boolean;
+    function ispowerof2(value : Tconstexprint;out power : longint) : boolean;
     function nextpowerof2(value : int64; out power: longint) : int64;
 {$ifdef VER2_6}  { only 2.7.1+ has a popcnt function in the system unit }
     function PopCnt(AValue : Byte): Byte;
@@ -229,18 +217,6 @@ implementation
       end;
 
 
-    function min(a,b : qword) : qword;
-    {
-      return the minimal of a and b
-    }
-      begin
-         if a<=b then
-           min:=a
-         else
-           min:=b;
-      end;
-
-
     function max(a,b : longint) : longint;{$ifdef USEINLINE}inline;{$endif}
     {
       return the maximum of a and b
@@ -254,18 +230,6 @@ implementation
 
 
     function max(a,b : int64) : int64;{$ifdef USEINLINE}inline;{$endif}
-    {
-      return the maximum of a and b
-    }
-      begin
-         if a>=b then
-           max:=a
-         else
-           max:=b;
-      end;
-
-
-    function max(a,b : qword) : qword;{$ifdef USEINLINE}inline;{$endif}
     {
       return the maximum of a and b
     }
@@ -309,32 +273,6 @@ implementation
         reverse_byte:=(reverse_nible[b and $f] shl 4) or reverse_nible[b shr 4];
       end;
 
-    function reverse_word(w: word): word;
-      type
-        TWordRec = packed record
-          hi, lo: Byte;
-        end;
-
-      begin
-        TWordRec(reverse_word).hi := reverse_byte(TWordRec(w).lo);
-        TWordRec(reverse_word).lo := reverse_byte(TWordRec(w).hi);
-      end;
-
-
-    function reverse_longword(l: longword): longword;
-      type
-        TLongWordRec = packed record
-          b: array[0..3] of Byte;
-        end;
-
-      begin
-        TLongWordRec(reverse_longword).b[0] := reverse_byte(TLongWordRec(l).b[3]);
-        TLongWordRec(reverse_longword).b[1] := reverse_byte(TLongWordRec(l).b[2]);
-        TLongWordRec(reverse_longword).b[2] := reverse_byte(TLongWordRec(l).b[1]);
-        TLongWordRec(reverse_longword).b[3] := reverse_byte(TLongWordRec(l).b[0]);
-      end;
-
-
     function align(i,a:longint):longint;{$ifdef USEINLINE}inline;{$endif}
     {
       return value <i> aligned <a> boundary
@@ -353,38 +291,7 @@ implementation
       end;
 
 
-    function align(i,a:int64):int64;{$ifdef USEINLINE}inline;{$endif}
-    {
-      return value <i> aligned <a> boundary
-    }
-      begin
-        { for 0 and 1 no aligning is needed }
-        if a<=1 then
-          result:=i
-        else
-          begin
-            if i<0 then
-              result:=((i-a+1) div a) * a
-            else
-              result:=((i+a-1) div a) * a;
-          end;
-      end;
-
-
-    function align(i,a:qword):qword;{$ifdef USEINLINE}inline;{$endif}
-    {
-      return value <i> aligned <a> boundary
-    }
-      begin
-        { for 0 and 1 no aligning is needed }
-        if a<=1 then
-          result:=i
-        else
-          result:=((i+a-1) div a) * a;
-      end;
-
-
-    function size_2_align(len : longint) : longint;
+    function size_2_align(len : longint) : shortint;
       begin
          if len>16 then
            size_2_align:=32
@@ -478,7 +385,7 @@ implementation
       end;
 
 
-    function used_align(varalign,minalign,maxalign:longint):longint;
+    function used_align(varalign,minalign,maxalign:shortint):shortint;
       begin
         { varalign  : minimum alignment required for the variable
           minalign  : Minimum alignment of this structure, 0 = undefined
@@ -663,7 +570,6 @@ implementation
       var
         i  : longint;
       begin
-        Result:='';
         setlength(upper,length(s));
         for i:=1 to length(s) do
           upper[i]:=uppertbl[s[i]];
@@ -699,7 +605,6 @@ implementation
       var
         i : longint;
       begin
-        Result:='';
         setlength(lower,length(s));
         for i:=1 to length(s) do
           lower[i]:=lowertbl[s[i]];
@@ -955,14 +860,14 @@ implementation
       return if value is a power of 2. And if correct return the power
     }
       begin
-        if (value <= 0) or (value and (value - 1) <> 0) then
+        if (value = 0) or (value and (value - 1) <> 0) then
           exit(false);
         power:=BsfQWord(value);
         result:=true;
       end;
 
 
-    function ispowerof2(const value: Tconstexprint; out power: longint): boolean;
+    function ispowerof2(value: Tconstexprint; out power: longint): boolean;
       begin
         if value.signed or
            (value.uvalue<=high(int64)) then
@@ -973,17 +878,6 @@ implementation
             result:=true;
             power:=63;
           end
-        else
-          result:=false;
-      end;
-
-
-    function isabspowerof2(const value : Tconstexprint;out power : longint) : boolean;
-      begin
-        if ispowerof2(value,power) then
-          result:=true
-        else if value.signed and (value.svalue<0) and (value.svalue<>low(int64)) and ispowerof2(-value.svalue,power) then
-          result:=true
         else
           result:=false;
       end;
@@ -1018,6 +912,8 @@ implementation
       PopCntData : array[0..15] of byte = (0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4);
 
     function PopCnt(AValue : Byte): Byte;
+      var
+        i : SizeInt;
       begin
         Result:=PopCntData[AValue and $f]+PopCntData[(AValue shr 4) and $f];
       end;
@@ -1105,7 +1001,6 @@ implementation
         t: string;
         ch: Char;
     begin
-      t:='';
       DePascalQuote:= false;
       len:= length(s);
       if (len >= 1) and (s[1] = '''') then
@@ -1289,7 +1184,7 @@ implementation
             exit(res);
           { if one of the two is at the end while the other isn't, add a '.0' }
           if (i1>length(s1)) and
-             (i2<=length(s2)) then
+             (i2<=length(s1)) then
             s1:=s1+'.0'
           else if i2>length(s2) then
             s2:=s2+'.0';

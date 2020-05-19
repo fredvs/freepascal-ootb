@@ -27,7 +27,6 @@ interface
 
     uses
       globtype,
-      symtype,
       cgbase,cpubase,nmem,ncgmem;
 
     type
@@ -37,7 +36,7 @@ interface
 
 
       tarmvecnode = class(tcgvecnode)
-        procedure update_reference_reg_mul(maybe_const_reg: tregister; regsize: tdef; l: aint);override;
+        procedure update_reference_reg_mul(maybe_const_reg: tregister; l: aint);override;
       end;
 
 implementation
@@ -71,7 +70,7 @@ implementation
                              TARMVECNODE
 *****************************************************************************}
 
-     procedure tarmvecnode.update_reference_reg_mul(maybe_const_reg: tregister; regsize: tdef; l: aint);
+     procedure tarmvecnode.update_reference_reg_mul(maybe_const_reg:tregister;l:aint);
        var
          hreg: tregister;
          hl : longint;
@@ -80,7 +79,7 @@ implementation
             (GenerateThumbCode) or
             { simple constant? }
             (l=1) or ispowerof2(l,hl) or ispowerof2(l+1,hl) or ispowerof2(l-1,hl) then
-           inherited update_reference_reg_mul(maybe_const_reg,regsize,l)
+           inherited update_reference_reg_mul(maybe_const_reg,l)
          else if (location.reference.base<>NR_NO) then
            begin
              hreg:=cg.getaddressregister(current_asmdata.CurrAsmList);

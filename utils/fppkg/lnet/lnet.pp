@@ -157,7 +157,7 @@ type
     property SocketState: TLSocketStates read FSocketState;
     property Creator: TLComponent read FCreator;
     property Session: TLSession read FSession;
-    Property MsgBufferSize: Integer Read FMsgBufferSize Write FMsgBufferSize;
+    Property MsgBufferSize : Integer Read FMsgBufferSize Write FMsgBufferSize;
   end;
   TLSocketClass = class of TLSocket;
   
@@ -350,7 +350,6 @@ type
     FSocketNet: Integer;
     FCount: Integer;
     FReuseAddress: Boolean;
-    FMsgBufferSize: integer;
     function InitSocket(aSocket: TLSocket): TLSocket; override;
 
     function GetConnected: Boolean; override;
@@ -394,7 +393,6 @@ type
     property OnConnect: TLSocketEvent read FOnConnect write FOnConnect;
     property ReuseAddress: Boolean read FReuseAddress write SetReuseAddress;
     property SocketNet: Integer read FSocketNet write SetSocketNet;
-    property MsgBufferSize: integer read FMsgBufferSize write FMsgBufferSize;
   end;
 
   { TLSession }
@@ -650,16 +648,13 @@ begin
     Result := DoGet(aData, aSize);
 
     if Result = 0 then
-    begin
-      FConnectionStatus := scNone;
       if FSocketType = SOCK_STREAM then
         Disconnect(True)
       else begin
         Bail('Receive Error [0 on recvfrom with UDP]', 0);
         Exit(0);
       end;
-    end;
-
+      
     Result := HandleResult(Result, soReceive);
   end;
 end;
@@ -806,10 +801,7 @@ end;
 
 function TLSocket.GetPeerPort: Word;
 begin
-  if FSocketType = SOCK_STREAM then
-    Result := ntohs(FAddress.IPv4.sin_port)
-  else
-    Result := ntohs(FPeerAddress.IPv4.sin_port);
+  Result := ntohs(FPeerAddress.IPv4.sin_port);
 end;
 
 function TLSocket.Listen(const APort: Word; const AIntf: string = LADDR_ANY): Boolean;
@@ -1353,7 +1345,6 @@ begin
   
   FRootSock := InitSocket(SocketClass.Create);
   FRootSock.SetReuseAddress(FReuseAddress);
-  FRootSock.MsgBufferSize:= MsgBufferSize;
   if FRootSock.Listen(APort, AIntf) then begin
     FRootSock.SetState(ssServerSocket);
     FRootSock.FConnectionStatus := scConnected;
@@ -1427,8 +1418,6 @@ end;
 
 procedure TLTcp.Disconnect(const Forced: Boolean = True);
 begin
-  if Assigned(FOnDisconnect) then
-    FOnDisconnect(FRootSock);
   FreeSocks(Forced);
   FRootSock := nil;
   FCount := 0;

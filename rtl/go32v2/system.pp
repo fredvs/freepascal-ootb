@@ -32,7 +32,6 @@ interface
 { include system-independent routine headers }
 
 {$I systemh.inc}
-{$I portsh.inc}
 
 
 const
@@ -158,7 +157,6 @@ implementation
 { include system independent routines }
 
 {$I system.inc}
-{$I ports.inc}
 
 
 var

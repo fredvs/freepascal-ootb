@@ -44,9 +44,6 @@ interface
       { comphook pulls in sysutils anyways }
       cutils,cclasses,cfileutl,
       cpuinfo,
-{$if defined(LLVM) and not defined(GENERIC_CPU)}
-      llvminfo,
-{$endif LLVM and not GENERIC_CPU}
       globtype,version,systems;
 
     const
@@ -54,8 +51,7 @@ interface
          [m_delphi,m_class,m_objpas,m_result,m_string_pchar,
           m_pointer_2_procedure,m_autoderef,m_tp_procvar,m_initfinal,m_default_ansistring,
           m_out,m_default_para,m_duplicate_names,m_hintdirective,
-          m_property,m_default_inline,m_except,m_advanced_records,
-          m_array_operators];
+          m_property,m_default_inline,m_except,m_advanced_records,m_type_helpers];
        delphiunicodemodeswitches = delphimodeswitches + [m_systemcodepage,m_default_unicodestring];
        fpcmodeswitches =
          [m_fpc,m_string_pchar,m_nested_comment,m_repeat_forward,
@@ -74,13 +70,7 @@ interface
        macmodeswitches =
          [m_mac,m_cvar_support,m_mac_procvar,m_nested_procvars,m_non_local_goto,m_isolike_unary_minus,m_default_inline];
        isomodeswitches =
-         [m_iso,m_tp_procvar,m_duplicate_names,m_nested_procvars,m_non_local_goto,m_isolike_unary_minus,m_isolike_io,
-          m_isolike_program_para,
-          m_isolike_mod];
-       extpasmodeswitches =
-         [m_extpas,m_tp_procvar,m_duplicate_names,m_nested_procvars,m_non_local_goto,m_isolike_unary_minus,m_isolike_io,
-          m_isolike_program_para,
-          m_isolike_mod];
+         [m_iso,m_tp_procvar,m_duplicate_names,m_nested_procvars,m_non_local_goto,m_isolike_unary_minus];
 
        { maximum nesting of routines }
        maxnesting = 32;
@@ -152,8 +142,7 @@ interface
          maxfpuregisters : shortint;
 
          cputype,
-         optimizecputype,
-         asmcputype      : tcputype;
+         optimizecputype : tcputype;
          fputype         : tfputype;
          asmmode         : tasmmode;
          interfacetype   : tinterfacetypes;
@@ -171,10 +160,6 @@ interface
 {$if defined(ARM)}
          instructionset : tinstructionset;
 {$endif defined(ARM)}
-
-{$if defined(LLVM) and not defined(GENERIC_CPU)}
-         llvmversion: tllvmversion;
-{$endif defined(LLVM) and not defined(GENERIC_CPU)}
 
         { CPU targets with microcontroller support can add a controller specific unit }
          controllertype   : tcontrollertype;
@@ -214,15 +199,6 @@ interface
         property items[I:longint]:TLinkRec read getlinkrec; default;
       end;
 
-      tpendingstateflag = (
-        psf_alignment_changed,
-        psf_verbosity_full_switched,
-        psf_local_switches_changed,
-        psf_packenum_changed,
-        psf_packrecords_changed,
-        psf_setalloc_changed
-      );
-      tpendingstateflags = set of tpendingstateflag;
 
       tpendingstate = record
         nextverbositystr : shortstring;
@@ -230,11 +206,8 @@ interface
         nextverbosityfullswitch: longint;
         nextcallingstr : shortstring;
         nextmessagerecord : pmessagestaterecord;
-        nextalignment : talignmentinfo;
-        nextpackenum : shortint;
-        nextpackrecords : shortint;
-        nextsetalloc : shortint;
-        flags : tpendingstateflags;
+        verbosityfullswitched,
+        localswitcheschanged : boolean;
       end;
 
 
@@ -257,6 +230,9 @@ interface
        asmextraopt       : string;
 
        { things specified with parameters }
+       paratarget        : tsystem;
+       paratargetdbg     : tdbg;
+       paratargetasm     : tasm;
        paralinkoptions   : TCmdStr;
        paradynamiclinker : string;
        paraprintnodetree : byte;
@@ -290,21 +266,15 @@ interface
        objectsearchpath,
        includesearchpath,
        frameworksearchpath  : TSearchPathList;
-       packagesearchpath     : TSearchPathList;
-       { list of default namespaces }
-       namespacelist : TCmdStrList;
-       { contains tpackageentry entries }
-       packagelist : TFPHashList;
        autoloadunits      : string;
 
        { linking }
+       usegnubinutils : boolean;
+       forceforwardslash : boolean;
        usewindowapi  : boolean;
        description   : string;
        SetPEFlagsSetExplicity,
        SetPEOptFlagsSetExplicity,
-       SetPEOSVersionSetExplicitely,
-       SetPESubSysVersionSetExplicitely,
-       SetPEUserVersionSetExplicitely,
        ImageBaseSetExplicity,
        MinStackSizeSetExplicity,
        MaxStackSizeSetExplicity,
@@ -314,12 +284,6 @@ interface
        dllminor,
        dllrevision   : word;  { revision only for netware }
        { win pe  }
-       peosversionminor,
-       peosversionmajor,
-       pesubsysversionminor,
-       pesubsysversionmajor,
-       peuserversionminor,
-       peuserversionmajor : word;
        peoptflags,
        peflags : longint;
        minstacksize,
@@ -333,6 +297,7 @@ interface
        MacOSXVersionMin,
        iPhoneOSVersionMin: string[15];
        RelocSectionSetExplicitly : boolean;
+       LinkTypeSetExplicitly : boolean;
 
        current_tokenpos,                  { position of the last token }
        current_filepos : tfileposinfo;    { current position }
@@ -342,7 +307,6 @@ interface
        nwcopyright  : string;
 
        codegenerror : boolean;           { true if there is an error reported }
-       exception_raised : boolean;           { true if there is an exception reported }
 
        block_type : tblock_type;         { type of currently parsed block }
 
@@ -359,7 +323,9 @@ interface
      { Memory sizes }
        heapsize,
        maxheapsize,
-       stacksize   : longint;
+       stacksize,
+       jmp_buf_size,
+       jmp_buf_align : longint;
 
 {$Ifdef EXTDEBUG}
      { parameter switches }
@@ -379,6 +345,13 @@ interface
        prop_auto_setter_prefix : string;
 
     const
+       DLLsource : boolean = false;
+
+       { used to set all registers used for each global function
+         this should dramatically decrease the number of
+         recompilations needed PM }
+       simplify_ppu : boolean = true;
+
        Inside_asm_statement : boolean = false;
 
        global_unit_count : word = 0;
@@ -392,11 +365,15 @@ interface
        palmos_applicationid : string[4] = 'FPCA';
 {$endif defined(m68k) or defined(arm)}
 
+{$ifdef powerpc}
+       { default calling convention used on MorphOS }
+       syscall_convention : string = 'LEGACY';
+{$endif powerpc}
+
        { default name of the C-style "main" procedure of the library/program }
        { (this will be prefixed with the target_info.cprefix)                }
        defaultmainaliasname = 'main';
        mainaliasname : string = defaultmainaliasname;
-
 
     const
       default_settings : TSettings = (
@@ -417,16 +394,12 @@ interface
         globalswitches : [cs_check_unit_name,cs_link_static];
         targetswitches : [];
         moduleswitches : [cs_extsyntax,cs_implicit_exceptions];
-        localswitches : [cs_check_io,cs_typed_const_writable,cs_pointermath,cs_imported_data{$ifdef i8086},cs_force_far_calls{$endif}];
+        localswitches : [cs_check_io,cs_typed_const_writable,cs_pointermath{$ifdef i8086},cs_force_far_calls{$endif}];
         modeswitches : fpcmodeswitches;
         optimizerswitches : [];
         genwpoptimizerswitches : [];
         dowpoptimizerswitches : [];
-{$ifdef i8086}
-        debugswitches : [ds_dwarf_sets,ds_dwarf_omf_linnum];
-{$else i8086}
-        debugswitches : [ds_dwarf_sets];
-{$endif i8086}
+        debugswitches : [];
 
         setalloc : 0;
         packenum : 4;
@@ -444,89 +417,71 @@ interface
 {$ifdef GENERIC_CPU}
         cputype : cpu_none;
         optimizecputype : cpu_none;
-        asmcputype : cpu_none;
         fputype : fpu_none;
 {$else not GENERIC_CPU}
   {$ifdef i386}
         cputype : cpu_Pentium;
         optimizecputype : cpu_Pentium3;
-        asmcputype : cpu_none;
         fputype : fpu_x87;
   {$endif i386}
   {$ifdef m68k}
         cputype : cpu_MC68020;
         optimizecputype : cpu_MC68020;
-        asmcputype : cpu_none;
         fputype : fpu_soft;
   {$endif m68k}
   {$ifdef powerpc}
         cputype : cpu_PPC604;
         optimizecputype : cpu_ppc7400;
-        asmcputype : cpu_none;
         fputype : fpu_standard;
   {$endif powerpc}
   {$ifdef POWERPC64}
         cputype : cpu_PPC970;
         optimizecputype : cpu_ppc970;
-        asmcputype : cpu_none;
         fputype : fpu_standard;
   {$endif POWERPC64}
   {$ifdef sparc}
         cputype : cpu_SPARC_V9;
         optimizecputype : cpu_SPARC_V9;
-        asmcputype : cpu_none;
         fputype : fpu_hard;
   {$endif sparc}
-  {$ifdef sparc64}
-        cputype : cpu_SPARC_V9;
-        optimizecputype : cpu_SPARC_V9;
-        asmcputype : cpu_none;
-        fputype : fpu_hard;
-  {$endif sparc64}
   {$ifdef arm}
-        cputype : cpu_armv4;
-        optimizecputype : cpu_armv4;
-        asmcputype : cpu_none;
+        cputype : cpu_armv3;
+        optimizecputype : cpu_armv3;
         fputype : fpu_fpa;
   {$endif arm}
   {$ifdef x86_64}
         cputype : cpu_athlon64;
         optimizecputype : cpu_athlon64;
-        asmcputype : cpu_none;
         fputype : fpu_sse64;
   {$endif x86_64}
+  {$ifdef ia64}
+        cputype : cpu_itanium;
+        optimizecputype : cpu_itanium;
+        fputype : fpu_itanium;
+  {$endif ia64}
   {$ifdef avr}
         cputype : cpuinfo.cpu_avr5;
         optimizecputype : cpuinfo.cpu_avr5;
-        asmcputype : cpu_none;
         fputype : fpu_none;
   {$endif avr}
   {$ifdef mips}
         cputype : cpu_mips2;
         optimizecputype : cpu_mips2;
-        asmcputype : cpu_none;
         fputype : fpu_mips2;
   {$endif mips}
   {$ifdef jvm}
         cputype : cpu_none;
         optimizecputype : cpu_none;
-        asmcputype : cpu_none;
         fputype : fpu_standard;
   {$endif jvm}
   {$ifdef aarch64}
         cputype : cpu_armv8;
         optimizecputype : cpu_armv8;
-        asmcputype : cpu_none;
         fputype : fpu_vfp;
   {$endif aarch64}
   {$ifdef i8086}
         cputype : cpu_8086;
         optimizecputype : cpu_8086;
-        { Use cpu_none by default,
-        because using cpu_8086 by default means
-        that we reject any instruction above bare 8086 instruction set
-        for all assembler code PM }
-        asmcputype : cpu_none;
         fputype : fpu_x87;
   {$endif i8086}
 {$endif not GENERIC_CPU}
@@ -547,21 +502,16 @@ interface
 {$if defined(ARM)}
         instructionset : is_arm;
 {$endif defined(ARM)}
-{$if defined(LLVM) and not defined(GENERIC_CPU)}
-        llvmversion    : llvmver_3_9_0;
-{$endif defined(LLVM) and not defined(GENERIC_CPU)}
         controllertype : ct_none;
         pmessage : nil;
       );
 
     var
       starttime  : real;
-      startsystime : TSystemTime;
 
     function getdatestr:string;
     function gettimestr:string;
     function filetimestring( t : longint) : string;
-    function getrealtime(const st: TSystemTime) : real;
     function getrealtime : real;
 
     procedure DefaultReplacements(var s:ansistring);
@@ -575,7 +525,6 @@ interface
 
     procedure InitGlobals;
     procedure DoneGlobals;
-    procedure register_initdone_proc(init,done:tprocedure);
 
     function  string2guid(const s: string; var GUID: TGUID): boolean;
     function  guid2string(const GUID: TGUID): string;
@@ -586,7 +535,7 @@ interface
     function Setcputype(const s:string;var a:tsettings):boolean;
     function SetFpuType(const s:string;var a:tfputype):boolean;
     function SetControllerType(const s:string;var a:tcontrollertype):boolean;
-    function HandleFeature(const s : string) : boolean;
+    function IncludeFeature(const s : string) : boolean;
     function SetMinFPConstPrec(const s: string; var a: tfloattype) : boolean;
 
     {# Routine to get the required alignment for size of data, which will
@@ -601,7 +550,6 @@ interface
     function is_double_hilo_swapped: boolean;{$ifdef USEINLINE}inline;{$endif}
 {$endif ARM}
     function floating_point_range_check_error : boolean;
-    function use_dotted_functions: boolean;
 
   { hide Sysutils.ExecuteProcess in units using this one after SysUtils}
   const
@@ -610,13 +558,14 @@ interface
 
 implementation
 
-{$if defined(macos)}
     uses
-      macutils;
-{$elseif defined(mswindows)}
-    uses
-      windirs;
+{$ifdef macos}
+      macutils,
 {$endif}
+{$ifdef mswindows}
+      windirs,
+{$endif}
+      comphook;
 
 {****************************************************************************
                                  TLinkStrMap
@@ -804,10 +753,10 @@ implementation
      get the current time in a string HH:MM:SS
    }
       var
-        st: TSystemTime;
+        hour,min,sec,hsec : word;
       begin
-        GetLocalTime(st);
-        gettimestr:=L0(st.Hour)+':'+L0(st.Minute)+':'+L0(st.Second);
+        DecodeTime(Time,hour,min,sec,hsec);
+        gettimestr:=L0(Hour)+':'+L0(min)+':'+L0(sec);
       end;
 
 
@@ -816,10 +765,10 @@ implementation
      get the current date in a string YY/MM/DD
    }
       var
-        st: TSystemTime;
+        Year,Month,Day: Word;
       begin
-        GetLocalTime(st);
-        getdatestr:=L0(st.Year)+'/'+L0(st.Month)+'/'+L0(st.Day);
+        DecodeDate(Date,year,month,day);
+        getdatestr:=L0(Year)+'/'+L0(Month)+'/'+L0(Day);
       end;
 
 
@@ -844,17 +793,13 @@ implementation
        Result := L0(Year)+'/'+L0(Month)+'/'+L0(Day)+' '+L0(Hour)+':'+L0(min)+':'+L0(sec);
      end;
 
-   function getrealtime(const st: TSystemTime) : real;
-     begin
-       result := st.Hour*3600.0 + st.Minute*60.0 + st.Second + st.MilliSecond/1000.0;
-     end;
 
    function getrealtime : real;
      var
-       st:TSystemTime;
+       h,m,s,s1000 : word;
      begin
-       GetLocalTime(st);
-       result:=getrealtime(st);
+       DecodeTime(Time,h,m,s,s1000);
+       result:=h*3600.0+m*60.0+s+s1000/1000.0;
      end;
 
 {****************************************************************************
@@ -873,30 +818,6 @@ implementation
          end;
 
 {$endif mswindows}
-{$ifdef openbsd}
-       function GetOpenBSDLocalBase: ansistring;
-         var
-           envvalue: pchar;
-         begin
-           envvalue := GetEnvPChar('LOCALBASE');
-           if assigned(envvalue) then
-             Result:=envvalue
-           else
-             Result:='/usr/local';
-           FreeEnvPChar(envvalue);
-         end;
-       function GetOpenBSDX11Base: ansistring;
-         var
-           envvalue: pchar;
-         begin
-           envvalue := GetEnvPChar('X11BASE');
-           if assigned(envvalue) then
-             Result:=envvalue
-           else
-             Result:='/usr/X11R6';
-           FreeEnvPChar(envvalue);
-         end;
-{$endif openbsd}
        var
          envstr: string;
          envvalue: pchar;
@@ -930,10 +851,6 @@ implementation
          ReplaceSpecialFolder('$PROGRAM_FILES_COMMON',CSIDL_PROGRAM_FILES_COMMON);
          ReplaceSpecialFolder('$PROFILE',CSIDL_PROFILE);
 {$endif mswindows}
-{$ifdef openbsd}
-         Replace(s,'$OPENBSD_LOCALBASE',GetOpenBSDLocalBase);
-         Replace(s,'$OPENBSD_X11BASE',GetOpenBSDX11Base);
-{$endif openbsd}
          { Replace environment variables between dollar signs }
          i := pos('$',s);
          while i>0 do
@@ -1146,7 +1063,7 @@ implementation
 
     function SetAktProcCall(const s:string; var a:tproccalloption):boolean;
       const
-        DefProcCallName : array[tproccalloption] of string[16] = ('',
+        DefProcCallName : array[tproccalloption] of string[12] = ('',
          'CDECL',
          'CPPDECL',
          'FAR16',
@@ -1159,13 +1076,7 @@ implementation
          'STDCALL',
          'SOFTFLOAT',
          'MWPASCAL',
-         'INTERRUPT',
-         'HARDFLOAT',
-         'SYSV_ABI_DEFAULT',
-         'SYSV_ABI_CDECL',
-         'MS_ABI_DEFAULT',
-         'MS_ABI_CDECL',
-         'VECTORCALL'
+         'INTERRUPT'
         );
       var
         t  : tproccalloption;
@@ -1300,7 +1211,7 @@ implementation
       end;
 
 
-    function HandleFeature(const s : string) : boolean;
+    function IncludeFeature(const s : string) : boolean;
       var
         i : tfeature;
       begin
@@ -1311,14 +1222,6 @@ implementation
               include(features,i);
               exit;
             end;
-        { Also support -Sfnoheap to exclude heap }
-        if Copy(S,1,2)='NO' then
-          for i:=low(tfeature) to high(tfeature) do
-            if s='NO'+featurestr[i] then
-              begin
-                exclude(features,i);
-                exit;
-              end;
         result:=false;
       end;
 
@@ -1393,14 +1296,6 @@ implementation
         result:=cs_ieee_errors in current_settings.localswitches;
       end;
 
-
-    function use_dotted_functions: boolean;
-      begin
-        result:=
-          (target_info.system in systems_dotted_function_names) and
-          (target_info.abi<>abi_powerpc_elfv2);
-      end;
-
 {****************************************************************************
                                     Init
 ****************************************************************************}
@@ -1434,7 +1329,7 @@ implementation
        if localexepath='' then
         begin
           hs1 := ExtractFileName(exeName);
-	  hs1 := ChangeFileExt(hs1,source_info.exeext);
+          ChangeFileExt(hs1,source_info.exeext);
 {$ifdef macos}
           FindFile(hs1,GetEnvironmentVariable('Commands'),false,localExepath);
 {$else macos}
@@ -1448,88 +1343,8 @@ implementation
 
 
 
-   type
-     tinitdoneentry=record
-       init:tprocedure;
-       done:tprocedure;
-     end;
-     pinitdoneentry=^tinitdoneentry;
-
-
-   const
-     initdoneprocs : TFPList = nil;
-
-
-   procedure allocinitdoneprocs;
-     begin
-       { Avoid double initialization }
-       if assigned(initdoneprocs) then
-         exit;
-       initdoneprocs:=tfplist.create;
-     end;
-
-
-   procedure register_initdone_proc(init,done:tprocedure);
-     var
-       entry : pinitdoneentry;
-     begin
-       new(entry);
-       entry^.init:=init;
-       entry^.done:=done;
-       { Do not rely on the fact that
-         globals unit initialization code
-         has already been executed.
-         Unit initialization order is too
-         uncertian for that. PM }
-       if not assigned(initdoneprocs) then
-         allocinitdoneprocs;
-       initdoneprocs.add(entry);
-     end;
-
-
-   procedure callinitprocs;
-     var
-       i : longint;
-     begin
-       if not assigned(initdoneprocs) then
-         exit;
-       for i:=0 to initdoneprocs.count-1 do
-         with pinitdoneentry(initdoneprocs[i])^ do
-           if assigned(init) then
-             init();
-     end;
-
-
-   procedure calldoneprocs;
-     var
-       i : longint;
-     begin
-       if not assigned(initdoneprocs) then
-         exit;
-       for i:=0 to initdoneprocs.count-1 do
-         with pinitdoneentry(initdoneprocs[i])^ do
-           if assigned(done) then
-             done();
-     end;
-
-
-   procedure freeinitdoneprocs;
-     var
-       i : longint;
-     begin
-       if not assigned(initdoneprocs) then
-         exit;
-       for i:=0 to initdoneprocs.count-1 do
-         dispose(pinitdoneentry(initdoneprocs[i]));
-       initdoneprocs.free;
-       { Reset variable, to be on the safe side }
-       initdoneprocs:=nil;
-     end;
-
-
    procedure DoneGlobals;
      begin
-       calldoneprocs;
        librarysearchpath.Free;
        unitsearchpath.Free;
        objectsearchpath.Free;
@@ -1537,8 +1352,6 @@ implementation
        frameworksearchpath.Free;
        LinkLibraryAliases.Free;
        LinkLibraryOrder.Free;
-       packagesearchpath.Free;
-       namespacelist.Free;
      end;
 
    procedure InitGlobals;
@@ -1551,6 +1364,10 @@ implementation
         do_make:=true;
         compile_level:=0;
         codegenerror:=false;
+        DLLsource:=false;
+        paratarget:=system_none;
+        paratargetasm:=as_none;
+        paratargetdbg:=dbg_none;
 
         { Output }
         OutputFileName:='';
@@ -1574,8 +1391,6 @@ implementation
         includesearchpath:=TSearchPathList.Create;
         objectsearchpath:=TSearchPathList.Create;
         frameworksearchpath:=TSearchPathList.Create;
-        packagesearchpath:=TSearchPathList.Create;
-        namespacelist:=TCmdStrList.Create;
 
         { Def file }
         usewindowapi:=false;
@@ -1583,9 +1398,6 @@ implementation
         DescriptionSetExplicity:=false;
         SetPEFlagsSetExplicity:=false;
         SetPEOptFlagsSetExplicity:=false;
-        SetPEOSVersionSetExplicitely:=false;
-        SetPESubSysVersionSetExplicitely:=false;
-        SetPEUserVersionSetExplicitely:=false;
         ImageBaseSetExplicity:=false;
         MinStackSizeSetExplicity:=false;
         MaxStackSizeSetExplicity:=false;
@@ -1602,12 +1414,18 @@ implementation
         GenerateImportSection:=false;
         RelocSection:=false;
         RelocSectionSetExplicitly:=false;
+        LinkTypeSetExplicitly:=false;
         MacOSXVersionMin:='';
         iPhoneOSVersionMin:='';
         { memory sizes, will be overridden by parameter or default for target
           in options or init_parser }
         stacksize:=0;
         { not initialized yet }
+{$ifndef jvm}
+        jmp_buf_size:=-1;
+{$else}
+        jmp_buf_size:=0;
+{$endif}
         apptype:=app_cui;
 
         { Init values }
@@ -1620,12 +1438,6 @@ implementation
 
         { enable all features by default }
         features:=[low(Tfeature)..high(Tfeature)];
-
-        callinitprocs;
      end;
 
-initialization
-  allocinitdoneprocs;
-finalization
-  freeinitdoneprocs;
 end.

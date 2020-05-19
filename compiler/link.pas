@@ -33,8 +33,7 @@ interface
       fmodule,
       globtype,
       ldscript,
-      ogbase,
-      owbase;
+      ogbase;
 
     Type
       TLinkerInfo=record
@@ -94,7 +93,6 @@ interface
       private
          FCExeOutput : TExeOutputClass;
          FCObjInput  : TObjInputClass;
-         FCArObjectReader : TObjectReaderClass;
          { Libraries }
          FStaticLibraryList : TFPObjectList;
          FImportLibraryList : TFPHashObjectList;
@@ -117,7 +115,6 @@ interface
          linkscript : TCmdStrList;
          ScriptCount : longint;
          IsHandled : PBooleanArray;
-         property CArObjectReader:TObjectReaderClass read FCArObjectReader write FCArObjectReader;
          property CObjInput:TObjInputClass read FCObjInput write FCObjInput;
          property CExeOutput:TExeOutputClass read FCExeOutput write FCExeOutput;
          property StaticLibraryList:TFPObjectList read FStaticLibraryList;
@@ -125,9 +122,6 @@ interface
          procedure DefaultLinkScript;virtual;abstract;
          procedure ScriptAddGenericSections(secnames:string);
          procedure ScriptAddSourceStatements(AddSharedAsStatic:boolean);virtual;
-         function GetCodeSize(aExeOutput: TExeOutput): QWord;virtual;
-         function GetDataSize(aExeOutput: TExeOutput): QWord;virtual;
-         function GetBssSize(aExeOutput: TExeOutput): QWord;virtual;
       public
          IsSharedLibrary : boolean;
          UseStabs : boolean;
@@ -160,9 +154,9 @@ Implementation
 {$ifdef hasUnix}
       baseunix,
 {$endif hasUnix}
-      cscript,globals,verbose,comphook,ppu,fpccrc,
-      aasmbase,aasmcpu,
-      ogmap;
+      script,globals,verbose,comphook,ppu,fpccrc,
+      aasmbase,aasmtai,aasmdata,aasmcpu,
+      owbase,owar,ogmap;
 
     var
       CLinker : array[tlink] of TLinkerClass;
@@ -180,13 +174,13 @@ Implementation
       begin
         result:=0;
         bufsize:=64*1024;
-        fs:=CFileStreamClass.Create(fn,fmOpenRead or fmShareDenyNone);
-        if CStreamError<>0 then
-          begin
-            fs.Free;
-            Comment(V_Error,'Can''t open file: '+fn);
-            exit;
-          end;
+	      fs:=CFileStreamClass.Create(fn,fmOpenRead or fmShareDenyNone);
+	      if CStreamError<>0 then
+	        begin
+	          fs.Free;
+	          Comment(V_Error,'Can''t open file: '+fn);
+	          exit;
+	        end;
         getmem(buf,bufsize);
         repeat
           bufcount:=fs.Read(buf^,bufsize);
@@ -483,15 +477,17 @@ Implementation
       end;
 
 
-   Procedure TLinker.AddSharedLibrary(S:TCmdStr);
+    Procedure TLinker.AddSharedLibrary(S:TCmdStr);
       begin
         if s='' then
           exit;
-           { remove prefix 'lib' only if no extension }
-        if (Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix)
-        and (system.pos(target_info.sharedlibext,s) = 0) then
-         Delete(s,1,length(target_info.sharedlibprefix));
-            
+        { remove prefix 'lib' }
+        if Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix then
+          Delete(s,1,length(target_info.sharedlibprefix));
+        { remove extension if any }
+        if Copy(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext))=target_info.sharedlibext then
+          Delete(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext)+1);
+        { ready to be added }
         SharedLibFiles.Concat(S);
       end;
 
@@ -509,18 +505,21 @@ Implementation
         StaticLibFiles.Concat(ns);
       end;
 
-     Procedure TLinker.AddSharedCLibrary(S:TCmdStr);
+
+    Procedure TLinker.AddSharedCLibrary(S:TCmdStr);
       begin
         if s='' then
           exit;
-      { remove prefix 'lib' only if no extension}
-      if (Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix)
-        and (system.pos(target_info.sharedclibext,s) = 0) then
-         Delete(s,1,length(target_info.sharedclibprefix));   
-    
-       SharedLibFiles.Concat(S);
-     
+        { remove prefix 'lib' }
+        if Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix then
+          Delete(s,1,length(target_info.sharedclibprefix));
+        { remove extension if any }
+        if Copy(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext))=target_info.sharedclibext then
+          Delete(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext)+1);
+        { ready to be added }
+        SharedLibFiles.Concat(S);
       end;
+
 
     Procedure TLinker.AddFramework(S:TCmdStr);
       begin
@@ -621,8 +620,8 @@ Implementation
         FillChar(Info,sizeof(Info),0);
         if cs_link_on_target in current_settings.globalswitches then
           begin
-            Info.ResName:=ChangeFileExt(inputfilename,'_link.res');
-            Info.ScriptName:=ChangeFileExt(inputfilename,'_script.res');
+            Info.ResName:=outputexedir+ChangeFileExt(inputfilename,'_link.res');
+            Info.ScriptName:=outputexedir+ChangeFileExt(inputfilename,'_script.res');
           end
         else
           begin
@@ -662,20 +661,10 @@ Implementation
         if cs_link_on_target in current_settings.globalswitches then
           begin
             { If linking on target, don't add any path PM }
-            { change extension only on platforms that use an exe extension, otherwise on OpenBSD 'ld.bfd' gets
-              converted to 'ld' }
-            if target_info.exeext<>'' then
-              FindUtil:=ChangeFileExt(s,target_info.exeext)
-            else
-              FindUtil:=s;
+            FindUtil:=ChangeFileExt(s,target_info.exeext);
             exit;
           end;
-        { change extension only on platforms that use an exe extension, otherwise on OpenBSD 'ld.bfd' gets converted
-          to 'ld' }
-        if source_info.exeext<>'' then
-          UtilExe:=ChangeFileExt(s,source_info.exeext)
-        else
-          UtilExe:=s;
+        UtilExe:=ChangeFileExt(s,source_info.exeext);
         FoundBin:='';
         Found:=false;
         if utilsdirectory<>'' then
@@ -759,7 +748,7 @@ Implementation
          begin
            if showinfo then
              begin
-               if current_module.islibrary then
+               if DLLsource then
                  AsmRes.AddLinkCommand(Command,Para,current_module.sharedlibfilename)
                else
                  AsmRes.AddLinkCommand(Command,Para,current_module.exefilename);
@@ -772,24 +761,22 @@ Implementation
 
     Function TExternalLinker.MakeStaticLibrary:boolean;
 
-        function GetNextFiles(const maxCmdLength : Longint; var item : TCmdStrListItem; const addfilecmd : string) : TCmdStr;
+        function GetNextFiles(const maxCmdLength : Longint; var item : TCmdStrListItem) : TCmdStr;
           begin
             result := '';
             while (assigned(item) and ((length(result) + length(item.str) + 1) < maxCmdLength)) do begin
-              result := result + ' ' + addfilecmd + item.str;
+              result := result + ' ' + item.str;
               item := TCmdStrListItem(item.next);
             end;
           end;
 
       var
-        binstr, firstbinstr, scriptfile : TCmdStr;
-        cmdstr, firstcmd, nextcmd, smartpath : TCmdStr;
+        binstr, scriptfile : TCmdStr;
+        cmdstr, nextcmd, smartpath : TCmdStr;
         current : TCmdStrListItem;
         script: Text;
         scripted_ar : boolean;
-        ar_creates_different_output_file : boolean;
         success : boolean;
-        first : boolean;
       begin
         MakeStaticLibrary:=false;
       { remove the library, to be sure that it is rewritten }
@@ -798,16 +785,6 @@ Implementation
         smartpath:=FixPath(ChangeFileExt(current_module.asmfilename,target_info.smartext),false);
         SplitBinCmd(target_ar.arcmd,binstr,cmdstr);
         binstr := FindUtil(utilsprefix + binstr);
-        if target_ar.arfirstcmd<>'' then
-          begin
-            SplitBinCmd(target_ar.arfirstcmd,firstbinstr,firstcmd);
-            firstbinstr := FindUtil(utilsprefix + firstbinstr);
-          end
-        else
-          begin
-            firstbinstr:=binstr;
-            firstcmd:=cmdstr;
-          end;
 
 
         scripted_ar:=(target_ar.id=ar_gnu_ar_scripted) or
@@ -846,33 +823,14 @@ Implementation
           end
         else
           begin
-            ar_creates_different_output_file:=(Pos('$OUTPUTLIB',cmdstr)>0) or (Pos('$OUTPUTLIB',firstcmd)>0);
             Replace(cmdstr,'$LIB',maybequoted(current_module.staticlibfilename));
-            Replace(firstcmd,'$LIB',maybequoted(current_module.staticlibfilename));
-            Replace(cmdstr,'$OUTPUTLIB',maybequoted(current_module.staticlibfilename+'.tmp'));
-            Replace(firstcmd,'$OUTPUTLIB',maybequoted(current_module.staticlibfilename+'.tmp'));
             { create AR commands }
             success := true;
             current := TCmdStrListItem(SmartLinkOFiles.First);
-            first := true;
             repeat
-              if first then
-                nextcmd := firstcmd
-              else
-                nextcmd := cmdstr;
-              Replace(nextcmd,'$FILES',GetNextFiles(2047, current, target_ar.addfilecmd));
-              if first then
-                success:=DoExec(firstbinstr,nextcmd,false,true)
-              else
-                success:=DoExec(binstr,nextcmd,false,true);
-              if ar_creates_different_output_file then
-                begin
-                  if FileExists(current_module.staticlibfilename,false) then
-                    DeleteFile(current_module.staticlibfilename);
-                  if FileExists(current_module.staticlibfilename+'.tmp',false) then
-                    RenameFile(current_module.staticlibfilename+'.tmp',current_module.staticlibfilename);
-                end;
-              first := false;
+              nextcmd := cmdstr;
+              Replace(nextcmd,'$FILES',GetNextFiles(2047, current));
+              success:=DoExec(binstr,nextcmd,false,true);
             until (not assigned(current)) or (not success);
           end;
 
@@ -896,8 +854,7 @@ Implementation
           end
          else
           begin
-            while not SmartLinkOFiles.Empty do
-              AsmRes.AddDeleteCommand(SmartLinkOFiles.GetFirst);
+            AsmRes.AddDeleteCommand(FixFileName(smartpath+current_module.asmprefix^+'*'+target_info.objext));
             if scripted_ar then
               AsmRes.AddDeleteCommand(scriptfile);
             AsmRes.AddDeleteDirCommand(smartpath);
@@ -995,30 +952,6 @@ Implementation
       end;
 
 
-    function TInternalLinker.GetCodeSize(aExeOutput: TExeOutput): QWord;
-      begin
-        Result:=aExeOutput.findexesection('.text').size;
-      end;
-
-
-    function TInternalLinker.GetDataSize(aExeOutput: TExeOutput): QWord;
-      begin
-        Result:=aExeOutput.findexesection('.data').size;
-      end;
-
-
-    function TInternalLinker.GetBssSize(aExeOutput: TExeOutput): QWord;
-      var
-        bsssec: TExeSection;
-      begin
-        bsssec:=aExeOutput.findexesection('.bss');
-        if assigned(bsssec) then
-          Result:=bsssec.size
-        else
-          Result:=0;
-      end;
-
-
     procedure TInternalLinker.ParseLdScript(src:TScriptLexer);
       var
         asneeded: boolean;
@@ -1103,7 +1036,7 @@ Implementation
 
     procedure TInternalLinker.Load_ReadStaticLibrary(const para:TCmdStr;asneededflag:boolean);
       var
-        objreader : TObjectReader;
+        objreader : TArObjectReader;
         objinput: TObjInput;
         objdata: TObjData;
         ScriptLexer: TScriptLexer;
@@ -1114,7 +1047,7 @@ Implementation
         if copy(ExtractFileName(para),1,6)='libimp' then
           exit;
         Comment(V_Tried,'Opening library '+para);
-        objreader:=CArObjectreader.createAr(para,true);
+        objreader:=TArObjectreader.create(para,true);
         if ErrorCount>0 then
           exit;
         if objreader.isarchive then
@@ -1162,7 +1095,7 @@ Implementation
 
     procedure TInternalLinker.ParseScript_Handle;
       var
-        s{, para}, keyword : String;
+        s, para, keyword : String;
         hp : TCmdStrListItem;
         i : longint;
       begin
@@ -1178,7 +1111,7 @@ Implementation
                 continue;
               end;
             keyword:=Upper(GetToken(s,' '));
-            {para:=}GetToken(s,' ');
+            para:=GetToken(s,' ');
             if Trim(s)<>'' then
               Comment(V_Warning,'Unknown part "'+s+'" in "'+hp.str+'" internal linker script');
             if (keyword<>'SYMBOL') and
@@ -1456,6 +1389,7 @@ Implementation
         myexit;
       var
         bsssize : aword;
+        bsssec  : TExeSection;
         dbgname : TCmdStr;
       begin
         result:=false;
@@ -1535,9 +1469,14 @@ Implementation
         { Post check that everything was handled }
         ParseScript_PostCheck;
 
-        status.codesize:=GetCodeSize(exeoutput);
-        status.datasize:=GetDataSize(exeoutput);
-        bsssize:=GetBssSize(exeoutput);
+{ TODO: fixed section names}
+        status.codesize:=exeoutput.findexesection('.text').size;
+        status.datasize:=exeoutput.findexesection('.data').size;
+        bsssec:=exeoutput.findexesection('.bss');
+        if assigned(bsssec) then
+          bsssize:=bsssec.size
+        else
+          bsssize:=0;
 
         { Executable info }
         Message1(execinfo_x_codesize,tostr(status.codesize));
@@ -1634,8 +1573,6 @@ Implementation
       ar_gnu_ar_info : tarinfo =
           (
             id          : ar_gnu_ar;
-            addfilecmd  : '';
-            arfirstcmd  : '';
             arcmd       : 'ar qS $LIB $FILES';
             arfinishcmd : 'ar s $LIB'
           );
@@ -1643,33 +1580,25 @@ Implementation
       ar_gnu_ar_scripted_info : tarinfo =
           (
             id    : ar_gnu_ar_scripted;
-            addfilecmd  : '';
-            arfirstcmd  : '';
             arcmd : 'ar -M < $SCRIPT';
             arfinishcmd : ''
           );
 
       ar_gnu_gar_info : tarinfo =
           ( id          : ar_gnu_gar;
-            addfilecmd  : '';
-            arfirstcmd  : '';
             arcmd       : 'gar qS $LIB $FILES';
             arfinishcmd : 'gar s $LIB'
           );
 
       ar_watcom_wlib_omf_info : tarinfo =
           ( id          : ar_watcom_wlib_omf;
-            addfilecmd  : '+';
-            arfirstcmd  : 'wlib -q -fo -c -b -n -o=$OUTPUTLIB $LIB $FILES';
-            arcmd       : 'wlib -q -fo -c -b -o=$OUTPUTLIB $LIB $FILES';
+            arcmd       : 'wlib -q -fo -c -b $LIB $FILES';
             arfinishcmd : ''
           );
 
       ar_watcom_wlib_omf_scripted_info : tarinfo =
           (
             id    : ar_watcom_wlib_omf_scripted;
-            addfilecmd  : '+';
-            arfirstcmd  : '';
             arcmd : 'wlib @$SCRIPT';
             arfinishcmd : ''
           );

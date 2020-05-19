@@ -294,10 +294,9 @@ Procedure Exec (Const Path: PathStr; Const ComLine: ComStr);
 var
   s: AnsiString;
   err: OSErr;
-  wdpath: RawByteString;
+  wdpath: AnsiString;
 
 Begin
-  wdpath:='';
   {Make ToolServers working directory in sync with our working directory}
   PathArgToFullPath(':', wdpath);
   wdpath:= 'Directory ''' + wdpath + '''';
@@ -390,6 +389,9 @@ End;
                        --- Findfirst FindNext ---
 ******************************************************************************}
 
+(*
+  {The one defined in Unixutils.pp is used instead}
+
   function FNMatch (const Pattern, Name: string): Boolean;
 
     var
@@ -466,6 +468,7 @@ End;
     FNMatch := DoFNMatch(1, 1);
   end;
 
+*)
 
   function GetFileAttrFromPB (var paramBlock: CInfoPBRec): Word;
 
@@ -757,8 +760,8 @@ End;
 
           if pathTranslation then
             NewDir := TranslatePathToMac(Copy(DirList, 1, P1 - 1), false)
-          else
-            NewDir := Copy(DirList, 1, P1 - 1);
+					else
+            NewDir := Copy(DirList, 1, P1 - 1);					
 
           NewDir := ConcatMacPath(NewDir, Path);
 
@@ -784,9 +787,8 @@ End;
 
   function FExpand (const path: pathstr): pathstr;
   var
-    fullpath: RawByteString;
+    fullpath: AnsiString;
   begin
-    fullpath:='';
     DosError:= PathArgToFullPath(path, fullpath);
     FExpand:= fullpath;
   end;
@@ -877,7 +879,7 @@ End;
     if (attr and VolumeID) <> 0 then
       begin
         Doserror := 5;
-        Exit;
+				Exit;
       end;
 
     DosError := PathArgToFSSpec(StrPas(filerec(f).name), spec);

@@ -15,16 +15,12 @@
 
 Type
   jmp_buf = packed record
-{$ifdef WIN16}
-    catch_buf: array [0..8] of SmallInt;
-{$else WIN16}
 //    bx,si,di: Word;
     bp,sp: Word;
     ip: Word;
-  {$ifdef FPC_X86_CODE_FAR}
+{$ifdef FPC_X86_CODE_FAR}
     cs: Word;
-  {$endif FPC_X86_CODE_FAR}
-{$endif WIN16}
+{$endif FPC_X86_CODE_FAR}
   end;
   PJmp_buf = ^jmp_buf;
 

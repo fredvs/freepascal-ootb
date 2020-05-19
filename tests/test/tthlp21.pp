@@ -2,7 +2,7 @@
 
 { type helpers are not parsed if modeswitch typehelpers is not set }
 
-program tthlp21;
+program tthlp20;
 
 type
   TTest = type helper for LongInt

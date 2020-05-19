@@ -1,7 +1,7 @@
 { %fail }
 
 { %target=darwin }
-{ %cpu=powerpc,powerpc64,i386,x86_64,arm,aarch64 }
+{ %cpu=powerpc,powerpc64,i386,x86_64,arm }
 
 {$mode objfpc}
 {$modeswitch objectivec1}

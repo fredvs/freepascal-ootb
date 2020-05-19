@@ -7,9 +7,11 @@
 
 { This reduces the memory requirements a lot }
 {$PACKENUM 1}
+{$ifdef FPC_HAS_VARSETS}
 {$ifndef FPC_BIG_ENDIAN}
 { $define USE_PACKSET1}
 {$endif}
+{$endif FPC_HAS_VARSETS}
 
 {$ifdef USE_PACKSET1}
 {$PACKSET 1}
@@ -18,14 +20,6 @@
 { We don't use exceptions, so turn off the implicit
   exceptions in the constructors }
 {$IMPLICITEXCEPTIONS OFF}
-
-{ This define enables codepage-aware compiler messages handling. Turning it on
-  forces code page conversion from the codepage, specified in the .msg file to
-  CP_ACP, before printing the message to the console. Enable this for host
-  platforms, that have code page conversion support in their RTL. }
-{$if defined(win32) or defined(win64) or defined(unix)}
-  {$define cpawaremessages}
-{$endif}
 
 { Inline small functions, but not when EXTDEBUG is used }
 {$ifndef EXTDEBUG}
@@ -58,22 +52,13 @@
   {//$define SUPPORT_MMX}
   {$define cpumm}
   {$define fewintregisters}
-  {$define cpurox}
-  {$define cpurefshaveindexreg}
+  {//$define cpurox}
   {$define SUPPORT_SAFECALL}
   {$define cpuneedsmulhelper}
   { TODO: add another define in order to disable the div helper for 16-bit divs? }
-  {$define cpuneedsdivhelper}
+  {$define cpuneedsdiv32helper}
   {$define VOLATILE_ES}
   {$define SUPPORT_GET_FRAME}
-  {$define cpucg64shiftsupport}
-  {$define OMFOBJSUPPORT}
-  {$ifdef go32v2}
-    { go32v2 uses cwsdpmi extender which is incompatible with watcom extender
-      thus we use the internal smartlink sections by default in that case. }
-    {$define I8086_SMARTLINK_SECTIONS}
-    {$define i8086_link_intern_debuginfo}
-  {$endif go32v2}
 {$endif i8086}
 
 {$ifdef i386}
@@ -87,11 +72,9 @@
   {$define cpumm}
   {$define fewintregisters}
   {$define cpurox}
-  {$define cpurefshaveindexreg}
   {$define SUPPORT_SAFECALL}
   {$define SUPPORT_GET_FRAME}
   {$define cpucapabilities}
-  {$define cpucg64shiftsupport}
 {$endif i386}
 
 {$ifdef x86_64}
@@ -110,6 +93,20 @@
   {$define cpucapabilities}
 {$endif x86_64}
 
+{$ifdef ia64}
+  {$define cpuflags}
+  {$define cpu64bitalu}
+  {$define cpu64bitaddr}
+  {$define cpuextended}
+  {$define cpufloat128}
+{$endif ia64}
+
+{$ifdef alpha}
+  {$define cpu64bitalu}
+  {$define cpu64bitaddr}
+  {$define cpurefshaveindexreg}
+{$endif alpha}
+
 {$ifdef sparc}
   {$define cpu32bit}
   {$define cpu32bitaddr}
@@ -117,26 +114,8 @@
   {$define cpuflags}
   {$define cputargethasfixedstack}
   {$define cpurefshaveindexreg}
-  {$define cpudelayslot}
   {$define SUPPORT_SAFECALL}
-  {$define sparcgen}
-
-  { the official name of the 32 Bit SPARC port is still "sparc" but
-    using the sparc32 define makes things more clear }
-  {$define sparc32}
 {$endif sparc}
-
-{$ifdef sparc64}
-  {$define cpu64bit}
-  {$define cpu64bitaddr}
-  {$define cpu64bitalu}
-  {$define cpuflags}
-  {$define cputargethasfixedstack}
-  {$define cpurefshaveindexreg}
-  {$define cpudelayslot}
-  {$define SUPPORT_SAFECALL}
-  {$define sparcgen}
-{$endif sparc64}
 
 {$ifdef powerpc}
   {$define cpu32bit}
@@ -147,7 +126,6 @@
   {$define cpumm}
   {$define cpurox}
   {$define cpurefshaveindexreg}
-  {$define SUPPORT_GET_FRAME}
 {$endif powerpc}
 
 {$ifdef powerpc64}
@@ -167,7 +145,7 @@
   {$define cpu32bitalu}
   {$define cpuflags}
   {$define cpufpemu}
-  {$define cpuneedsdivhelper}
+  {$define cpuneedsdiv32helper}
   {$define cpurox}
   {$define cputargethasfixedstack}
   {$define cpurefshaveindexreg}
@@ -197,15 +175,10 @@
   {$define cpu32bitaddr}
   {$define cpu32bitalu}
   {$define cpuflags}
-  {$define cpurox}
   {$define cpufpemu}
   {$define cpurefshaveindexreg}
   {$define cpucapabilities}
-  {$define cpuneedsmulhelper}
-  {$define cpuneedsdivhelper}
-  {$define cpu_uses_separate_address_registers}
-  {$define SUPPORT_SAFECALL}
-  {$define SUPPORT_GET_FRAME}
+  {$define cpuneedsdiv32helper}
 {$endif m68k}
 
 {$ifdef avr}
@@ -215,7 +188,7 @@
   {$define cpuflags}
   {$define cpunofpu}
   {$define cpunodefaultint}
-  {$define cpuneedsdivhelper}
+  {$define cpuneedsdiv32helper}
   {$define cpuneedsmulhelper}
   {$define cpurefshaveindexreg}
   {$define cpucapabilities}
@@ -248,7 +221,6 @@
   {$define cpurequiresproperalignment}
   { define cpumm}
   {$define cpurefshaveindexreg}
-  {$define cpudelayslot}
   {$define SUPPORT_GET_FRAME}
   {$define SUPPORT_SAFECALL}
 {$endif mips}
@@ -270,33 +242,19 @@
   {$define cpurox}
   {$define cputargethasfixedstack}
   {$define cpurefshaveindexreg}
-  {$define SUPPORT_GET_FRAME}
-  {$define SUPPORT_SAFECALL}
 {$endif aarch64}
+
+{$IFDEF MACOS}
+{$DEFINE USE_FAKE_SYSUTILS}
+{$ENDIF MACOS}
 
 { Stabs is not officially supported on 64 bit targets by gdb, except on Mac OS X
   (but there we don't support it)
 }
 {$ifdef cpu64bitaddr}
-{$ifndef USE_STABS_64}
 {$define NoDbgStabs}
-{$endif}
 {$endif}
 
 {$if not defined(FPC_HAS_TYPE_EXTENDED) and defined(i386)}
-{$ifndef FPC_SOFT_FPUX80}
 {$error Cross-compiling from systems without support for an 80 bit extended floating point type to i386 is not yet supported at this time }
-{$endif}
-{$endif}
-
-{ llvm backends partially use other backends for parameter info calculation,
-  alignment info, data sizes etc. They always support 64 bit alu though.
-}
-{$ifdef llvm}
-  {$undef SUPPORT_MMX}
-  {$undef cpu16bitalu}
-  {$undef cpu32bitalu}
-  {$define cpu64bitalu}
-  {$define cpuhighleveltarget}
-  {$define symansistr}
 {$endif}

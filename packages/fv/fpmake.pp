@@ -16,11 +16,13 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'Leon De Boer and Pierre Mueller';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
-    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,win16,win32,win64,os2,emx,netware,netwlibc,go32v2,msdos,aix,dragonfly]+AllAmigaLikeOSes;
+    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,win32,win64,os2,emx,netware,netwlibc,go32v2,aix,dragonfly]+AllAmigaLikeOSes;
+    if Defaults.CPU = powerpc then
+      P.OSes := P.OSes - [amiga];
     P.Email := '';
     P.Description := 'Free Vision, a portable Turbo Vision clone.';
     P.NeedLibC:= false;
@@ -31,10 +33,7 @@ begin
     P.Dependencies.add('rtl-extra');
     P.Dependencies.add('morphunits',[morphos]);
     P.Dependencies.add('arosunits',[aros]);
-    if Defaults.CPU=m68k then
-      P.Dependencies.Add('amunits',[amiga]);
-    if Defaults.CPU=powerpc then
-      P.Dependencies.Add('os4units',[amiga]);
+    P.Dependencies.add('amunits',[amiga]);
 
     T:=P.Targets.AddUnit('app.pas');
       with T.Dependencies do

@@ -4,7 +4,7 @@
   {$linklib c}
 {$endif}
 
-unit SQLite;
+unit sqlite;
 
 interface
 

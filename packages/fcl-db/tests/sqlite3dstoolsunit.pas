@@ -119,7 +119,8 @@ begin
          FieldByName('FMEMO').AsString := testStringValues[i];
          Post;
        end;
-       ApplyUpdates;
+       if not ApplyUpdates then
+         raise Exception.Create('Error in ApplyUpdates: ' + FieldDataset.ReturnString);
        Destroy;
      end;
   except

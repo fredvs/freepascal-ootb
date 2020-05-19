@@ -26,9 +26,8 @@ unit nx86mem;
 interface
     uses
       globtype,
-      cgbase,cpubase,
-      symtype,
-      nmem,ncgmem;
+      cgbase,cpuinfo,cpubase,
+      node,nmem,ncgmem;
 
     type
       tx86derefnode = class(tcgderefnode)
@@ -36,16 +35,16 @@ interface
       end;
 
       tx86vecnode = class(tcgvecnode)
-        procedure update_reference_reg_mul(maybe_const_reg: tregister; regsize: tdef; l: aint);override;
+        procedure update_reference_reg_mul(maybe_const_reg:tregister;l:aint);override;
       end;
 
 implementation
 
     uses
       cutils,verbose,
-      aasmdata,
+      aasmtai,aasmdata,
       cgutils,cgobj,
-      symconst,symcpu;
+      symconst,symdef,symcpu;
 
 {*****************************************************************************
                            TX86DEREFNODE
@@ -87,7 +86,7 @@ implementation
      { the live range of the LOC_CREGISTER will most likely overlap the   }
      { the live range of the target LOC_(C)REGISTER)                      }
      { The passed register may be a LOC_CREGISTER as well.                }
-     procedure tx86vecnode.update_reference_reg_mul(maybe_const_reg: tregister; regsize: tdef; l: aint);
+     procedure tx86vecnode.update_reference_reg_mul(maybe_const_reg:tregister;l:aint);
        var
          l2 : integer;
          hreg : tregister;
@@ -120,7 +119,7 @@ implementation
             cg.a_loadaddr_ref_reg(current_asmdata.CurrAsmList,location.reference,hreg);
             { reference_reset_base kills the segment, so make sure we preserve it }
             saveseg:=location.reference.segment;
-            reference_reset_base(location.reference,hreg,0,location.reference.temppos,location.reference.alignment,location.reference.volatility);
+            reference_reset_base(location.reference,hreg,0,location.reference.alignment);
             location.reference.segment:=saveseg;
           end;
          { insert the new index register and scalefactor or

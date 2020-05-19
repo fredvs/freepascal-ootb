@@ -1,5 +1,5 @@
 { %version=1.1 }
-{ %TARGET=linux,freebsd,darwin,solaris,aix,haiku }
+{ %TARGET=linux,freebsd,darwin,solaris,aix }
 
 {$linklib c}
 

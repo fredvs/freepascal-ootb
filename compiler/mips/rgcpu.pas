@@ -27,7 +27,7 @@ unit rgcpu;
   interface
 
     uses
-      aasmbase,aasmsym,aasmcpu,aasmtai,aasmdata,
+      aasmbase,aasmcpu,aasmtai,aasmdata,
       cgbase,cgutils,
       cpubase,
       rgobj;
@@ -35,9 +35,9 @@ unit rgcpu;
     type
       trgcpu=class(trgobj)
         function get_spill_subreg(r : tregister) : tsubregister;override;
-        procedure do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
-        procedure do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
-        function do_spill_replace(list: TAsmList; instr: tai_cpu_abstract_sym; orgreg: tsuperregister; const spilltemp: treference): boolean; override;
+        procedure do_spill_read(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);override;
+        procedure do_spill_written(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);override;
+        function do_spill_replace(list:TAsmList;instr:taicpu;orgreg:tsuperregister;const spilltemp:treference):boolean;override;
       end;
 
       trgintcpu=class(trgcpu)
@@ -61,7 +61,7 @@ implementation
       end;
 
 
-    procedure trgcpu.do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
+    procedure trgcpu.do_spill_read(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);
       var
         helpins  : tai;
         tmpref   : treference;
@@ -81,7 +81,7 @@ implementation
             helplist.concat(taicpu.op_reg_reg_const(A_ORI,hreg,hreg,spilltemp.offset and $FFFF));
             helplist.concat(taicpu.op_reg_reg_reg(A_ADDU,hreg,hreg,spilltemp.base));
 
-            reference_reset_base(tmpref,hreg,0,spilltemp.temppos,sizeof(aint),[]);
+            reference_reset_base(tmpref,hreg,0,sizeof(aint));
 
             helpins:=spilling_create_load(tmpref,tempreg);
             helplist.concat(helpins);
@@ -89,11 +89,11 @@ implementation
             helplist.free;
           end
         else
-          inherited;
+          inherited do_spill_read(list,pos,spilltemp,tempreg);
       end;
 
 
-    procedure trgcpu.do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
+    procedure trgcpu.do_spill_written(list:tasmlist;pos:tai;const spilltemp:treference;tempreg:tregister);
       var
         tmpref   : treference;
         helplist : tasmlist;
@@ -112,7 +112,7 @@ implementation
             helplist.concat(taicpu.op_reg_reg_const(A_ORI,hreg,hreg,spilltemp.offset and $FFFF));
             helplist.concat(taicpu.op_reg_reg_reg(A_ADDU,hreg,hreg,spilltemp.base));
 
-            reference_reset_base(tmpref,hreg,0,spilltemp.temppos,sizeof(aint),[]);
+            reference_reset_base(tmpref,hreg,0,sizeof(aint));
 
             helplist.concat(spilling_create_store(tempreg,tmpref));
             if getregtype(tempreg)=R_INTREGISTER then
@@ -122,11 +122,11 @@ implementation
             helplist.free;
           end
         else
-          inherited;
+          inherited do_spill_written(list,pos,spilltemp,tempreg);
     end;
 
 
-    function trgcpu.do_spill_replace(list: TAsmList; instr: tai_cpu_abstract_sym; orgreg: tsuperregister; const spilltemp: treference): boolean;
+    function trgcpu.do_spill_replace(list:TAsmList;instr:taicpu;orgreg:tsuperregister;const spilltemp:treference):boolean;
       begin
         result:=false;
         { Replace 'move  orgreg,src' with 'sw  src,spilltemp'

@@ -48,7 +48,7 @@ interface
       cutils,verbose,globals,
       symconst,symdef,paramgr,
       aasmbase,aasmtai,aasmdata,aasmcpu,defutil,htypechk,
-      cgbase,cpuinfo,pass_1,pass_2,
+      cgbase,cpuinfo,pass_1,pass_2,regvars,
       cpupara,cgcpu,cgutils,procinfo,
       ncon,nset,
       ncgutil,tgobj,rgobj,rgcpu,cgobj,hlcgobj,cg64f32;
@@ -143,8 +143,6 @@ interface
 
     procedure tppcaddnode.second_add64bit;
       var
-        truelabel,
-        falselabel : tasmlabel;
         op         : TOpCG;
         op1,op2    : TAsmOp;
         cmpop,
@@ -194,10 +192,10 @@ interface
            case nodetype of
               ltn,gtn:
                 begin
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrTrueLabel);
                    { cheat a little bit for the negative test }
                    toggleflag(nf_swapped);
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,falselabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrFalseLabel);
                    toggleflag(nf_swapped);
                 end;
               lten,gten:
@@ -207,24 +205,24 @@ interface
                      nodetype:=ltn
                    else
                      nodetype:=gtn;
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrTrueLabel);
                    { cheat for the negative test }
                    if nodetype=ltn then
                      nodetype:=gtn
                    else
                      nodetype:=ltn;
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,falselabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrFalseLabel);
                    nodetype:=oldnodetype;
                 end;
               equaln:
                 begin
                   nodetype := unequaln;
-                  cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,falselabel);
+                  cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrFalseLabel);
                   nodetype := equaln;
                 end;
               unequaln:
                 begin
-                  cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
+                  cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrTrueLabel);
                 end;
            end;
         end;
@@ -239,20 +237,20 @@ interface
                 begin
                    { the comparison of the low dword always has }
                    { to be always unsigned!                     }
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
-                   cg.a_jmp_always(current_asmdata.CurrAsmList,falselabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrTrueLabel);
+                   cg.a_jmp_always(current_asmdata.CurrAsmList,current_procinfo.CurrFalseLabel);
                 end;
               equaln:
                 begin
                    nodetype := unequaln;
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,falselabel);
-                   cg.a_jmp_always(current_asmdata.CurrAsmList,truelabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrFalseLabel);
+                   cg.a_jmp_always(current_asmdata.CurrAsmList,current_procinfo.CurrTrueLabel);
                    nodetype := equaln;
                 end;
               unequaln:
                 begin
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,truelabel);
-                   cg.a_jmp_always(current_asmdata.CurrAsmList,falselabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags,current_procinfo.CurrTrueLabel);
+                   cg.a_jmp_always(current_asmdata.CurrAsmList,current_procinfo.CurrFalseLabel);
                 end;
            end;
         end;
@@ -262,8 +260,6 @@ interface
       tempreg64: tregister64;
 
       begin
-        truelabel:=nil;
-        falselabel:=nil;
         firstcomplex(self);
 
         pass_left_and_right;
@@ -310,16 +306,8 @@ interface
             internalerror(2002072705);
         end;
 
-        if not cmpop or
-           (nodetype in [equaln,unequaln]) then
-          location_reset(location,LOC_REGISTER,def_cgsize(resultdef))
-        else
-          begin
-            { we call emit_cmp, which will set location.loc to LOC_FLAGS ->
-              wait till the end with setting the location }
-            current_asmdata.getjumplabel(truelabel);
-            current_asmdata.getjumplabel(falselabel);
-          end;
+        if not cmpop then
+          location_reset(location,LOC_REGISTER,def_cgsize(resultdef));
 
         load_left_right(cmpop,((cs_check_overflow in current_settings.localswitches) and
             (nodetype in [addn,subn])) or (nodetype = muln));
@@ -557,7 +545,7 @@ interface
         {  real location only now) (JM)                               }
         if cmpop and
            not(nodetype in [equaln,unequaln]) then
-          location_reset_jump(location,truelabel,falselabel);
+          location_reset(location,LOC_JUMP,OS_NO);
       end;
 
 

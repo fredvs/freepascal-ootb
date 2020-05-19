@@ -1,6 +1,10 @@
 {      MDItem.h
         Copyright (c) 2003-2010, Apple Inc. All rights reserved.
 }
+
+ { Pascal Translation: Gorazd Krosl <gorazd_1957@yahoo.ca>, October 2009 }
+ { Pascal Translation Updated: Jonas Maebe <jonas@freepascal.org>, September 2012 }
+
 {
     Modified for use with Free Pascal
     Version 308
@@ -9,7 +13,6 @@
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -56,11 +59,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -79,7 +77,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -90,7 +87,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -101,7 +97,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -118,16 +113,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -135,26 +123,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -638,7 +613,7 @@ var kMDItemAttributeChangeDate: CFStringRef; external name '_kMDItemAttributeCha
 var kMDItemContentType: CFStringRef; external name '_kMDItemContentType'; (* attribute const *)
 (* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)               // CFString
 var kMDItemContentTypeTree: CFStringRef; external name '_kMDItemContentTypeTree'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_5_AND_LATER *)   // CFArray of CFStringRef
+(* AVAILABLE_MAC_OS_X_VERSION_10_5_AND_LATER *)   // Array of CFStringRef
 var kMDItemKeywords: CFStringRef; external name '_kMDItemKeywords'; (* attribute const *)
 (* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)                  // CFArray of CFString
 var kMDItemTitle: CFStringRef; external name '_kMDItemTitle'; (* attribute const *)
@@ -716,11 +691,11 @@ var kMDItemEXIFVersion: CFStringRef; external name '_kMDItemEXIFVersion'; (* att
 (* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)               // CFString
 
 var kMDItemCameraOwner: CFStringRef; external name '_kMDItemCameraOwner'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)       // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemFocalLength35mm: CFStringRef; external name '_kMDItemFocalLength35mm'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)   // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemLensModel: CFStringRef; external name '_kMDItemLensModel'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)         // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 
 var kMDItemEXIFGPSVersion: CFStringRef; external name '_kMDItemEXIFGPSVersion'; (* attribute const *)
 (* AVAILABLE_MAC_OS_X_VERSION_10_5_AND_LATER *)    // CFString
@@ -742,29 +717,29 @@ var kMDItemNamedLocation: CFStringRef; external name '_kMDItemNamedLocation'; (*
 (* AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER *) // CFString
 
 var kMDItemGPSStatus: CFStringRef; external name '_kMDItemGPSStatus'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)             // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSMeasureMode: CFStringRef; external name '_kMDItemGPSMeasureMode'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)        // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDOP: CFStringRef; external name '_kMDItemGPSDOP'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)                // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSMapDatum: CFStringRef; external name '_kMDItemGPSMapDatum'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)           // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDestLatitude: CFStringRef; external name '_kMDItemGPSDestLatitude'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)       // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDestLongitude: CFStringRef; external name '_kMDItemGPSDestLongitude'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)      // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDestBearing: CFStringRef; external name '_kMDItemGPSDestBearing'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)        // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDestDistance: CFStringRef; external name '_kMDItemGPSDestDistance'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)       // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSProcessingMethod: CFStringRef; external name '_kMDItemGPSProcessingMethod'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)   // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSAreaInformation: CFStringRef; external name '_kMDItemGPSAreaInformation'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)    // CFString
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDateStamp: CFStringRef; external name '_kMDItemGPSDateStamp'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)          // CFDate
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 var kMDItemGPSDifferental: CFStringRef; external name '_kMDItemGPSDifferental'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)        // CFNumber
+(* AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER *)
 
 var kMDItemCodecs: CFStringRef; external name '_kMDItemCodecs'; (* attribute const *)
 (* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)                    // CFArray of CFString
@@ -784,7 +759,7 @@ var kMDItemDeliveryType: CFStringRef; external name '_kMDItemDeliveryType'; (* a
 var kMDItemAlbum: CFStringRef; external name '_kMDItemAlbum'; (* attribute const *)
 (* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)                     // CFString
 var kMDItemHasAlphaChannel: CFStringRef; external name '_kMDItemHasAlphaChannel'; (* attribute const *)
-(* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)		   // CFBoolean
+(* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)		  // CFBoolean
 var kMDItemRedEyeOnOff: CFStringRef; external name '_kMDItemRedEyeOnOff'; (* attribute const *)
 (* AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER *)               // CFBoolean
 var kMDItemMeteringMode: CFStringRef; external name '_kMDItemMeteringMode'; (* attribute const *)

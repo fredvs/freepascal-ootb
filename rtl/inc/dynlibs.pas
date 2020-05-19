@@ -20,95 +20,156 @@ unit dynlibs;
 
 interface
 
-Type
-  TLibHandle = System.TLibHandle;
+{$i rtldefs.inc}
 
-Const
-  NilHandle = System.NilHandle;
-  SharedSuffix = System.SharedSuffix;
+{ ---------------------------------------------------------------------
+  Read OS-dependent interface declarations.
+  ---------------------------------------------------------------------}
 
-Function SafeLoadLibrary(const Name : RawByteString) : TLibHandle; inline;
-Function LoadLibrary(const Name : RawByteString) : TLibHandle; inline;
-Function SafeLoadLibrary(const Name : UnicodeString) : TLibHandle; inline;
-Function LoadLibrary(const Name : UnicodeString) : TLibHandle; inline;
+{ Note: should define the TOrdinalEntry type and define
+        DYNLIBS_SUPPORTS_ORDINAL if the operating system supports loading
+        functions by a ordinal like e.g. Windows or OS/2 do }
 
-Function GetProcedureAddress(Lib : TlibHandle; const ProcName : AnsiString) : {$ifdef cpui8086}FarPointer{$else}Pointer{$endif}; inline;
-Function GetProcedureAddress(Lib : TLibHandle; Ordinal: TOrdinalEntry) : {$ifdef cpui8086}FarPointer{$else}Pointer{$endif}; inline;
-Function UnloadLibrary(Lib : TLibHandle) : Boolean; inline;
-Function GetLoadErrorStr: string; inline;
+{$define readinterface}
+{$i dynlibs.inc}
+{$undef  readinterface}
+
+{ ---------------------------------------------------------------------
+  OS - Independent declarations.
+  ---------------------------------------------------------------------}
+{$IFNDEF DYNLIBS_SUPPORTS_ORDINAL}
+type
+ TOrdinalEntry = SizeUInt;
+{$ENDIF DYNLIBS_SUPPORTS_ORDINAL}
+
+Function SafeLoadLibrary(const Name : RawByteString) : TLibHandle;
+Function LoadLibrary(const Name : RawByteString) : TLibHandle;
+Function SafeLoadLibrary(const Name : UnicodeString) : TLibHandle;
+Function LoadLibrary(const Name : UnicodeString) : TLibHandle;
+
+Function GetProcedureAddress(Lib : TlibHandle; const ProcName : AnsiString) : Pointer;
+Function GetProcedureAddress(Lib : TLibHandle; Ordinal: TOrdinalEntry) : Pointer;
+Function UnloadLibrary(Lib : TLibHandle) : Boolean;
+Function GetLoadErrorStr: string;
 
 // Kylix/Delphi compability
 
-Function FreeLibrary(Lib : TLibHandle) : Boolean; inline;
-Function GetProcAddress(Lib : TlibHandle; const ProcName : AnsiString) : {$ifdef cpui8086}FarPointer{$else}Pointer{$endif}; inline;
+Function FreeLibrary(Lib : TLibHandle) : Boolean;
+Function GetProcAddress(Lib : TlibHandle; const ProcName : AnsiString) : Pointer;
 
 Type
   HModule = TLibHandle; 
 
 Implementation
 
+{ ---------------------------------------------------------------------
+  OS - Independent declarations.
+  ---------------------------------------------------------------------}
 
-{ Should define a procedure InitDynLibs which sets up the DynLibs manager; optionally a
-  DoneDynLibs can be defined which is called during finalization }
+{ Note: should define the TOrdinalEntry overload if the operating system
+        supports loading functions by a ordinal like e.g. Windows or OS/2 do }
 {$i dynlibs.inc}
 
+{$ifndef FPCRTL_FILESYSTEM_TWO_BYTE_API}
+Function DoSafeLoadLibrary(const Name : RawByteString) : TLibHandle;
+{$else not FPCRTL_FILESYSTEM_TWO_BYTE_API}
+Function DoSafeLoadLibrary(const Name : UnicodeString) : TLibHandle;
+{$endif not FPCRTL_FILESYSTEM_TWO_BYTE_API}
+{$if defined(cpui386) or defined(cpux86_64)}
+  var
+    fpucw : Word;
+    ssecw : DWord;
+{$endif}
+  begin
+    try
+{$if defined(cpui386) or defined(cpux86_64)}
+      fpucw:=Get8087CW;
+{$ifdef cpui386}
+      if has_sse_support then
+{$endif cpui386}
+        ssecw:=GetMXCSR;
+{$endif}
+      Result:=doloadlibrary(Name);
+      finally
+{$if defined(cpui386) or defined(cpux86_64)}
+      Set8087CW(fpucw);
+{$ifdef cpui386}
+      if has_sse_support then
+{$endif cpui386}
+        SetMXCSR(ssecw);
+{$endif}
+    end;
+  end;
+
+{$ifndef FPCRTL_FILESYSTEM_SINGLE_BYTE_API}
 Function SafeLoadLibrary(const Name : RawByteString) : TLibHandle;
 begin
-  Result:=System.SafeLoadLibrary(Name);
+  Result:=DoSafeLoadLibrary(UnicodeString(Name));
 end;
 
 Function LoadLibrary(const Name : RawByteString) : TLibHandle;
 begin
-  Result:=System.LoadLibrary(Name);
+  Result:=DoLoadLibrary(UnicodeString(Name));
 end;
 
+{$else not FPCRTL_FILESYSTEM_SINGLE_BYTE_API}
+
+Function SafeLoadLibrary(const Name : RawByteString) : TLibHandle;
+begin
+  Result:=DoSafeLoadLibrary(ToSingleByteFileSystemEncodedFileName(Name));
+end;
+
+Function LoadLibrary(const Name : RawByteString) : TLibHandle;
+begin
+  Result:=DoLoadLibrary(ToSingleByteFileSystemEncodedFileName(Name));
+end;
+{$endif not FPCRTL_FILESYSTEM_SINGLE_BYTE_API}
+
+
+{$ifndef FPCRTL_FILESYSTEM_TWO_BYTE_API}
 Function SafeLoadLibrary(const Name : UnicodeString) : TLibHandle;
 begin
-  Result:=System.SafeLoadLibrary(Name);
+  Result:=DoSafeLoadLibrary(ToSingleByteFileSystemEncodedFileName(Name));
 end;
 
 Function LoadLibrary(const Name : UnicodeString) : TLibHandle;
 begin
-  Result:=System.LoadLibrary(Name);
+  Result:=DoLoadLibrary(ToSingleByteFileSystemEncodedFileName(Name));
 end;
 
+{$else not FPCRTL_FILESYSTEM_TWO_BYTE_API}
 
-Function GetProcedureAddress(Lib : TLibHandle; const ProcName: AnsiString) : {$ifdef cpui8086}FarPointer{$else}Pointer{$endif};
+Function SafeLoadLibrary(const Name : UnicodeString) : TLibHandle;
 begin
-  Result:=System.GetProcedureAddress(Lib, ProcName);
+  Result:=DoSafeLoadLibrary(Name);
 end;
 
-Function GetProcedureAddress(Lib : TLibHandle; Ordinal : TOrdinalEntry) : {$ifdef cpui8086}FarPointer{$else}Pointer{$endif};
+Function LoadLibrary(const Name : UnicodeString) : TLibHandle;
 begin
-  Result:=System.GetProcedureAddress(Lib, Ordinal);
+  Result:=DoLoadLibrary(Name);
 end;
+{$endif not FPCRTL_FILESYSTEM_TWO_BYTE_API}
 
-Function UnloadLibrary(Lib : TLibHandle) : Boolean;
+{$ifndef DYNLIBS_SUPPORTS_ORDINAL}
+{ OS does not support loading by ordinal (or it's not implemented yet), so by
+  default we simply return Nil }
+Function GetProcedureAddress(Lib : TLibHandle; Ordinal : TOrdinalEntry) : Pointer;
 begin
-  Result:=System.UnloadLibrary(Lib);
+  Result := Nil;
 end;
-
-Function GetLoadErrorStr: String;
-begin
-  Result:=System.GetLoadErrorStr;
-end;
+{$endif not DYNLIBS_SUPPORTS_ORDINAL}
 
 Function FreeLibrary(Lib : TLibHandle) : Boolean;
 
 begin
-  Result:=System.FreeLibrary(lib);
+  Result:=UnloadLibrary(lib);
 end;
 
-Function GetProcAddress(Lib : TlibHandle; const ProcName : AnsiString) : {$ifdef cpui8086}FarPointer{$else}Pointer{$endif};
+Function GetProcAddress(Lib : TlibHandle; const ProcName : AnsiString) : Pointer;
 
 begin
-  Result:=System.GetProcedureAddress(Lib,Procname);
+  Result:=GetProcedureAddress(Lib,Procname);
 end;
 
-initialization
-  InitDynLibs;
-finalization
-{$if declared(DoneDynLibs)}
-  DoneDynLibs;
-{$endif}
+
 end.

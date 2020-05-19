@@ -12,14 +12,12 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-{$modeswitch result}
+{$mode objfpc}
 Unit heapmgr;
 
   interface
 
     procedure RegisterHeapBlock(AAddress: pointer; ASize: ptruint);
-    
-    function GetAlignedMem(Size, Alignment: ptruint): pointer;
 
   implementation
 
@@ -49,10 +47,7 @@ Unit heapmgr;
         p, prev: PHeapBlock;
         AllocSize, RestSize: ptruint;
       begin
-        if size+sizeof(PtrUInt)<MinBlock then
-          AllocSize := MinBlock
-        else
-          AllocSize := align(size+sizeof(PtrUInt), sizeof(pointer));
+        AllocSize := align(size+sizeof(ptruint), sizeof(pointer));
 
         p := Blocks;
         prev := nil;
@@ -66,8 +61,7 @@ Unit heapmgr;
           begin
             result := @pptruint(p)[1];
 
-            if (p^.size > AllocSize) and
-               (p^.Size-AllocSize >= MinBlock) then
+            if p^.Size-AllocSize >= MinBlock then
               RestSize := p^.Size-AllocSize
             else
               begin
@@ -85,12 +79,7 @@ Unit heapmgr;
             InternalFreemem(pointer(ptruint(p)+AllocSize), RestSize);
           end
         else
-          begin
-            if ReturnNilIfGrowHeapFails then
-              Result := nil
-            else
-              RunError(203);
-          end;
+          Result := nil;
       end;
 
     function GetAlignedMem(Size, Alignment: ptruint): pointer;
@@ -102,8 +91,8 @@ Unit heapmgr;
           result := GetMem(size)
         else
           begin
-            mem := GetMem(Size+Alignment-1+MinBlock);
-            memp := align(ptruint(mem)+MinBlock, Alignment);
+            mem := GetMem(Size+Alignment-1);
+            memp := align(ptruint(mem), Alignment);
             InternalFreemem(mem, ptruint(memp)-ptruint(mem));
             result := pointer(memp);
           end;
@@ -114,9 +103,6 @@ Unit heapmgr;
         b, p, prev: PHeapBlock;
         concatenated: boolean;
       begin
-        if size<=0 then
-          exit;
-
         concatenated := true;
         while concatenated do
           begin
@@ -189,12 +175,7 @@ Unit heapmgr;
       var
         sz: ptruint;
       begin
-        if addr=nil then
-          begin
-            result:=0;
-            exit;
-          end;
-        sz := Align(FindSize(addr)+SizeOf(pointer), sizeof(pointer));
+        sz := Align(FindSize(addr)+SizeOf(ptruint), sizeof(pointer));
 
         InternalFreeMem(@pptruint(addr)[-1], sz);
 
@@ -215,57 +196,31 @@ Unit heapmgr;
       begin
         result := SysGetMem(size);
         if result<>nil then
-          FillChar(pbyte(result)^,size,0);
+          FillChar(result^,SysMemSize(result),0);
       end;
 
     function SysReAllocMem(var p: pointer; size: ptruint):pointer;
       var
         sz: ptruint;
       begin
-        if size=0 then
+        result := AllocMem(size);
+        if result <> nil then
           begin
-            SysFreeMem(p);
-            result := nil;
-            p := nil;
-          end
-        else if p=nil then
-          begin
-            result := AllocMem(size);
-            p := result;
-          end
-        else
-          begin
-            result := AllocMem(size);
-            if result <> nil then
+            if p <> nil then
               begin
-                if p <> nil then
-                  begin
-                    sz := FindSize(p);
-                    if sz > size then
-                      sz := size;
-                    move(pbyte(p)^, pbyte(result)^, sz);
-                  end;
+                sz := FindSize(p);
+                if sz > size then
+                  sz := size;
+                move(pbyte(p)^, pbyte(result)^, sz);
               end;
-            SysFreeMem(p);
-            p := result;
           end;
+        SysFreeMem(p);
+        p := result;
       end;
 
     procedure RegisterHeapBlock(AAddress: pointer; ASize: ptruint);
       begin
-        InternalFreeMem(AAddress, ASize);
-      end;
-
-    { avoid that programs crash due to a heap status request }
-    function SysGetFPCHeapStatus : TFPCHeapStatus;
-      begin
-        FillChar(Result,SizeOf(Result),0);
-      end;
-
-    { avoid that programs crash due to a heap status request }
-    function SysGetHeapStatus : THeapStatus;
-      begin
-        FillChar(Result,SizeOf(Result),0);
+        FreeMem(AAddress, ASize);
       end;
 
     const
@@ -280,8 +235,8 @@ Unit heapmgr;
         InitThread: nil;
         DoneThread: nil;
         RelocateHeap: nil;
-        GetHeapStatus: @SysGetHeapStatus;
-        GetFPCHeapStatus: @SysGetFPCHeapStatus;
+        GetHeapStatus: nil;
+        GetFPCHeapStatus: nil;
       );
 
 var
@@ -295,3 +250,4 @@ initialization
 finalization
   //FinalizeHeap;
 end.
+

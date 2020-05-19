@@ -23,7 +23,8 @@ program MakeSkel;
 {$h+}
 
 uses
-  SysUtils, Classes, Gettext, dGlobals, PasTree, PParser,PScanner;
+  SysUtils, Classes, Gettext,
+  dGlobals, PasTree, PParser,PScanner;
 
 resourcestring
   STitle = 'MakeSkel - FPDoc skeleton XML description file generator';
@@ -234,9 +235,7 @@ Function TSkelEngine.WriteElement(Var F : Text;El : TPasElement; ADocNode : TDoc
   begin
     Result:=(APasElement.ClassType=TPasArgument) or
             (APasElement.ClassType=TPasResultElement) or
-            (APasElement.ClassType=TPasEnumValue) or
-            (aPaselement.ClassType=TPasUsesUnit) or
-            ((APasElement.CLassType=TPasVariable) and (APasElement.Parent is TPasRecordType));
+            (APasElement.ClassType=TPasEnumValue);
   end;
 
   Function IsTypeVarConst(APasElement : TPasElement) : Boolean;
@@ -399,7 +398,7 @@ begin
     FEmittedList:=TStringList.Create;
     FEmittedList.Sorted:=True;
     try
-      Module:=ParseSource (Self,AFileName+' -dFPC',ATarget,ACPU,[poUseStreams,poSkipDefaultDefs]);
+      Module:=ParseSource(Self,AFileName,ATarget,ACPU);
       If UpdateMode then
         begin
         N:=FindDocNode(Module);

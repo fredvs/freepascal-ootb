@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'Library: Apache Foundation, header: Felipe Monteiro de Carvalho';
     P.License := 'Library: Apache License 2, header: LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
@@ -25,8 +25,6 @@ begin
     P.Description := 'Headers for the Apache 2.4 series www server';
     P.NeedLibC:= true;  // true for headers that indirectly link to libc?
     P.OSes := AllUnixOSes+AllWindowsOSes-[qnx];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
 
     P.SourcePath.Add('src');
     P.SourcePath.Add('src/apr');

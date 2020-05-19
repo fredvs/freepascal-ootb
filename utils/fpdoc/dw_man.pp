@@ -1,7 +1,7 @@
 {$mode objfpc}
 {$H+}
 unit dw_man;
-{$WARN 5024 off : Parameter "$1" not used}
+
 interface
 
 uses
@@ -138,8 +138,6 @@ Type
     procedure DescrEndItalic; override;
     procedure DescrBeginEmph; override;
     procedure DescrEndEmph; override;
-    procedure DescrBeginUnderline; override;
-    procedure DescrEndUnderline; override;
     procedure DescrWriteFileEl(const AText: DOMString); override;
     procedure DescrWriteKeywordEl(const AText: DOMString); override;
     procedure DescrWriteVarEl(const AText: DOMString); override;
@@ -391,7 +389,7 @@ end;
 procedure TManWriter.DescrWriteText(const AText: DOMString);
 
 begin
-  self.Write(EscapeText(Utf8Encode(AText)));
+  self.Write(EscapeText(AText));
 end;
 
 procedure TManWriter.DescrBeginBold;
@@ -427,17 +425,6 @@ begin
   NewLine;
 end;
 
-procedure TManWriter.DescrBeginUnderline;
-begin
-  NewLine;
-  Write('.I '); //use ITALIC!
-end;
-
-procedure TManWriter.DescrEndUnderline;
-begin
-  NewLine;
-end;
-
 procedure TManWriter.DescrWriteFileEl(const AText: DOMString);
 
 Var
@@ -445,7 +432,7 @@ Var
 
 begin
   NewLine;
-  S:=UTF8Encode(AText);
+  S:=AText;
   Writeln('.I '+S);
 end;
 
@@ -456,7 +443,7 @@ Var
 
 begin
   NewLine;
-  S:=Utf8Encode(AText);
+  S:=AText;
   Writeln('.B '+S);
 end;
 
@@ -467,7 +454,7 @@ Var
 
 begin
   NewLine;
-  S:=Utf8Encode(AText);
+  S:=AText;
   Writeln('.B '+S);
 end;
 
@@ -897,7 +884,7 @@ begin
     begin
     if IsLinkNode(Node) then
       begin
-      S:=UTF8Encode(TDomElement(Node)['id']);
+      S:=TDomElement(Node)['id'];
       WriteManRef(S,(Node.NextSibling<>Nil) or Comma);
       end;
     Node:=Node.NextSibling;
@@ -1558,8 +1545,6 @@ var
   i : integer;
   D,N : String;
 begin
-  N:=ProcDecl.name;
-  D:='';
   DocNode := Engine.FindDocNode(ProcDecl);
   StartManpage(ProcDecl,DocNode);
   Try
@@ -1685,7 +1670,6 @@ begin
   DocNode := Engine.FindDocNode(PropDecl);
   StartManpage(PropDecl,DocNode);
   Try
-    N:= PropDecl.Name;
     PageTitle(PropDecl.Name,ManSection,PackageName,PackageDescr);
     if Assigned(DocNode) then
     D:=GetDescrString(PropDecl,DocNode.ShortDescr);

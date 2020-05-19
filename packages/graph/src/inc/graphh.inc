@@ -434,12 +434,6 @@ type
 
 
     type
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-       ColorType = LongWord;
-{$else FPC_GRAPH_SUPPORTS_TRUECOLOR}
-       ColorType = Word;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
        RGBRec = packed record
          Red: smallint;
          Green: smallint;
@@ -467,7 +461,7 @@ type
 
        FillSettingsType = record
              pattern : word;
-             color : ColorType;
+             color : word;
        end;
 
        FillPatternType = array[1..8] of byte;
@@ -524,8 +518,8 @@ TYPE
        defpixelproc = procedure(X,Y: smallint);
 
        { standard plot and get pixel                                }
-       getpixelproc = function(X,Y: smallint): ColorType;
-       putpixelproc = procedure(X,Y: smallint; Color: ColorType);
+       getpixelproc = function(X,Y: smallint): word;
+       putpixelproc = procedure(X,Y: smallint; Color: Word);
 
        { clears the viewport, also used to clear the device         }
        clrviewproc  = procedure;
@@ -595,8 +589,8 @@ TYPE
 
        CircleProc = procedure(X, Y: smallint; Radius:Word);
 
-       SetBkColorProc = procedure(ColorNum: ColorType);
-       GetBkColorProc = function: ColorType;
+       SetBkColorProc = procedure(ColorNum: Word);
+       GetBkColorProc = function: Word;
 
 
 TYPE
@@ -624,7 +618,7 @@ TYPE
       MaxY: word;                { Max. column.                    }
       DirectColor: boolean;         { Is this a direct color mode??   }
       Hardwarepages: byte;          { total number of image pages - 1 }
-      ModeName: String[32];
+      ModeName: String[18];
       { necessary hooks ... }
       DirectPutPixel : DefPixelProc;
       GetPixel       : GetPixelProc;
@@ -758,7 +752,6 @@ procedure GraphDefaults;
 procedure ClearDevice;
 procedure GetViewSettings(var viewport : ViewPortType);
 procedure SetWriteMode(WriteMode : smallint);
-procedure SetWriteModeEx(WriteMode : smallint);
 procedure GetFillSettings(var Fillinfo:Fillsettingstype);
 procedure GetFillPattern(var FillPattern:FillPatternType);
 procedure GetLineSettings(var ActiveLineInfo : LineSettingsType);
@@ -766,8 +759,8 @@ procedure InitGraph(var GraphDriver:smallint;var GraphMode:smallint;const PathTo
 procedure DetectGraph(var GraphDriver:smallint;var GraphMode:smallint);
 function InstallUserDriver(Name: string; AutoDetectPtr: Pointer): smallint;
 function RegisterBGIDriver(driver: pointer): smallint;
-procedure SetFillStyle(Pattern : word; Color: ColorType);
-procedure SetFillPattern(Pattern: FillPatternType; Color: ColorType);
+procedure SetFillStyle(Pattern : word; Color: word);
+procedure SetFillPattern(Pattern: FillPatternType; Color: word);
 Function GetDriverName: string;
  procedure MoveRel(Dx, Dy: smallint);
  procedure MoveTo(X,Y: smallint);
@@ -776,9 +769,9 @@ Function GetDriverName: string;
  function GetDirectVideo: boolean;
 
  { -------------------- Color/Palette ------------------------------- }
- function  GetColor: ColorType;
- procedure SetColor(Color: ColorType);
- function  GetMaxColor: ColorType;
+ function  GetColor: Word;
+ procedure SetColor(Color: Word);
+ function  GetMaxColor: word;
 
  procedure SetPalette(ColorNum: word; Color: shortint);
  procedure GetPalette(var Palette: PaletteType);
@@ -794,7 +787,7 @@ Function GetDriverName: string;
  procedure DrawPoly(NumPoints : word;var polypoints);
  procedure LineRel(Dx, Dy: smallint);
  procedure LineTo(X,Y : smallint);
- procedure FloodFill(x : smallint; y : smallint; Border: ColorType);
+ procedure FloodFill(x : smallint; y : smallint; Border: word);
 
  { -------------------- Circle related routines --------------------- }
  procedure GetAspectRatio(var Xasp,Yasp : word);

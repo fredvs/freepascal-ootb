@@ -42,7 +42,8 @@ start:
     movl     _ExecBase,%eax
     pushl    %eax
     pushl    $0
-    call     *-196(%eax)        /* FindTask(nil) */
+    movl     -196(%eax),%eax    /* FindTask(nil) */
+    call     *%eax
     addl     $8,%esp
 
     movl     64(%eax),%ecx      /* SPUpper */
@@ -72,7 +73,8 @@ _allocStack:
     pushl    %eax
     pushl    $0                 /* MEMF_ANY */
     pushl    __stklen
-    call     *-456(%eax)        /* AllocVec() */
+    movl     -456(%eax),%eax    /* AllocVec() */
+    call     *%eax
     addl     $12,%esp
 
     testl    %eax,%eax
@@ -92,7 +94,8 @@ _allocStack:
     lea      _initProc,%ebx
     pushl    %ebx
     pushl    %ecx
-    call     *-536(%eax)            /* NewStackSwap() */
+    movl     -536(%eax),%eax        /* NewStackSwap() */
+    call     *%eax
     addl     $16,%esp
     jmp      _afterMain
 
@@ -110,7 +113,8 @@ _freeStack:
     movl     _ExecBase,%eax
     pushl    %eax
     pushl    StackAreaPtr
-    call     *-460(%eax)            /* FreeVec() */
+    movl     -460(%eax),%eax        /* FreeVec() */
+    call     *%eax
     addl     $8,%esp
 
 __exit:

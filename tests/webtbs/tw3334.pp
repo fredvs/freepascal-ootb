@@ -20,7 +20,7 @@ begin
 end;
 
 var
- mem : sizeuint;
+ mem : sizeint;
 begin
   domem(mem);
   p1;

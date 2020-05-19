@@ -332,6 +332,23 @@ const
                          GCC /ABI linking information
   *****************************************************************************}
 
+  {# Registers which must be saved when calling a routine declared as
+     cppdecl, cdecl, stdcall, safecall, palmossyscall. The registers
+     saved should be the ones as defined in the target ABI and / or GCC.
+
+     This value can be deduced from CALLED_USED_REGISTERS array in the
+     GCC source.
+  }
+  saved_standard_registers: array[0..17] of tsuperregister = (
+    RS_R14, RS_R15, RS_R16, RS_R17, RS_R18, RS_R19,
+    RS_R20, RS_R21, RS_R22, RS_R23, RS_R24, RS_R25,
+    RS_R26, RS_R27, RS_R28, RS_R29, RS_R30, RS_R31
+    );
+
+  { this is only for the generic code which is not used for this architecture }
+  saved_address_registers : array[0..0] of tsuperregister = (RS_INVALID);
+  saved_mm_registers : array[0..0] of tsuperregister = (RS_INVALID);
+  
   {# Required parameter alignment when calling a routine declared as
      stdcall and cdecl. The alignment value should be the one defined
      by GCC or the target ABI.
@@ -344,7 +361,6 @@ const
   *****************************************************************************}
 
   LinkageAreaSizeELF = 48;
-  LinkageAreaSizeELFv2 = 32;
   { offset in the linkage area for the saved stack pointer }
   LA_SP = 0;
   { offset in the linkage area for the saved conditional register}
@@ -355,7 +371,6 @@ const
   { offset in the linkage area for the saved RTOC register}
   LA_RTOC_SYSV = 40;
   LA_RTOC_AIX = 40;
-  LA_RTOC_ELFV2 = 24;
 
   PARENT_FRAMEPOINTER_OFFSET = 24;
 
@@ -369,7 +384,6 @@ const
   
   { minimum size of the stack frame if one exists }
   MINIMUM_STACKFRAME_SIZE = 112;
-  MINIMUM_STACKFRAME_SIZE_ELFV2 = 112 - 16;
 
   maxfpuregs = 8;
 
@@ -397,7 +411,6 @@ function inverse_cond(const c: TAsmCond): Tasmcond;
 {$IFDEF USEINLINE}inline;{$ENDIF USEINLINE}
 function conditions_equal(const c1, c2: TAsmCond): boolean;
 function dwarf_reg(r:tregister):shortint;
-function dwarf_reg_no_error(r:tregister):shortint;
 
 implementation
 
@@ -479,8 +492,6 @@ begin
     internalerror(200112301);
   result.simple := true;
   result.cr := f.cr;
-  if byte(f.cr)=0 then
-    Comment(V_error,'Wrong use of whole CR register in falgs_to_cond');
   result.cond := flag_2_cond[f.flag];
 end;
 
@@ -564,10 +575,6 @@ begin
     internalerror(200603251);
 end;
 
-    function dwarf_reg_no_error(r:tregister):shortint;
-      begin
-        result:=regdwarf_table[findreg_by_number(r)];
-      end;
 
 end.
 

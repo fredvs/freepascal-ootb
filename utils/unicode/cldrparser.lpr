@@ -1,5 +1,5 @@
 {   Unicode CLDR's collation parser.
-    Copyright (c) 2013-2017 by Inoussa OUEDRAOGO
+    Copyright (c) 2013-2015 by Inoussa OUEDRAOGO
 
     It creates units from CLDR's collation files.
 
@@ -25,7 +25,7 @@ program cldrparser;
 { $define WINCE_TEST}
 {$TYPEDADDRESS ON}
 
-uses    //heaptrc,
+uses
   SysUtils, classes, getopts,{$ifdef WINCE}StreamIO,{$endif}
   cldrhelper, helper, cldrtest, cldrxml, unicodeset, cldrtxt;
 
@@ -119,15 +119,12 @@ begin
   end;
 end;
 
-procedure Main;
 var
   orderedChars : TOrderedCharacters;
-  settings : TSettingRecArray;
   ucaBook : TUCA_DataBook;
   stream, streamNE, streamOE, binaryStreamNE, binaryStreamOE : TMemoryStream;
   s, collationFileName, collationTypeName, collationTypeAlt : string;
   i , c: Integer;
-  repository : TCldrCollationRepository;
   collation : TCldrCollation;
   dataPath, outputPath : string;
   collationItem : TCldrCollationItem;
@@ -207,11 +204,11 @@ begin
     Halt(1);
   end;
 
-  {collationFileName := dataPath + collationFileName;
+  collationFileName := dataPath + collationFileName;
   if not FileExists(collationFileName) then begin
     WriteLn('File not found : "',collationFileName,'"');
     Halt(1);
-  end;}
+  end;
 
   WriteLn(sLineBreak,'Collation Parsing ',QuotedStr(collationFileName),'  ...');
   stream := nil;
@@ -219,11 +216,9 @@ begin
   streamOE := nil;
   binaryStreamNE := nil;
   binaryStreamOE := nil;
-  repository := TCldrCollationRepository.Create(
-                  TCldrCollationFileLoader.Create(dataPath) as ICldrCollationLoader
-                );
+  collation := TCldrCollation.Create();
   try
-    collation := repository.Load(collationFileName,TCldrParserMode.HeaderParsing);
+    ParseCollationDocument2(collationFileName,collation,TCldrParserMode.HeaderParsing);
     WriteLn(Format('  Collation Count = %d',[collation.FindPublicItemCount()]));
     if (collation.FindPublicItemCount() = 0) then begin
       WriteLn('No collation in this file.');
@@ -249,22 +244,20 @@ begin
       if (collationTypeAlt <> '') then
         s := Format('%s (%s)',[s,collationTypeAlt]);
       WriteLn(Format('Parsing Collation Item "%s" ...',[s]));
-      collationItem := repository.LoadType(collationFileName,collationTypeName,collationTypeAlt);
+      ParseCollationDocument2(collationFileName,collationItem,collationTypeName);
 
       s := dataPath + SROOT_RULES_FILE;
       WriteLn;
       WriteLn('Parsing ',QuotedStr(s),'  ...');
       FillByte(orderedChars,SizeOf(orderedChars),0);
       orderedChars.Clear();
-      SetLength(settings,0);
-      ParseInitialDocument(@orderedChars,s,settings);
+      ParseInitialDocument(@orderedChars,s);
       WriteLn('File parsed, ',orderedChars.ActualLength,' characters.');
 
       WriteLn('Loading CLDR root''s key table ...');
       stream := TMemoryStream.Create();
       s := dataPath + 'allkeys.txt';
       stream.LoadFromFile(s);
-      FillChar(ucaBook,SizeOf(ucaBook),#0);
       ParseUCAFile(stream,ucaBook);
       //WriteLn('  LEVEL-2''s items Value = ',CalcMaxLevel2Value(ucaBook.Lines));
       //RewriteLevel2Values(@ucaBook.Lines[0],Length(ucaBook.Lines));
@@ -302,20 +295,15 @@ begin
         );
       end;
     end;
-    repository.Clear();
   finally
     binaryStreamOE.Free();
     binaryStreamNE.Free();
     streamOE.Free();
     streamNE.Free();
     stream.Free();
-    repository.Free();
+    collation.Free();
   end;
 
   WriteLn(sLineBreak,'Finished.');
-end;
-
-begin
-  Main();
 end.
 

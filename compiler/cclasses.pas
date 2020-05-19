@@ -378,8 +378,6 @@ type
           procedure insertListcopy(p : TLinkedList);
           { concats another List at the end and makes a copy }
           procedure concatListcopy(p : TLinkedList);
-          { removes all items from the list, the items are not freed }
-          procedure RemoveAll;
           property First:TLinkedListItem read FFirst;
           property Last:TLinkedListItem read FLast;
           property Count:Integer read FCount;
@@ -403,7 +401,7 @@ type
        { string container }
        TCmdStrList = class(TLinkedList)
        private
-          FDoubles : boolean;  { if this is set to true, doubles (case insensitive!) are allowed }
+          FDoubles : boolean;  { if this is set to true, doubles are allowed }
        public
           constructor Create;
           constructor Create_No_Double;
@@ -472,7 +470,6 @@ type
          procedure writestr(const s:string); {$ifdef CCLASSESINLINE}inline;{$endif}
          procedure readstream(f:TCStream;maxlen:longword);
          procedure writestream(f:TCStream);
-         function  equal(other:tdynamicarray):boolean;
          property  CurrBlockSize : longword read FCurrBlocksize;
          property  FirstBlock : PDynamicBlock read FFirstBlock;
          property  Pos : longword read FPosn;
@@ -615,7 +612,6 @@ implementation
           s : string;
         begin
           l := c-b;
-          s:='';
           if (l > 0) or AddEmptyStrings then
             begin
               setlength(s, l);
@@ -623,7 +619,7 @@ implementation
                 move (b^, s[1],l*SizeOf(char));
               l:=length(Strings);
               setlength(Strings,l+1);
-              Strings[l]:=S;
+              Strings[l]:=S;  
               inc (result);
             end;
         end;
@@ -1031,7 +1027,6 @@ begin
   begin
     Clear;
     FList.Destroy;
-    FList:=nil;
   end;
   inherited Destroy;
 end;
@@ -1847,7 +1842,6 @@ begin
     begin
       Clear;
       FHashList.Destroy;
-      FHashList:=nil;
     end;
   inherited Destroy;
 end;
@@ -2359,14 +2353,6 @@ end;
       end;
 
 
-    procedure TLinkedList.RemoveAll;
-      begin
-        FFirst:=nil;
-        FLast:=nil;
-        FCount:=0;
-      end;
-
-
 {****************************************************************************
                              TCmdStrListItem
  ****************************************************************************}
@@ -2421,7 +2407,7 @@ end;
     procedure TCmdStrList.insert(const s : TCmdStr);
       begin
          if (s='') or
-            ((not FDoubles) and (findcase(s)<>nil)) then
+            ((not FDoubles) and (find(s)<>nil)) then
           exit;
          inherited insert(TCmdStrListItem.create(s));
       end;
@@ -2430,7 +2416,7 @@ end;
     procedure TCmdStrList.concat(const s : TCmdStr);
       begin
          if (s='') or
-            ((not FDoubles) and (findcase(s)<>nil)) then
+            ((not FDoubles) and (find(s)<>nil)) then
           exit;
          inherited concat(TCmdStrListItem.create(s));
       end;
@@ -2442,7 +2428,7 @@ end;
       begin
         if s='' then
          exit;
-        p:=findcase(s);
+        p:=find(s);
         if assigned(p) then
          begin
            inherited Remove(p);
@@ -2803,14 +2789,6 @@ end;
          end;
       end;
 
-
-    function tdynamicarray.equal(other:tdynamicarray):boolean;
-      begin
-        result:=false;
-        { TODO }
-      end;
-
-
 {****************************************************************************
                                 thashset
 ****************************************************************************}
@@ -2903,7 +2881,7 @@ end;
         h: LongWord;
       begin
         h := FPHash(Key, KeyLen);
-        Entry := @FBucket[h and (FBucketCount-1)];
+        Entry := @FBucket[h mod FBucketCount];
         while Assigned(Entry^) and
           not ((Entry^^.HashValue = h) and (Entry^^.KeyLength = KeyLen) and
             (CompareByte(Entry^^.Key^, Key^, KeyLen) = 0)) do
@@ -2952,7 +2930,7 @@ end;
             e := FBucket[i];
             while Assigned(e) do
             begin
-              chain := @p[e^.HashValue and (NewCapacity-1)];
+              chain := @p[e^.HashValue mod NewCapacity];
               n := e^.Next;
               e^.Next := chain^;
               chain^ := e;
@@ -3010,7 +2988,7 @@ end;
         h: LongWord;
       begin
         h := FPHash(Key, KeyLen, Tag);
-        Entry := @PPTagHashSetItem(FBucket)[h and (FBucketCount-1)];
+        Entry := @PPTagHashSetItem(FBucket)[h mod FBucketCount];
         while Assigned(Entry^) and
           not ((Entry^^.HashValue = h) and (Entry^^.KeyLength = KeyLen) and
             (Entry^^.Tag = Tag) and (CompareByte(Entry^^.Key^, Key^, KeyLen) = 0)) do

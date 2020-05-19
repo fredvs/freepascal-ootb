@@ -28,9 +28,9 @@ program tcalcst6;
   {$define tp}
 {$endif}
 
-{ On linux/i386 and linux/x86-64 safecall is the same as cdecl, so it does not }
-{ support all parameter types.                                                 }
-{$if ((defined(linux) or defined(android)) and (defined(cpui386) or defined(cpux86_64) or defined(cpum68k)))}
+{ On linux/i386 and linux/x86-64safecall is the same as cdecl, so it does not       }
+{ support all parameter types.                                      }
+{$if ((defined(linux) or defined(android)) and (defined(cpui386) or defined(cpux86_64)))}
   {$define safecall_is_cdecl}
 {$endif}
 
@@ -38,7 +38,7 @@ program tcalcst6;
 {$ifdef cpu68k}
   {$define cpusmall}
 {$endif}
-{$ifdef cpui8086}
+{$ifdef cpu8086}
   {$define cpusmall}
 {$endif}
 

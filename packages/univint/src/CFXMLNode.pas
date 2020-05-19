@@ -1,6 +1,9 @@
 {	CFXMLNode.h
-	Copyright (c) 1998-2013, Apple Inc. All rights reserved.
+	Copyright (c) 1998-2012, Apple Inc. All rights reserved.
 }
+{	  Pascal Translation Updated:  Peter N Lewis, <peter@stairways.com.au>, November 2005 }
+{	  Pascal Translation Updated:  Jonas Maebe, <jonas@freepascal.org>, October 2009 }
+{	  Pascal Translation Updated:  Jonas Maebe <jonas@freepascal.org>, September 2012 }
 {
     Modified for use with Free Pascal
     Version 308
@@ -9,7 +12,6 @@
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -56,11 +58,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -79,7 +76,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -90,7 +86,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -101,7 +96,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -118,16 +112,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -135,26 +122,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -200,9 +174,6 @@ uses MacTypes,CFBase,CFArray,CFDictionary,CFString,CFTree,CFURL;
 {$endc} {not MACOSALLINCLUDE}
 
 {$ALIGN POWER}
-
-
-{  CFXMLParser (and thus CFXMLNode) are deprecated as of Mac OS X 10.8 and iOS 6.0. The suggested replacements are the Foundation classes NSXMLParser and NSXMLDocument, or the libxml2 library. }
 
 
 const
@@ -363,37 +334,36 @@ type
 }
 
 function CFXMLNodeGetTypeID: CFTypeID; external name '_CFXMLNodeGetTypeID';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 { Creates a new node based on xmlType, dataString, and additionalInfoPtr.  version (together with xmlType) determines the expected structure of additionalInfoPtr }
 function CFXMLNodeCreate( alloc: CFAllocatorRef; xmlType: CFXMLNodeTypeCode; dataString: CFStringRef; additionalInfoPtr: {const} UnivPtr; version: CFIndex ): CFXMLNodeRef; external name '_CFXMLNodeCreate';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 { Creates a copy of origNode (which may not be NULL). }
 function CFXMLNodeCreateCopy( alloc: CFAllocatorRef; origNode: CFXMLNodeRef ): CFXMLNodeRef; external name '_CFXMLNodeCreateCopy';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 function CFXMLNodeGetTypeCode( node: CFXMLNodeRef ): CFXMLNodeTypeCode; external name '_CFXMLNodeGetTypeCode';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 function CFXMLNodeGetString( node: CFXMLNodeRef ): CFStringRef; external name '_CFXMLNodeGetString';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 function CFXMLNodeGetInfoPtr( node: CFXMLNodeRef ): UnivPtr; external name '_CFXMLNodeGetInfoPtr';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 function CFXMLNodeGetVersion( node: CFXMLNodeRef ): CFIndex; external name '_CFXMLNodeGetVersion';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 { CFXMLTreeRef }
 
 { Creates a childless, parentless tree from node }
 function CFXMLTreeCreateWithNode( allocator: CFAllocatorRef; node: CFXMLNodeRef ): CFXMLTreeRef; external name '_CFXMLTreeCreateWithNode';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 { Extracts and returns the node stored in xmlTree }
 function CFXMLTreeGetNode( xmlTree: CFXMLTreeRef ): CFXMLNodeRef; external name '_CFXMLTreeGetNode';
-(* CF_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
+(* CF_AVAILABLE_BUT_DEPRECATED(10_0, 10_8, 2_0, 6_0) *)
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 

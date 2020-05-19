@@ -190,13 +190,11 @@ interface
             begin
               r:=cg.getintregister(current_asmdata.CurrAsmList,OS_INT);
               cg64.a_load64low_loc_reg(current_asmdata.CurrAsmList,right.location,r);
-              cg.a_reg_alloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
               emit_reg_reg(op1,opsize,left.location.register64.reglo,r);
               emit_reg_reg(A_MOV,opsize,r,left.location.register64.reglo);
               cg64.a_load64high_loc_reg(current_asmdata.CurrAsmList,right.location,r);
               { the carry flag is still ok }
               emit_reg_reg(op2,opsize,left.location.register64.reghi,r);
-              cg.a_reg_dealloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
               emit_reg_reg(A_MOV,opsize,r,left.location.register64.reghi);
             end
            else
@@ -231,8 +229,6 @@ interface
 
     procedure ti386addnode.second_cmp64bit;
       var
-        truelabel,
-        falselabel,
         hlab       : tasmlabel;
         href       : treference;
         unsigned   : boolean;
@@ -250,12 +246,12 @@ interface
            case nodetype of
               ltn,gtn:
                 begin
-                   if (hlab<>location.truelabel) then
-                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),location.truelabel);
+                   if (hlab<>current_procinfo.CurrTrueLabel) then
+                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),current_procinfo.CurrTrueLabel);
                    { cheat a little bit for the negative test }
                    toggleflag(nf_swapped);
-                   if (hlab<>location.falselabel) then
-                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),location.falselabel);
+                   if (hlab<>current_procinfo.CurrFalseLabel) then
+                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),current_procinfo.CurrFalseLabel);
                    toggleflag(nf_swapped);
                 end;
               lten,gten:
@@ -265,21 +261,21 @@ interface
                      nodetype:=ltn
                    else
                      nodetype:=gtn;
-                   if (hlab<>location.truelabel) then
-                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),location.truelabel);
+                   if (hlab<>current_procinfo.CurrTrueLabel) then
+                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),current_procinfo.CurrTrueLabel);
                    { cheat for the negative test }
                    if nodetype=ltn then
                      nodetype:=gtn
                    else
                      nodetype:=ltn;
-                   if (hlab<>location.falselabel) then
-                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),location.falselabel);
+                   if (hlab<>current_procinfo.CurrFalseLabel) then
+                     cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(unsigned),current_procinfo.CurrFalseLabel);
                    nodetype:=oldnodetype;
                 end;
               equaln:
-                cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.falselabel);
+                cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,current_procinfo.CurrFalseLabel);
               unequaln:
-                cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
+                cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,current_procinfo.CurrTrueLabel);
            end;
         end;
 
@@ -292,25 +288,23 @@ interface
                 begin
                    { the comparisaion of the low dword have to be }
                    {  always unsigned!                            }
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(true),location.truelabel);
-                   cg.a_jmp_always(current_asmdata.CurrAsmList,location.falselabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,getresflags(true),current_procinfo.CurrTrueLabel);
+                   cg.a_jmp_always(current_asmdata.CurrAsmList,current_procinfo.CurrFalseLabel);
                 end;
               equaln:
                 begin
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.falselabel);
-                   cg.a_jmp_always(current_asmdata.CurrAsmList,location.truelabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,current_procinfo.CurrFalseLabel);
+                   cg.a_jmp_always(current_asmdata.CurrAsmList,current_procinfo.CurrTrueLabel);
                 end;
               unequaln:
                 begin
-                   cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,location.truelabel);
-                   cg.a_jmp_always(current_asmdata.CurrAsmList,location.falselabel);
+                   cg.a_jmp_flags(current_asmdata.CurrAsmList,F_NE,current_procinfo.CurrTrueLabel);
+                   cg.a_jmp_always(current_asmdata.CurrAsmList,current_procinfo.CurrFalseLabel);
                 end;
            end;
         end;
 
       begin
-        truelabel:=nil;
-        falselabel:=nil;
         pass_left_right;
 
         unsigned:=((left.resultdef.typ=orddef) and
@@ -319,9 +313,7 @@ interface
                    (torddef(right.resultdef).ordtype=u64bit));
 
         { we have LOC_JUMP as result }
-        current_asmdata.getjumplabel(truelabel);
-        current_asmdata.getjumplabel(falselabel);
-        location_reset_jump(location,truelabel,falselabel);
+        location_reset(location,LOC_JUMP,OS_NO);
 
         { Relational compares against constants having low dword=0 can omit the
           second compare based on the fact that any unsigned value is >=0 }
@@ -330,8 +322,8 @@ interface
            (lo(right.location.value64)=0) then
           begin
             case getresflags(true) of
-              F_AE: hlab:=location.truelabel ;
-              F_B:  hlab:=location.falselabel;
+              F_AE: hlab:=current_procinfo.CurrTrueLabel;
+              F_B:  hlab:=current_procinfo.CurrFalseLabel;
             end;
           end;
 
@@ -451,7 +443,7 @@ interface
     begin
       pass_left_right;
       reg:=NR_NO;
-      reference_reset(ref,sizeof(pint),[]);
+      reference_reset(ref,sizeof(pint));
 
       { Mul supports registers and references, so if not register/reference,
         load the location into a register.

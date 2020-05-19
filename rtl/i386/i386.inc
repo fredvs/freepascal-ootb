@@ -14,10 +14,6 @@
 
  **********************************************************************}
 
-{$if not(defined(VER3_0)) and defined(linux)}
-  {$define FPC_SYSTEM_STACKALIGNMENT16}
-{$endif not(defined(VER3_0)) and defined(linux)}
-
 {****************************************************************************
                                Primitives
 ****************************************************************************}
@@ -49,10 +45,8 @@ function cpuid_support : boolean;assembler;nostackframe;
 
 {$ifndef FPC_PIC}
 {$ifndef FPC_SYSTEM_HAS_MOVE}
-{$ifndef OLD_ASSEMBLER}
 {$define USE_FASTMOVE}
 {$i fastmove.inc}
-{$endif not OLD_ASSEMBLER}
 {$endif FPC_SYSTEM_HAS_MOVE}
 {$endif FPC_PIC}
 
@@ -505,14 +499,14 @@ asm
         andl    $3,%ecx
         subl    %ecx,%eax       { Subtract from number of bytes to go }
         orl     %ecx,%ecx
-        repe
+        rep
         cmpsb                   { The actual 32-bit Aligning }
         jne     .LCmpbyte3
         movl    %eax,%ecx       { bytes to do, divide by 4 }
         andl    $3,%eax         { remainder }
         shrl    $2,%ecx         {  The actual division }
         orl     %ecx,%ecx       { Sets zero flag if ecx=0 -> no cmp }
-        repe
+        rep
         cmpsl
         je      .LCmpbyte2      { All equal? then to the left over bytes }
         movl    $4,%eax         { Not equal. Rescan the last 4 bytes bytewise }
@@ -521,7 +515,7 @@ asm
 .LCmpbyte2:
         movl    %eax,%ecx       { bytes still to (re)scan }
         orl     %eax,%eax       { prevent disaster in case %eax=0 }
-        repe
+        rep
         cmpsb
 .LCmpbyte3:
         movzbl  -1(%esi),%ecx
@@ -589,7 +583,7 @@ asm
         andl    $1,%edx         { %edx is 1 if array not 2-aligned, 0 otherwise}
         shrl    $2,%ecx         { divide bytes to go by 4, DWords to go}
         orl     %ecx,%ecx       { Sets zero flag if ecx=0 -> no cmp}
-        repe                    { Compare entire DWords}
+        rep                     { Compare entire DWords}
         cmpsl
         je      .LCmpword2a     { All equal? then to the left over bytes}
         movl    $4,%eax         { Not equal. Rescan the last 4 bytes bytewise}
@@ -605,7 +599,7 @@ asm
 .LCmpword2:
         movl    %eax,%ecx       {words still to (re)scan}
         orl     %eax,%eax       {prevent disaster in case %eax=0}
-        repe
+        rep
         cmpsw
 .LCmpword3:
         movzwl  -2(%esi),%ecx
@@ -664,7 +658,7 @@ asm
         movl    %eax,%edi
         movl    %edx,%esi
         xorl    %eax,%eax
-        repe                     { Compare entire DWords}
+        rep                     { Compare entire DWords}
         cmpsl
         movl    -4(%edi),%edi        // Compare failing (or equal) position
         subl    -4(%esi),%edi        // calculate end result.
@@ -866,14 +860,14 @@ asm
         andl    $3,%ecx
         subl    %ecx,%eax
         orl     %ecx,%ecx
-        repe
+        rep
         cmpsb
         jne     .LStrCmp3
         movl    %eax,%ecx
         andl    $3,%eax
         shrl    $2,%ecx
         orl     %ecx,%ecx
-        repe
+        rep
         cmpsl
         je      .LStrCmp2
         movl    $4,%eax
@@ -882,7 +876,7 @@ asm
 .LStrCmp2:
         movl    %eax,%ecx
         orl     %eax,%eax
-        repe
+        rep
         cmpsb
         je      .LStrCmp4
 .LStrCmp3:
@@ -994,6 +988,40 @@ asm
 end;
 {$endif FPC_SYSTEM_HAS_FPC_PCHAR_TO_SHORTSTR}
 
+
+{$ifndef FPC_SYSTEM_HAS_FPC_PCHAR_LENGTH}
+{$define FPC_SYSTEM_HAS_FPC_PCHAR_LENGTH}
+function fpc_pchar_length(p:pchar):sizeint;assembler;[public,alias:'FPC_PCHAR_LENGTH']; compilerproc;
+
+var
+  saveedi : longint;
+asm
+{$ifdef FPC_PROFILE}
+        push  %eax
+        push  %edx
+        push  %ecx
+        call  mcount
+        pop   %ecx
+        pop   %edx
+        pop   %eax
+{$endif FPC_PROFILE}
+        test    %eax,%eax
+        jz      .LStrLenDone
+        movl    %edi,saveedi
+        movl    %eax,%edi
+        movl    $0xffffffff,%ecx
+        xorl    %eax,%eax
+{$ifdef FPC_ENABLED_CLD}
+        cld
+{$endif FPC_ENABLED_CLD}
+        repne
+        scasb
+        movl    $0xfffffffe,%eax
+        subl    %ecx,%eax
+        movl    saveedi,%edi
+.LStrLenDone:
+end;
+{$endif FPC_SYSTEM_HAS_FPC_PCHAR_LENGTH}
 
 {$IFNDEF INTERNAL_BACKTRACE}
 {$define FPC_SYSTEM_HAS_GET_FRAME}
@@ -1331,16 +1359,7 @@ Procedure SysResetFPU;
         localmxcsr:=DefaultMXCSR;
         asm
           { setup sse exceptions }
-        {$ifndef OLD_ASSEMBLER}
           ldmxcsr localmxcsr
-        {$else OLD_ASSEMBLER}
-          mov     localmxcsr,%eax
-          subl    $4,%esp
-          mov     %eax,(%esp)
-          //ldmxcsr (%esp)
-          .byte   0x0f,0xae,0x14,0x24
-          addl    $4,%esp
-        {$endif OLD_ASSEMBLER}
         end;
       end;
   end;
@@ -1368,11 +1387,7 @@ procedure fpc_cpucodeinit;
               { force an sse exception if no sse is supported, the exception handler sets
                 os_supports_sse to false then }
               { don't change this instruction, the code above depends on its size }
-            {$ifdef OLD_ASSEMBLER}
-              .byte  0x0f,0x28,0xf7
-            {$else}
               movaps %xmm7, %xmm6
-            {$endif not EMX}
             end;
             sse_check:=false;
             has_sse_support:=os_supports_sse;
@@ -1437,15 +1452,7 @@ asm
         je      .Lj3596
 .Lj3620:
         movl    %esi,%eax
-        { freemem is not an assembler leaf function like fpc_geteipasebx and cpudeclocked, so it
-          needs to be called with proper stack alignment }
-{$ifdef FPC_SYSTEM_STACKALIGNMENT16}
-        leal    -8(%esp),%esp
-{$endif FPC_SYSTEM_STACKALIGNMENT16}
         call    FPC_FREEMEM
-{$ifdef FPC_SYSTEM_STACKALIGNMENT16}
-        leal    8(%esp),%esp
-{$endif FPC_SYSTEM_STACKALIGNMENT16}
 .Lj3596:
         popl    %esi
 .Lquit:
@@ -1471,13 +1478,7 @@ asm
         je      .Lj4038
 // [441] result:=fpc_truely_ansistr_unique(s);
         movl    %edx,%eax
-{$ifdef FPC_SYSTEM_STACKALIGNMENT16}
-        leal    -12(%esp),%esp
-{$endif FPC_SYSTEM_STACKALIGNMENT16}
         call    fpc_truely_ansistr_unique
-{$ifdef FPC_SYSTEM_STACKALIGNMENT16}
-        leal    12(%esp),%esp
-{$endif FPC_SYSTEM_STACKALIGNMENT16}
 .Lj4038:
 .Lj4031:
 // [442] end;

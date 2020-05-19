@@ -26,7 +26,30 @@
 {$IFNDEF FPC_USE_LIBC}
 
   Stat = record  // No unix typing because of differences
-        st_dev    : culonglong;
+    case byte of
+      0:
+        (dev    : culonglong deprecated;
+        ino    : culonglong deprecated;
+        mode   : cuint deprecated;
+        nlink  : cuint deprecated;
+        uid    : cuint deprecated;
+        gid    : cuint deprecated;
+        rdev   : culonglong deprecated;
+        __pad2 : cushort deprecated;
+        size   : clonglong deprecated;
+        blksize: clong deprecated;
+
+        blocks : clonglong deprecated;
+        atime  : clong deprecated;
+        atime_nsec : culong deprecated;
+        mtime  : clong deprecated;
+        mtime_nsec : culong deprecated;
+        ctime  : clong deprecated;
+        __unused3 : culong deprecated;
+        __unused4 : culong deprecated;
+        __unused5 : culong deprecated;);
+      1:
+        (st_dev    : culonglong;
         st_ino    : culonglong;
         st_mode   : cuint;
         st_nlink  : cuint;
@@ -45,7 +68,7 @@
         st_ctime  : clong;
         __unused3_ : culong;
         __unused4_ : culong;
-        __unused5_ : culong;
+        __unused5_ : culong;);
   end;
 
 {$ELSE FPC_USE_LIBC}
@@ -55,6 +78,8 @@
 { i.e. powerpc kernel sources (2.6.20-15) /include/asm-powerpc/stat.h, stat64 struct }
 
   stat = record
+    case byte of
+      0: (
         st_dev     : cULongLong;
         st_ino     : cULongLong;
         st_mode    : cUInt;
@@ -73,7 +98,27 @@
         st_ctime,
         st_ctime_nsec,
         __unused4,
-        __unused5  : cULong;
+        __unused5  : cULong);
+      1: (
+        dev    : cULongLong deprecated;
+        ino    : cULongLong deprecated;
+        mode   : cUInt deprecated;
+        nlink  : cUInt deprecated;
+        uid    : cUInt deprecated;
+        gid    : cUInt deprecated;
+        rdev   : cULongLong deprecated;
+        __pad2_: cUShort deprecated;
+        size   : cLongLong deprecated;
+        blksize: cInt deprecated;
+        blocks : cULongLong deprecated;
+        atime,
+        __unused1_dummy,
+        mtime,
+        __unused2_dummy,
+        ctime,
+        __unused3_dummy,
+        __unused4_dummy,
+        __unused5_dummy  : cULong deprecated);
   end;
 
 {$ENDIF FPC_USE_LIBC}

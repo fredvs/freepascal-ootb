@@ -15,8 +15,6 @@
 
  **********************************************************************}
 
-{$ifdef FPC_BIG_ENDIAN}
-
 { Note: the implementation of these routines is for BIG ENDIAN only!! (JM) }
 
 {$ifndef FPC_UNIT_HAS_STRCOPY}
@@ -167,8 +165,6 @@ asm
         {  r3 contains new dest here  }
 end;
 {$endif FPC_UNIT_HAS_STRECOPY}
-
-{$endif FPC_BIG_ENDIAN}
 
 
 {$ifndef FPC_UNIT_HAS_STRLCOPY}

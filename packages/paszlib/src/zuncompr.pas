@@ -1,4 +1,4 @@
-unit ZUncompr;
+unit zuncompr;
 
 { uncompr.c -- decompress a memory buffer
   Copyright (C) 1995-1998 Jean-loup Gailly.

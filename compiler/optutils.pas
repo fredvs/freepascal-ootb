@@ -27,8 +27,7 @@ unit optutils;
 
     uses
       cclasses,
-      node,
-      globtype;
+      node;
 
     type
       { this implementation should be really improved,
@@ -48,16 +47,12 @@ unit optutils;
     }
     procedure CalcDefSum(p : tnode);
 
-    { calculates/estimates the field execution weight of optinfo }
-    procedure CalcExecutionWeights(p : tnode;Initial : longint = 100);
-
     { returns true, if n is a valid node and has life info }
     function has_life_info(n : tnode) : boolean;
 
   implementation
 
     uses
-      cutils,
       verbose,
       optbase,
       ncal,nbas,nflw,nutils,nset,ncon;
@@ -138,8 +133,6 @@ unit optutils;
               write(text(arg^),' Successor: ',nodetype2str[n.successor.nodetype],'(',n.successor.fileinfo.line,',',n.successor.fileinfo.column,')')
             else
               write(text(arg^),' Successor: nil');
-            write(text(arg^),' DefSum: ');
-            PrintDFASet(text(arg^),n.optinfo^.defsum);
             writeln(text(arg^));
           end;
         result:=fen_false;
@@ -318,6 +311,7 @@ unit optutils;
                 { raise never returns }
                 p.successor:=nil;
               end;
+            withn,
             tryexceptn,
             tryfinallyn,
             onn:
@@ -353,50 +347,6 @@ unit optutils;
             foreachnodestatic(pm_postprocess,p,@adddef,nil);
             p.optinfo^.defsum:=sum;
           end;
-      end;
-
-
-    function SetExecutionWeight(var n: tnode; arg: pointer): foreachnoderesult;
-      var
-        Weight : longint;
-        i : Integer;
-      begin
-        Result:=fen_false;
-        n.allocoptinfo;
-        Weight:=max(plongint(arg)^,1);
-        case n.nodetype of
-          casen:
-            begin
-              CalcExecutionWeights(tcasenode(n).left,Weight);
-              for i:=0 to tcasenode(n).blocks.count-1 do
-                CalcExecutionWeights(pcaseblock(tcasenode(n).blocks[i])^.statement,max(1,Weight div case_count_labels(tcasenode(n).labels)));
-
-              CalcExecutionWeights(tcasenode(n).elseblock,max(1,Weight div case_count_labels(tcasenode(n).labels)));
-              Result:=fen_norecurse_false;
-            end;
-          whilerepeatn:
-            begin
-              CalcExecutionWeights(twhilerepeatnode(n).right,max(Weight,1)*8);
-              CalcExecutionWeights(twhilerepeatnode(n).left,max(Weight,1)*8);
-              Result:=fen_norecurse_false;
-            end;
-          ifn:
-            begin
-              CalcExecutionWeights(tifnode(n).left,Weight);
-              CalcExecutionWeights(tifnode(n).right,max(Weight div 2,1));
-              CalcExecutionWeights(tifnode(n).t1,max(Weight div 2,1));
-              Result:=fen_norecurse_false;
-            end;
-          else
-            n.optinfo^.executionweight:=weight;
-        end;
-      end;
-
-
-    procedure CalcExecutionWeights(p : tnode;Initial : longint = 100);
-      begin
-        if assigned(p) then
-          foreachnodestatic(pm_postprocess,p,@SetExecutionWeight,Pointer(@Initial));
       end;
 
 

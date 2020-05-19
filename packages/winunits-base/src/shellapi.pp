@@ -18,11 +18,7 @@
 {$smartlink on}
 {$endif}
 
-{$ifdef WIN64}
-  {$PACKRECORDS C}
-{$else}
-  {$PACKRECORDS 1}
-{$endif}
+{$PACKRECORDS C}
 {$calling stdcall}
 {$mode objfpc}
 

@@ -27,7 +27,6 @@ unit t_android;
 interface
 
   uses
-    globtype,
     aasmdata,
     symsym,symdef,ppu,
     import,export,expunix,link;
@@ -37,13 +36,8 @@ interface
       procedure generatelib;override;
     end;
 
-    { texportlibandroid }
-
     texportlibandroid=class(texportlibunix)
-    public
       procedure setfininame(list: TAsmList; const s: string); override;
-      procedure exportprocedure(hp: texported_item); override;
-      procedure generatelib; override;
     end;
 
     { tlinkerandroid }
@@ -52,7 +46,6 @@ interface
     private
       prtobj  : string[80];
       reorder : boolean;
-      FJNIOnLoadName: TSymStr;
       Function  WriteResponseFile(isdll:boolean) : Boolean;
       function DoLink(IsSharedLib: boolean): boolean;
     public
@@ -70,17 +63,14 @@ implementation
   uses
     SysUtils,
     cutils,cfileutl,cclasses,
-    verbose,systems,globals,
-    symconst,cscript,
+    verbose,systems,globtype,globals,
+    symconst,script,
     fmodule,
-    aasmbase,aasmtai,aasmcpu,cpubase,hlcgcpu,hlcgobj,
+    aasmbase,aasmtai,aasmcpu,cpubase,
     cgbase,cgobj,cgutils,ogbase,ncgutil,
     comprsrc,
     rescmn, i_android
     ;
-
-const
-  SJNI_OnLoad = 'JNI_OnLoad';
 
 {*****************************************************************************
                                TIMPORTLIBANDROID
@@ -113,44 +103,6 @@ const
         inherited setfininame(list,s);
       end;
 
-    procedure texportlibandroid.exportprocedure(hp: texported_item);
-      begin
-        {
-          Android versions prior to 4.1 do not support recursive dlopen() calls.
-          Therefore if a shared library is loaded by JVM ( using dlopen() ),
-          it is not possible to use dlopen() in a units initialization code -
-          dlopen() simply hangs.
-          To workaround this issue, if a library exports JNI_OnLoad(), then
-          no unit initialization is performed during library load.
-          The initialization is called when JVM has loaded the library and calls
-          JNI_OnLoad().
-        }
-        // Check for the JNI_OnLoad export
-        if current_module.islibrary and not hp.is_var and assigned(hp.sym) and
-           (hp.sym.typ = procsym) and (eo_name in hp.options) and
-           (hp.name^ = SJNI_OnLoad) and (tprocsym(hp.sym).procdeflist.count = 1) then
-          begin
-            // Save the JNI_OnLoad procdef
-            tlinkerandroid(Linker).FJNIOnLoadName:=tprocdef(tprocsym(hp.sym).procdeflist[0]).mangledname;
-            hp.Free;
-            exit;
-          end;
-        inherited exportprocedure(hp);
-      end;
-
-    procedure texportlibandroid.generatelib;
-      begin
-        inherited generatelib;
-        if tlinkerandroid(Linker).FJNIOnLoadName = '' then
-          exit;
-        // If JNI_OnLoad is exported, export a system proxy function instead
-        create_hlcodegen;
-        new_section(current_asmdata.asmlists[al_procedures],sec_code,'',0);
-        hlcg.g_external_wrapper(current_asmdata.asmlists[al_procedures],nil,SJNI_OnLoad,'FPC_JNI_ON_LOAD_PROXY',true);
-        destroy_hlcodegen;
-        exportedsymnames.insert(SJNI_OnLoad);
-      end;
-
 {*****************************************************************************
                                   TLINKERANDROID
 *****************************************************************************}
@@ -168,18 +120,14 @@ begin
   with Info do
    begin
      { Specify correct max-page-size and common-page-size to prevent big gaps between sections in resulting executable }
-     s:='ld -z max-page-size=0x1000 -z common-page-size=0x1000 -z noexecstack -z now -z relro --build-id $OPT -L. -T $RES -o $EXE';
-     ExeCmd[1]:=s + ' --entry=_start';
+     s:='ld -z max-page-size=0x1000 -z common-page-size=0x1000 -z noexecstack -z now $OPT -L. -T $RES -o $EXE';
+     ExeCmd[1]:=s + ' --entry=_fpc_start';
      DllCmd[1]:=s + ' -shared -soname $SONAME';
      DllCmd[2]:='strip --strip-unneeded $EXE';
      ExtDbgCmd[1]:='objcopy --only-keep-debug $EXE $DBG';
      ExtDbgCmd[2]:='objcopy --add-gnu-debuglink=$DBG $EXE';
      ExtDbgCmd[3]:='strip --strip-unneeded $EXE';
-{$ifdef cpu64bitalu}
-     DynamicLinker:='/system/bin/linker64';
-{$else}
      DynamicLinker:='/system/bin/linker';
-{$endif cpu64bitalu}
    end;
 end;
 
@@ -354,21 +302,7 @@ begin
       add('    KEEP (*(.fpc .fpc.n_version .fpc.n_links))');
       add('  }');
       add('}');
-      add('INSERT AFTER .data1');
-
-      // Define different aliases for normal and JNI libraries
-      if FJNIOnLoadName <> '' then
-        begin
-          s:=FJNIOnLoadName;
-          s1:='FPC_JNI_LIB_MAIN_ANDROID';
-        end
-      else
-        begin
-          s:='0';
-          s1:='PASCALMAIN';
-        end;
-      add('FPC_JNI_ON_LOAD = ' + s + ';');
-      add('FPC_LIB_MAIN_ANDROID = ' + s1 + ';');
+      add('INSERT BEFORE .data1');
 
       { Write and Close response }
       writetodisk;
@@ -490,21 +424,11 @@ initialization
   RegisterExport(system_arm_android,texportlibandroid);
   RegisterTarget(system_arm_android_info);
 {$endif ARM}
-{$ifdef AARCH64}
-  RegisterImport(system_aarch64_android,timportlibandroid);
-  RegisterExport(system_aarch64_android,texportlibandroid);
-  RegisterTarget(system_aarch64_android_info);
-{$endif AARCH64}
 {$ifdef I386}
   RegisterImport(system_i386_android,timportlibandroid);
   RegisterExport(system_i386_android,texportlibandroid);
   RegisterTarget(system_i386_android_info);
 {$endif I386}
-{$ifdef X86_64}
-  RegisterImport(system_x86_64_android,timportlibandroid);
-  RegisterExport(system_x86_64_android,texportlibandroid);
-  RegisterTarget(system_x86_64_android_info);
-{$endif X86_64}
 {$ifdef MIPSEL}
   RegisterImport(system_mipsel_android,timportlibandroid);
   RegisterExport(system_mipsel_android,texportlibandroid);

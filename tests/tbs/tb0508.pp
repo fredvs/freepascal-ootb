@@ -5,12 +5,7 @@ type
 
 procedure proccall(p: codepointer);
 begin
-{$ifndef FPC_LOCALS_ARE_STACK_REG_RELATIVE}
-  PointerLocal(p)(get_caller_frame(get_frame,get_pc_addr));
-{$else}
-PointerLocal(p)(get_frame);
-{$endif}  
-
+  PointerLocal(p)(get_caller_frame(get_frame));
 end;
 
 procedure t1;

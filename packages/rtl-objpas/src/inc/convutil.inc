@@ -3,7 +3,7 @@
    Copyright (c) 2004 by Marco van de Voort
    member of the Free Pascal development team.
 
-   An implementation for unit ConvUtils, which converts between
+   An implementation for unit convutils, which converts between
    units and simple combinations of them.
 
    Based on a guessed interface derived from some programs on the web. (Like
@@ -18,7 +18,7 @@
 
 **********************************************************************}
 
-unit ConvUtils;
+unit convutils;
 
 interface
 
@@ -26,16 +26,12 @@ interface
 {$H+}
 
 {$ifndef FPUNONE}
-uses
-  sysutils;
-
 Type TConvType        = type Integer;
      TConvFamily      = type Integer;
      TConvFamilyArray = array of TConvFamily;
      TConvTypeArray   = array of TConvType;
      TConversionProc  = function(const AValue: Double): Double;
      TConvUtilFloat   = double;
-     EConversionError = class(EConvertError);
 
 Function RegisterConversionFamily(Const S : String):TConvFamily;
 Function RegisterConversionType(Fam:TConvFamily;Const S:String;Value:TConvUtilFloat):TConvType;
@@ -43,17 +39,10 @@ Function RegisterConversionType(Fam:TConvFamily;Const S:String;Value:TConvUtilFl
 function Convert ( const Measurement  : Double; const FromType, ToType  : TConvType ) :TConvUtilFloat;
 function Convert ( const Measurement  : Double; const FromType1, FromType2, ToType1, ToType2  : TConvType ) :TConvUtilFloat;
 
-function ConvertFrom(const AFrom: TConvType; AValue: Double): TConvUtilFloat;
-
 function ConvFamilyToDescription(const AFamily: TConvFamily): string;
 function ConvTypeToDescription(const AType: TConvType): string;
-function  DescriptionToConvFamily(const ADescription: String; out AFamily: TConvFamily): Boolean;
-function  DescriptionToConvType(const ADescription: String; out AType: TConvType): Boolean; overload;
-function  DescriptionToConvType(const AFamily: TConvFamily; const ADescription: String; out AType: TConvType): Boolean; overload;
 procedure GetConvFamilies(out AFamilies: TConvFamilyArray);
 procedure GetConvTypes(const AFamily: TConvFamily; out ATypes: TConvTypeArray);
-
-function ConvTypeToFamily(const AType: TConvType): TConvFamily;
 
 Type
   TConvTypeInfo = Class(Tobject)
@@ -95,9 +84,6 @@ Type
 
 Implementation
 
-uses
-  RtlConsts;
-
 Type ResourceData = record
                       Description : String;
                       Value       : TConvUtilFloat;
@@ -114,22 +100,6 @@ begin
   result:='';
   if AFamily<length(TheFamilies) then
     result:=TheFamilies[AFamily];
-end;
-
-function  DescriptionToConvFamily(const ADescription: String; out AFamily: TConvFamily): Boolean;
-var
-  i: Integer;
-begin
-  Result := False;
-  for i := 0 to Length(TheFamilies) - 1 do
-  begin
-    if TheFamilies[i] = ADescription then
-    begin
-      AFamily := i;
-      Result := true;
-      break;
-     end;
-  end;
 end;
 
 procedure GetConvFamilies(out AFamilies: TConvFamilyArray);
@@ -166,47 +136,6 @@ Begin
   result:='';
   if AType<length(TheUnits) then
     result:=TheUnits[AType].Description;
-end;
-
-function  DescriptionToConvType(const ADescription: String; out AType: TConvType): Boolean;
-var
-  i: Integer;
-begin
-  Result := False;
-  for i := 0 to Length(TheUnits) - 1 do
-  begin
-    if TheUnits[i].Description = ADescription then
-    begin
-      AType := i;
-      Result := true;
-      break;
-     end;
-  end;
-end;
-
-function  DescriptionToConvType(const AFamily: TConvFamily; const ADescription: String; out AType: TConvType): Boolean;
-var
-  i: Integer;
-begin
-  Result := False;
-  for i := 0 to Length(TheUnits) - 1 do
-  begin
-    if (AFamily = TheUnits[i].Fam) and
-       (TheUnits[i].Description = ADescription) then
-    begin
-      AType := i;
-      Result := true;
-      break;
-     end;
-  end;
-end;
-
-function ConvTypeToFamily(const AType: TConvType): TConvFamily;
-
-begin
-  result:=0;  // CIllegalConvFamily according to Tokyo docs.
-  if AType<length(TheUnits) then
-    result:=TheUnits[AType].Fam;
 end;
 
 Function RegisterConversionFamily(Const S:String):TConvFamily;
@@ -247,8 +176,7 @@ Function RegisterConversionType(Fam:TConvFamily;Const S:String;Value:TConvUtilFl
 var l1 : Longint;
 
 begin
-  If NOT CheckFamily(Fam) Then
-    raise EConversionError.CreateFmt(SConvUnknownFamily, [IntToStr(Fam)]);
+  If NOT CheckFamily(Fam) Then exit(-1); // family not registered.
   if (value+1.0)<macheps then            // not properly defined yet.
     exit(-1);
   l1:=length(theunits);
@@ -278,14 +206,11 @@ var
 
 begin
   if not SearchConvert(fromtype,fromrec) then
-    raise EConversionError.CreateFmt(SConvUnknownType, [IntToStr(FromType)]);
+   exit(-1.0);                                  // raise exception?
   if not SearchConvert(totype,torec) then
-    raise EConversionError.CreateFmt(SConvUnknownType, [IntToStr(ToType)]);
+   exit(-1.0);                                  // raise except?
   if fromrec.fam<>torec.fam then
-    raise EConversionError.CreateFmt(SConvIncompatibleTypes2,[
-      ConvFamilyToDescription(fromrec.fam),
-      ConvFamilyToDescription(torec.fam)
-    ]);
+   exit(-1.0);
   result:=Measurement*fromrec.value/torec.value;
 end;
 
@@ -296,32 +221,16 @@ var
 
 begin
   if not SearchConvert(fromtype1,fromrec1) then
-    raise EConversionError.CreateFmt(SConvUnknownType, [IntToStr(fromtype1)]);
+   exit(-1.0);                                  // raise exception?
   if not SearchConvert(totype1,torec1) then
-    raise EConversionError.CreateFmt(SConvUnknownType, [IntToStr(totype1)]);
+   exit(-1.0);                                  // raise except?
   if not SearchConvert(fromtype2,fromrec2) then
-    raise EConversionError.CreateFmt(SConvUnknownType, [IntToStr(fromtype2)]);
+   exit(-1.0);                                  // raise exception?
   if not SearchConvert(totype2,torec2) then
-    raise EConversionError.CreateFmt(SConvUnknownType, [IntToStr(totype2)]);
-  if (fromrec1.fam<>torec1.fam) or (fromrec2.fam<>torec2.fam) then
-    raise EConversionError.CreateFmt(SConvIncompatibleTypes4,[
-      ConvFamilyToDescription(fromrec1.fam),
-      ConvFamilyToDescription(torec1.fam),
-      ConvFamilyToDescription(fromrec2.fam),
-      ConvFamilyToDescription(torec2.fam)
-    ]);
+   exit(-1.0);                                  // raise except?
+  if (fromrec1.fam<>torec1.fam) or (fromrec1.fam<>torec1.fam) then
+   exit(-1.0);
   result:=Measurement*(fromrec1.value/fromrec2.value)/(torec1.value/torec2.value);
-end;
-
-function ConvertFrom(const AFrom: TConvType; AValue: Double): TConvUtilFloat;
-
-var
-  fromrec :   resourcedata;
-
-begin
-  if not SearchConvert(AFrom, fromrec) then
-    raise  EConversionError.CreateFmt(SConvUnknownType, [IntToStr(AFrom)]);
-  result:=fromrec.value*AValue;
 end;
 
 Constructor TConvTypeInfo.Create(Const AConvFamily : TConvFamily;const ADescription:String);

@@ -1,4 +1,4 @@
-unit ZStream;
+unit zstream;
 
 {**********************************************************************
     This file is part of the Free Pascal free component library.
@@ -52,11 +52,7 @@ type
           destructor destroy;override;
         end;
 
-        { Tcompressionstream }
-
         Tcompressionstream=class(Tcustomzlibstream)
-        private
-          procedure ClearOutBuffer;
         protected
           raw_written,compressed_written: int64;
         public
@@ -180,7 +176,8 @@ end;
 function Tcompressionstream.write(const buffer;count:longint):longint;
 
 var err:smallint;
-    lastavail:longint;
+    lastavail,
+    written:longint;
 
 begin
   Fstream.next_in:=@buffer;
@@ -189,9 +186,17 @@ begin
   while Fstream.avail_in<>0 do
     begin
       if Fstream.avail_out=0 then
-        ClearOutBuffer;
-      inc(raw_written,lastavail-Fstream.avail_in);
-      lastavail:=Fstream.avail_in;
+        begin
+          { Flush the buffer to the stream and update progress }
+          written:=source.write(Fbuffer^,bufsize);
+          inc(compressed_written,written);
+          inc(raw_written,lastavail-Fstream.avail_in);
+          lastavail:=Fstream.avail_in;
+          progress(self);
+          { reset output buffer }
+          Fstream.next_out:=Fbuffer;
+          Fstream.avail_out:=bufsize;
+        end;
       err:=deflate(Fstream,Z_NO_FLUSH);
       if err<>Z_OK then
         raise Ecompressionerror.create(zerror(err));
@@ -206,27 +211,25 @@ begin
   get_compressionrate:=100*compressed_written/raw_written;
 end;
 
-procedure TCompressionstream.ClearOutBuffer;
-
-begin
-  { Flush the buffer to the stream and update progress }
-  source.writebuffer(Fbuffer^,bufsize-Fstream.avail_out);
-  inc(compressed_written,bufsize-Fstream.avail_out);
-  progress(self);
-  { reset output buffer }
-  Fstream.next_out:=Fbuffer;
-  Fstream.avail_out:=bufsize;
-end;
 
 procedure Tcompressionstream.flush;
 
 var err:smallint;
+    written:longint;
 
 begin
   {Compress remaining data still in internal zlib data buffers.}
   repeat
     if Fstream.avail_out=0 then
-      ClearOutBuffer;
+      begin
+        { Flush the buffer to the stream and update progress }
+        written:=source.write(Fbuffer^,bufsize);
+        inc(compressed_written,written);
+        progress(self);
+        { reset output buffer }
+        Fstream.next_out:=Fbuffer;
+        Fstream.avail_out:=bufsize;
+      end;
     err:=deflate(Fstream,Z_FINISH);
     if err=Z_STREAM_END then
       break;
@@ -234,7 +237,11 @@ begin
       raise Ecompressionerror.create(zerror(err));
   until false;
   if Fstream.avail_out<bufsize then
-    ClearOutBuffer;
+    begin
+      source.writebuffer(FBuffer^,bufsize-Fstream.avail_out);
+      inc(compressed_written,bufsize-Fstream.avail_out);
+      progress(self);
+    end;
 end;
 
 
@@ -264,7 +271,7 @@ begin
   else
     err:=inflateInit(Fstream);
   if err<>Z_OK then
-    raise Edecompressionerror.create(zerror(err));
+    raise Ecompressionerror.create(zerror(err));
 end;
 
 function Tdecompressionstream.read(var buffer;count:longint):longint;

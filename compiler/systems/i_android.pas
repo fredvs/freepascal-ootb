@@ -91,8 +91,7 @@ unit i_android;
             first_parm_offset : 8;
             stacksize    : 8*1024*1024;
             stackalign   : 8;
-            abi : abi_eabi;
-            llvmdatalayout : 'e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:64:128-a0:0:64-n32-S64';
+            abi : abi_eabi
           );
 
        system_i386_android_info : tsysteminfo =
@@ -145,7 +144,7 @@ unit i_android;
                 loopalign       : 4;
                 jumpalign       : 0;
                 constalignmin   : 0;
-                constalignmax   : 16;
+                constalignmax   : 8;
                 varalignmin     : 0;
                 varalignmax     : 16;
                 localalignmin   : 4;
@@ -157,141 +156,8 @@ unit i_android;
             first_parm_offset : 8;
             stacksize    : 8*1024*1024;
             stackalign   : 16;
-            abi : abi_default;
-            llvmdatalayout : 'e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32-S128';
+            abi : abi_default
           );
-
-        system_aarch64_android_info  : tsysteminfo =
-           (
-             system       : system_aarch64_android;
-             name         : 'Android for AArch64';
-             shortname    : 'Android';
-             flags        : [tf_needs_symbol_size,tf_needs_symbol_type,tf_files_case_sensitive,
-                             tf_requires_proper_alignment, tf_safecall_exceptions,
-                             tf_pic_uses_got, tf_pic_default,
-                             tf_smartlink_sections,tf_has_winlike_resources];
-             cpu          : cpu_aarch64;
-             unit_env     : 'ANDROIDUNITS';
-             extradefines : 'UNIX;HASUNIX';
-             exeext       : '';
-             defext       : '.def';
-             scriptext    : '.sh';
-             smartext     : '.sl';
-             unitext      : '.ppu';
-             unitlibext   : '.ppl';
-             asmext       : '.s';
-             objext       : '.o';
-             resext       : '.res';
-             resobjext    : '.or';
-             sharedlibext : '.so';
-             staticlibext : '.a';
-             staticlibprefix : 'libp';
-             sharedlibprefix : 'lib';
-             sharedClibext : '.so';
-             staticClibext : '.a';
-             staticClibprefix : 'lib';
-             sharedClibprefix : 'lib';
-             importlibprefix : 'libimp';
-             importlibext : '.a';
-             Cprefix      : '';
-             newline      : #10;
-             dirsep       : '/';
-             assem        : as_gas;
-             assemextern  : as_gas;
-             link         : ld_none;
-             linkextern   : ld_android;
-             ar           : ar_gnu_ar;
-             res          : res_elf;
-             dbg          : dbg_dwarf2;
-             script       : script_unix;
-             endian       : endian_little;
-             alignment    :
-               (
-                 procalign       : 8;
-                 loopalign       : 4;
-                 jumpalign       : 0;
-                 constalignmin   : 0;
-                 constalignmax   : 16;
-                 varalignmin     : 0;
-                 varalignmax     : 16;
-                 localalignmin   : 4;
-                 localalignmax   : 16;
-                 recordalignmin  : 0;
-                 recordalignmax  : 16;
-                 maxCrecordalign : 16
-               );
-             first_parm_offset : 16;
-             stacksize    : 8*1024*1024;
-             stackalign   : 16;
-             abi : abi_default;
-             llvmdatalayout : 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32:64-S128'
-           );
-
-        system_x86_64_android_info : tsysteminfo =
-           (
-             system       : system_x86_64_android;
-             name         : 'Android for x86-64';
-             shortname    : 'Android';
-             flags        : [tf_needs_symbol_size,tf_needs_symbol_type,tf_files_case_sensitive,
-                             tf_needs_dwarf_cfi,tf_has_winlike_resources,
-                             {tf_pic_uses_got,} tf_pic_default, tf_smartlink_sections,
-                             tf_safecall_exceptions, tf_safecall_clearstack];
-             cpu          : cpu_x86_64;
-             unit_env     : 'ANDROIDUNITS';
-             extradefines : 'UNIX;HASUNIX';
-             exeext       : '';
-             defext       : '.def';
-             scriptext    : '.sh';
-             smartext     : '.sl';
-             unitext      : '.ppu';
-             unitlibext   : '.ppl';
-             asmext       : '.s';
-             objext       : '.o';
-             resext       : '.res';
-             resobjext    : '.or';
-             sharedlibext : '.so';
-             staticlibext : '.a';
-             staticlibprefix : 'libp';
-             sharedlibprefix : 'lib';
-             sharedClibext : '.so';
-             staticClibext : '.a';
-             staticClibprefix : 'lib';
-             sharedClibprefix : 'lib';
-             importlibprefix : 'libimp';
-             importlibext : '.a';
-             Cprefix      : '';
-             newline      : #10;
-             dirsep       : '/';
-             assem        : as_x86_64_elf64;
-             assemextern  : as_gas;
-             link         : ld_none;
-             linkextern   : ld_android;
-             ar           : ar_gnu_ar;
-             res          : res_elf;
-             dbg          : dbg_dwarf2;
-             script       : script_unix;
-             endian       : endian_little;
-             alignment    :
-               (
-                 procalign       : 16;
-                 loopalign       : 8;
-                 jumpalign       : 0;
-                 constalignmin   : 0;
-                 constalignmax   : 16;
-                 varalignmin     : 0;
-                 varalignmax     : 16;
-                 localalignmin   : 4;
-                 localalignmax   : 16;
-                 recordalignmin  : 0;
-                 recordalignmax  : 16;
-                 maxCrecordalign : 16
-               );
-             first_parm_offset : 16;
-             stacksize    : 8*1024*1024;
-             stackalign   : 16;
-             abi : abi_default;
-             llvmdatalayout : 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128';
-           );
 
        system_mipsel_android_info : tsysteminfo =
           (
@@ -354,8 +220,7 @@ unit i_android;
             first_parm_offset : 0;
             stacksize    : 32*1024*1024;
             stackalign   : 8;
-            abi : abi_default;
-            llvmdatalayout : 'e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S64';
+            abi : abi_default
           );
 
 implementation
@@ -366,21 +231,11 @@ initialization
     set_source_info(system_i386_android_info);
   {$endif}
 {$endif CPUI386}
-{$ifdef CPUX86_64}
-  {$ifdef android}
-    set_source_info(system_x86_64_android_info);
-  {$endif}
-{$endif CPUX86_64}
 {$ifdef CPUARM}
   {$ifdef android}
     set_source_info(system_arm_android_info);
   {$endif android}
 {$endif CPUARM}
-{$ifdef CPUAARCH64}
-  {$ifdef android}
-    set_source_info(system_aarch64_android_info);
-  {$endif android}
-{$endif CPUAARCH64}
 {$ifdef CPUMIPSEL}
   {$ifdef android}
     set_source_info(system_mipsel_android_info);

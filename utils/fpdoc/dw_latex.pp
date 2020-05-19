@@ -16,7 +16,7 @@
 {$mode objfpc}
 {$H+}
 unit dw_LaTeX;
-{$WARN 5024 off : Parameter "$1" not used}
+
 interface
 
 uses DOM, dGlobals, PasTree;
@@ -69,7 +69,7 @@ Type
     procedure StartListing(Frames: Boolean; const name: String); override;
     procedure EndListing; override;
     Function  EscapeText(S : String) : String; override;
-    Function  StripText(S : String) : String; override;overload;
+    Function  StripText(S : String) : String; override;
     procedure WriteCommentLine; override;
     procedure WriteComment(Comment : String);override;
     procedure StartSection(SectionName : String);override;
@@ -87,8 +87,6 @@ Type
     procedure DescrEndItalic; override;
     procedure DescrBeginEmph; override;
     procedure DescrEndEmph; override;
-    procedure DescrBeginUnderline; override;
-    procedure DescrEndUnderline; override;
     procedure DescrWriteImageEl(const AFileName, ACaption, ALinkName : DOMString); override;
     procedure DescrWriteFileEl(const AText: DOMString); override;
     procedure DescrWriteKeywordEl(const AText: DOMString); override;
@@ -250,7 +248,7 @@ var
   I: Integer;
 
 begin
-  Result:='';
+  SetLength(Result, 0);
   for i := 1 to Length(S) do
     If not (S[i] in ['&','{','}','#','_','$','%','''','~','^', '\']) then
       Result := Result + S[i]
@@ -289,38 +287,24 @@ begin
   Write('}');
 end;
 
-procedure TLaTeXWriter.DescrBeginUnderline;
-begin
-  Write('\underline{');
-end;
-
-procedure TLaTeXWriter.DescrEndUnderline;
-begin
-  Write('}');
-end;
-
 procedure TLaTeXWriter.DescrWriteImageEl(const AFileName, ACaption, ALinkName : DOMString); 
 
 Var
   FN : String;
   L : Integer;
-  S : String;
   
 begin
   Writeln('\begin{figure}[ht]%');
   Writeln('\begin{center}');
   If (ACaption<>ACaption) then
-    begin
-    S:=EscapeText(ACaption);
-    Writeln(Format('\caption{%s}',[S]));
-    end;
+    Writeln(Format('\caption{%s}',[EscapeText(ACaption)]));
   If (ALinkName<>'') then
-    WriteLabel('fig:'+Utf8Encode(ALinkName));
+    WriteLabel('fig:'+ALinkName);
   FN:=ImageDir;
   L:=Length(FN);
   If (L>0) and (FN[l]<>'/')  then
     FN:=FN+'/';
-  FN:=FN+Utf8Encode(AFileName);
+  FN:=FN+AFileName;
   Writeln('\epsfig{file='+FN+'}');
   Writeln('\end{center}');
   Writeln('\end{figure}');
@@ -349,7 +333,7 @@ end;
 
 procedure TLaTeXWriter.DescrBeginLink(const AId: DOMString);
 begin
-  FLink := Engine.ResolveLink(Module, UTF8Encode(AId));
+  FLink := Engine.ResolveLink(Module, AId);
 //  System.WriteLn('Link "', AId, '" => ', FLink);
 end;
 
@@ -590,7 +574,6 @@ begin
   else
     Writeln('\end{verbatim}')
 end;
-
 
 procedure TLaTeXWriter.WriteCommentLine;
 const

@@ -14,6 +14,8 @@
  **********************************************************************}
 unit Intuition;
 
+{$mode objfpc}
+
 {$define INTUI_V36_NAMES_ONLY}
 
 interface
@@ -50,7 +52,7 @@ type
     WorkBuffer: STRPTR;                // must be as large as StringInfo.Buffer
     Reserved: array[0..3] of LongWord; // set to 0
   end;
-
+  
 { Data type Border, used for drawing a series of lines which is intended for use as a border drawing, but which may, in fact, be used to render any
   arbitrary vector shape. The routine DrawBorder sets up the RastPort with the appropriate variables, then does a Move to the first coordinate, then does Draws
   to the subsequent coordinates. After all the Draws are done, if NextBorder is non-zero we call DrawBorder recursively}
@@ -113,7 +115,7 @@ const
   If COMMSEQ, likewise I'll use this generic stuff}
   CHECKWIDTH    = 19;
   LOWCHECKWIDTH = 13;
-  COMMWIDTH     = 27;
+  COMMWIDTH     = 27; 
   LOWCOMMWIDTH  = 16;
 
 type
@@ -125,8 +127,8 @@ type
     Width,
     Height: SmallInt;     // dimensions of the select box
     Flags: Word;          // see flag definitions below (MENUENABLED, MIDRAWN)
-    MenuName: PChar;      // text for this Menu Header
-    FirstItem: PMenuItem; // pointer to first in chain
+    MenuName: PChar;      // text for this Menu Header 
+    FirstItem: PMenuItem; // pointer to first in chain 
     JazzX,                // these mysteriously-named variables are for internal use only
     JazzY,
     BeatX,
@@ -159,7 +161,7 @@ type
     GadgetText: PIntuiText; // text for this gadget
 
     MutualExclude: IPTR;    // obsolete
-
+    
     SpecialInfo: APTR;      // pointer to a structure of special data required by Proportional, String and LongInt Gadgets
     GadgetID: Word;         // user-definable ID field
     UserData: APTR;         // ptr to general purpose User data (ignored by In)
@@ -169,7 +171,7 @@ type
   TExtGadget = record
     // The first fields match struct Gadget exactly
     NextGadget: PExtGadget;  // Matches struct Gadget
-    LeftEdge, TopEdge,       // Matches struct Gadget
+    LeftEdge, TopEdge,       // Matches struct Gadget 
     Width, Height: SmallInt; // Matches struct Gadget
     Flags,                   // Matches struct Gadget
     Activation,              // Matches struct Gadget
@@ -192,7 +194,7 @@ type
 const
 // Gadget.Flags values
   // combinations in these bits describe the highlight technique to be used
-
+  
   GFLG_GADGHCOMP    = $0000;    // Complement the select box
   GFLG_GADGHBOX     = 1 shl 0;  // Draw a box around the image
   GFLG_GADGHIMAGE   = 1 shl 1;  // Blast in this alternate image
@@ -217,39 +219,39 @@ const
   GFLG_LABELMASK    = $3000;
   GFLG_RELSPECIAL   = 1 shl 14; // custom gadget has special relativity. Gadget box values are absolutes, but can be changed via the GM_LAYOUT method.
   GFLG_EXTENDED     = 1 shl 15; // Gadget is extended
-
+  
 {GFLG_RELSPECIAL allows custom gadget implementors to
   make gadgets whose position and size depend in an arbitrary way
   on their window's dimensions.  The GM_LAYOUT method will be invoked
   for such a gadget (or any other GREL_xxx gadget) at suitable times,
   such as when the window opens or the window's size changes.
-
+  
  GFLG_STRINGEXTEND.  We discovered that V34 doesn't properly
   ignore the value we had chosen for the Gadget->Activation flag
   GACT_STRINGEXTEND.  NEVER SET THAT FLAG WHEN RUNNING UNDER V34.
   The Gadget->Flags bit GFLG_STRINGEXTEND is provided as a synonym which is
   safe under V34, and equivalent to GACT_STRINGEXTEND under V37.
   (Note that the two flags are not numerically equal)
-
+  
  GFLG_IMAGEDISABLE.  This flag is automatically set if
   the custom image of this gadget knows how to do disabled rendering
   (more specifically, if its IA_SupportsDisable attribute is TRUE).
   Intuition uses this to defer the ghosting to the image-class,
   instead of doing it itself (the old compatible way).
   Do not set this flag yourself - Intuition will do it for you.
-
+  
  GFLG_EXTENDED. If set, this bit means that the Gadget is actually
   a struct ExtGadget, with new fields and flags.  All V39 boopsi
   gadgets are ExtGadgets.  Never ever attempt to read the extended
-  fields of a gadget if this flag is not set.
-
+  fields of a gadget if this flag is not set.  
+  
  GACT_FOLLOWMOUSE flag, when set, specifies that you want to receive
   reports on mouse movements while this gadget is active.
   You probably want to set the GACT_IMMEDIATE flag when using
   GACT_FOLLOWMOUSE, since that's the only reasonable way you have of
   learning why Intuition is suddenly sending you a stream of mouse
   movement events.  If you don't set GACT_RELVERIFY, you'll get at
-  least one Mouse Position event.
+  least one Mouse Position event. 
   }
 
 // Gadget.Activation flag values
@@ -263,13 +265,13 @@ const
   GACT_TOPBORDER    = 1 shl 6;
   GACT_BOTTOMBORDER = 1 shl 7;
   GACT_TOGGLESELECT = 1 shl 8; // this bit for toggle-select mode
-  // should properly be in StringInfo, but aren't
+  // should properly be in StringInfo, but aren't 
   GACT_STRINGLEFT   = $0000;   // NOTE WELL: that this has value zero
   GACT_STRINGCENTER = 1 shl 9;
   GACT_STRINGRIGHT  = 1 shl 10;
   GACT_LONGINT      = 1 shl 11;  // this String Gadget is for Long Ints
   GACT_ALTKEYMAP    = 1 shl 12;  // this String has an alternate keymap
-  GACT_STRINGEXTEND = 1 shl 13;  // this String Gadget has StringExtend NOTE: NEVER SET GACT_STRINGEXTEND IF YOU ARE RUNNING ON LESS THAN V36! SEE GFLG_STRINGEXTEND (ABOVE) INSTEAD
+  GACT_STRINGEXTEND = 1 shl 13;  // this String Gadget has StringExtend NOTE: NEVER SET GACT_STRINGEXTEND IF YOU ARE RUNNING ON LESS THAN V36! SEE GFLG_STRINGEXTEND (ABOVE) INSTEAD  
   GACT_BOOLEXTEND   = 1 shl 13;  // this Boolean Gadget has a BoolInfo
   GACT_ACTIVEGADGET = 1 shl 14;  // this gadget is "active".  This flag is maintained by Intuition, and you cannot count on its value persisting
                                  // while you do something on your program's task.  It can only be trusted by people implementing custom gadgets
@@ -280,7 +282,7 @@ const
   gadget number type MUST start from one.  NO TYPES OF ZERO ALLOWED.
   first comes the mask for Gadget flags reserved for Gadget typing}
   GTYP_GADGETTYPE  = $FC00;  // all Gadget Global type flags (padded)
-  GTYP_SYSTYPEMASK = $00F0;
+  GTYP_SYSTYPEMASK = $00F0;  
   // system gadgets
   GTYP_SIZING      = $0010;
   GTYP_WDRAGGING   = $0020;
@@ -321,7 +323,7 @@ type
     Flags: Word;        // defined below (BOOLMASK)
     Mask: PWord;        // bit mask for highlighting and selecting mask must follow the same rules as an Image
                         // plane.  It's width and height are determined by the width and height of the gadget's select box. (i.e. Gadget.Width and .Height).
-    Reserved: LongWord; // set to 0
+    Reserved: LongWord; // set to 0 
   end;
 const
 // set BoolInfo.Flags to this flag bit. in the future, additional bits might mean more stuff hanging  off of BoolInfo.Reserved.
@@ -417,7 +419,7 @@ type
   PImage = ^TImage;
   PWindow = ^TWindow;
   PScreen = ^TScreen;
-// Requesters The following struct is used for standard intuition requesters (not to be mixed up with asl or easy requesters). See intuition.library/Request() for more information.
+// Requesters The following struct is used for standard intuition requesters (not to be mixed up with asl or easy requesters). See intuition.library/Request() for more information. 
   PRequester = ^TRequester;
   TRequester = record
     // the ClipRect and BitMap and used for rendering the requester
@@ -432,8 +434,8 @@ type
     ReqGadget: PGadget;       // First gadget of the requester
     ReqBorder: PBorder;       // First border of the requester
     ReqText: PIntuiText;      // First intuitext of the requester
-
-    Flags: Word;              // see definitions below
+    
+    Flags: Word;              // see definitions below 
     BackFill: Byte;           // pen number for back-plane fill before draws
 
     ReqLayer: PLayer;         // Layer in place of clip rect
@@ -450,7 +452,7 @@ type
     ReqImage: PImage;      // corresponds to USEREQIMAGE (see below)
     ReqPad2: array[0..31] of ShortInt; // PRIVATE
   end;
-
+  
 { The Timage.PlanePick and PlaneOnOff variables work much the same way as the equivalent GELS Bob variables.  It's a space-saving
   mechanism for image data.  Rather than defining the image data for every plane of the RastPort, you need define data only
   for the planes that are not entirely zero or one.  As you define your Imagery, you will often find that most of the planes
@@ -485,7 +487,7 @@ type
   PTabletData = ^TTabletData;
   TTabletData = record
     td_XFraction,         // Sub-pixel position of tablet, in screen coordinates, scaled to fill a Word fraction:
-    td_YFraction: Word;
+    td_YFraction: Word; 
     td_TabletX,
     td_TabletY: LongWord; // Current tablet coordinates along each axis
     td_RangeX,
@@ -500,7 +502,7 @@ type
   result in ient_ScaledX, ient_ScaledY, ient_ScaledXFraction, and ient_ScaledYFraction.
   The tablet hook must currently return NULL.  This is the only acceptable return-value.}
   PTabletHookData = ^TTabletHookData;
-  TTabletHookData = record
+  TTabletHookData = record  
     thd_Screen: PScreen;        // Pointer to the active screen: Note: if there are no open screens, thd_Screen will be nil.
     thd_Width,                  // thd_Width and thd_Height will then describe an NTSC 64$400 screen.  Please scale accordingly.
     thd_Height: LongWord;       // The width and height (measured in pixels of the active screen)that your are to scale to:
@@ -515,7 +517,7 @@ type
     Qualifier: Word;       // the Qualifier field is a copy of the current InputEvent's Qualifier
     IAddress: APTR;        // IAddress contains particular addresses for Intuition functions, like the pointer to the Gadget or the Screen
 
-    MouseX,            // when getting mouse movement reports, any event you get will have the the mouse coordinates in these variables.
+    MouseX,            // when getting mouse movement reports, any event you get will have the the mouse coordinates in these variables. 
     MouseY: SmallInt;  // the coordinates are relative to the upper-left corner of your Window (GIMMEZEROZERO notwithstanding)
     Seconds,           // the time values are copies of the current system clock time.
     Micros: LongWord;  // Micros are in units of microseconds, Seconds in seconds.
@@ -554,12 +556,12 @@ type
 // Window
   TWindow = record
     NextWindow: PWindow;   // for the linked list in a screen
-
+    
     LeftEdge,
     TopEdge: SmallInt;     // screen dimensions of window
     Width,
     Height: SmallInt;      // screen dimensions of window
-{$ifdef AROS_BINCOMPAT}
+{$ifdef AROS_FLAVOUR_BINCOMPAT}
     MouseY,
     MouseX: SmallInt;      // relative to upper-left of window
 {$else}
@@ -631,15 +633,15 @@ type
 
     ExtData: PByte;
     UserData: PSmallInt; // general-purpose pointer to User data extension
-
+    
     WLayer: PLayer;
     IFont: PTextFont;
 
     MoreFlags: LongWord;
 
-    RelLeftEdge: SmallInt; // relative coordinates of the window to its parent window. If it is
+    RelLeftEdge: SmallInt; // relative coordinates of the window to its parent window. If it is 
     RelTopEdge: SmallInt;  // a window on the screen then these are the same as LeftEdge and TopEdge.
-
+    
     FirstChild: PWindow;   // pointer to first child
     PrevChild: PWindow;    // if window is a child of a window
     NextChild: PWindow;    // then they are concatenated here.
@@ -655,8 +657,8 @@ type
     TopEdge: SmallInt;    // parameters of the screen
     Width,
     Height: SmallInt;     // parameters of the screen
-
-{$ifdef AROS_BINCOMPAT}
+    
+{$ifdef AROS_FLAVOUR_BINCOMPAT}
     MouseY,
     MouseX: SmallInt;     // position relative to upper-left
 {$else}
@@ -698,10 +700,10 @@ type
     BarLayer: PLayer;       // This layer is for the Screen and Menu bars
     ExtData: Pointer;
     UserData: Pointer;
-  { general-purpose pointer to User data extension
+  { general-purpose pointer to User data extension 
     **** Data below this point are SYSTEM PRIVATE ****}
   end;
-
+  
 const
 // IDCMP Classes
   // Please refer to the Autodoc for OpenWindow() and to the Rom Kernel  Manual for full details on the IDCMP classes.
@@ -731,7 +733,7 @@ const
   IDCMP_IDCMPUPDATE    = 1 shl 23;  // for notifications from "boopsi" gadgets
   IDCMP_MENUHELP       = 1 shl 24;  // for getting help key report during menu session
   IDCMP_CHANGEWINDOW   = 1 shl 25;  // for notification of any move/size/zoom/change window
-  IDCMP_GADGETHELP     = 1 shl 26;
+  IDCMP_GADGETHELP     = 1 shl 26;  
   IDCMP_LONELYMESSAGE  = 1 shl 31; { the IDCMP Flags do not use this special bit, which is cleared when
     Intuition sends its special message to the Task, and set when Intuition
     gets its Message back from the Task.  Therefore, I can check here to
@@ -760,9 +762,9 @@ type
     TopEdge: SmallInt;        // screen dimensions of window
     Width,
     Height: SmallInt;         // screen dimensions of window
-
+    
     DetailPen,
-    BlockPen: Byte;           // for bar/border/gadget rendering
+    BlockPen: Byte;           // for bar/border/gadget rendering 
 
     IDCMPFlags: LongWord;     // User-selected IDCMP flags
     Flags: LongWord;          // see Window struct for defines
@@ -821,10 +823,10 @@ type
 
     DetailPen,
     BlockPen: Byte;
-
+    
     IDCMPFlags: LongWord;
     Flags: LongWord;
-
+    
     FirstGadget: PGadget;
     CheckMark: PImage;
     Title: PChar;
@@ -853,7 +855,7 @@ type
     Extension: PTagItem;
   end;
 
-const
+const  
   TAG_DONE = 0; { terminates array of TagItems. ti_Data unused }
   TAG_END = TAG_DONE;
 
@@ -911,7 +913,7 @@ const
   WA_RMBTrap       = WA_Dummy + 39;
   WA_WBenchWindow  = WA_Dummy + 40; // PRIVATE!!
   WA_SimpleRefresh = WA_Dummy + 41; // only specify if True
-  WA_SmartRefresh  = WA_Dummy + 42; // only specify if True
+  WA_SmartRefresh  = WA_Dummy + 42; // only specify if True 
   WA_SizeBRight    = WA_Dummy + 43;
   WA_SizeBBottom   = WA_Dummy + 44;
   WA_AutoAdjust    = WA_Dummy + 45; // shift or squeeze the window's position and dimensions to fit it on screen.
@@ -939,15 +941,15 @@ const
   WA_ToolBox       = WA_Dummy + 58; // (LongBool) Make this window a Toolbox window
 
   // AROS specific tags
-  WA_Priority       = WA_Dummy + 100;
-  WA_Parent         = WA_Dummy + 101; // (PWindow) Make the window a child of the parent Window
-  WA_InFrontOf      = WA_Dummy + 102;
-  WA_Behind         = WA_Dummy + 103;
-  WA_Visible        = WA_Dummy + 104; // (LongBool) Make window visible. default True
-  WA_Shape          = WA_Dummy + 105; // (PRegion)
-  WA_ShapeHook      = WA_Dummy + 106; // (PHook)
+  WA_Priority 	    = WA_Dummy + 100;
+  WA_Parent   	    = WA_Dummy + 101; // (PWindow) Make the window a child of the parent Window
+  WA_InFrontOf	    = WA_Dummy + 102;
+  WA_Behind   	    = WA_Dummy + 103;
+  WA_Visible  	    = WA_Dummy + 104; // (LongBool) Make window visible. default True
+  WA_Shape    	    = WA_Dummy + 105; // (PRegion)
+  WA_ShapeHook	    = WA_Dummy + 106; // (PHook)
 
-// --- Flags requested at OpenWindow() time by the application
+// --- Flags requested at OpenWindow() time by the application 
   WFLG_SIZEGADGET  = 1 shl 0; // include sizing system-gadget
   WFLG_DRAGBAR     = 1 shl 1; // include dragging system-gadget
   WFLG_DEPTHGADGET = 1 shl 2; // include depth arrangement gadget
@@ -960,7 +962,7 @@ const
   WFLG_SUPER_BITMAP   = 1 shl 7;
   WFLG_OTHER_REFRESH  = (1 shl 6) or (1 shl 7);
   WFLG_REFRESHBITS    = WFLG_OTHER_REFRESH;
-
+  
   WFLG_BACKDROP      = 1 shl 8;  // this is a backdrop window
   WFLG_REPORTMOUSE   = 1 shl 9;  // to hear about every mouse move
   WFLG_GIMMEZEROZERO = 1 shl 10; // a GimmeZeroZero window
@@ -974,7 +976,7 @@ const
   WFLG_RMBTRAP       = 1 shl 16; // Catch RMB events for your own
   WFLG_NOCAREREFRESH = 1 shl 17; // not to be bothered with REFRESH
   WFLG_NW_EXTENDED   = 1 shl 18; // extension data provided see struct ExtNewWindow
-
+  
   WFLG_NEWLOOKMENUS  = 1 shl 21; // window has NewLook menus
 
   // These flags are set only by Intuition.  YOU MAY NOT SET THEM YOURSELF!
@@ -984,11 +986,11 @@ const
   WFLG_VISITOR       = 1 shl 27; // visitor window
   WFLG_ZOOMED        = 1 shl 28; // identifies "zoom state"
   WFLG_HASZOOM       = 1 shl 29; // windowhas a zoom gadget
-  WFLG_TOOLBOX       = 1 shl 30;
+  WFLG_TOOLBOX       = 1 shl 30; 
   // Other Window Values
   DEFAULTMOUSEQUEUE = 5; // no more mouse messages
   // see struct IntuiMessage for the IDCMP Flag definitions
-
+  
   // HelpControl() flags: HC_GADGETHELP - Set this flag to enable Gadget-Help for one or more windows.
   HC_GADGETHELP = 1;
 
@@ -1070,7 +1072,7 @@ type
     es_Flags: LongWord;      // should be 0 for now
     es_Title: PChar;         // title of requester window
     es_TextFormat: PChar;    // 'printf' style formatting string
-    es_GadgetFormat: PChar;  // Text of the gadgets, separated by |'s
+    es_GadgetFormat: PChar;  // Text of the gadgets, separated by |'s 
   end;
 
 const
@@ -1078,7 +1080,7 @@ const
   ALERT_TYPE     = $80000000;
   RECOVERY_ALERT = $00000000;   // the system can recover from this
   DEADEND_ALERT  = $80000000;   // no recovery possible, this is it
-
+  
 { When you're defining IntuiText for the Positive and Negative Gadgets created by a call to AutoRequest(), these defines will get you
   reasonable-looking text.  The only field without a define is the IText field; you decide what text goes with the Gadget}
   AUTOFRONTPEN  = 0;
@@ -1106,7 +1108,7 @@ const
   CURSORDOWN      = $4D;
   CURSORRIGHT     = $4E;
   CURSORLEFT      = $4F;
-
+  
   KEYCODE_Q       = $10;
   KEYCODE_Z       = $31;
   KEYCODE_X       = $32;
@@ -1125,7 +1127,7 @@ const
   // these are the system Gadget defines
   HIRESGADGET  = 0;
   LOWRESGADGET = 1;
-  RESCOUNT     = 2;
+  RESCOUNT     = 2;  
 
   UPFRONTGADGET   = 0;
   DOWNBACKGADGET  = 1;
@@ -1136,7 +1138,7 @@ const
   SDOWNBACKGADGET = 6;
   SDRAGGADGET     = 7;
   GADGETCOUNT     = 8;
-
+  
   EVENTMAX = 10;  // size of event array
 
 type
@@ -1149,13 +1151,13 @@ type
     dri_Font: PTextFont; // screen default font
     dri_Depth: Word;     // (initial) depth of screen bitmap
 
-    dri_Resolution: record
+    dri_Resolution: record      
       x: Word;           // from DisplayInfo database for initial display mode
       y: Word;
     end;
 
     dri_Flags: LongWord; // defined below (DIRF_*)
-
+    
     dri_CheckMark: PImage; // pointer to scaled checkmark image Will be nil if DRI_VERSION < 2
     dri_AmigaKey: PImage;  // pointer to scaled Amiga-key image Will be NULL if DRI_VERSION < 2
 
@@ -1163,7 +1165,7 @@ type
   end;
 
 const
-
+  
   // If you find dri_Version >= DRI_VERSION, you know this structure has at least the fields defined in this version of the include file
   DRI_VERSION = 2;
   // dri_Flags
@@ -1190,11 +1192,11 @@ const
   PEN_C2 = $FEFD; // Complement of color 2
   PEN_C1 = $FEFE; // Complement of color 1
   PEN_C0 = $FEFF; // Complement of color 0
-
+  
 // values for ChangeDecoration ID param
   DECORATION_SET     = $8001;
   DECORATION_DEFAULT = $8000;
-
+  
 // OpenScreen error codes, which are returned in the (optional) LongIng pointed to by ti_Data for the SA_ErrorCode tag item
   OSERR_NOMONITOR    = 1; // named monitor spec not available
   OSERR_NOCHIPS      = 2; // you need newer custom chips
@@ -1205,7 +1207,7 @@ const
   OSERR_TOODEEP      = 7;
   OSERR_ATTACHFAIL   = 8;
   OSERR_NOTAVAILABLE = 9;
-
+  
 // The SCREENTYPE bits are reserved for describing various Screen types available under Intuition.
   // The screen flags have the suffix "_f" added to avoid conflicts with routine names.
   // Screen^.Flags and (Ext)NewScreen^.Type
@@ -1213,7 +1215,7 @@ const
   PUBLICSCREEN_f = 1 shl 1;
   CUSTOMSCREEN_f = $000F;     // for that special look
   SCREENTYPE_f   = $000F;     // all the screens types available
-  // Screen^.Flags
+  // Screen^.Flags 
   SHOWTITLE_f    = 1 shl 4;   // this gets set by a call to ShowTitle()
   BEEPING_f      = 1 shl 5;   // set when Screen is beeping
   CUSTOMBITMAP_f = 1 shl 6;   // if you are supplying your own BitMap
@@ -1248,7 +1250,7 @@ const
   SA_PubName     = SA_Dummy + 15; // presence of this tag means that the screen is to be a public screen. Please specify BEFORE the two tags below
   SA_PubSig      = SA_Dummy + 16;
   SA_PubTask     = SA_Dummy + 17; // Task ID and signal for being notified that the last window has closed on a public screen.
-  SA_DisplayID   = SA_Dummy + 18; // ti_Data is new extended display ID
+  SA_DisplayID   = SA_Dummy + 18; // ti_Data is new extended display ID 
   SA_DClip       = SA_Dummy + 19; // ti_Data points to a rectangle which defines screen display clip region
   SA_Overscan    = SA_Dummy + 20; { was S_STDDCLIP.  Set to one of the OSCAN_* specifiers below to get a system standard
                                        overscan region for your display clip, screen dimensions (unless otherwise specified),
@@ -1312,7 +1314,7 @@ type
 
     ViewModes: Word;        // the Modes for the ViewPort (and View)
     SType: Word;            // the Screen type (see defines above) (Type in C-Include)
-
+    
     Font: PTextAttr;        // this Screen's default text attributes
     DefaultTitle: PChar;    // the default title for this Screen
     Gadgets: PGadget;       // your own Gadgets for this Screen
@@ -1342,7 +1344,7 @@ type
     CustomBitMap: PBitMap;
     Extension: PTagItem; // ExtNewScreen specific extension SA_*
   end;
-
+  
 // Public Shared Screen Node
 { This is the representative of a public shared screen.
   This is an internal data structure, but some functions may
@@ -1399,7 +1401,7 @@ const
   open a screen should never use that flag.
  }
 
-  SPOS_RELATIVE    = 0;       // The x1 and y1 parameters to ScreenPosition() describe the offset in coordinates you wish to move the screen by. Coordinates are relative
+  SPOS_RELATIVE    = 0;       // The x1 and y1 parameters to ScreenPosition() describe the offset in coordinates you wish to move the screen by. Coordinates are relative 
   SPOS_ABSOLUTE    = 1 shl 0; // The x1 and y1 parameters to ScreenPosition() describe the absolute coordinates you wish to move the screen to. Coordinates are expressed as absolutes, not relatives.
   SPOS_MAKEVISIBLE = 1 shl 1; // Coordinates describe a box on the screen you wish to be made visible by autoscrolling
                               // (x1,y1)-(x2,y2) describes a rectangle on the screen which you would like autoscrolled into view.
@@ -1427,7 +1429,7 @@ const
   FILENAME_SIZE = 30; // Filename size
   DEVNAME_SIZE  = 16;
   POINTERSIZE = (1 + 16 + 1) * 2; // Size of Pointer data buffer
-
+  
 { These defines are for the default font size.   These actually describe the
   height of the defaults fonts.  The default font type is the topaz
   font, which is a fixed width font that can be used in either
@@ -1441,16 +1443,16 @@ const
 type
   PPreferences = ^TPreferences;
   TPreferences = record
-    FontHeight: ShortInt;      // height for system default font
-    PrinterPort: Byte;         // printer port connection constant describing what's hooked up to the port
+    FontHeight: ShortInt;      // height for system default font  
+    PrinterPort: Byte;         // printer port connection constant describing what's hooked up to the port 
     BaudRate: Word;            // baud rate for the serial port
-
+    
   // various timing rates
     KeyRptSpeed: Ttimeval;     // repeat speed for keyboard
     KeyRptDelay: Ttimeval;     // Delay before keys repeat
     DoubleClick: Ttimeval;     // Interval allowed between clicks
-
-  // Intuition Mouse-Pointer data
+    
+  // Intuition Mouse-Pointer data  
     PointerMatrix: array[0..POINTERSIZE - 1] of Word; // Definition of pointer sprite
     XOffset: ShortInt;   // X-Offset for active 'bit'
     YOffset: ShortInt;   // Y-Offset for active 'bit'
@@ -1471,11 +1473,11 @@ type
     ViewInitX,
     ViewInitY: SmallInt;   // View initial offset values
 
-    EnableCLI: WordBool;   // CLI availability switch
+    EnableCLI: LongBool;   // CLI availability switch
 
   // printer configurations
     PrinterType: Word;     // printer type
-    PrinterFilename: array[0..FILENAME_SIZE - 1] of char; // file for printer
+    PrinterFilename: array[0..FILENAME_SIZE - 1] of char; // file for printer 
 
   // print format and quality configurations
     PrintPitch: Word;         // print pitch
@@ -1497,12 +1499,12 @@ type
     SerRWBits: Byte;  // upper nibble = (8-number of read bits), lower nibble = (8-number of write bits)
     SerStopBuf: Byte; // upper nibble = (number of stop bits - 1), lower nibble = (table value for BufSize)
     SerParShk: Byte;  // upper nibble = (value for Parity setting), lower nibble = (value for Handshake mode)
-    LaceWB: Byte;     // if workbench is to be interlaced
+    LaceWB: Byte;     // if workbench is to be interlaced 
 
   // temp file for printer
     Pad: array[0..11] of Byte;
     PrtDevName: array [0..DEVNAME_SIZE - 1] of char; // Device used by printer.device (leave out the ".device")
-
+  
     DefaultPrtUnit: Byte; // Default unit opened by printer.device
     DefaultSerUnit: Byte; // Default serial unit
 
@@ -1662,12 +1664,12 @@ type
     FirstScreen: PScreen; { for linked list of all screens, the FirstScreen variable points to the frontmost Screen.
                             Screens are then maintained in a front to back order using Screen.NextScreen  }
     Flags: LongWord;      // see definitions below
-{$ifdef AROS_BINCOMPAT}
-    MouseY,
-    MouseX: SmallInt;      // mouse position relative to View
-{$else}
+{$ifdef AROS_FLAVOUR_BINCOMPAT}
     MouseX,
     MouseY: SmallInt;      // mouse position relative to View
+{$else}
+    MouseY,
+    MouseX: SmallInt;      // mouse position relative to View
 {$endif}
 
     Seconds: LongWord;     // timestamp of most current input event
@@ -1716,7 +1718,7 @@ type
 type
   Object_ = LongWord;
   PObject_ = ^Object_;
-  PPObject_ = ^PObject_;
+  PPObject_ = ^PObject_; 
   ClassID = STRPTR;
 
 { you can use this type to point to a 'generic' message,
@@ -1726,7 +1728,7 @@ type
   packet structure definitions are defined below.}
   PMsg = ^TMsg;
   TMsg = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
   end;
 
 { Class id strings for Intuition classes.
@@ -1734,8 +1736,8 @@ type
   over the lowercase strings, but this makes a good place
   to list the names of the built-in classes.}
 const
-  ROOTCLASS: ClassID     = 'rootclass';          // classusr.h
-  IMAGECLASS: ClassID    = 'imageclass';        // imageclass.h
+  ROOTCLASS: ClassID     = 'rootclass';          // classusr.h   
+  IMAGECLASS: ClassID    = 'imageclass';        // imageclass.h 
   FRAMEICLASS: ClassID   = 'frameiclass';
   SYSICLASS: ClassID     = 'sysiclass';
   FILLRECTCLASS: ClassID = 'fillrectclass';
@@ -1777,40 +1779,40 @@ type
   // OM_NEW and OM_SET
   PopSet = ^TopSet;
   TopSet = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     ops_AttrList: PTagItem; // new attributes
     ops_GInfo: PGadgetInfo; // always there for gadgets, when SetGadgetAttrs() is used, but will be nil for OM_NEW
   end;
-
+  
   // OM_GET
   PopGet = ^TopGet;
   TopGet = record
     MethodID,
-    opg_AttrID: PtrUInt;
+    opg_AttrID: LongWord;
     opg_Storage: Pointer;   // may be other types, but 'int' types are all LongWord
   end;
-
+  
   // OM_ADDTAIL
 
   PopAddTail = ^TopAddTail;
   TopAddTail = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     opat_List: PList;
   end;
 
   // OM_ADDMEMBER, OM_REMMEMBER
   PopMember = ^TopMember;
   TopMember = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     opam_Object: PObject_;
   end;
   TopAddMember = TopMember;
   PopAddMember = ^TopAddMember;
-
+  
   // OM_NOTIFY, and OM_UPDATE
   PopUpdate = ^TopUpdate;
   TopUpdate = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     opu_AttrList: PTagItem; // new attributes
     opu_GInfo: PGadgetInfo; // non-nil when SetGadgetAttrs OR notification resulting from gadget input occurs.
     opu_Flags: LongWord;    // defined below (OPUF_*)
@@ -1890,11 +1892,11 @@ const
   GA_RelWidth  = (GA_Dummy + $0006); // [ISG] (LONG) Width of gadget, depending on window width: Width=Win^.Width-this
   GA_Height    = (GA_Dummy + $0007); // [ISG] (LONG) Height of gadget.
   GA_RelHeight = (GA_Dummy + $0008); // [ISG] (LONG) Height of gadget, depending on window height: Height=Win^.Height-this
-
+  
 // Gadget rendering
   GA_Text         = (GA_Dummy + $0009); // [IS.] (PChar) Label text. This is mutually exclusive with GA_IntuiText and GA_LabelImage.
   // The next two attributes are mutually exclusive.
-  GA_Image        = (GA_Dummy + $000A); // (PImage) Gadget imagry is an image
+  GA_Image        = (GA_Dummy + $000A); // (PImage) Gadget imagry is an image 
   GA_Border       = (GA_Dummy + $000B); // (PBorder) Gadget imagry is a border
   GA_SelectRender = (GA_Dummy + $000C); { [IS.] (PImage) Gadgets' image in selected state. Note that if
      this is nil and GA_Image is in fact an image object, GA_Image may be
@@ -1903,7 +1905,7 @@ const
      object that supports the selected state.}
   GA_Highlight    = (GA_Dummy + $000D); // [IS.] (LongWord) Takes GFLG_GADGH* flags as argument. Used to specify the highlighting technique.
   GA_Disabled     = (GA_Dummy + $000E); // [ISG] (LongBool) If this is set to true, the gadget is not selectable. Often this is visually represented by using a special disabled pattern.
-
+  
 // Additional information.
   GA_GZZGadget   = (GA_Dummy + $000F); // [IS.] (LongBool) The Gadget is a GimmeZeroZero gadget. Default = False
   GA_ID          = (GA_Dummy + $0010); // (LongInt) Gadget ID assigned by the application (prevent double numbers)
@@ -1911,7 +1913,7 @@ const
   GA_SpecialInfo = (GA_Dummy + $0012); { [IS.] (APTR) Pointer to additional information, needed by some gadgets
      (like string or integer gadgets). This field should generally only be set
      by subclasses of GadgetClass. Applications should keep their hands off it.}
-
+     
 // Gadget activation.
   GA_Selected     = (GA_Dummy + $0013); // [ISG] (LongBool) Indicate whether the gadget is selected or not. Default = False
   GA_EndGadget    = (GA_Dummy + $0014); // [IS.] (LongBool) Only used for requester gadgets. This tells intuition that the requester is to be closed, when the gadget is released. Default = False
@@ -1922,7 +1924,7 @@ const
   GA_LeftBorder   = (GA_Dummy + $0019); // [IS.] (LongBool) Indicate whether the gadget is in the left border or not. Default = False.
   GA_TopBorder    = (GA_Dummy + $001A); // [IS.] (LongBool) Indicate whether the gadget is in the top border or not. Default = False.
   GA_BottomBorder = (GA_Dummy + $001B); // [IS.] (LongBool) Indicate whether the gadget is in the bottom border or not. Default = False.
-  GA_ToggleSelect = (GA_Dummy + $001C); // [IS.] (LongBool) Indicate whether the gadget is toggle-selected or not.  Default = False.
+  GA_ToggleSelect = (GA_Dummy + $001C); // [IS.] (LongBool) Indicate whether the gadget is toggle-selected or not.  Default = False. 
   // The following two attributes are PRIVATE!
   GA_SysGadget    = (GA_Dummy + $001D); // [IS.] (LongBool) Set, if gadget is a system-gadget e.g. a standard window border gadget. Default = False.
   GA_SysGType     = (GA_Dummy + $001E); // [IS.] (LongWord) Reserved for system use to indicate the gadget type.
@@ -1936,9 +1938,9 @@ const
      to be able to perform correct rendering. Read the documentation of the
      subclasses to learn, which need this attribute. To be on the safe side,
      you can always supply it.}
-  // You should use at most ONE of GA_Text, GA_IntuiText, and GA_LabelImage
+  // You should use at most ONE of GA_Text, GA_IntuiText, and GA_LabelImage 
   GA_IntuiText = (GA_Dummy + $0022); // [IS.] (PIntuiText) Label is an IntuiText.
-  GA_LabelImage = (GA_Dummy + $0023); // [IS.] (PObject_) Label is an image object.
+  GA_LabelImage = (GA_Dummy + $0023); // [IS.] (PObject_) Label is an image object. 
   GA_TabCycle = (GA_Dummy + $0024);  // [IS.] (LongBool) If set to true that gadget participates in TAB handling, i.e. if tab is pressed, the next gadget is activated.
   GA_GadgetHelp = (GA_Dummy + $0025); // [..G] (LongBool) If this is set by the gadget, the sends GADGETHELP messages.
   GA_Bounds = (GA_Dummy + $0026); // [IS.] (PIBox) Bounds to be copied into the ExtGadget structure.
@@ -1957,7 +1959,7 @@ const
 // Aros Specifics
   GA_LabelPlace = GA_Dummy + 100; { [I..] (LongInt) Choose the placing of the label. GadgetClass does not support
      this directly. Its subclasses have to take care of that. For possible values see GV_* .}
-
+     
 // Placetext values for GA_LabelPlace.
   GV_LabelPlace_In    = 1;
   GV_LabelPlace_Left  = 2;
@@ -1970,7 +1972,7 @@ const
   PGA_Dummy       = TAG_USER + $31000;
   PGA_Freedom     = PGA_Dummy + 1;  // [IS.] (LongWord) Define in which the direction gadget should stretch. Possible values are FREEVERT and FREEHORIZ
   PGA_Borderless  = PGA_Dummy + 2;  // [IS.] (LongBool) If set, no border will be rendered.
-  // The following four attributes should not be used with PGA_Total, PGA_Visible and PGA_Top.
+  // The following four attributes should not be used with PGA_Total, PGA_Visible and PGA_Top. 
   PGA_HorizPot    = PGA_Dummy + 3;  // [ISG] (Word)
   PGA_HorizBody   = PGA_Dummy + 4;  // [ISG] (Word)
   PGA_VertPot     = PGA_Dummy + 5;  // [ISG] (Word)
@@ -2002,7 +2004,7 @@ const
   STRINGA_AltKeyMap      = STRINGA_Dummy + 7;  // [IS.] (PKeyMap) KeyMap to use
   STRINGA_Font           = STRINGA_Dummy + 8;  // [IS.] (PTextFont) Font to use for displaying the string
   STRINGA_Pens           = STRINGA_Dummy + 9;  // [IS.] (LongInt) The lower 16 bits specify the background-pen, the upper 16 bits the foreground-pen. The gadget is rendered, using these pens, if the gadget is inactive
-  STRINGA_ActivePens     = STRINGA_Dummy + 10; // [IS.] (LongInt) Like STRINGA_Pens. These pens are used, if the gadget is active.
+  STRINGA_ActivePens     = STRINGA_Dummy + 10; // [IS.] (LongInt) Like STRINGA_Pens. These pens are used, if the gadget is active. 
   STRINGA_EditHook       = STRINGA_Dummy + 11; // [I..] (PHook) FIXME
   STRINGA_EditModes      = STRINGA_Dummy + 12; // [IS.] (LongWord) FIXME
   STRINGA_ReplaceMode    = STRINGA_Dummy + 13; // [IS.] (BOOL) If this is TRUE, the current character is overwritten, if the use presses a key. Otherwise, the new character is inserted.
@@ -2022,7 +2024,7 @@ const
   LAYOUTA_Orientation    = LAYOUTA_Dummy + 3; // Orientation LORIENT_*
   LAYOUTA_ChildMaxWidth  = LAYOUTA_Dummy + 4; // (BOOL) Child objects are of equal width. Should default to True for gadgets with a horizontal orientation.
   LAYOUTA_ChildMaxHeight = LAYOUTA_Dummy + 5; // (BOOL) Child objects are of equal height. Should default to True for gadgets with a vertical orientation.
-  // orientation values for LAYOUTA_Orientation
+  // orientation values for LAYOUTA_Orientation 
   LORIENT_NONE  = 0;
   LORIENT_HORIZ = 1;
   LORIENT_VERT  = 2;
@@ -2036,8 +2038,8 @@ const
   GM_GOINACTIVE  = 4;  // whether or not by choice, you are done
   GM_HELPTEST    = 5;  // Will you send gadget help if the mouse is at the specified coordinates?  See below for possible GMR_ values.                              }
   GM_LAYOUT      = 6;  // re-evaluate your size based on the GadgetInfo Domain.  Do NOT re-render yourself yet, you will be called when it is time...
-  GM_DOMAIN      = 7;  // This method is invoked to learn about the sizing requirements of your class, before an object is created.
-
+  GM_DOMAIN      = 7;  // This method is invoked to learn about the sizing requirements of your class, before an object is created. 
+  
 // Parameter "Messages" passed to gadget class methods
 type
   // GM_HITTEST
@@ -2046,7 +2048,7 @@ type
    have to test, if you were hit, no matter if you are disabled or not.}
   PgpHitTest = ^TgpHitTest;
   TgpHitTest = record
-    MethodID: PtrUInt;         // GM_HITEST or GM_HELPTEST
+    MethodID: LongWord;       // GM_HITEST or GM_HELPTEST
     gpht_GInfo: PGadgetInfo;
     gpht_Mouse: record         // These values are relative to the gadget select box for GM_HITTEST. For
       x: SmallInt;             // GM_HELPTEST they are relative to the bounding box (which is often
@@ -2063,7 +2065,7 @@ type
   // GM_RENDER   This method is invoked to draw the gadget into a rastport.
   PgpRender = ^TgpRender;
   TgpRender = record
-    MethodID: PtrUInt;        // GM_RENDER
+    MethodID: LongWord;       // GM_RENDER
     gpr_GInfo: PGadgetInfo;   // gadget context
     gpr_RPort: PRastPort;     // all ready for use
     gpr_Redraw: LongInt;      // might be a "highlight pass" (GREDRAW_*)
@@ -2072,7 +2074,7 @@ const
   // gpr_Redraw. Not all of these values make sense for all gadgets.
   GREDRAW_UPDATE = 2; // incremental update. Some data (e.g. the level of a slider) was updated. Just redraw the necessary parts.
   GREDRAW_REDRAW = 1; // redraw the whole gadget
-  GREDRAW_TOGGLE = 0; // toggle highlight, IF applicable
+  GREDRAW_TOGGLE = 0; // toggle highlight, IF applicable 
 
 type
   // GM_GOACTIVE, GM_HANDLEINPUT
@@ -2083,7 +2085,7 @@ type
    same values, as defined below.}
   PgpInput = ^TgpInput;
   TgpInput = record
-    MethodID: PtrUInt;        // GM_GOACTIVE or GM_HANDLEINPUT
+    MethodID: LongWord;       // GM_GOACTIVE or GM_HANDLEINPUT
     gpi_GInfo: PGadgetInfo;   //  gadget context
     gpi_IEvent: PInputEvent;  // Pointer to the InputEvent that caused the method to be invoked.
     gpi_Termination: Pointer; { Pointer to a variable that is to be set by the gadget class, if
@@ -2108,12 +2110,12 @@ const
     set is to be activated.}
   GMR_NEXTACTIVE = 1 shl 4; // Activate next gadget.
   GMR_PREVACTIVE = 1 shl 5; // Activate previous gadget.
-
+  
 type
   // GM_GOINACTIVE see GM_GOACTIVE for explanation
   PgpGoInactive = ^TgpGoInactive;
   TgpGoInactive = record
-    MethodID: PtrUInt;         // GM_GOINACTIVE
+    MethodID: LongWord;         // GM_GOINACTIVE
     gpgi_GInfo: PGadgetInfo;
     gpgi_Abort: LongWord; { Boolean field to indicate, who wanted the gadget to go inactive. If
          this is 1 this method was sent, because intution wants the gadget to
@@ -2128,7 +2130,7 @@ type
     are not allowed to do any rendering operation during this method!}
   PgpLayout = ^TgpLayout;
   TgpLayout = record
-    MethodID: PtrUInt;       // GM_LAYOUT
+    MethodID: LongWord;       // GM_LAYOUT
     gpl_GInfo: PGadgetInfo;
     gpl_Initial: LongWord; {Boolean that indicated, if this method was invoked, when you are added
          to a window (True) or if it is called, because the window was resized
@@ -2140,7 +2142,7 @@ type
    before an object is created. This is AROS specific.}
   PgpDomain = ^TgpDomain;
   TgpDomain = record
-    MethodID: PtrUInt;       // GM_DOMAIN
+    MethodID: LongWord;      // GM_DOMAIN
     gpd_GInfo: PGadgetInfo;
     gpd_RPort: PRastPort;    // RastPort to calculate dimensions for.
     gpd_Which: LONG;         // what to calculate (GDOMAIN_*)
@@ -2148,11 +2150,11 @@ type
     gpd_Attrs: PTagItem;     // Additional attributes. None defines yet
   end;
 const
-  // gpd_Which
+  // gpd_Which 
   GDOMAIN_MINIMUM = 0; // Calculate minimum size.
   GDOMAIN_NOMINAL = 1; // Calculate nominal size.
   GDOMAIN_MAXIMUM = 2; // Calculate maximum size.
-
+  
 const
   ICM_Dummy     = $0401;          // used for nothing
   // no parameters for ICM_SETLOOP, ICM_CLEARLOOP, ICM_CHECKLOOP
@@ -2180,7 +2182,7 @@ const
 const
   // if image.Depth is this, it's a new Image class object
   CUSTOMIMAGEDEPTH = -1;
-
+  
   // Attributes for IMAGECLASS
   IA_Dummy        = TAG_USER + $20000;
   IA_Left         = IA_Dummy + $01;
@@ -2205,7 +2207,7 @@ const
   // SYSICLASS attributes
   SYSIA_Size          = IA_Dummy + $0B; // see below SYSISIZE_*
   SYSIA_Depth         = IA_Dummy + $0C;
-  SYSIA_Which         = IA_Dummy + $0D; // see below
+  SYSIA_Which         = IA_Dummy + $0D; // see below 
   SYSIA_UserBuffer    = IA_Dummy + $20; // Only for system Images
   SYSIA_DrawInfo      = IA_Dummy + $18; // Must be specified
   SYSIA_ReferenceFont = IA_Dummy + $19; // Font to use as reference for scaling certain sysiclass images
@@ -2213,10 +2215,10 @@ const
   IA_FrameType        = IA_Dummy + $1b; // Starting with V39, FrameIClass recognizes several standard types of frame.  Use one of the FRAME_* specifiers below.  Default = FRAME_DEFAULT.
   // Private AROS sysiclass tags and defines
   SYSIA_WithBorder    = IA_FGPen; // default: True
-  SYSIA_Style         = IA_BGPen; // default: SYSISTYLE_NORMAL
-
+  SYSIA_Style         = IA_BGPen;	// default: SYSISTYLE_NORMAL
+  
   SYSISTYLE_NORMAL   = 0;
-  SYSISTYLE_GADTOOLS = 1; // to get arrow images in gadtools look
+  SYSISTYLE_GADTOOLS = 1;	// to get arrow images in gadtools look
 
   // data values for SYSIA_Size
   SYSISIZE_MEDRES = 0;
@@ -2264,12 +2266,12 @@ const
   IDS_INACTIVESELECTED = 6; // selected, in inactive border
   IDS_INACTIVEDISABLED = 7; // disabled, in inactive border
   IDS_SELECTEDDISABLED = 8; // disabled and selected
-
+  
 type
   // IM_FRAMEBOX
   PimpFrameBox = ^TimpFrameBox;
   TimpFrameBox = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     imp_ContentsBox: PIBox;   // input: relative box of contents
     imp_FrameBox: PIBox;      // output: rel. box of encl frame
     imp_DrInfo: PDrawInfo;    // may be nil
@@ -2295,7 +2297,7 @@ type
   // IM_DRAW, IM_DRAWFRAME
   PimpDraw = ^TimpDraw;
   TimpDraw = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     imp_RPort: PRastPort;
     imp_Offset: TimpPos;
     imp_State: LongWord;
@@ -2306,7 +2308,7 @@ type
   // IM_ERASE, IM_ERASEFRAME NOTE: This is a subset of TimpDraw
   PimpErase = ^TimpErase;
   TimpErase = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     imp_RPort: PRastPort;
     imp_Offset: TimpPos;
     imp_Dimensions: TimpSize; // // Only valid for IM_DRAWFRAME
@@ -2315,7 +2317,7 @@ type
   // IM_HITTEST, IM_HITFRAME
   PimpHitTest = ^TimpHitTest;
   TimpHitTest = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     imp_Point: TimpPos;
     imp_Dimensions: TimpSize; // only valid for IM_HITFRAME
   end;
@@ -2343,13 +2345,13 @@ const
 
 { These are the choices for the POINTERA_YResolution attribute which
   will determine what vertical resolution is used for this pointer.
-
+ 
   POINTERYRESN_DEFAULT
        = In 15 kHz modes, the pointer resolution will be the same
          as a non-interlaced screen.  In 31 kHz modes, the pointer
          will be doubled vertically.  This means there will be about
          200-256 pointer lines per screen.
-
+ 
   POINTERYRESN_HIGH
   POINTERYRESN_HIGHASPECT
        = Where the hardware/software supports it, the pointer resolution
@@ -2358,7 +2360,7 @@ const
          when the pointer comes out double-height due to hardware/software
          restrictions, its width would be doubled as well, if possible
          (to preserve aspect).
-
+ 
   POINTERYRESN_SCREENRES
   POINTERYRESN_SCREENRESASPECT
        = Will attempt to match the vertical resolution of the pointer
@@ -2430,7 +2432,7 @@ const
   SGA_PREVACTIVE = $40; // Make previous possible gadget active.
   // function id for only existing custom string gadget edit hook
   SGH_KEY   = 1; // process editing keystroke
-  SGH_CLICK = 2; // process mouse click cursor position
+  SGH_CLICK = 2; // process mouse click cursor position 
 
 { Here's a brief summary of how the custom string gadget edit hook works:
     You provide a hook in StringInfo.Extension.EditHook. The hook is called in the standard way with the 'object' a pointer to SGWork,
@@ -2440,21 +2442,21 @@ const
        There are no parameters following the command LongWord. Intuition will put its idea of proper values in the SGWork
        before calling you, and if you leave SGA_USE set in the SGWork.Actions field, Intuition will use the values
        found in SGWork fields WorkBuffer, NumChars, BufferPos, and LongInt, copying the WorkBuffer back to the StringInfo
-       Buffer.
-
+       Buffer. 
+       
        NOTE WELL: You may NOT change other SGWork fields.
        If you clear SGA_USE, the string gadget will be unchanged.
-
+       
        If you set SGA_END, Intuition will terminate the activation of the string gadget.  If you also set SGA_REUSE, Intuition
        will reuse the input event after it deactivates your gadget. In this case, Intuition will put the value found in SGWork.Code
        into the IntuiMessage.Code field of the IDCMP_GADGETUP message it sends to the application.
 
        If you set SGA_BEEP, Intuition will call DisplayBeep(); use this if the user has typed in error, or buffer is full.
-
+ 
        Set SGA_REDISPLAY if the changes to the gadget warrant a gadget redisplay.  Note: cursor movement requires a redisplay.
        Starting in V37, you may set SGA_PREVACTIVE or SGA_NEXTACTIVE when you set SGA_END.  This tells Intuition that you want
        the next or previous gadget with GFLG_TABCYCLE to be activated.
-
+ 
     SGH_CLICK:
        This hook command is called when Intuition wants to position the cursor in response to a mouse click in the string gadget.
        Again, here are no parameters following the command LongWord. This time, Intuition has already calculated the mouse position
@@ -2462,7 +2464,7 @@ const
 
        Intuition will again use the SGWork fields listed above for SGH_KEY.  One restriction is that you are NOT allowed to set
        SGA_END or SGA_REUSE for this command.  Intuition will not stand for a gadget which goes inactive when you click in it.
-
+ 
        You should always leave the SGA_REDISPLAY flag set, since Intuition uses this processing when activating a string gadget.}
 type
 { NewDecorator structure used by ChangeDecoration the three Objects (nd_Window, nd_Screen and nd_Menu must be installed and point to decorator objects
@@ -2478,7 +2480,7 @@ type
     nd_Screen: PObject_;
     nd_Menu: PObject_;
   end;
-
+  
   PDecoratorMessage = ^TDecoratorMessage;
   TDecoratorMessage = record
     dm_Message: TMagicMessage;
@@ -2487,22 +2489,22 @@ type
     dm_Flags: LongWord;
     dm_Object: IPTR;
   end;
-
+  
   PScreenNotifyMessage = ^TScreenNotifyMessage;
   TScreenNotifyMessage = record
     snm_Message: PMagicMessage;
     snm_Class: LongWord;  // Notification Class ID same as SNA_Notify
     snm_Code: LongWord;   // Code only supported for ScreenDepth() and will put the Flags in
-    snm_Object: IPTR;     // Pointer to the Object that caused this message
+    snm_Object: IPTR;     // Pointer to the Object that caused this message      
     snm_UserData: IPTR;   // will be filled with SNA_UserData
   end;
-
+  
 const
   DECORATOR_VERSION    = 0;
   SCREENNOTIFY_VERSION = 0;
 { there is only one Message in the initial decoration system it will be sent to the decorator port to signal that it´ll not be used any longer
   and may be destroyed, in that case the dm_Object contains the NewDecorator struct Intuition does not touch anything, the decorator have to
-  destroy all objects as well as the NewDecorator struct.}
+  destroy all objects as well as the NewDecorator struct.} 
   DM_CLASS_DESTROYDECORATOR = $8001;
   // Tags for Screen notify message
   SNA_PubName  = TAG_USER + $01; // public screen name of nil for all screens
@@ -2524,7 +2526,7 @@ const
   SNOTIFY_PUBSCREENSTATE         = 1 shl 6;  // PubScreenState()
   SNOTIFY_LOCKPUBSCREEN          = 1 shl 7;  // LockPubScreen()
   SNOTIFY_SCREENDEPTH            = 1 shl 8;  // ScreenDepth()
-  SNOTIFY_AFTER_CLOSESCREEN      = 1 shl 9;  // notify after CloseScreen()
+  SNOTIFY_AFTER_CLOSESCREEN      = 1 shl 9;	 // notify after CloseScreen()
   SNOTIFY_AFTER_CLOSEWINDOW      = 1 shl 10; // dto. CloseWindow()
   SNOTIFY_BEFORE_OPENSCREEN      = 1 shl 11; // notify before OpenScreen()
   SNOTIFY_BEFORE_OPENWINDOW      = 1 shl 12; // dto. OpenWindow()
@@ -2534,7 +2536,7 @@ const
   SNOTIFY_UNLOCKPUBSCREEN        = 1 shl 16; // UnlockPubScreen()
   SNOTIFY_BEFORE_UPDATEINTUITION = 1 shl 17; // Intuition is going to be updated
   SNOTIFY_AFTER_UPDATEINTUITION  = 1 shl 18; // Intuition is updated
-
+  
   // Attributes for MENUDECORCLASS
   MDA_Dummy         = TAG_USER + $22000;
   MDA_DrawInfo      = MDA_Dummy + 1; // [I.G]
@@ -2553,11 +2555,11 @@ const
 type
   PmdpGetDefSizeSysImage = ^TmdpGetDefSizeSysImage;
   TmdpGetDefSizeSysImage = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     mdp_TrueColor: ShortInt;
     mdp_Dri: PDrawInfo;
     mdp_ReferenceFont: PTextFont; // In:
-    mdp_Which: LongWord;          // In: One of CLOSEIMAGE, SIZEIMAGE, ...
+    mdp_Which: LongWord;          // In: One of CLOSEIMAGE, SIZEIMAGE, ... 
     mdp_SysiSize: LongWord;       // In: lowres/medres/highres
     mdp_Width: PLongWord;         // Out
     mdp_Height: PLongWord;        // Out
@@ -2566,7 +2568,7 @@ type
 
   PmdpDrawSysImage = ^TmdpDrawSysImage;
   TmdpDrawSysImage = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     mdp_TrueColor: ShortInt;
     mdp_Dri: PDrawInfo;
     mdp_RPort: PRastPort;
@@ -2582,7 +2584,7 @@ type
 
   PmdpGetMenuSpaces = ^TmdpGetMenuSpaces;
   TmdpGetMenuSpaces = record
-    MethodID: PtrUInt;
+    MethodID: LongInt;
     mdp_TrueColor: ShortInt;
     mdp_InnerLeft: LongInt;      // Out
     mdp_InnerTop: LongInt;       // Out
@@ -2598,7 +2600,7 @@ type
 
   PmdpDrawBackground = ^TmdpDrawBackground;
   TmdpDrawBackground = record
-    MethodID: PtrUInt;
+    MethodID: Longword;
     mdp_TrueColor: ShortInt;
     mdp_RPort: PRastPort;
     mdp_X: LongInt;
@@ -2616,7 +2618,7 @@ type
 
   PmdpInitMenu = ^TmdpInitMenu;
   TmdpInitMenu = record
-    MethodID: PtrUInt;
+    MethodID: LongInt;
     mdp_TrueColor: SmallInt;
     mdp_RPort: PRastPort;
     mdp_Screen: PScreen;
@@ -2631,7 +2633,7 @@ type
 
   PmdpExitMenu = ^TmdpExitMenu;
   TmdpExitMenu = record
-    MethodID: PtrUInt;
+    MethodID: LongInt;
     mdp_TrueColor: ShortInt;
     mdp_UserBuffer: IPTR;
   end;
@@ -2645,26 +2647,26 @@ const
   MDP_MDF_ITEM             = 1 shl 1;
   MDP_MDF_SUBITEM          = 1 shl 2;
   MDP_MDF_MENUS_UNDERMOUSE = 1 shl 7;
-
+  
   // Length of array returned by MA_PixelFormats
   MONITOR_MAXPIXELFORMATS = 14;
 
   // Attributes
   MA_Dummy               = TAG_USER;
-  MA_MonitorName         = MA_Dummy + 1;  // [..G] STRPTR Monitor name
-  MA_Manufacturer        = MA_Dummy + 2;  // [..G] STRPTR Hardware manufacturer string
-  MA_ManufacturerID      = MA_Dummy + 3;  // [..G] LongWord
-  MA_ProductID           = MA_Dummy + 4;  // [..G] LongWord
-  MA_MemorySize          = MA_Dummy + 5;  // [..G] LongWord Video card memory size
+  MA_MonitorName         = MA_Dummy + 1;	// [..G] STRPTR Monitor name
+  MA_Manufacturer        = MA_Dummy + 2;	// [..G] STRPTR Hardware manufacturer string
+  MA_ManufacturerID      = MA_Dummy + 3;	// [..G] LongWord
+  MA_ProductID           = MA_Dummy + 4;	// [..G] LongWord
+  MA_MemorySize          = MA_Dummy + 5;	// [..G] LongWord Video card memory size
   MA_PixelFormats        = MA_Dummy + 6;  // [..G] PLongWord Pixelformat support flags
-  MA_TopLeftMonitor      = MA_Dummy + 7;  // [.SG] PObject_  Monitor placed in a position relative to the current one
+  MA_TopLeftMonitor      = MA_Dummy + 7;	// [.SG] PObject_  Monitor placed in a position relative to the current one
   MA_TopMiddleMonitor    = MA_Dummy + 8;  // [.SG] PObject_
   MA_TopRightMonitor     = MA_Dummy + 9;  // [.SG] PObject_
   MA_MiddleLeftMonitor   = MA_Dummy + 10; // [.SG] PObject_
   MA_MiddleRightMonitor  = MA_Dummy + 11; // [.SG] PObject_
   MA_BottomLeftMonitor   = MA_Dummy + 12; // [.SG] PObject_
   MA_BottomMiddleMonitor = MA_Dummy + 13; // [.SG] PObject_
-  MA_BottomRightMonitor  = MA_Dummy + 14; // [.SG] PObject_
+  MA_BottomRightMonitor  = MA_Dummy + 14; // [.SG] PObject_ 
   MA_GammaControl        = MA_Dummy + 15; // [..G] LongBool Whether gamma control is supported
   MA_PointerType         = MA_Dummy + 16; // [..G] LongWord Supported pointer types
   MA_DriverName          = MA_Dummy + 17; // [..G] STRPTR Driver name
@@ -2676,7 +2678,7 @@ const
   PointerType_ARGB   = $0004; // Direct color alpha-blended bitmap pointer
 
   // Methods
-  MM_GetRootBitMap         = $401; // Reserved
+  MM_GetRootBitMap	       = $401; // Reserved
   MM_Query3DSupport        = $402; // Ask for 3D acceleration support for given pixelformat
   MM_GetDefaultGammaTables = $403; // Get default gamma correction table
   MM_GetDefaultPixelFormat = $404; // Ask for preferred pixelformat for given depth (-1 = unsupported depth)
@@ -2687,21 +2689,21 @@ const
 
   // AROS-specific attributes
   MA_AROS      = TAG_USER + $00010000;
-  MA_Windowed  = MA_AROS + 1; // [G..] BOOL A display is a window on hosted OS
+  MA_Windowed  = MA_AROS + 1; // [G..] BOOL A display is a window on hosted OS 
   // AROS-specific methods
   MM_SetDefaultGammaTables = $1401; // Set default gamma correction table
 
 type
   PmsGetRootBitMap = ^TmsGetRootBitMap;
   TmsGetRootBitMap = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     PixelFormat: LongWord;
     Store: ^PBitMap;
   end;
 
   PmsQuery3DSupport = ^TmsQuery3DSupport;
   TmsQuery3DSupport = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     PixelFormat: LongWord;
     Store: PLongWord;
   end;
@@ -2713,22 +2715,22 @@ const
 type
   PmsGetDefaultGammaTables = ^TmsGetDefaultGammaTables;
   TmsGetDefaultGammaTables = record
-    MethodID: PtrUInt;
-    Red: PByte;         // Optional pointers to 256-byte arrays to fill in
+    MethodID: LongWord;
+    Red: PByte;		      // Optional pointers to 256-byte arrays to fill in
     Green: PByte;
     Blue: PByte;
   end;
 
   PmsGetDefaultPixelFormat = ^TmsGetDefaultPixelFormat;
   TmsGetDefaultPixelFormat = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     Depth: LongWord;
     Store: PLongWord;
   end;
 
   PmsGetPointerBounds = ^TmsGetPointerBounds;
   TmsGetPointerBounds = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     PointerType: LongWord;
     Width: PLongWord;
     Height: PLongWord;
@@ -2741,7 +2743,7 @@ const
   SDA_Dummy = TAG_USER + $22100;
   SDA_DrawInfo      = SDA_Dummy + 1; // [I.G]
   SDA_Screen        = SDA_Dummy + 2; // [I.G]
-  SDA_TrueColorOnly = SDA_Dummy + 3; // [..G]
+  SDA_TrueColorOnly	= SDA_Dummy + 3; // [..G]
   SDA_UserBuffer    = SDA_Dummy + 4; // [I.G]
   // Methods for SCRDECORCLASS */
   SDM_Dummy                = SDA_Dummy + 500;
@@ -2756,21 +2758,21 @@ const
 type
   PsdpGetDefSizeSysImage = ^TsdpGetDefSizeSysImage;
   TsdpGetDefSizeSysImage = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     sdp_TrueColor: ShortInt;
     sdp_Dri: PDrawInfo;
     sdp_ReferenceFont: PTextFont; // In:
-    sdp_Which: LongWord;          // In: SDEPTHIMAGE
-    sdp_SysiSize: LongWord;       // In: lowres/medres/highres
-    sdp_Width: PLongWord;         // Out
-    sdp_Height: PLongWord;        // Out
+    sdp_Which: LongWord;  	      // In: SDEPTHIMAGE
+    sdp_SysiSize: LongWord;	      // In: lowres/medres/highres
+    sdp_Width: PLongWord;  	      // Out
+    sdp_Height: PLongWord; 	      // Out
     sdp_Flags: LongWord;
     sdp_UserBuffer: LongWord;
   end;
-
+  
   PsdpDrawSysImage = ^TsdpDrawSysImage;
   TsdpDrawSysImage = record
-    MethodID: PtrUInt;
+    MethodID: LongInt;
     sdp_TrueColor: ShortInt;
     sdp_Dri: PDrawInfo;
     sdp_RPort: PRastPort;
@@ -2786,7 +2788,7 @@ type
 
   PsdpDrawScreenBar = ^TsdpDrawScreenBar;
   TsdpDrawScreenBar = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     sdp_TrueColor: ShortInt;
     sdp_Dri: PDrawInfo;
     sdp_Layer: PLayer;
@@ -2798,7 +2800,7 @@ type
 
   PsdpLayoutScreenGadgets = ^TsdpLayoutScreenGadgets;
   TsdpLayoutScreenGadgets = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     sdp_TrueColor: ShortInt;
     sdp_Dri: PDrawInfo;
     sdp_Layer: PLayer;
@@ -2809,7 +2811,7 @@ type
 
   PsdpInitScreen = ^TsdpInitScreen;
   TsdpInitScreen = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     sdp_TrueColor: ShortInt;
     sdp_Dri: PDrawInfo;
     sdp_Screen: PScreen;
@@ -2829,7 +2831,7 @@ type
 
   PsdpExitScreen = ^TsdpExitScreen;
   TsdpExitScreen = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     sdp_TrueColor: ShortInt;
     sdp_UserBuffer: IPTR;
   end;
@@ -2840,11 +2842,11 @@ const
   SDF_LSG_INGADLIST    = 4; // Gadget is already in screen gadget list
   SDF_LSG_MULTIPLE     = 8; // There may be multiple gadgets (linked together through NextGadget. Follow it)
 
-// Attributes for WINDECORCLASS
+// Attributes for WINDECORCLASS 
   WDA_Dummy         = TAG_USER + $22000;
-  WDA_DrawInfo      = WDA_Dummy + 1;  // [I.G]
-  WDA_Screen        = WDA_Dummy + 2;  // [I.G]
-  WDA_TrueColorOnly = WDA_Dummy + 3;  // [..G]
+  WDA_DrawInfo      = WDA_Dummy + 1; 	// [I.G]
+  WDA_Screen        = WDA_Dummy + 2; 	// [I.G]
+  WDA_TrueColorOnly = WDA_Dummy + 3; 	// [..G]
   WDA_UserBuffer    = WDA_Dummy + 4;  // [I.G]
 
 // Methods for WINDECORCLASS
@@ -2864,7 +2866,7 @@ const
 type
   PwdpGetDefSizeSysImage = ^TwdpGetDefSizeSysImage;
   TwdpGetDefSizeSysImage = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     wdp_TrueColor: ShortInt;
     wdp_Dri: PDrawInfo;
     wdp_ReferenceFont: PTextFont; // In:
@@ -2878,7 +2880,7 @@ type
 
   PwdpDrawSysImage = ^TwdpDrawSysImage;
   TwdpDrawSysImage = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     wdp_TrueColor: ShortInt;
     wdp_Dri: PDrawInfo;
     wdp_RPort: PRastPort;
@@ -2894,7 +2896,7 @@ type
 
   PwdpDrawWinBorder = ^TwdpDrawWinBorder;
   TwdpDrawWinBorder = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     wdp_TrueColor: ShortInt;
     wdp_Dri: PDrawInfo;
     wdp_Window: PWindow;
@@ -2905,7 +2907,7 @@ type
 
   PwdpLayoutBorderGadgets = ^TwdpLayoutBorderGadgets;
   TwdpLayoutBorderGadgets = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     wdp_TrueColor: ShortInt;
     wdp_Dri: PDrawInfo;
     wdp_Window: PWindow;
@@ -2917,7 +2919,7 @@ type
 
   PwdpDrawBorderPropBack = ^TwdpDrawBorderPropBack;
   TwdpDrawBorderPropBack = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     wdp_TrueColor: ShortInt;
     wdp_Dri: PDrawInfo;
     wdp_Window: PWindow;
@@ -2932,7 +2934,7 @@ type
 
   PwdpDrawBorderPropKnob = ^TwdpDrawBorderPropKnob;
   TwdpDrawBorderPropKnob = record
-    MethodID: PtrUInt;
+    MethodID: LongWord;
     wdp_TrueColor: ShortInt;
     wdp_Dri: PDrawInfo;
     wdp_Window: PWindow;
@@ -2972,7 +2974,7 @@ type
 const
 // WinDecor DrawWindowBorder Flags
    WDF_DWB_TOP_ONLY = 1;   // Draw top border only
-// WinDecor DrawWinTitle Title Align
+// WinDecor DrawWinTitle Title Align 
   WD_DWTA_LEFT    = 0;
   WD_DWTA_RIGHT   = 1;
   WD_DWTA_CENTER  = 2;
@@ -2997,7 +2999,7 @@ const
   JUMPIMAGE       = $17;
   MENUTOGGLEIMAGE = $19;
   SUBMENUIMAGE    = $1A;
-
+  
 // Window attributes
   WA_ExtraTitlebarGadgets = WA_Dummy + 151;
   WA_ExtraGadgetsStartID  = WA_Dummy + 152;
@@ -3009,7 +3011,7 @@ const
   WA_ExtraGadget_Jump     = WA_Dummy + 158;
 
 // WA_ExtraTitlebarGadgets
-  // Flags
+  // Flags 
   ETG_ICONIFY  = $01;
   ETG_LOCK     = $02;
   ETG_MUI      = $04;
@@ -3153,7 +3155,7 @@ const
   WINDOWDEPTH   = WFLG_DEPTHGADGET;
   WINDOWDRAG    = WFLG_DRAGBAR;
   WINDOWSIZING  = WFLG_SIZEGADGET;
-// IDCMP class names:
+// IDCMP class names: 
   LONELYMESSAGE  = IDCMP_LONELYMESSAGE;
   CHANGEWINDOW   = IDCMP_CHANGEWINDOW;
   MENUHELP       = IDCMP_MENUHELP;
@@ -3191,182 +3193,170 @@ const
 var
   IntuitionBase: PIntuitionBase;
 
+
+function ActivateGadget(Gadget: PGadget; Window: PWindow; Requester: PRequester): LongBool; syscall IntuitionBase 77;
+procedure ActivateWindow(Window: PWindow); syscall IntuitionBase 75;
+procedure AddClass(ClassPtr: PIClass); syscall IntuitionBase 114;
 function AddGadget(Window: PWindow; Gadget: PGadget; Position: LongWord): Word; syscall IntuitionBase 7;
+function AddGList(Window: PWindow; Gadget: PGadget; Position: LongWord; NumGad: LongInt; Requester: PRequester): Word; syscall IntuitionBase 73;
+function AllocIntuiMessage(Window: PWindow): PIntuiMessage; syscall IntuitionBase 148;
+function AllocRemember(var RememberKey: PRemember; Size: LongWord; Flags: LongWord): APTR; syscall IntuitionBase 66;
+function AllocScreenBuffer(Screen: PScreen; Bitmap: PBitMap; Flags: LongWord): PScreenBuffer; syscall IntuitionBase 128;
+procedure AlohaWorkbench(MsgPort: PMsgPort); syscall IntuitionBase 67;
+function AutoRequest(Window: PWindow; Body: PIntuiText; PosText: PIntuiText; NegText: PIntuiText; PFlag: LongWord; NFlag: LongWord; Width: LongWord; Height: LongWord): LongBool; syscall IntuitionBase 58;
+procedure BeginRefresh(Window: PWindow); syscall IntuitionBase 59;
+function BuildEasyRequestArgs(Window: PWindow; EasyStruct: PEasyStruct; IDCMP: LongWord; Args: APTR): PWindow; syscall IntuitionBase 99;
+function BuildSysRequest(Window: PWindow; Body: PIntuiText; PosText: PIntuiText; NegText: PIntuiText; Flags: LongWord; Width: LongWord; Height: LongWord): PWindow; syscall IntuitionBase 60;
+function ChangeScreenBuffer(Screen: PScreen; ScreenBuffer: PScreenBuffer): LongWord; syscall IntuitionBase 130;
+procedure ChangeWindowBox(Window: PWindow; Left: LongInt; Top: LongInt; Width: LongInt; Height: LongInt); syscall IntuitionBase 81;
 function ClearDMRequest(Window: PWindow): LongBool; syscall IntuitionBase 8;
 procedure ClearMenuStrip(Window: PWindow); syscall IntuitionBase 9;
 procedure ClearPointer(Window: PWindow); syscall IntuitionBase 10;
 function CloseScreen(Screen: PScreen): LongBool; syscall IntuitionBase 11;
 procedure CloseWindow(Window: PWindow); syscall IntuitionBase 12;
 function CloseWorkBench: LongInt; syscall IntuitionBase 13;
+procedure ChangeDecoration(ID: LongWord; Decor: PNewDecorator); syscall IntuitionBase 153;
+function ChangeWindowShape(Window: PWindow; NewShape: PRegion; CallBack: PHook): PRegion; syscall IntuitionBase 143; unimplemented;
 procedure CurrentTime(var Seconds: LongWord; var Micros: LongWord); syscall IntuitionBase 14;
 function DisplayAlert(AlertNumber: LongWord; String_: PChar; Height: Word): LongBool; syscall IntuitionBase 15; deprecated;
 procedure DisplayBeep(Screen: PScreen); syscall IntuitionBase 16;
+procedure DisposeObject(Object_: APTR); syscall IntuitionBase 107;
+function DoGadgetMethodA(Gad: PGadget; Win: PWindow; Req: PRequester; Msg: TMsg): IPTR; syscall IntuitionBase 135;
+function DoNotify(Cl: PIClass; O: PObject_; Ic: Pointer; Msg: TopUpdate): Pointer; syscall IntuitionBase 145;
 function DoubleClick(SSeconds: LongWord; SMicros: LongWord; CSeconds: LongWord; CMicros: LongWord): LongBool; syscall IntuitionBase 17;
 procedure DrawBorder(Rp: PRastPort; Border: PBorder; LeftOffset: LongInt; TopOffset: LongInt); syscall IntuitionBase 18;
 procedure DrawImage(Rp: PRastPort; Image: PImage; LeftOffset: LongInt; TopOffset: LongInt); syscall IntuitionBase 19;
+procedure DrawImageState(Rp: PRastPort; Image: PImage; LeftOffset: LongInt; TopOffset: LongInt; state: LongWord; DrawInfo: PDrawInfo); syscall IntuitionBase 103;
+function EasyRequestArgs(Window: PWindow; EasyStruct: PEasyStruct; IDCMP_Ptr: PLongWord; Args: APTR): LongInt; syscall IntuitionBase 98;
+procedure EndRefresh(Window: PWindow; Complete: LongBool); syscall IntuitionBase 61;
 procedure EndRequest(Requester: PRequester; Window: PWindow); syscall IntuitionBase 20;
+function EndScreenNotify(Notify: IPTR): LongBool; syscall IntuitionBase 162;
+procedure EraseImage(Rp: PRastPort; Image: PImage; LeftOffset: LongInt; TopOffset: LongInt); syscall IntuitionBase 105;
+function FindClass(ClassID: ClassID): PIClass; syscall IntuitionBase 112;
+function FreeClass(IClass: PIClass): LongBool; syscall IntuitionBase 119;
+procedure FreeICData(ICData: Pointer); syscall IntuitionBase 146;
+procedure FreeIntuiMessage(IMsg: PIntuiMessage); syscall IntuitionBase 149;
+procedure FreeMonitorList(Obj: PPObject_); syscall IntuitionBase 164;
+procedure FreeRemember(var RememberKey: PRemember; ReallyForget: LongInt); syscall IntuitionBase 68;
+procedure FreeScreenBuffer(Screen: PScreen; ScreenBuffer: PScreenBuffer); syscall IntuitionBase 129;
+procedure FreeScreenDrawInfo(Screen: PScreen; DrawInfo: PDrawInfo); syscall IntuitionBase 116;
+procedure FreeSysRequest(Window: PWindow); syscall IntuitionBase 62;
+procedure GadgetMouse(Gadget: PGadget; GInfo: PGadgetInfo; var MousePoint: SmallInt); syscall IntuitionBase 95;
+function GetAttr(AttrID: LongWord; Object_: PObject_; StoragePtr: PIPTR): LongWord; syscall IntuitionBase 109;
+function GetDefaultPubScreen(NameBuffer: PChar): PScreen; syscall IntuitionBase 97;
 function GetDefPrefs(Preferences: PPreferences; Size: SmallInt): PPreferences; syscall IntuitionBase 21;
+function GetMonitorList(Tags: PTagItem): PPObject_; syscall IntuitionBase 163; 
 function GetPrefs(Preferences: PPreferences; Size: SmallInt): PPreferences; syscall IntuitionBase 22;
+function GetScreenData(Buffer: APTR; Size: LongWord; Type_: LongWord; Screen: PScreen): LongInt; syscall IntuitionBase 71;
+function GetScreenDrawInfo(Screen: PScreen): PDrawInfo; syscall IntuitionBase 115;
+procedure HelpControl(Window: PWindow; Flags: LongWord); syscall IntuitionBase 138;
+procedure HideWindow(Window: PWindow); syscall IntuitionBase 141;
 procedure InitRequester(Requester: PRequester); syscall IntuitionBase 23; deprecated;
+function IntuiTextLength(iText: PIntuiText): LongInt; syscall IntuitionBase 55;
 function ItemAddress(MenuStrip: PMenu; MenuNumber: Word): PMenuItem; syscall IntuitionBase 24;
+function IsWindowVisible(Window: PWindow): LongWord; syscall IntuitionBase 139;
+procedure LendMenus(FromWindow: PWindow; ToWindow: PWindow); syscall IntuitionBase 134;
+function LockIBase(LockNumber: LongWord): LongWord; syscall IntuitionBase 69;
+function LockPubScreen(const Name: STRPTR): PScreen; syscall IntuitionBase 85;
+function LockPubScreenList: PList; syscall IntuitionBase 87;
+function MakeClass(ClassID: ClassID; SuperClassID: ClassID; SuperClassPtr: PIClass; InstanceSize: LongWord; Flags: LongWord): PIClass; syscall IntuitionBase 113;
+function MakeScreen(Screen: PScreen): LongInt; syscall IntuitionBase 63;
 function ModifyIDCMP(Window: PWindow; Flags: LongWord): LongBool; syscall IntuitionBase 25;
 procedure ModifyProp(Gadget: PGadget; Window: PWindow; Requester: PRequester; Flags: LongWord; HorizPot: LongWord; VertPot: LongWord; HorizBody: LongWord; VertBody: LongWord); syscall IntuitionBase 26;
 procedure MoveScreen(Screen: PScreen; Dx: LongInt; Dy: LongInt); syscall IntuitionBase 27;
 procedure MoveWindow(Window: PWindow; Dx: LongInt; Dy: LongInt); syscall IntuitionBase 28;
+procedure MoveWindowInFrontOf(Window: PWindow; BehindWindow: PWindow); syscall IntuitionBase 80;
+procedure NewModifyProp(Gadget: PGadget; Window: PWindow; Requester: PRequester; Flags: LongWord; HorizPot: LongWord; VertPot: LongWord; HorizBody: LongWord; VertBody: LongWord; NumGad: LongInt); syscall IntuitionBase 78;
+function NewObjectA(ClassPtr: PIClass; ClassID: PChar; TagList: PTagItem): APTR; syscall IntuitionBase 106;
+function NextObject(ObjectPtrPtr: APTR): APTR; syscall IntuitionBase  111;
+function NextPubScreen(Screen: PScreen; Namebuf: PChar): PChar; syscall IntuitionBase 89;
+function ObtainGIRPort(GInfo: PGadgetInfo): PRastPort; syscall IntuitionBase 93;
 procedure OffGadget(Gadget: PGadget; Window: PWindow; Requester: PRequester); syscall IntuitionBase 29;
 procedure OffMenu(Window: PWindow; MenuNumber: Word); syscall IntuitionBase 30;
 procedure OnGadget(Gadget: PGadget; Window: PWindow; Requester: PRequester); syscall IntuitionBase 31;
 procedure OnMenu(Window: PWindow; MenuNumber: Word); syscall IntuitionBase 32;
 function OpenScreen(NewScreen: PNewScreen): PScreen; syscall IntuitionBase 33;
+function OpenScreenTagList(NewScreen: PNewScreen; TagList: PTagItem): PScreen; syscall IntuitionBase 102;
 function OpenWindow(NewWindow: PNewWindow): PWindow; syscall IntuitionBase 34;
+function OpenWindowTagList(NewWindow: PNewWindow; TagList: PTagItem): PWindow; syscall IntuitionBase 101;
 function OpenWorkBench: IPTR; syscall IntuitionBase 35;
+function PointInImage(Point: LongWord; Image: PImage): LongBool; syscall IntuitionBase 104;
 procedure PrintIText(Rp: PRastPort; IText: PIntuiText; Left: LongInt; Top: LongInt); syscall IntuitionBase 36;
+function PubScreenStatus(Screen: PScreen; StatusFlags: Word): Word; syscall IntuitionBase 92;
+function QueryOverscan(DisplayID: LongWord; Rect: PRectangle; OScanType: SmallInt): LongInt; syscall IntuitionBase 79;
 procedure RefreshGadgets(Gadgets: PGadget; Window: PWindow; Requester: PRequester); syscall IntuitionBase 37;
+procedure RefreshGList(Gadgets: PGadget; Window: PWindow; Requester: PRequester; NumGad: LongInt); syscall IntuitionBase 72;
+procedure RefreshWindowFrame(Window: PWindow); syscall IntuitionBase 76;
+procedure ReleaseGIRPort(Rp: PRastPort); syscall IntuitionBase 94;
+function RemakeDisplay: LongInt; syscall IntuitionBase 64;
+procedure RemoveClass(ClassPtr: PIClass); syscall IntuitionBase 118;
 function RemoveGadget(Window: PWindow; Gadget: PGadget): Word; syscall IntuitionBase 38;
+function RemoveGList(RemPtr: PWindow; Gadget: PGadget; NumGad: LongInt): Word; syscall IntuitionBase 74;
 procedure ReportMouse(Flag: LongInt; Window: PWindow); syscall IntuitionBase 39;
 function Request(Requester: PRequester; Window: PWindow): LongBool; syscall IntuitionBase 40;
-procedure ScreenToBack(Screen: PScreen); syscall IntuitionBase 41;
-procedure ScreenToFront(Screen: PScreen); syscall IntuitionBase 42;
-function SetDMRequest(Window: PWindow; Requester: PRequester): LongBool; syscall IntuitionBase 43;
-function SetMenuStrip(Window: PWindow; Menu: PMenu): LongBool; syscall IntuitionBase 44;
-procedure SetPointer(Window: PWindow; Pointer_: PWord; Height: LongInt; Width: LongInt; XOffset: LongInt; YOffset: LongInt); syscall IntuitionBase 45;
-procedure SetWindowTitles(Window: PWindow; const WindowTitle: PChar; const ScreenTitle: PChar); syscall IntuitionBase 46;
-procedure ShowTitle(Screen: PScreen; ShowIt: LongBool); syscall IntuitionBase 47;
-procedure SizeWindow(Window: PWindow; Dx: LongInt; Dy: LongInt); syscall IntuitionBase 48;
-function ViewAddress: PView; syscall IntuitionBase 49;
-function ViewPortAddress(Window: PWindow): PViewPort; syscall IntuitionBase 50;
-procedure WindowToBack(Window: PWindow); syscall IntuitionBase 51;
-procedure WindowToFront(Window: PWindow); syscall IntuitionBase 52;
-function WindowLimits(Window: PWindow; WidthMin: SmallInt; HeightMin: SmallInt; WidthMax: Word; HeightMax: Word): LongBool; syscall IntuitionBase 53;
-function SetPrefs(PrefBuffer: PPreferences; Size: LongInt; Inform: LongBool): PPreferences; syscall IntuitionBase 54;
-function IntuiTextLength(iText: PIntuiText): LongInt; syscall IntuitionBase 55;
-function WBenchToBack: LongBool; syscall IntuitionBase 56;
-function WBenchToFront: LongBool; syscall IntuitionBase 57;
-function AutoRequest(Window: PWindow; Body: PIntuiText; PosText: PIntuiText; NegText: PIntuiText; PFlag: LongWord; NFlag: LongWord; Width: LongWord; Height: LongWord): LongBool; syscall IntuitionBase 58;
-procedure BeginRefresh(Window: PWindow); syscall IntuitionBase 59;
-function BuildSysRequest(Window: PWindow; Body: PIntuiText; PosText: PIntuiText; NegText: PIntuiText; Flags: LongWord; Width: LongWord; Height: LongWord): PWindow; syscall IntuitionBase 60;
-procedure EndRefresh(Window: PWindow; Complete: LongBool); syscall IntuitionBase 61;
-procedure FreeSysRequest(Window: PWindow); syscall IntuitionBase 62;
-function MakeScreen(Screen: PScreen): LongInt; syscall IntuitionBase 63;
-function RemakeDisplay: LongInt; syscall IntuitionBase 64;
-function RethinkDisplay: LongInt; syscall IntuitionBase 65;
-function AllocRemember(var RememberKey: PRemember; Size: LongWord; Flags: LongWord): APTR; syscall IntuitionBase 66;
-procedure AlohaWorkbench(MsgPort: PMsgPort); syscall IntuitionBase 67;
-procedure FreeRemember(var RememberKey: PRemember; ReallyForget: LongInt); syscall IntuitionBase 68;
-function LockIBase(LockNumber: LongWord): LongWord; syscall IntuitionBase 69;
-procedure UnlockIBase(LockNumber: LongWord); syscall IntuitionBase 70;
-function GetScreenData(Buffer: APTR; Size: LongWord; Type_: LongWord; Screen: PScreen): LongInt; syscall IntuitionBase 71;
-procedure RefreshGList(Gadgets: PGadget; Window: PWindow; Requester: PRequester; NumGad: LongInt); syscall IntuitionBase 72;
-function AddGList(Window: PWindow; Gadget: PGadget; Position: LongWord; NumGad: LongInt; Requester: PRequester): Word; syscall IntuitionBase 73;
-function RemoveGList(RemPtr: PWindow; Gadget: PGadget; NumGad: LongInt): Word; syscall IntuitionBase 74;
-procedure ActivateWindow(Window: PWindow); syscall IntuitionBase 75;
-procedure RefreshWindowFrame(Window: PWindow); syscall IntuitionBase 76;
-function ActivateGadget(Gadget: PGadget; Window: PWindow; Requester: PRequester): LongBool; syscall IntuitionBase 77;
-procedure NewModifyProp(Gadget: PGadget; Window: PWindow; Requester: PRequester; Flags: LongWord; HorizPot: LongWord; VertPot: LongWord; HorizBody: LongWord; VertBody: LongWord; NumGad: LongInt); syscall IntuitionBase 78;
-function QueryOverscan(DisplayID: LongWord; Rect: PRectangle; OScanType: SmallInt): LongInt; syscall IntuitionBase 79;
-procedure MoveWindowInFrontOf(Window: PWindow; BehindWindow: PWindow); syscall IntuitionBase 80;
-procedure ChangeWindowBox(Window: PWindow; Left: LongInt; Top: LongInt; Width: LongInt; Height: LongInt); syscall IntuitionBase 81;
-function SetEditHook(Hook: PHook): PHook; syscall IntuitionBase 82;
-function SetMouseQueue(Window: PWindow; QueueLength: LongWord): LongInt; syscall IntuitionBase 83;
-procedure ZipWindow(Window: PWindow); syscall IntuitionBase 84;
-function LockPubScreen(const Name: STRPTR): PScreen; syscall IntuitionBase 85;
-procedure UnlockPubScreen(Name: PChar; Screen: PScreen); syscall IntuitionBase 86;
-function LockPubScreenList: PList; syscall IntuitionBase 87;
-procedure UnlockPubScreenList; syscall IntuitionBase 88;
-function NextPubScreen(Screen: PScreen; Namebuf: PChar): PChar; syscall IntuitionBase 89;
-procedure SetDefaultPubScreen(Name: PChar); syscall IntuitionBase 90;
-function SetPubScreenModes(Modes: Word): Word; syscall IntuitionBase 91;
-function PubScreenStatus(Screen: PScreen; StatusFlags: Word): Word; syscall IntuitionBase 92;
-function ObtainGIRPort(GInfo: PGadgetInfo): PRastPort; syscall IntuitionBase 93;
-procedure ReleaseGIRPort(Rp: PRastPort); syscall IntuitionBase 94;
-procedure GadgetMouse(Gadget: PGadget; GInfo: PGadgetInfo; var MousePoint: SmallInt); syscall IntuitionBase 95;
-function SetIPrefs(Data: Pointer; Length: LongWord; Typ: LongWord): LongWord; syscall IntuitionBase 96;
-function GetDefaultPubScreen(NameBuffer: PChar): PScreen; syscall IntuitionBase 97;
-function EasyRequestArgs(Window: PWindow; EasyStruct: PEasyStruct; IDCMP_Ptr: PLongWord; Args: APTR): LongInt; syscall IntuitionBase 98;
-function BuildEasyRequestArgs(Window: PWindow; EasyStruct: PEasyStruct; IDCMP: LongWord; Args: APTR): PWindow; syscall IntuitionBase 99;
-function SysReqHandler(Window: PWindow; IDCMPFlagsPtr: PLongWord; WaitInput: LongBool): LongInt; syscall IntuitionBase 100;
-function OpenWindowTagList(NewWindow: PNewWindow; TagList: PTagItem): PWindow; syscall IntuitionBase 101;
-function OpenScreenTagList(NewScreen: PNewScreen; TagList: PTagItem): PScreen; syscall IntuitionBase 102;
-procedure DrawImageState(Rp: PRastPort; Image: PImage; LeftOffset: LongInt; TopOffset: LongInt; state: LongWord; DrawInfo: PDrawInfo); syscall IntuitionBase 103;
-function PointInImage(Point: LongWord; Image: PImage): LongBool; syscall IntuitionBase 104;
-procedure EraseImage(Rp: PRastPort; Image: PImage; LeftOffset: LongInt; TopOffset: LongInt); syscall IntuitionBase 105;
-function NewObjectA(ClassPtr: PIClass; ClassID: PChar; TagList: PTagItem): APTR; syscall IntuitionBase 106;
-procedure DisposeObject(Object_: APTR); syscall IntuitionBase 107;
-function SetAttrsA(Object_: APTR; TagList: PTagItem): IPTR; syscall IntuitionBase 108;
-function GetAttr(AttrID: LongWord; Object_: PObject_; StoragePtr: PIPTR): LongWord; overload syscall IntuitionBase 109;
-function GetAttr(AttrID: LongWord; Object_: PObject_; var Storage: IPTR): LongWord; overload syscall IntuitionBase 109;
-function SetGadgetAttrsA(Gadget: PGadget; Window: PWindow; Requester: PRequester; TagList: PTagItem): IPTR; syscall IntuitionBase 110;
-function NextObject(ObjectPtrPtr: APTR): APTR; syscall IntuitionBase 111;
-function FindClass(ClassID: ClassID): PIClass; syscall IntuitionBase 112;
-function MakeClass(ClassID: ClassID; SuperClassID: ClassID; SuperClassPtr: PIClass; InstanceSize: LongWord; Flags: LongWord): PIClass; syscall IntuitionBase 113;
-procedure AddClass(ClassPtr: PIClass); syscall IntuitionBase 114;
-function GetScreenDrawInfo(Screen: PScreen): PDrawInfo; syscall IntuitionBase 115;
-procedure FreeScreenDrawInfo(Screen: PScreen; DrawInfo: PDrawInfo); syscall IntuitionBase 116;
 function ResetMenuStrip(Window: PWindow; Menu: PMenu): LongBool; syscall IntuitionBase 117;
-procedure RemoveClass(ClassPtr: PIClass); syscall IntuitionBase 118;
-function FreeClass(IClass: PIClass): LongBool; syscall IntuitionBase 119;
-function AllocScreenBuffer(Screen: PScreen; Bitmap: PBitMap; Flags: LongWord): PScreenBuffer; syscall IntuitionBase 128;
-procedure FreeScreenBuffer(Screen: PScreen; ScreenBuffer: PScreenBuffer); syscall IntuitionBase 129;
-function ChangeScreenBuffer(Screen: PScreen; ScreenBuffer: PScreenBuffer): LongWord; syscall IntuitionBase 130;
+function RethinkDisplay: LongInt; syscall IntuitionBase 65;
 procedure ScreenDepth(Screen: PScreen; Flags: LongWord; Reserved: APTR); syscall IntuitionBase 131;
 procedure ScreenPosition(Screen: PScreen; Flags: LongWord; X1: LongInt; Y1: LongInt; X2: LongInt; Y2: LongInt); syscall IntuitionBase 132;
+procedure ScreenToBack(Screen: PScreen); syscall IntuitionBase 41;
+procedure ScreenToFront(Screen: PScreen); syscall IntuitionBase 42;
 procedure ScrollWindowRaster(Win: PWindow; Dx: SmallInt; Dy: SmallInt; XMin: SmallInt; YMin: SmallInt; XMax: SmallInt; YMax: SmallInt); syscall IntuitionBase 133;
-procedure LendMenus(FromWindow: PWindow; ToWindow: PWindow); syscall IntuitionBase 134;
-function DoGadgetMethodA(Gad: PGadget; Win: PWindow; Req: PRequester; Msg: TMsg): IPTR; syscall IntuitionBase 135;
-procedure SetWindowPointerA(Win: PWindow; Taglist: PTagItem); syscall IntuitionBase 136;
-function TimedDisplayAlert(AlertNumber: LongWord; String_: PChar; Height: Word; Time: LongWord): LongBool; syscall IntuitionBase 137;
-procedure HelpControl(Window: PWindow; Flags: LongWord); syscall IntuitionBase 138;
-function IsWindowVisible(Window: PWindow): LongWord; syscall IntuitionBase 139;
-procedure ShowWindow(Window: PWindow); syscall IntuitionBase 140;
-procedure HideWindow(Window: PWindow); syscall IntuitionBase 141;
-function ChangeWindowShape(Window: PWindow; NewShape: PRegion; CallBack: PHook): PRegion; syscall IntuitionBase 143; unimplemented;
-procedure SetDefaultScreenFont(TextFont: PTextFont); syscall IntuitionBase 144;
-function DoNotify(Cl: PIClass; O: PObject_; Ic: Pointer; Msg: TopUpdate): Pointer; syscall IntuitionBase 145;
-procedure FreeICData(ICData: Pointer); syscall IntuitionBase 146;
-function AllocIntuiMessage(Window: PWindow): PIntuiMessage; syscall IntuitionBase 148;
-procedure FreeIntuiMessage(IMsg: PIntuiMessage); syscall IntuitionBase 149;
-procedure SendIntuiMessage(Window: PWindow; IMsg: PIntuiMessage); syscall IntuitionBase 151;
-function GetDrawInfoAttr(DrawInfo: PDrawInfo; AttrID: LongWord; ErrorPtr: PIPTR): IPTR; syscall IntuitionBase 156;
-procedure WindowAction(Window: PWindow; Action: LongWord; Tags: PTagItem); syscall IntuitionBase 157;
 procedure ScrollWindowRasterNoFill(Window: PWindow; Dx, Dy, XMin, YMin, XMax, YMax: Word); syscall IntuitionBase 159;
+procedure SendIntuiMessage(Window: PWindow; IMsg: PIntuiMessage); syscall IntuitionBase 151;
+function SetAttrsA(Object_: APTR; TagList: PTagItem): IPTR; syscall IntuitionBase 108;
+procedure SetDefaultPubScreen(Name: PChar); syscall IntuitionBase 90;
+procedure SetDefaultScreenFont(TextFont: PTextFont); syscall IntuitionBase 144;
+function SetDMRequest(Window: PWindow; Requester: PRequester): LongBool; syscall IntuitionBase 43;
+function SetEditHook(Hook: PHook): PHook; syscall IntuitionBase 82;
+function SetGadgetAttrsA(Gadget: PGadget; Window: PWindow; Requester: PRequester; TagList: PTagItem): IPTR; syscall IntuitionBase 110;
+function SetIPrefs(Data: Pointer; Length: LongWord; Typ: LongWord): LongWord; syscall IntuitionBase 96;
+function SetMenuStrip(Window: PWindow; Menu: PMenu): LongBool; syscall IntuitionBase 44;
+function SetMouseQueue(Window: PWindow; QueueLength: LongWord): LongInt; syscall IntuitionBase 83;
+procedure SetPointer(Window: PWindow; Pointer_: PWord; Height: LongInt; Width: LongInt; XOffset: LongInt; YOffset: LongInt); syscall IntuitionBase 45;
 function SetPointerBounds(Screen: PScreen; Rect: TRectangle; Reserved: LongWord; Tags: PTagItem): LongWord; syscall IntuitionBase 160;
-
-{$ifdef AROS_ABIv0}
-procedure ChangeDecoration(ID: LongWord; Decor: PNewDecorator); syscall IntuitionBase 153;
+function SetPrefs(PrefBuffer: PPreferences; Size: LongInt; Inform: LongBool): PPreferences; syscall IntuitionBase 54;
+function SetPubScreenModes(Modes: Word): Word; syscall IntuitionBase 91;
+procedure SetWindowPointerA(Win: PWindow; Taglist: PTagItem); syscall IntuitionBase 136;
+procedure SetWindowTitles(Window: PWindow; const WindowTitle: PChar; const ScreenTitle: PChar); syscall IntuitionBase 46;
+procedure ShowTitle(Screen: PScreen; ShowIt: LongBool); syscall IntuitionBase 47;
+procedure ShowWindow(Window: PWindow); syscall IntuitionBase 140;
+procedure SizeWindow(Window: PWindow; Dx: LongInt; Dy: LongInt); syscall IntuitionBase 48;
 function StartScreenNotifyTagList(Tags: PTagItem): IPTR; syscall IntuitionBase 161;
-function EndScreenNotify(Notify: IPTR): LongBool; syscall IntuitionBase 162;
-function GetMonitorList(Tags: PTagItem): PPObject_; syscall IntuitionBase 163;
-procedure FreeMonitorList(Obj: PPObject_); syscall IntuitionBase 164;
-{$endif}
-
-{$ifdef AROS_ABIv1}
-procedure ChangeDecoration(ID: LongWord; Decor: PNewDecorator); syscall IntuitionBase 152;
-function StartScreenNotifyTagList(Tags: PTagItem): IPTR; syscall IntuitionBase 154;
-function EndScreenNotify(Notify: IPTR): LongBool; syscall IntuitionBase 155;
-procedure FreeMonitorList(Obj: PPObject_); syscall IntuitionBase 162;
-function GetMonitorList(Tags: PTagItem): PPObject_; syscall IntuitionBase 161;
-{$endif}
+function SysReqHandler(Window: PWindow; IDCMPFlagsPtr: PLongWord; WaitInput: LongBool): LongInt; syscall IntuitionBase 100;
+function TimedDisplayAlert(AlertNumber: LongWord; String_: PChar; Height: Word; Time: LongWord): LongBool; syscall IntuitionBase 137;
+procedure UnlockIBase(LockNumber: LongWord); syscall IntuitionBase 70;
+procedure UnlockPubScreen(Name: PChar; Screen: PScreen); syscall IntuitionBase 86;
+procedure UnlockPubScreenList; syscall IntuitionBase 88;
+function ViewAddress: PView; syscall IntuitionBase 49;
+function ViewPortAddress(Window: PWindow): PViewPort; syscall IntuitionBase 50;
+function WBenchToBack: LongBool; syscall IntuitionBase 56;
+function WBenchToFront: LongBool; syscall IntuitionBase 57;
+procedure WindowAction(Window: PWindow; Action: LongWord; Tags: PTagItem); syscall IntuitionBase 157;
+function WindowLimits(Window: PWindow; WidthMin: SmallInt; HeightMin: SmallInt; WidthMax: Word; HeightMax: Word): LongBool; syscall IntuitionBase 53;
+procedure WindowToBack(Window: PWindow); syscall IntuitionBase 51;
+procedure WindowToFront(Window: PWindow); syscall IntuitionBase 52;
+procedure ZipWindow(Window: PWindow); syscall IntuitionBase 84;
 
 // VarArgs Versions
-function SetAttrs(Obj: APTR; const Tags: array of PtrUInt): LongWord;
-function NewObject(ClassPtr: PIClass; ClassID: PChar; const Tags: array of PtrUInt): APTR;
-function BuildEasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP: LongWord; const Args: array of PtrUInt): PWindow;
-function DoGadgetMethod(Gad: PGadget; Win: PWindow; Req: PRequester; const Args: array of PtrUInt): IPTR;
-function EasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP_Ptr: PLongWord; const Args: array of PtrUInt): LongInt;
-function OpenScreenTags(NewScreen: PNewScreen; const Tags: array of PtrUInt): PScreen;
-function OpenWindowTags(NewWindow: PNewWindow; const Tags: array of PtrUInt): PWindow;
-function SetGadgetAttrs(Gadget: PGadget; Window: PWindow; Requester: PRequester; const Tags: array of PtrUInt): IPTR;
-procedure SetWindowPointer(Win: PWindow; const Tags: array of PtrUInt);
+function SetAttrs(Obj: APTR; const Tags: array of const): LongWord;
+function NewObject(ClassPtr: PIClass; ClassID: PChar; const Tags: array of const): APTR;
+function BuildEasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP: LongWord; const Args: array of const): PWindow;
+function DoGadgetMethod(Gad: PGadget; Win: PWindow; Req: PRequester; const Args: array of const): IPTR;
+function EasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP_Ptr: PLongWord; const Args: array of const): LongInt; 
+function OpenScreenTags(NewScreen: PNewScreen; const Tags: array of const): PScreen;
+function OpenWindowTags(NewWindow: PNewWindow; const Tags: array of const): PWindow;
+function SetGadgetAttrs(Gadget: PGadget; Window: PWindow; Requester: PRequester; const Tags: array of const): IPTR;
+procedure SetWindowPointer(Win: PWindow; const Tags: array of const);
 
 // Function wrapper
 function SetSuperAttrsA(cl: PIClass; Obj: PObject_; TagList: PTagItem): IPTR;
-function SetSuperAttrs(cl: PIClass; Obj: PObject_; const Tags: array of PtrUInt): IPTR;
+function SetSuperAttrs(cl: PIClass; Obj: PObject_; Tags: array of const): IPTR;
 function DoMethodA(Obj: PObject_; Message: APTR): IPTR;
-function DoMethod(Obj: PObject_; const Args: array of PtrUInt): IPTR;
+function DoMethod(Obj: PObject_; MethodID: LongWord; Args: array of const): IPTR;
 function CoerceMethodA(cl: PIClass; Obj: PObject_; Message: APTR): IPTR;
-function CoerceMethod(cl: PIClass; Obj: PObject_; const Args: array of PtrUInt): IPTR;
+function CoerceMethod(cl: PIClass; Obj: PObject_; MethodID: LongWord; const Args: array of const): IPTR;
 function DoSuperMethodA(cl: PIClass; Obj: PObject_; Message: APTR): IPTR;
-function DoSuperMethod(cl: PIClass; Obj: PObject_; const Args: array of PtrUInt): IPTR;
+function DoSuperMethod(cl: PIClass; Obj: PObject_; Args: array of const): IPTR;
 
 function Has_Children(Win: PWindow): Boolean;
 function Is_Children(Win: PWindow): Boolean;
@@ -3376,9 +3366,9 @@ function Is_Children(Win: PWindow): Boolean;
 function INST_DATA(Cl: PIClass; O: P_Object): Pointer;
 function SIZEOF_INSTANCE(Cl: PIClass): LongInt;
 function BASEOBJECT(O: P_Object): Pointer;
-function _OBJ(O: Pointer): P_Object; inline;
-function __OBJECT(O: Pointer): P_Object; inline;
-function OCLASS(O: Pointer): PIClass; inline;
+function _OBJ(O: Pointer): P_Object;
+function __OBJECT(O: Pointer): P_Object;
+function OCLASS(O: Pointer): PIClass;
 function SHIFTITEM(N: SmallInt): Word;
 function SHIFTMENU(N: SmallInt): Word;
 function SHIFTSUB(N: SmallInt): Word;
@@ -3400,110 +3390,150 @@ function SHAKNUM(x: Word): Word;
 
 implementation
 
-function SetAttrs(Obj: APTR; const Tags: array of PtrUInt): LongWord; inline;
+uses
+  tagsarray, longarray;
+  
+function SetAttrs(Obj: APTR; const Tags: array of const): LongWord;
+var
+  TagList: TTagsList;
 begin
-  SetAttrs := SetAttrsA(Obj, @Tags);
+  AddTags(TagList, Tags);
+  Result := SetAttrsA(Obj, GetTagPtr(TagList));
 end;
 
-function NewObject(ClassPtr: PIClass; ClassID: PChar; const Tags: array of PtrUInt): APTR; inline;
+function NewObject(ClassPtr: PIClass; ClassID: PChar; const Tags: array of const): APTR;
+var
+  TagList: TTagsList;
 begin
-  NewObject := NewObjectA(ClassPtr, ClassID, @Tags);
+  AddTags(TagList, Tags);
+  Result := NewObjectA(ClassPtr, ClassID, GetTagPtr(TagList));
 end;
 
-function BuildEasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP: LongWord; const Args: array of PtrUInt): PWindow; inline;
+function BuildEasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP: LongWord; const Args: array of const): PWindow;
+var
+  ArgList: TArgList;
 begin
-  BuildEasyRequest := BuildEasyRequestArgs(Window, EasyStruct, IDCMP, @Args);
+  AddArguments(ArgList, Args);
+  Result := BuildEasyRequestArgs(Window, EasyStruct, IDCMP, GetArgPtr(ArgList));
 end;
 
-function DoGadgetMethod(Gad: PGadget; Win: PWindow; Req: PRequester; const Args: array of PtrUInt): IPTR; inline;
+function DoGadgetMethod(Gad: PGadget; Win: PWindow; Req: PRequester; const Args: array of const): IPTR;
+var
+  ArgList: TArgList;
 begin
-{$ifdef i386}
-  DoGadgetMethod := DoGadgetMethodA(Gad, Win, Req, TMsg(@Args));
-{$else}
-{$warning fix me!}
-{$endif}
+  AddArguments(ArgList, Args);
+  Result := DoGadgetMethodA(Gad, Win, Req, TMsg(ArgList));
 end;
 
-function EasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP_Ptr: PLongWord; const Args: array of PtrUInt): LongInt; inline;
+function EasyRequest(Window: PWindow; EasyStruct: PEasyStruct; IDCMP_Ptr: PLongWord; const Args: array of const): LongInt;
+var
+  ArgList: TArgList;
 begin
-  EasyRequest := EasyRequestArgs(Window, EasyStruct, IDCMP_Ptr, @Args);
+  AddArguments(ArgList, Args);
+  Result := EasyRequestArgs(Window, EasyStruct, IDCMP_Ptr, @(ArgList[0])); 
 end;
 
-function OpenScreenTags(NewScreen: PNewScreen; const Tags: array of PtrUInt): PScreen; inline;
+function OpenScreenTags(NewScreen: PNewScreen; const Tags: array of const): PScreen;
+var
+  TagList: TTagsList;
 begin
-  OpenScreenTags := OpenScreenTagList(NewScreen, @Tags);
+  AddTags(TagList, Tags);
+  Result := OpenScreenTagList(NewScreen, GetTagPtr(TagList));
 end;
 
-function OpenWindowTags(NewWindow: PNewWindow; const Tags: array of PtrUInt): PWindow; inline;
+function OpenWindowTags(NewWindow: PNewWindow; const Tags: array of const): PWindow;
+var
+  TagList: TTagsList;
 begin
-  OpenWindowTags := OpenWindowTagList(NewWindow, @Tags);
+  AddTags(TagList, Tags);
+  Result := OpenWindowTagList(NewWindow, GetTagPtr(TagList));
 end;
 
-function SetGadgetAttrs(Gadget: PGadget; Window: PWindow; Requester: PRequester; const Tags: array of PtrUInt): IPTR; inline;
+function SetGadgetAttrs(Gadget: PGadget; Window: PWindow; Requester: PRequester; const Tags: array of const): IPTR;
+var
+  TagList: TTagsList;
 begin
-  SetGadgetAttrs := SetGadgetAttrsA(Gadget, Window, Requester, @Tags);
+  AddTags(TagList, Tags);
+  Result := SetGadgetAttrsA(Gadget, Window, Requester, GetTagPtr(TagList));
 end;
 
-procedure SetWindowPointer(Win: PWindow; const Tags: array of PtrUInt); inline;
+procedure SetWindowPointer(Win: PWindow; const Tags: array of const);
+var
+  TagList: TTagsList;
 begin
-  SetWindowPointerA(Win, @Tags);
+  AddTags(TagList, Tags);
+  SetWindowPointerA(Win, GetTagPtr(TagList));
 end;
 
 // Functions wrapper
 
-function DoMethodA(Obj: PObject_; Message: APTR): IPTR; inline;
+function DoMethodA(Obj: PObject_; Message: APTR): IPTR;
 begin
-  DoMethodA := 0;
+  Result := 0;
   if Obj = nil then
     Exit;
-  DoMethodA := CALLHOOKPKT_(PHook(OCLASS(Obj)), Obj, Message);
+  Result := CALLHOOKPKT_(PHook(OCLASS(Obj)), Obj, Message);
 end;
 
-function DoMethod(Obj: PObject_; const Args: array of PtrUInt): IPTR; inline;
+function DoMethod(Obj: PObject_; MethodID: LongWord; Args: array of const): IPTR;
+var
+  ArgList: TArgList;
 begin
-  DoMethod := 0;
+  Result := 0;
   if obj = nil then
     Exit;
-  DoMethod := CALLHOOKPKT_(PHook(OCLASS(Obj)), Obj, @Args);
+  AddArguments(ArgList, [MethodID]);  
+  AddArguments(ArgList, Args);  
+  Result := CALLHOOKPKT_(PHook(OCLASS(Obj)), Obj, @(ArgList[0]));
 end;
 
-function DoSuperMethodA(cl: PIClass; Obj: PObject_; Message: APTR): IPTR; inline;
+function DoSuperMethodA(cl: PIClass; Obj: PObject_; Message: APTR): IPTR;
 begin
-  DoSuperMethodA := 0;
+  Result := 0;
   if (cl = nil) or (obj = nil) then
     Exit;
-  DoSuperMethodA := CALLHOOKPKT_(PHook(cl^.cl_Super), Obj, Message);
+  Result := CALLHOOKPKT_(PHook(cl^.cl_Super), Obj, Message);
 end;
 
-function DoSuperMethod(cl: PIClass; Obj: PObject_; const Args: array of PtrUInt): IPTR; inline;
-begin
-  DoSuperMethod := 0;
-  if (cl = nil) or (obj = nil) then
-    Exit;
-  DoSuperMethod := CALLHOOKPKT_(PHook(cl^.cl_Super), Obj, @Args);
-end;
-
-function CoerceMethodA(cl: PIClass; Obj: PObject_; Message: APTR): IPTR; inline;
-begin
-  CoerceMethodA := 0;
-  if (cl = nil) or (obj = nil) then
-    Exit;
-  CoerceMethodA := CALLHOOKPKT_(PHook(cl), Obj, Message);
-end;
-
-function CoerceMethod(cl: PIClass; Obj: PObject_; const Args: array of PtrUInt): IPTR; inline;
-begin
-  CoerceMethod := CoerceMethodA(cl, Obj, @Args);
-end;
-
-function SetSuperAttrs(cl: PIClass; Obj: PObject_; const Tags: array of PtrUInt): IPTR;
+function DoSuperMethod(cl: PIClass; Obj: PObject_; Args: array of const): IPTR;
 var
+  ArgList: TArgList;
+begin
+  Result := 0;
+  if (cl = nil) or (obj = nil) then
+    Exit;
+  AddArguments(ArgList, Args);  
+  Result := CALLHOOKPKT_(PHook(cl^.cl_Super), Obj, @(ArgList[0]));
+end;
+
+function CoerceMethodA(cl: PIClass; Obj: PObject_; Message: APTR): IPTR;
+begin
+  Result := 0;
+  if (cl = nil) or (obj = nil) then
+    Exit;
+  Result := CALLHOOKPKT_(PHook(cl), Obj, Message);
+end;
+
+function CoerceMethod(cl: PIClass; Obj: PObject_; MethodID: LongWord; const Args: array of const): IPTR;
+var
+  ArgList: TArgList;
+begin
+  AddArguments(ArgList,[MethodID]);
+  AddArguments(ArgList, Args);
+  Result := CoerceMethodA(cl, Obj, @(ArgList[0])); 
+end;
+
+
+function SetSuperAttrs(cl: PIClass; Obj: PObject_; Tags: array of const): IPTR;
+var
+  TagList: TTagsList;
   ops: TopSet;
 begin
+  AddTags(TagList, Tags);
   ops.MethodID := OM_SET;
-  ops.ops_AttrList := @Tags;
+  ops.ops_AttrList := GetTagPtr(TagList);
   ops.ops_GInfo := nil;
-  SetSuperAttrs := DoSuperMethodA(cl, obj, @ops);
+  Result := DoSuperMethodA(cl, obj, @ops);
 end;
 
 function SetSuperAttrsA(cl: PIClass; Obj: PObject_; TagList: PTagItem): IPTR;
@@ -3513,37 +3543,41 @@ begin
   ops.MethodID := OM_SET;
   ops.ops_AttrList := TagList;
   ops.ops_GInfo := nil;
-  SetSuperAttrsA := DoSuperMethodA(cl, obj, @ops);
+  Result := DoSuperMethodA(cl, obj, @ops);
 end;
 
-function INST_DATA(Cl: PIClass; O: P_Object): Pointer; inline;
+
+function INST_DATA(Cl: PIClass; O: P_Object): Pointer;
 begin
   INST_DATA := Pointer(PtrUInt(O) + Cl^.cl_InstOffset);
 end;
 
-function SIZEOF_INSTANCE(Cl: PIClass): LongInt; inline;
+function SIZEOF_INSTANCE(Cl: PIClass): LongInt;
 begin
   SIZEOF_INSTANCE := Cl^.cl_InstOffset + Cl^.cl_InstSize + SizeOf(T_Object);
 end;
 
-function BASEOBJECT(O: P_Object): Pointer; inline;
+function BASEOBJECT(O: P_Object): Pointer;
 begin
   BASEOBJECT := Pointer(PtrUInt(O) + SizeOf(T_Object));
 end;
 
-function _OBJ(O: Pointer): P_Object; inline;
+function _OBJ(O: Pointer): P_Object;
 begin
  _OBJ := P_Object(O);
 end;
 
-function __OBJECT(O: Pointer): P_Object; inline;
+function __OBJECT(O: Pointer): P_Object;
 begin
   __OBJECT := P_Object(PtrUInt(O) - SizeOf(T_Object))
 end;
 
-function OCLASS(O: Pointer): PIClass; inline;
+function OCLASS(O: Pointer): PIClass;
+var
+  Obj: P_Object;
 begin
-  OCLASS := P_Object(PtrUInt(O) - SizeOf(T_Object))^.o_Class;
+  Obj := P_Object(PtrUInt(O) - SizeOf(T_Object));
+  OCLASS := Obj^.o_Class;
 end;
 
 function SHIFTITEM(N: SmallInt): Word;
@@ -3551,17 +3585,17 @@ begin
   SHIFTITEM := (N and $3f) shl 5
 end;
 
-function SHIFTMENU(N: SmallInt): Word; inline;
+function SHIFTMENU(N: SmallInt): Word;
 begin
   SHIFTMENU := N and $1f
 end;
 
-function SHIFTSUB(N: SmallInt): Word; inline;
+function SHIFTSUB(N: SmallInt): Word;
 begin
   SHIFTSUB := (N and $1f) shl 11
 end;
 
-function FULLMENUNUM(Menu, Item, Sub: SmallInt): Word; inline;
+function FULLMENUNUM(Menu, Item, Sub: SmallInt): Word;
 begin
   FULLMENUNUM := ((Sub and $1f) shl 11) or ((Item and $3f) shl 5) or (Menu and $1f);
 end;
@@ -3572,84 +3606,84 @@ end;
   in pascal, of course!
 }
 
-function IM_BGPEN(Im: PImage): Byte; inline;
+function IM_BGPEN(Im: PImage): Byte;
 begin
   IM_BGPEN := Im^.PlaneOnOff;
 end;
 
-function IM_BOX(Im: PImage): PIBox; inline;
+function IM_BOX(Im: PImage): PIBox;
 begin
   IM_BOX := PIBox(@Im^.LeftEdge);
 END;
 
-function IM_FGPEN (Im: PImage): Byte; inline;
+function IM_FGPEN (Im: PImage): Byte;
 begin
   IM_FGPEN := Im^.PlanePick;
 end;
 
-function GADGET_BOX(G: PGadget): PIBox; inline;
+function GADGET_BOX(G: PGadget): PIBox;
 begin
   GADGET_BOX := PIBox(@G^.LeftEdge);
 end;
 
-function CUSTOM_HOOK (Gadget: PGadget): PHook; inline;
+function CUSTOM_HOOK (Gadget: PGadget): PHook;
 begin
     CUSTOM_HOOK := PHook(Gadget^.MutualExclude);
 end;
 
-function ITEMNUM(N: Word): Word; inline;
+function ITEMNUM(N: Word): Word;
 begin
   ITEMNUM := (N shr 5) and $3F
 end;
 
-function MENUNUM(N: Word): Word; inline;
+function MENUNUM(N: Word): Word;
 begin
  MENUNUM := N and $1f
 end;
 
-function SUBNUM(N: Word): Word; inline;
+function SUBNUM(N: Word): Word;
 begin
   SUBNUM := (N shr 11) and $1f
 end;
 
-function IAM_Resolution(x, y: Word): LongWord; inline;
+function IAM_Resolution(x, y: Word): LongWord;
 begin
-  IAM_Resolution := (x shl 16) or y;
+  Result := (x shl 16) or y;
 end;
 
-function SRBNUM(x: Word): Word; inline;
+function SRBNUM(x: Word): Word;
 begin
   SRBNUM := $08 - (x shr 4);
 end;
 
-function SWBNUM(x: Word): Word; inline;
+function SWBNUM(x: Word): Word;
 begin
   SWBNUM := $08 - (x and $0f);
 end;
 
-function SSBNUM(x: Word): Word; inline;
+function SSBNUM(x: Word): Word;
 begin
   SSBNUM := $01 + (x shr 4);
 end;
 
-function SPARNUM(x: Word): Word; inline;
+function SPARNUM(x: Word): Word;
 begin
   SPARNUM := x shr 4;
 end;
 
-function SHAKNUM(x: Word): Word; inline;
+function SHAKNUM(x: Word): Word;
 begin
   SHAKNUM := x and $0f;
 end;
 
-function Has_Children(Win: PWindow): Boolean; inline;
+function Has_Children(Win: PWindow): Boolean;
 begin
-  Has_Children := Assigned(Win^.FirstChild);
+  Result := Assigned(Win^.FirstChild);
 end;
 
-function Is_Children(Win: PWindow): Boolean; inline;
+function Is_Children(Win: PWindow): Boolean;
 begin
-  Is_Children := Assigned(Win^.Parent2);
+  Result := Assigned(Win^.Parent2);
 end;
 
 initialization

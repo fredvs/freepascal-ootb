@@ -28,51 +28,17 @@ type
     handles     : PPtrUint;     //pointer to handles
   end;
   PResHdr = ^TResHdr;
-  PPResHdr = ^PResHdr;
-
-  TLibGetResHdr=function():PResHdr;
 
 var
 {$ifdef FPC_HAS_WINLIKERESOURCES}
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-  ResHeader : PPResHdr; external name '_FPC_ResLocation';
+  ResHeader : PResHdr; external name 'FPC_RESLOCATION';
 {$else}
-  ResHeaderVar: PResHdr; external name 'FPC_RESLOCATION';
-  ResHeader : PPResHdr = @ResHeaderVar;
-{$endif}
-{$else}
-  ResHeaderVar : PResHdr = nil;
-  ResHeader : PPResHdr= @ResHeaderVar;
+  ResHeader : PResHdr= nil;
 {$endif}
 
 (*****************************************************************************
                              Private Helper Functions
 *****************************************************************************)
-
-function ExtGetResHdr(ModuleHandle : TFPResourceHMODULE):PResHdr;
-var
-  p:TLibGetResHdr;
-  pp:pointer;
-begin
-  ExtGetResHdr:=nil;
-  if ModuleHandle=0 then
-    ExtGetResHdr:=ResHeader^ // internal
-  else
-  begin
-    // 1-st way to get resource location
-    p:=TLibGetResHdr(GetProcAddress(ModuleHandle,'rsrc'));
-    if p<>nil then // there is public
-      ExtGetResHdr:=p();
-    if ExtGetResHdr=nil then // try another way
-    begin
-      // 2-nd way to get resource location
-      pp:=GetProcAddress(ModuleHandle,'FPC_RESLOCATION');
-      if pp<>nil then
-      ExtGetResHdr:=PResHDR(pp^);
-    end;
-  end;
-end;
-
 
 //resource functions are case insensitive... copied from genstr.inc
 function ResStrIComp(Str1, Str2 : PChar): SizeInt;
@@ -169,12 +135,12 @@ begin
 end;
 
 //Returns a pointer to a name node.
-function InternalFindResource(ResHdr:PResHdr;ResourceName, ResourceType: PChar):
+function InternalFindResource(ResourceName, ResourceType: PChar):
  PResInfoNode;
 begin
   InternalFindResource:=nil;
-  if ResHdr=nil then exit;
-  InternalFindResource:=ResHdr^.rootptr;
+  if ResHeader=nil then exit;
+  InternalFindResource:=ResHeader^.rootptr;
 
   InternalFindResource:=BinSearchRes(InternalFindResource,ResourceType);
   if InternalFindResource<>nil then
@@ -199,9 +165,6 @@ begin
   end;
 end;
 
-
-
-
 (*****************************************************************************
                              Public Resource Functions
 *****************************************************************************)
@@ -214,13 +177,11 @@ end;
 Function IntEnumResourceTypes(ModuleHandle : TFPResourceHMODULE; EnumFunc : EnumResTypeProc; lParam : PtrInt) : LongBool;
 var ptr : PResInfoNode;
     tot, i : integer;
-    res_hdr:PResHdr;
 begin
   IntEnumResourceTypes:=False;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  tot:=res_hdr^.rootptr^.ncounthandle+res_hdr^.rootptr^.idcountsize;
-  ptr:=res_hdr^.rootptr^.subptr;
+  if ResHeader=nil then exit;
+  tot:=ResHeader^.rootptr^.ncounthandle+ResHeader^.rootptr^.idcountsize;
+  ptr:=ResHeader^.rootptr^.subptr;
   IntEnumResourceTypes:=true;
   i:=0;
   while i<tot do
@@ -233,12 +194,10 @@ end;
 Function IntEnumResourceNames(ModuleHandle : TFPResourceHMODULE; ResourceType : PChar; EnumFunc : EnumResNameProc; lParam : PtrInt) : LongBool;
 var ptr : PResInfoNode;
     tot, i : integer;
-    res_hdr:PResHdr;
 begin
   IntEnumResourceNames:=False;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  ptr:=res_hdr^.rootptr;
+  if ResHeader=nil then exit;
+  ptr:=ResHeader^.rootptr;
 
   ptr:=BinSearchRes(ptr,ResourceType);
   if ptr=nil then exit;
@@ -257,12 +216,9 @@ end;
 Function IntEnumResourceLanguages(ModuleHandle : TFPResourceHMODULE; ResourceType, ResourceName : PChar; EnumFunc : EnumResLangProc; lParam : PtrInt) : LongBool;
 var ptr : PResInfoNode;
     tot, i : integer;
-    res_hdr:PResHdr;
 begin
   IntEnumResourceLanguages:=False;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  ptr:=InternalFindResource(res_hdr,ResourceName,ResourceType);
+  ptr:=InternalFindResource(ResourceName,ResourceType);
   if ptr=nil then exit;
 
   tot:=ptr^.idcountsize;
@@ -279,21 +235,18 @@ end;
 Function IntFindResource(ModuleHandle: TFPResourceHMODULE; ResourceName,
   ResourceType: PChar): TFPResourceHandle;
 var ptr : PResInfoNode;
-    res_hdr: PresHdr;
 begin
   IntFindResource:=0;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  ptr:=InternalFindResource(res_hdr,ResourceName,ResourceType);
+  ptr:=InternalFindResource(ResourceName,ResourceType);
   if ptr=nil then exit;
 
   //first language id
   ptr:=ptr^.subptr;
   if ptr^.ncounthandle=0 then
   begin
-    res_hdr^.handles[res_hdr^.usedhandles]:=PtrUint(ptr);
-    inc(res_hdr^.usedhandles);
-    ptr^.ncounthandle:=res_hdr^.usedhandles;
+    ResHeader^.handles[ResHeader^.usedhandles]:=PtrUint(ptr);
+    inc(ResHeader^.usedhandles);
+    ptr^.ncounthandle:=ResHeader^.usedhandles;
   end;
   IntFindResource:=ptr^.ncounthandle;
 end;
@@ -303,12 +256,9 @@ Function IntFindResourceEx(ModuleHandle: TFPResourceHMODULE; ResourceType,
 const LANG_NEUTRAL = 0;
       LANG_ENGLISH = 9;
 var nameptr,ptr : PResInfoNode;
-    res_hdr: PResHdr;
 begin
   IntFindResourceEx:=0;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  nameptr:=InternalFindResource(res_hdr,ResourceName,ResourceType);
+  nameptr:=InternalFindResource(ResourceName,ResourceType);
   if nameptr=nil then exit;
 
   //try exact match
@@ -328,48 +278,44 @@ begin
 
   if ptr^.ncounthandle=0 then
   begin
-    res_hdr^.handles[res_hdr^.usedhandles]:=PtrUint(ptr);
-    inc(res_hdr^.usedhandles);
-    ptr^.ncounthandle:=res_hdr^.usedhandles;
+    ResHeader^.handles[ResHeader^.usedhandles]:=PtrUint(ptr);
+    inc(ResHeader^.usedhandles);
+    ptr^.ncounthandle:=ResHeader^.usedhandles;
   end;
   IntFindResourceEx:=ptr^.ncounthandle;
 end;
 
 Function IntLoadResource(ModuleHandle: TFPResourceHMODULE; ResHandle: TFPResourceHandle): TFPResourceHGLOBAL;
-var res_hdr: PResHdr;
 begin
   IntLoadResource:=0;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  if (ResHandle<=0) or (ResHandle>res_hdr^.usedhandles) then exit;
-  IntLoadResource:=TFPResourceHGLOBAL(PResInfoNode(res_hdr^.handles[ResHandle-1])^.subptr);
+  if ResHeader=nil then exit;
+  if (ResHandle<=0) or (ResHandle>ResHeader^.usedhandles) then exit;
+  IntLoadResource:=TFPResourceHGLOBAL(PResInfoNode(ResHeader^.handles[ResHandle-1])^.subptr);
 end;
 
 Function IntSizeofResource(ModuleHandle: TFPResourceHMODULE; ResHandle: TFPResourceHandle): LongWord;
-var res_hdr: PResHdr;
 begin
   IntSizeofResource:=0;
-  res_hdr:=ExtGetResHdr(ModuleHandle);
-  if res_hdr=nil then exit;
-  if (ResHandle<=0) or (ResHandle>res_hdr^.usedhandles) then exit;
-  IntSizeofResource:=PResInfoNode(res_hdr^.handles[ResHandle-1])^.idcountsize;
+  if ResHeader=nil then exit;
+  if (ResHandle<=0) or (ResHandle>ResHeader^.usedhandles) then exit;
+  IntSizeofResource:=PResInfoNode(ResHeader^.handles[ResHandle-1])^.idcountsize;
 end;
 
 Function IntLockResource(ResData: TFPResourceHGLOBAL): Pointer;
 begin
   IntLockResource:=Nil;
-  if ResHeader^=nil then exit;
+  if ResHeader=nil then exit;
   IntLockResource:=Pointer(ResData);
 end;
 
 Function IntUnlockResource(ResData: TFPResourceHGLOBAL): LongBool;
 begin
-  IntUnlockResource:=(ResHeader^<>nil);
+  IntUnlockResource:=(ResHeader<>nil);
 end;
 
 Function IntFreeResource(ResData: TFPResourceHGLOBAL): LongBool;
 begin
-  IntFreeResource:=(ResHeader^<>nil);
+  IntFreeResource:=(ResHeader<>nil);
 end;
 
 const

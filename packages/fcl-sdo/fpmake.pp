@@ -19,15 +19,13 @@ begin
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-xml');
     P.Dependencies.Add('fcl-db');
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'Inoussa Ouedraogo';
     P.License := 'LGPL with modification';
     P.HomepageURL := 'www.freepascal.org';
     P.Email := 'inoussa12@gmail.com';
     P.Description := 'Free Pascal implementation of Service Data Objects';
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes:=AllOSes-[embedded,msdos];
 
     // P.NeedLibC:= false;
     P.SourcePath.Add('src/base');

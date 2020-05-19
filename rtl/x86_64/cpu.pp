@@ -135,10 +135,12 @@ unit cpu;
         _ebx : longint;
       begin
         asm
+           pushq %rbx
            movl $0x00000001,%eax
            cpuid
            movl %ecx,_ecx
-        end ['rax','rbx','rcx','rdx'];
+           popq %rbx
+        end;
         _InterlockedCompareExchange128Support:=(_ecx and $2000)<>0;
         _AESSupport:=(_ecx and $2000000)<>0;
 
@@ -155,11 +157,13 @@ unit cpu;
         _FMASupport:=_AVXSupport and ((_ecx and $1000)<>0);
 
         asm
+           pushq %rbx
            movl $7,%eax
            movl $0,%ecx
            cpuid
            movl %ebx,_ebx
-        end ['rax','rbx','rcx','rdx'];
+           popq %rbx
+        end;
         _AVX2Support:=_AVXSupport and ((_ebx and $20)<>0);
       end;
 

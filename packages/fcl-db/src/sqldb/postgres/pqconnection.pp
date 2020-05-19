@@ -1,4 +1,4 @@
-unit PQConnection;
+unit pqconnection;
 
 {$mode objfpc}{$H+}
 
@@ -33,7 +33,7 @@ type
   // TField and TFieldDef only support a limited amount of fields.
   // TFieldBinding and TExtendedFieldType can be used to map PQ types
   // on standard fields and retain mapping info.
-  TExtendedFieldType = (eftNone,eftEnum,eftCitext);
+  TExtendedFieldType = (eftNone,eftEnum);
 
   TFieldBinding = record
     FieldDef : TSQLDBFieldDef; // FieldDef this is associated with
@@ -276,7 +276,7 @@ constructor TPQConnection.Create(AOwner : TComponent);
 
 begin
   inherited;
-  FConnOptions := FConnOptions + [sqSupportParams, sqSupportEmptyDatabaseName, sqEscapeRepeat, sqEscapeSlash, sqImplicitTransaction,sqSupportReturning,sqSequences];
+  FConnOptions := FConnOptions + [sqSupportParams, sqSupportEmptyDatabaseName, sqEscapeRepeat, sqEscapeSlash, sqImplicitTransaction,sqSupportReturning];
   FieldNameQuoteChars:=DoubleQuotes;
   VerboseErrors:=True;
   FConnectionPool:=TThreadlist.Create;
@@ -366,16 +366,15 @@ begin
       tt:=pqgetvalue(Res,i,2);
       tc:=pqgetvalue(Res,i,3);
       J:=length(Bindings)-1;
-      while (J>= 0) do
-        begin
-        if (Bindings[j].TypeOID=toid) then
-          Case tt of
-           'e':
-            Bindings[j].ExtendedFieldType:=eftEnum;
-           'citext':
-            Bindings[j].ExtendedFieldType:=eftCitext;
-          end;
+      while (J>=0) and (Bindings[j].TypeOID<>toid) do
         Dec(J);
+      if (J>=0) then
+        begin
+        Bindings[j].TypeName:=TN;
+        Case tt of
+          'e': // Enum
+            Bindings[j].ExtendedFieldType:=eftEnum;
+        end;
         end;
       end;
   finally
@@ -743,7 +742,7 @@ begin
   case AOID of
     Oid_varchar,Oid_bpchar,
     Oid_name               : begin
-                             Result := ftString;
+                             Result := ftstring;
                              size := PQfsize(Res, Tuple);
                              if (size = -1) then
                                begin
@@ -755,7 +754,7 @@ begin
                                end;
                              if size > MaxSmallint then size := MaxSmallint;
                              end;
-//    Oid_text               : Result := ftString;
+//    Oid_text               : Result := ftstring;
     Oid_text,Oid_JSON      : Result := ftMemo;
     Oid_Bytea              : Result := ftBlob;
     Oid_oid                : Result := ftInteger;
@@ -974,11 +973,9 @@ end;
 
 procedure TPQConnection.Execute(cursor: TSQLCursor;atransaction:tSQLtransaction;AParams : TParams);
 
-var ar  : array of PAnsiChar;
-    handled : boolean;
+var ar  : array of pchar;
     l,i : integer;
-    s   : RawByteString;
-    bd : TBlobData;
+    s   : string;
     lengths,formats : array of integer;
     ParamNames,
     ParamValues : array of string;
@@ -1007,7 +1004,6 @@ begin
         setlength(formats,l);
         for i := 0 to AParams.Count -1 do if not AParams[i].IsNull then
           begin
-          handled:=False;
           case AParams[i].DataType of
             ftDateTime:
               s := FormatDateTime('yyyy"-"mm"-"dd hh":"nn":"ss.zzz', AParams[i].AsDateTime);
@@ -1015,10 +1011,8 @@ begin
               s := FormatDateTime('yyyy"-"mm"-"dd', AParams[i].AsDateTime);
             ftTime:
               s := FormatTimeInterval(AParams[i].AsDateTime);
-            ftFloat:
+            ftFloat, ftBCD:
               Str(AParams[i].AsFloat, s);
-            ftBCD:
-              Str(AParams[i].AsCurrency, s);
             ftCurrency:
               begin
                 cash:=NtoBE(round(AParams[i].AsCurrency*100));
@@ -1027,29 +1021,12 @@ begin
               end;
             ftFmtBCD:
               s := BCDToStr(AParams[i].AsFMTBCD, FSQLFormatSettings);
-            ftBlob, ftGraphic:
-              begin
-              Handled:=true;
-              bd:= AParams[i].AsBlob;
-              l:=length(BD);
-              if l>0 then
-                begin
-                GetMem(ar[i],l+1);
-                ar[i][l]:=#0;
-                Move(BD[0],ar[i]^, L);
-                lengths[i]:=l;
-                end;
-              end
             else
-              s := GetAsString(AParams[i]);
+              s := AParams[i].AsString;
           end; {case}
-          if not handled then
-            begin
-            l:=length(s);
-            GetMem(ar[i],l+1);
-            StrMove(PAnsiChar(ar[i]), PAnsiChar(s), L+1);
-            lengths[i]:=L;
-            end;
+          GetMem(ar[i],length(s)+1);
+          StrMove(PChar(ar[i]),PChar(s),Length(S)+1);
+          lengths[i]:=Length(s);
           if (AParams[i].DataType in [ftBlob,ftMemo,ftGraphic,ftCurrency]) then
             Formats[i]:=1
           else
@@ -1106,8 +1083,8 @@ end;
 procedure TPQConnection.AddFieldDefs(cursor: TSQLCursor; FieldDefs : TfieldDefs);
 var
   i         : integer;
-  asize     : integer;
-  aoid      : oid;
+  size      : integer;
+  aoid       : oid;
   fieldtype : tfieldtype;
   nFields   : integer;
   b : Boolean;
@@ -1124,8 +1101,8 @@ begin
     setlength(FieldBinding,nFields);
     for i := 0 to nFields-1 do
       begin
-      fieldtype := TranslateFldType(Res, i, asize, aoid );
-      FD := AddFieldDef(FieldDefs, i+1, PQfname(Res, i), fieldtype, asize, -1, False, False, False) as TSQLDBFieldDef;
+      fieldtype := TranslateFldType(Res, i,size, aoid );
+      FD:=FieldDefs.Add(FieldDefs.MakeNameUnique(PQfname(Res, i)),fieldtype,Size,False,I+1) as TSQLDBFieldDef;
       With FD do
         begin
         SQLDBData:=@FieldBinding[i];
@@ -1153,10 +1130,6 @@ begin
             FD.DataType:=ftString;
             FD.Size:=64;
             //FD.Attributes:=FD.Attributes+[faReadonly];
-            end;
-          eftCitext:
-            begin
-            FD.DataType:=ftMemo;
             end
         else
           if ErrorOnUnknownType then

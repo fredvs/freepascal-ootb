@@ -32,9 +32,9 @@ implementation
     uses
        SysUtils,
        cutils,cfileutl,cclasses,
-       globtype,globals,systems,verbose,cscript,
+       globtype,globals,systems,verbose,script,
        fmodule,i_go32v2,
-       link,ogcoff,owar,aasmbase;
+       link,ogcoff,aasmbase;
 
     type
       TInternalLinkerGo32v2=class(TInternallinker)
@@ -60,7 +60,6 @@ implementation
     constructor TInternalLinkerGo32v2.Create;
       begin
         inherited Create;
-        CArObjectReader:=TArObjectReader;
         CExeoutput:=TDJCoffexeoutput;
         CObjInput:=TDJCoffObjInput;
       end;

@@ -1,6 +1,6 @@
 #
 #   This file is part of the Free Pascal Compiler
-#   Copyright (c) 1998-2018 by the Free Pascal Development team
+#   Copyright (c) 1998-2000 by the Free Pascal Development team
 #
 #   French (cp850) Language File for Free Pascal
 #
@@ -11,9 +11,6 @@
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-
-# CodePage 850
-
 #
 # The constants are build in the following order:
 # <part>_<type>_<txtidentifier>
@@ -1715,7 +1712,7 @@ option_asm_forced=11022_W_"$1" assembler use forced
 #
 option_logo=11023_[
 Compilateur Free Pascal version $FPCFULLVERSION [$FPCDATE] pour $FPCTARGET
-Copyright (c) 1993-2020 by Florian Klaempfl and others
+Copyright (c) 1993-2015 by Florian Klaempfl and others
 ]
 
 #
@@ -1841,10 +1838,6 @@ option_help_pages=11025_[
 3*1R<x>_type lecture assembleur :
 3*2Ratt_lit l'assembleur AT&T
 3*2Rintel_lit l'assembleur Intel
-4*2Ratt_lit l'assembleur AT&T
-4*2Rintel_lit l'assembleur Intel
-8*2Ratt_lit l'assembleur AT&T
-8*2Rintel_lit l'assembleur Intel
 3*2Rdirect_copie le texte assembleur directement dans le fichier assembleur
 3*1O<x>_optimisations :
 3*2Og_gÇnäre du code compact
@@ -1880,7 +1873,7 @@ option_help_pages=11025_[
 6*2Ox_optimize maximum (still BUGGY!!!)
 6*2O2_set target processor to a MC68020+
 6*1R<x>_styles d'assembleur :
-6*2RMOT_lire l'assembleur type Motorola
+6*2RMOT_lire l'assembleur type motorola
 6*1T<x>_Systäme d'exploitation cible :
 6*2TAMIGA_Commodore Amiga
 6*2TATARI_Atari ST/STe/TT
@@ -1889,7 +1882,7 @@ option_help_pages=11025_[
 **1*_
 **1?_affiche cette aide
 6*1R<x>_version de l'assembleur lu
-6*2RMOT_read Motorola style assembler
+6*2RMOT_read motorola style assembler
 6*1T<x>_Target operating system:
 6*2TAMIGA_Commodore Amiga
 6*2TATARI_Atari ST/STe/TT

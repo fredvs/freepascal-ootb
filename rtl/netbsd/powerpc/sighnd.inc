@@ -6,7 +6,7 @@
    See the file COPYING.FPC, included in this distribution,
    for details about the copyright.
 
-   Signalhandler for NetBSD/powerpc
+   Signalhandler for FreeBSD/i386
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY;without even the implied warranty of
@@ -20,7 +20,7 @@ begin
   getfpustate:=0;
 end;
 
-procedure SignalToRunerror(Signo: longint;info : PSigInfo;SigContext: PSigContextRec); public name '_FPC_DEFAULTSIGHANDLER'; cdecl;
+procedure SignalToRunerror(signo: cint); public name '_FPC_DEFAULTSIGHANDLER'; cdecl;
 var
   res : word;
 begin
@@ -48,3 +48,6 @@ begin
      HandleError(res);
    end;
 end;
+
+
+

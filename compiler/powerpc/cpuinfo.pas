@@ -14,8 +14,6 @@
 
 Unit CPUInfo;
 
-{$i fpcdefs.inc}
-
 Interface
 
   uses
@@ -53,12 +51,6 @@ Type
      (ct_none
      );
 
-   tcontrollerdatatype = record
-      controllertypestr, controllerunitstr: string[20];
-      cputype: tcputype; fputype: tfputype;
-      flashbase, flashsize, srambase, sramsize, eeprombase, eepromsize, bootbase, bootsize: dword;
-   end;
-
 
 Const
    { Is there support for dealing with multiple microcontrollers available }
@@ -71,7 +63,7 @@ Const
     {$WARN 3177 OFF}
    embedded_controllers : array [tcontrollertype] of tcontrollerdatatype =
    (
-      (controllertypestr:''; controllerunitstr:''; cputype:cpu_none; fputype:fpu_none; flashbase:0; flashsize:0; srambase:0; sramsize:0));
+      (controllertypestr:''; controllerunitstr:''; flashbase:0; flashsize:0; srambase:0; sramsize:0));
    {$POP}
 
    { calling conventions supported by the code generator }

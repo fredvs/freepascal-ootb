@@ -6,7 +6,10 @@ unit DBGuiTestRunner;
 interface
 
 uses
-  Classes, SysUtils, Interfaces, Forms, StdCtrls, GuiTestRunner, Menus,inieditor;
+  Classes, SysUtils,
+  Interfaces, Forms,
+  StdCtrls,
+  GuiTestRunner, inieditor;
 
 type
 
@@ -14,7 +17,7 @@ type
 
   TDBGuiTestRunnerForm=class(TGUITestRunner)
   private
-    MEditIni: TMenuItem;
+    DBEditButton: TButton;
   public
     procedure DBEditButtonClick(ASender: TObject);
     constructor Create(AOwner: TComponent); override;
@@ -47,14 +50,18 @@ end;
 
 constructor TDBGuiTestRunnerForm.Create(AOwner: TComponent);
 // Add our database.ini edit button to the existing GUI
-
 begin
   inherited Create(AOwner);
-  MEditIni:=TMenuItem.Create(Self);
-  MEditIni.Caption:='Edit database.ini...';
-  MEditIni.Hint:='Edit database selection settings (effective for next start)';
-  MEditIni.OnClick:=@DBEditButtonClick;
-  MenuItemEdit.Add(MEditIni);
+  DBEditButton:=TButton.Create(Self);
+  DBEditButton.Top:=7;
+  DBEditButton.Left:=340; //to the left of the close button
+  DBEditButton.Height:=32;
+  DBEditButton.Width:=100;
+  DBEditButton.Caption:='Edit database.ini...';
+  DBEditButton.Hint:='Edit database selection settings (effective for next start)';
+  DBEditButton.OnClick:=@DBEditButtonClick;
+  // Set this last; now all properties take effect
+  DBEditButton.Parent:=Self.Panel1;
 end;
 
 end.

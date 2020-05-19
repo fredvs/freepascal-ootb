@@ -16,7 +16,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.OSes := [palmos];
 
     P.SourcePath.Add('src');
@@ -122,10 +122,6 @@ begin
     P.Targets.AddUnit('penmgr.pp',[PalmOS]);
     P.Targets.AddUnit('pdilib.pp',[PalmOS]);
     P.Targets.AddUnit('helperserviceclass.pp',[PalmOS]);
-
-    P.ExamplePath.Add('examples');
-    P.Targets.AddExampleProgram('hello.pas');
-    P.Targets.AddExampleProgram('palmcube.pas');
 
 {$ifndef ALLPACKAGES}
     Run;

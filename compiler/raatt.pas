@@ -57,7 +57,7 @@ unit raatt;
         AS_SET,AS_WEAK,AS_SECTION,AS_END,
         {------------------ Assembler Operators  --------------------}
         AS_TYPE,AS_SIZEOF,AS_VMTOFFSET,AS_MOD,AS_SHL,AS_SHR,AS_NOT,AS_AND,AS_OR,AS_XOR,AS_NOR,AS_AT,
-        AS_RELTYPE, // common token for relocation types
+        AS_LO,AS_HI,
         {------------------ Target-specific directive ---------------}
         AS_TARGET_DIRECTIVE
         );
@@ -82,7 +82,7 @@ unit raatt;
         '.asciz','.lcomm','.comm','.single','.double','.tfloat','.tcfloat',
         '.data','.text','.init','.fini','.rva',
         '.set','.weak','.section','END',
-        'TYPE','SIZEOF','VMTOFFSET','%','<<','>>','!','&','|','^','~','@','reltype',
+        'TYPE','SIZEOF','VMTOFFSET','%','<<','>>','!','&','|','^','~','@','lo','hi',
         'directive');
 
     type
@@ -95,9 +95,9 @@ unit raatt;
          procedure BuildRealConstant(typ : tfloattype);
          procedure BuildStringConstant(asciiz: boolean);
          procedure BuildRva;
-         procedure BuildRecordOffsetSize(const expr: string;var offset:tcgint;var size:tcgint; var mangledname: string; needvmtofs: boolean);
-         procedure BuildConstSymbolExpression(allowref,betweenbracket,needofs:boolean;var value:tcgint;var asmsym:string;var asmsymtyp:TAsmsymtype);
-         function BuildConstExpression(allowref,betweenbracket:boolean): tcgint;
+         procedure BuildRecordOffsetSize(const expr: string;var offset:aint;var size:aint; var mangledname: string; needvmtofs: boolean);
+         procedure BuildConstSymbolExpression(allowref,betweenbracket,needofs:boolean;var value:aint;var asmsym:string;var asmsymtyp:TAsmsymtype);
+         function BuildConstExpression(allowref,betweenbracket:boolean): aint;
          function Assemble: tlinkedlist;override;
          procedure handleopcode;virtual;abstract;
          function is_asmopcode(const s: string) : boolean;virtual;abstract;
@@ -120,7 +120,7 @@ unit raatt;
       { globals }
       verbose,systems,
       { input }
-      scanner, pbase,
+      scanner,
       { symtable }
       symbase,symtype,symsym,symdef,symtable,
 {$ifdef x86}
@@ -203,7 +203,6 @@ unit raatt;
         srsym : tsym;
         srsymtable : TSymtable;
       begin
-        c:=scanner.c;
         { save old token and reset new token }
         prevasmtoken:=actasmtoken;
         actasmtoken:=AS_NONE;
@@ -213,10 +212,10 @@ unit raatt;
         while c in [' ',#9] do
          c:=current_scanner.asmgetchar;
         { get token pos }
-        if not (c in [#10,#13,'{',';','/','(']) then
+        if not (c in [#10,#13,'{',';']) then
           current_scanner.gettokenpos;
         { Local Label, Label, Directive, Prefix or Opcode }
-        if firsttoken and not(c in [#10,#13,'{',';','/','(']) then
+        if firsttoken and not(c in [#10,#13,'{',';']) then
          begin
            firsttoken:=FALSE;
            len:=0;
@@ -288,24 +287,12 @@ unit raatt;
            end;
 {$endif POWERPC}
 {$if defined(ARM)}
-           {
-             Thumb-2 instructions can have a .W postfix to indicate 32bit instructions,
-             Also in unified syntax sizes and types are indicated with something like a .<dt> prefix for example
+           { Thumb-2 instructions can have a .W postfix to indicate 32bit instructions
            }
            case c of
              '.':
                begin
-                 if len>1 then
-                   begin
-                     while c in ['A'..'Z','a'..'z','0'..'9','_','.'] do
-                       begin
-                         inc(len);
-                         actasmpattern[len]:=c;
-                         c:=current_scanner.asmgetchar;
-                       end;
-                     actasmpattern[0]:=chr(len);
-                   end;
-                 {actasmpattern:=actasmpattern+c;
+                 actasmpattern:=actasmpattern+c;
                  c:=current_scanner.asmgetchar;
 
                  if upcase(c) = 'W' then
@@ -314,22 +301,10 @@ unit raatt;
                      c:=current_scanner.asmgetchar;
                    end
                  else
-                   internalerror(2010122301);}
+                   internalerror(2010122301);
                end
            end;
 {$endif ARM}
-{$ifdef aarch64}
-           { b.cond }
-           case c of
-             '.':
-               begin
-                 repeat
-                   actasmpattern:=actasmpattern+c;
-                   c:=current_scanner.asmgetchar;
-                 until not(c in ['a'..'z','A'..'Z']);
-               end;
-           end;
-{$endif aarch64}
            { Opcode ? }
            If is_asmopcode(upper(actasmpattern)) then
             Begin
@@ -574,6 +549,7 @@ unit raatt;
 
              '''' : { char }
                begin
+                 current_scanner.in_asm_string:=true;
                  actasmpattern:='';
                  repeat
                    c:=current_scanner.asmgetchar;
@@ -598,11 +574,13 @@ unit raatt;
                  until false;
                  actasmpattern:=EscapeToPascal(actasmpattern);
                  actasmtoken:=AS_STRING;
+                 current_scanner.in_asm_string:=false;
                  exit;
                end;
 
              '"' : { string }
                begin
+                 current_scanner.in_asm_string:=true;
                  actasmpattern:='';
                  repeat
                    c:=current_scanner.asmgetchar;
@@ -627,6 +605,7 @@ unit raatt;
                  until false;
                  actasmpattern:=EscapeToPascal(actasmpattern);
                  actasmtoken:=AS_STRING;
+                 current_scanner.in_asm_string:=false;
                  exit;
                end;
 
@@ -656,28 +635,15 @@ unit raatt;
                  c:=current_scanner.asmgetchar;
                  exit;
                end;
-
+{$ifdef arm}
+             // the arm assembler uses { ... } for register sets
              '{' :
                begin
-{$ifdef arm}
-                 // the arm assembler uses { ... } for register sets
-                 // but compiler directives {$... } are still allowed
+                 actasmtoken:=AS_LSBRACKET;
                  c:=current_scanner.asmgetchar;
-                 if c<>'$' then
-                   actasmtoken:=AS_LSBRACKET
-                 else
-                   begin
-                     current_scanner.skipcomment(false);
-                     GetToken;
-                   end;
-{$else arm}
-                 current_scanner.skipcomment(true);
-                 GetToken;
-{$endif arm}
                  exit;
                end;
 
-{$ifdef arm}
              '}' :
                begin
                  actasmtoken:=AS_RSBRACKET;
@@ -735,14 +701,8 @@ unit raatt;
 
              '(' :
                begin
+                 actasmtoken:=AS_LPAREN;
                  c:=current_scanner.asmgetchar;
-                 if c='*' then
-                   begin
-                     current_scanner.skipoldtpcomment(true);
-                     GetToken;
-                   end
-                 else
-                   actasmtoken:=AS_LPAREN;
                  exit;
                end;
 
@@ -783,18 +743,12 @@ unit raatt;
 
              '/' :
                begin
+                 actasmtoken:=AS_SLASH;
                  c:=current_scanner.asmgetchar;
-                 if c='/' then
-                   begin
-                     current_scanner.skipdelphicomment;
-                     GetToken;
-                   end
-                 else
-                   actasmtoken:=AS_SLASH;
                  exit;
                end;
 
-             '!', '~' :
+             '!' :
                begin
                  actasmtoken:=AS_NOT;
                  c:=current_scanner.asmgetchar;
@@ -808,17 +762,12 @@ unit raatt;
                  exit;
                end;
 
-             #13,#10:
+{$ifndef arm}
+             '{',
+{$endif arm}
+             #13,#10,';' :
                begin
-                 current_scanner.linebreak;
-                 c:=current_scanner.asmgetchar;
-                 firsttoken:=TRUE;
-                 actasmtoken:=AS_SEPARATOR;
-                 exit;
-               end;
-
-             ';' :
-               begin
+                 { the comment is read by asmgetchar }
                  c:=current_scanner.asmgetchar;
                  firsttoken:=TRUE;
                  actasmtoken:=AS_SEPARATOR;
@@ -862,7 +811,7 @@ unit raatt;
        asmsymtyp : TAsmSymType;
        asmsym,
        expr: string;
-       value : tcgint;
+       value : aint;
       Begin
         Repeat
           Case actasmtoken of
@@ -896,7 +845,7 @@ unit raatt;
                  begin
                    if constsize<>sizeof(pint) then
                     Message(asmr_w_32bit_const_for_address);
-                   ConcatConstSymbol(curlist,asmsym,asmsymtyp,value,constsize,true)
+                   ConcatConstSymbol(curlist,asmsym,asmsymtyp,value)
                  end
                 else
                  ConcatConstant(curlist,value,constsize);
@@ -1033,15 +982,12 @@ unit raatt;
        hl         : tasmlabel;
        commname,
        symname,
-       symval     ,sectionname: string;
+       symval     : string;
        lasTSec    : TAsmSectiontype;
        l1,
        l2,
-       symofs     : tcgint;
+       symofs     : aint;
        symtyp     : TAsmsymtype;
-       section    : tai_section;
-       secflags   : TSectionFlags;
-       secprogbits : TSectionProgbits;
      Begin
        Message1(asmr_d_start_reading,'GNU AS');
        firsttoken:=TRUE;
@@ -1052,13 +998,9 @@ unit raatt;
           _asmsorted:=TRUE;
         end;
        curlist:=TAsmList.Create;
-
-       { we might need to know which parameters are passed in registers }
-       if not parse_generic then
-         current_procinfo.generate_parameter_info;
-
        lasTSec:=sec_code;
        { start tokenizer }
+       c:=current_scanner.asmgetcharstart;
        gettoken;
        { main loop }
        repeat
@@ -1073,11 +1015,7 @@ unit raatt;
            AS_LABEL:
              Begin
                if SearchLabel(upper(actasmpattern),hl,true) then
-                 begin
-                   if hl.is_public then
-                     ConcatPublic(curlist,actasmpattern);
-                   ConcatLabel(curlist,hl);
-                 end
+                ConcatLabel(curlist,hl)
                else
                 Message1(asmr_e_unknown_label_identifier,actasmpattern);
                Consume(AS_LABEL);
@@ -1237,8 +1175,7 @@ unit raatt;
                commname:=actasmpattern;
                Consume(AS_ID);
                Consume(AS_COMMA);
-               symofs:=BuildConstExpression(false,false);
-               curList.concat(Tai_datablock.Create(commname,symofs,carraydef.getreusable(u8inttype,symofs)));
+               curList.concat(Tai_datablock.Create(commname,BuildConstExpression(false,false)));
                if actasmtoken<>AS_SEPARATOR then
                 Consume(AS_SEPARATOR);
              end;
@@ -1249,8 +1186,7 @@ unit raatt;
                commname:=actasmpattern;
                Consume(AS_ID);
                Consume(AS_COMMA);
-               symofs:=BuildConstExpression(false,false);
-               curList.concat(Tai_datablock.Create_global(commname,symofs,carraydef.getreusable(u8inttype,symofs)));
+               curList.concat(Tai_datablock.Create_global(commname,BuildConstExpression(false,false)));
                if actasmtoken<>AS_SEPARATOR then
                 Consume(AS_SEPARATOR);
              end;
@@ -1282,78 +1218,22 @@ unit raatt;
                Consume(AS_COMMA);
                BuildConstSymbolExpression(true,false,false, symofs,symval,symtyp);
 
-               curList.concat(tai_symbolpair.create(spk_set,symname,symval));
+               curList.concat(tai_set.create(symname,symval));
              end;
 
            AS_WEAK:
              begin
                Consume(AS_WEAK);
                BuildConstSymbolExpression(true,false,false, l1,symname,symtyp);
-               { ideally, we should look up the symbol here (or later) and
-                 depending on whether it's external or net, generate
-                 asd_weak_reference or asd_weak_definition -- this is different
-                 on some targets) }
-               curList.concat(tai_directive.create(asd_weak_definition,symname));
+               curList.concat(tai_weak.create(symname));
              end;
 
            AS_SECTION:
              begin
                Consume(AS_SECTION);
-               sectionname:=actasmpattern;
-               secflags:=SF_None;
-               secprogbits:=SPB_None;
-               Consume(AS_STRING);
-               if actasmtoken=AS_COMMA then
-                 begin
-                   Consume(AS_COMMA);
-                   if actasmtoken=AS_STRING then
-                     begin
-                       case actasmpattern of
-                         'a':
-                           secflags:=SF_A;
-                         'w':
-                           secflags:=SF_W;
-                         'x':
-                           secflags:=SF_X;
-                         '':
-                           secflags:=SF_None;
-                         else
-                           Message(asmr_e_syntax_error);
-                       end;
-                       Consume(AS_STRING);
-                       if actasmtoken=AS_COMMA then
-                         begin
-                           Consume(AS_COMMA);
-                           if actasmtoken=AS_MOD then
-                             begin
-                               Consume(AS_MOD);
-                               if actasmtoken=AS_ID then
-                                 begin
-                                   case actasmpattern of
-                                     'PROGBITS':
-                                       secprogbits:=SPB_PROGBITS;
-                                     'NOBITS':
-                                       secprogbits:=SPB_NOBITS;
-                                     else
-                                       Message(asmr_e_syntax_error);
-                                   end;
-                                   Consume(AS_ID);
-                                 end
-                               else
-                                 Message(asmr_e_syntax_error);
-                             end
-                           else
-                             Message(asmr_e_syntax_error);
-                         end;
-                     end
-                   else
-                     Message(asmr_e_syntax_error);
-                 end;
-
+               new_section(curlist, sec_user, actasmpattern, 0);
                //curList.concat(tai_section.create(sec_user, actasmpattern, 0));
-               section:=new_section(curlist, sec_user, sectionname, 0);
-               section.secflags:=secflags;
-               section.secprogbits:=secprogbits;
+               consume(AS_STRING);
              end;
 
            AS_TARGET_DIRECTIVE:
@@ -1389,13 +1269,12 @@ unit raatt;
                                Parsing Helpers
 *****************************************************************************}
 
-    Procedure tattreader.BuildRecordOffsetSize(const expr: string;var offset:tcgint;var size:tcgint; var mangledname: string; needvmtofs: boolean);
+    Procedure tattreader.BuildRecordOffsetSize(const expr: string;var offset:aint;var size:aint; var mangledname: string; needvmtofs: boolean);
       { Description: This routine builds up a record offset after a AS_DOT }
       { token is encountered.                                              }
       { On entry actasmtoken should be equal to AS_DOT                     }
       var
         s : string;
-        hastypecast: boolean;
       Begin
         offset:=0;
         size:=0;
@@ -1403,31 +1282,25 @@ unit raatt;
         while (actasmtoken=AS_DOT) do
          begin
            Consume(AS_DOT);
-
-           { a record field could have the same name as a register }
-           if actasmtoken in [AS_ID,AS_REGISTER] then
-             begin
-               s:=s+'.'+actasmpattern;
-               consume(actasmtoken)
-             end
-           else
+           if actasmtoken=AS_ID then
+            s:=s+'.'+actasmpattern;
+           if not Consume(AS_ID) then
             begin
-              Consume(AS_ID);
               RecoverConsume(true);
               break;
             end;
          end;
-        if not GetRecordOffsetSize(s,offset,size,mangledname,needvmtofs,hastypecast) then
+        if not GetRecordOffsetSize(s,offset,size,mangledname,needvmtofs) then
          Message(asmr_e_building_record_offset);
       end;
 
 
-    procedure tattreader.BuildConstSymbolExpression(allowref,betweenbracket,needofs:boolean;var value:tcgint;var asmsym:string;var asmsymtyp:TAsmsymtype);
+    procedure tattreader.BuildConstSymbolExpression(allowref,betweenbracket,needofs:boolean;var value:aint;var asmsym:string;var asmsymtyp:TAsmsymtype);
       var
         hssymtyp : TAsmSymType;
         hs,tempstr,expr,mangledname : string;
         parenlevel : longint;
-        l,k : tcgint;
+        l,k : aint;
         errorflag : boolean;
         prevtok : tasmtoken;
         sym : tsym;
@@ -1749,9 +1622,9 @@ unit raatt;
       end;
 
 
-    function tattreader.BuildConstExpression(allowref,betweenbracket:boolean): tcgint;
+    function tattreader.BuildConstExpression(allowref,betweenbracket:boolean): aint;
       var
-        l : tcgint;
+        l : aint;
         hs : string;
         hssymtyp : TAsmSymType;
       begin
@@ -1764,7 +1637,7 @@ unit raatt;
 
     Procedure tattreader.BuildConstantOperand(oper : toperand);
       var
-        l : tcgint;
+        l : aint;
         tempstr : string;
         tempsymtyp : TAsmSymType;
       begin
@@ -1773,17 +1646,12 @@ unit raatt;
          begin
            oper.opr.typ:=OPR_SYMBOL;
            oper.opr.symofs:=l;
-           oper.opr.symbol:=current_asmdata.RefAsmSymbol(tempstr,tempsymtyp);
+           oper.opr.symbol:=current_asmdata.RefAsmSymbol(tempstr);
          end
         else
          begin
            oper.opr.typ:=OPR_CONSTANT;
-           { cast properly to avoid a range check error }
-{$if defined(AVR) or defined(i8086)}
-           oper.opr.val:=longint(l);
-{$else}
-           oper.opr.val:=aint(l);
-{$endif}
+           oper.opr.val:=l;
          end;
       end;
 
@@ -1791,7 +1659,7 @@ unit raatt;
       var
        asmsymtyp : TAsmSymType;
        asmsym: string;
-       value : tcgint;
+       value : aint;
        ai:tai_const;
       begin
         repeat
@@ -1805,7 +1673,7 @@ unit raatt;
                 BuildConstSymbolExpression(false,false,false,value,asmsym,asmsymtyp);
                 if asmsym<>'' then
                  begin
-                   ai:=tai_const.create_type_sym(aitconst_rva_symbol,current_asmdata.RefAsmSymbol(asmsym,asmsymtyp));
+                   ai:=tai_const.create_type_sym(aitconst_rva_symbol,current_asmdata.RefAsmSymbol(asmsym));
                    ai.value:=value;
                    curlist.concat(ai);
                  end

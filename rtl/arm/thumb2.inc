@@ -15,7 +15,7 @@
 
  **********************************************************************}
 
-{$asmmode divided}
+{$asmmode gas}
 
 {$ifndef FPC_SYSTEM_HAS_MOVE}
 {$define FPC_SYSTEM_FPC_MOVE}

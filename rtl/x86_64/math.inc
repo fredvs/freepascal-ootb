@@ -122,17 +122,10 @@ const
     {$ifndef FPC_SYSTEM_HAS_SQRT}
     {$define FPC_SYSTEM_HAS_SQRT}
     function fpc_sqrt_real(d : ValReal) : ValReal;compilerproc;
-{$ifndef cpullvm}
     begin
       { Function is handled internal in the compiler }
       runerror(207);
       result:=0;
-{$else not cpullvm}
-    assembler;
-    asm
-      fldt d
-      fsqrt
-{$endif not cpullvm}
     end;
     {$endif FPC_SYSTEM_HAS_SQRT}
 
@@ -141,67 +134,37 @@ const
     {$ifndef FPC_SYSTEM_HAS_ARCTAN}
     {$define FPC_SYSTEM_HAS_ARCTAN}
     function fpc_arctan_real(d : ValReal) : ValReal;compilerproc;
-{$ifndef cpullvm}
     begin
       { Function is handled internal in the compiler }
       runerror(207);
       result:=0;
-{$else not cpullvm}
-    assembler;
-    asm
-      fldt d
-      fld1
-      fpatan
-{$endif not cpullvm}
     end;
     {$endif FPC_SYSTEM_HAS_ARCTAN}
     {$ifndef FPC_SYSTEM_HAS_LN}
     {$define FPC_SYSTEM_HAS_LN}
     function fpc_ln_real(d : ValReal) : ValReal;compilerproc;
-{$ifndef cpullvm}
     begin
       { Function is handled internal in the compiler }
       runerror(207);
       result:=0;
-{$else not cpullvm}
-    assembler;
-    asm
-      fldln2
-      fldt d
-      fyl2x
-{$endif not cpullvm}
     end;
     {$endif FPC_SYSTEM_HAS_LN}
     {$ifndef FPC_SYSTEM_HAS_SIN}
     {$define FPC_SYSTEM_HAS_SIN}
     function fpc_sin_real(d : ValReal) : ValReal;compilerproc;
-{$ifndef cpullvm}
     begin
       { Function is handled internal in the compiler }
       runerror(207);
       result:=0;
-{$else not cpullvm}
-    assembler;
-    asm
-      fldt d
-      fsin
-{$endif not cpullvm}
     end;
     {$endif FPC_SYSTEM_HAS_SIN}
     {$ifndef FPC_SYSTEM_HAS_COS}
     {$define FPC_SYSTEM_HAS_COS}
     function fpc_cos_real(d : ValReal) : ValReal;compilerproc;
-{$ifndef cpullvm}
     begin
       { Function is handled internal in the compiler }
       runerror(207);
       result:=0;
-{$else not cpullvm}
-    assembler;
-    asm
-      fldt d
-      fcos
-{$endif not cpullvm}
     end;
     {$endif FPC_SYSTEM_HAS_COS}
 
@@ -240,7 +203,7 @@ const
             fld         %st
             fabs
             fld1
-            fcomip      %st(1),%st(0)
+            fcomip
             fstp        %st
             jp          .L3               { NaN }
             jae         .L1               { |frac(z)| <= 1, good }
@@ -248,7 +211,7 @@ const
             fld         %st(1)
             fabs
             flds        large(%rip)
-            fcomip      %st(1),%st(0)
+            fcomip
             fstp        %st
             jb          .L3               { int(z) >= 24576 }
    .L0:
@@ -356,54 +319,16 @@ const
 
 {$else FPC_HAS_TYPE_EXTENDED}
 
-    {$ifndef FPC_SYSTEM_HAS_INT}
-    {$define FPC_SYSTEM_HAS_INT}
-    function fpc_int_real(d : ValReal) : ValReal;compilerproc; assembler; nostackframe;
-      asm
-        movq      %xmm0,  %rax
-        shr       $48,    %rax
-        and       $0x7ff0,%ax
-        cmp       $0x4330,%ax
-        jge       .L0
-        cvttsd2si %xmm0,  %rax
-        cvtsi2sd  %rax,   %xmm0
-    .L0:
-      end;
-    {$endif FPC_SYSTEM_HAS_INT}
-
-    {$ifndef FPC_SYSTEM_HAS_TRUNC}
     {$define FPC_SYSTEM_HAS_TRUNC}
     function fpc_trunc_real(d : ValReal) : int64;compilerproc; assembler; nostackframe;
       asm
         cvttsd2si   %xmm0,%rax;
       end;
-    {$endif FPC_SYSTEM_HAS_TRUNC}
 
-    {$ifndef FPC_SYSTEM_HAS_ROUND}
     {$define FPC_SYSTEM_HAS_ROUND}
     function fpc_round_real(d : ValReal) : int64;compilerproc; assembler; nostackframe;
       asm
         cvtsd2si   %xmm0,%rax;
       end;
-    {$endif FPC_SYSTEM_HAS_ROUND}
-
-    {$ifndef FPC_SYSTEM_HAS_FRAC}
-    {$define FPC_SYSTEM_HAS_FRAC}
-    function fpc_frac_real(d: ValReal) : ValReal;compilerproc; assembler; nostackframe;
-      asm
-        { Windows defines %xmm4 and %xmm5 as first non-parameter volatile registers;
-          on SYSV systems all are considered as such, so use %xmm4 }
-        movq      %xmm0,  %rax
-        movapd    %xmm0,  %xmm4
-        shr       $48,    %rax
-        and       $0x7ff0,%ax
-        cmp       $0x4330,%ax
-        jge       .L0
-        cvttsd2si %xmm0,  %rax
-        cvtsi2sd  %rax,   %xmm4
-  .L0:
-        subsd     %xmm4,  %xmm0
-      end;
-    {$endif FPC_SYSTEM_HAS_FRAC}
 
 {$endif FPC_HAS_TYPE_EXTENDED}

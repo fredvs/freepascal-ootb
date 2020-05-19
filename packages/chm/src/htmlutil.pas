@@ -37,13 +37,13 @@ uses
   SysUtils, strutils;
 
 { most commonly used }
-function GetVal(const tag, attribname_ci: string): string;
-function GetTagName(const Tag: string): string;
+function GetVal(tag, attribname_ci: string): string;
+function GetTagName(Tag: string): string;
 
 { less commonly used, but useful }
-function GetUpTagName(const tag: string): string;
-function GetNameValPair(const tag, attribname_ci: string): string;
-function GetValFromNameVal(const namevalpair: string): string;
+function GetUpTagName(tag: string): string;
+function GetNameValPair(tag, attribname_ci: string): string;
+function GetValFromNameVal(namevalpair: string): string;
 
 { old buggy code}
 function GetVal_JAMES(tag, attribname_ci: string): string;
@@ -64,17 +64,15 @@ begin
 end;
 
 { Return tag name, case preserved }
-function GetTagName(const Tag: string): string;
+function GetTagName(Tag: string): string;
 var
   P : Pchar;
   S : Pchar;
 begin
   P := Pchar(Tag);
-  while P^ in ['<',' ',#9] do 
-    inc(P);
+  while P^ in ['<',' ',#9] do inc(P);
   S := P;
-  while Not (P^ in [' ','>',#0]) do 
-    inc(P);
+  while Not (P^ in [' ','>',#0]) do inc(P);
   if P > S then
     Result := CopyBuffer( S, P-S)
   else
@@ -82,17 +80,15 @@ begin
 end;
 
 { Return tag name in uppercase }
-function GetUpTagName(const tag: string): string;
+function GetUpTagName(tag: string): string;
 var
   P : Pchar;
   S : Pchar;
 begin
   P := Pchar(uppercase(Tag));
-  while P^ in ['<',' ',#9] do 
-    inc(P);
+  while P^ in ['<',' ',#9] do inc(P);
   S := P;
-  while Not (P^ in [' ','>',#0]) do 
-    inc(P);
+  while Not (P^ in [' ','>',#0]) do inc(P);
   if P > S then
     Result := CopyBuffer( S, P-S)
   else
@@ -102,7 +98,7 @@ end;
 
 { Return name=value pair ignoring case of NAME, preserving case of VALUE
   Lars' fixed version }
-function GetNameValPair(const tag, attribname_ci: string): string;
+function GetNameValPair(tag, attribname_ci: string): string;
 var
   P    : Pchar;
   S    : Pchar;
@@ -123,13 +119,11 @@ begin
     inc(S); // skip space
     P:= S;
 
-    // Skip tag name
+    // Skip 
     while not (P^ in ['=', ' ', '>', #0]) do
       inc(P);
 
-    // Skip spaces and '='
-    while (P^ in ['=', ' ']) do
-      inc(P);
+    if (P^ = '=') then inc(P);
     
     while not (P^ in [' ','>',#0]) do
     begin
@@ -161,21 +155,18 @@ end;
 
 
 { Get value of attribute, e.g WIDTH=36 -return-> 36, preserves case sensitive }
-function GetValFromNameVal(const namevalpair: string): string;
+function GetValFromNameVal(namevalpair: string): string;
 var
   P: Pchar;
   S: Pchar;
   C: Char;
 begin
-  Result := '';
-
   P:= Pchar(namevalpair);
   S:= StrPos(P, '=');
 
   if S <> nil then     
   begin
     inc(S); // skip equal
-    while S^ = ' ' do inc(S);  // skip any spaces after =
     P:= S;  // set P to a character after =
 
     if (P^ in ['"','''']) then
@@ -190,13 +181,15 @@ begin
       inc(P);
 
     if (P <> S) then { Thanks to Dave Keighan (keighand@yahoo.com) }
-      Result:= CopyBuffer(S, P - S); 
+      Result:= CopyBuffer(S, P - S) 
+    else
+      Result:= '';
   end;
 end;
 
 
 { return value of an attribute (attribname_ci), case ignored for NAME portion, but return value case is preserved } 
-function GetVal(const tag, attribname_ci: string): string;
+function GetVal(tag, attribname_ci: string): string;
 var namevalpair: string;
 begin
   // returns full name=value pair
@@ -235,8 +228,7 @@ begin
     while not (P^ in ['=',' ','>',#0]) do
       inc(P);
 
-    if (P^ = '=') then 
-       inc(P);
+    if (P^ = '=') then inc(P);
     
     while not (P^ in [' ','>',#0]) do
     begin
@@ -291,8 +283,7 @@ begin
     while not (P^ in ['=',' ','>',#0]) do
       inc(P);
 
-    if (P^ = '=') then 
-      inc(P);
+    if (P^ = '=') then inc(P);
     
     while not (P^ in [' ','>',#0]) do
     begin
@@ -308,8 +299,7 @@ begin
       while not (P^ in [C, '>', #0]) do
         inc(P);
 
-      if (P^<>'>') then 
-        inc(P); { Skip current character, except '>' }
+      if (P^<>'>') then inc(P); { Skip current character, except '>' }
       break;
     end;
 

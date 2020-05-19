@@ -16,22 +16,20 @@
 
 
 Procedure UniqueString (Var S : UnicodeString);external name 'FPC_UNICODESTR_UNIQUE';
-Function Pos (Const Substr : UnicodeString; Const Source : UnicodeString; Offset: Sizeint = 1) : SizeInt;
-Function Pos (c : Char; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
-Function Pos (c : UnicodeChar; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
-Function Pos (const c : RawByteString; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
-Function Pos (const c : UnicodeString; Const s : RawByteString; Offset: Sizeint = 1) : SizeInt;
-Function Pos (const c : ShortString; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (Const Substr : UnicodeString; Const Source : UnicodeString) : SizeInt;
+Function Pos (c : Char; Const s : UnicodeString) : SizeInt;
+Function Pos (c : UnicodeChar; Const s : UnicodeString) : SizeInt;
+Function Pos (const c : RawByteString; Const s : UnicodeString) : SizeInt;
+Function Pos (const c : UnicodeString; Const s : RawByteString) : SizeInt;
+Function Pos (const c : ShortString; Const s : UnicodeString) : SizeInt;
 
 Function UpCase(const s : UnicodeString) : UnicodeString;
 Function  UpCase(c:UnicodeChar):UnicodeChar;
 Function LowerCase(const s : UnicodeString) : UnicodeString;
 Function  LowerCase(c:UnicodeChar):UnicodeChar;
 
-{$ifdef VER3_0}
 Procedure Insert (Const Source : UnicodeString; Var S : UnicodeString; Index : SizeInt);
 Procedure Delete (Var S : UnicodeString; Index,Size: SizeInt);
-{$endif VER3_0}
 Procedure {$ifdef FPC_HAS_CPSTRING}fpc_setstring_unicodestr_pwidechar{$else}SetString{$endif}(Out S : UnicodeString; Buf : PUnicodeChar; Len : SizeInt); {$ifdef FPC_HAS_CPSTRING} compilerproc; {$endif FPC_HAS_CPSTRING}
 Procedure {$ifdef FPC_HAS_CPSTRING}fpc_setstring_unicodestr_pansichar{$else}SetString{$endif}(Out S : UnicodeString; Buf : PChar; Len : SizeInt); {$ifdef FPC_HAS_CPSTRING} compilerproc; {$endif FPC_HAS_CPSTRING}
 
@@ -54,14 +52,11 @@ procedure DefaultUnicode2AnsiMove(source:punicodechar;var dest:RawByteString;cp 
 procedure DefaultAnsi2UnicodeMove(source:pchar;cp : TSystemCodePage;var dest:unicodestring;len:SizeInt);
 
 Type
-  { please only enable options below after creating a test program for them that
-    passes on Windows and committing it, so it can be used to verify the
-    functionality on other platforms }
-  TCompareOption = ({coLingIgnoreCase, coLingIgnoreDiacritic, }coIgnoreCase{,
+  TCompareOption = (coLingIgnoreCase, coLingIgnoreDiacritic, coIgnoreCase,
                     coIgnoreKanaType, coIgnoreNonSpace, coIgnoreSymbols, coIgnoreWidth,
-                    coLingCasing, coDigitAsNumbers, coStringSort});
+                    coLingCasing, coDigitAsNumbers, coStringSort);
   TCompareOptions = set of TCompareOption;
-  TStandardCodePageEnum = (
+                                              TStandardCodePageEnum = (
     scpAnsi,                 // system Ansi code page (GetACP on windows)
     scpConsoleInput,         // system console input code page (GetConsoleCP on windows)
     scpConsoleOutput,        // system console output code page (GetConsoleOutputCP on windows)
@@ -138,15 +133,6 @@ function Utf8ToUnicode(Dest: PUnicodeChar; MaxDestChars: SizeUInt; Source: PChar
 function UTF8Encode(const s : RawByteString) : RawByteString; inline;
 function UTF8Encode(const s : UnicodeString) : RawByteString;
 function UTF8Decode(const s : RawByteString): UnicodeString;
-function UTF8ToString(const s : RawByteString): UnicodeString;inline;
-function UTF8ToString(const S: ShortString): unicodestring;
-function UTF8ToString(const S: PAnsiChar): unicodestring;
-{ byte and ansichar are the same on the JVM, and "array of" and "pointer to"
-  are as well }
-{$ifndef CPUJVM}
-function UTF8ToString(const S: array of AnsiChar): unicodestring;
-function UTF8ToString(const S: array of Byte): unicodestring;
-{$endif not CPUJVM}
 function AnsiToUtf8(const s : RawByteString): RawByteString;{$ifdef SYSTEMINLINE}inline;{$endif}
 function Utf8ToAnsi(const s : RawByteString) : RawByteString;{$ifdef SYSTEMINLINE}inline;{$endif}
 function UnicodeStringToUCS4String(const s : UnicodeString) : UCS4String;

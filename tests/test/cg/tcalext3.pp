@@ -1,4 +1,3 @@
-{ %FILES=tcext3.o }
 { Tests passing of different records by value to C methods.
  One type of these records has one field which is a simple array of bytes,
  the other consists of a few fields of atomic size.

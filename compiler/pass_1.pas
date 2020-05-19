@@ -42,13 +42,12 @@ interface
 implementation
 
     uses
-      globtype,comphook,
-      globals,
+      globtype,comphook,systems,cclasses,
+      cutils,globals,
       procinfo,
-      symdef
+      cgbase,symdef
 {$ifdef extdebug}
       ,verbose,htypechk
-      ,cgbase
 {$endif extdebug}
 {$ifdef state_tracking}
       ,nstate

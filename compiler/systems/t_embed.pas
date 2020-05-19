@@ -1,8 +1,8 @@
 {
-    Copyright (c) 2005-2017 by Free Pascal Compiler team
+    This unit implements support import,export,link routines
+    for the (arm) GameBoy Advance target
 
-    This unit implements support import, export, link routines
-    for the Embedded Target
+    Copyright (c) 2001-2002 by Peter Vreman
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ implementation
     uses
        SysUtils,
        cutils,cfileutl,cclasses,
-       globtype,globals,systems,verbose,comphook,cscript,fmodule,i_embed,link,
+       globtype,globals,systems,verbose,comphook,script,fmodule,i_embed,link,
        cpuinfo;
 
     type
@@ -90,13 +90,13 @@ Var
   linklibc : boolean;
   found1,
   found2   : boolean;
-{$if defined(ARM)}
+{$if defined(ARM) or defined(MIPSEL)}
   LinkStr  : string;
 {$endif}
 begin
   WriteResponseFile:=False;
   linklibc:=(SharedLibFiles.Find('c')<>nil);
-{$if defined(ARM) or defined(i386) or defined(x86_64) or defined(AVR) or defined(MIPSEL)}
+{$if defined(ARM) or defined(i386) or defined(AVR) or defined(MIPSEL)}
   prtobj:='';
 {$else}
   prtobj:='prt0';
@@ -187,7 +187,7 @@ begin
        begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-         Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
        end
       else
@@ -401,68 +401,6 @@ begin
       ct_stm32f107rc,
       ct_stm32f107vb,
       ct_stm32f107vc,
-      
-      ct_stm32f401cb,
-      ct_stm32f401rb,
-      ct_stm32f401vb,
-      ct_stm32f401cc,
-      ct_stm32f401rc,
-      ct_stm32f401vc,
-      ct_discoveryf401vc,
-      ct_stm32f401cd,
-      ct_stm32f401rd,
-      ct_stm32f401vd,
-      ct_stm32f401ce,
-      ct_stm32f401re,
-      ct_nucleof401re,
-      ct_stm32f401ve,
-      ct_stm32f407vg,
-      ct_discoveryf407vg,
-      ct_stm32f407ig,
-      ct_stm32f407zg,
-      ct_stm32f407ve,
-      ct_stm32f407ze,
-      ct_stm32f407ie,
-      ct_stm32f411cc,
-      ct_stm32f411rc,
-      ct_stm32f411vc,
-      ct_stm32f411ce,
-      ct_stm32f411re,
-      ct_nucleof411re,
-      ct_stm32f411ve,
-      ct_discoveryf411ve,
-      ct_stm32f429vg,
-      ct_stm32f429zg,
-      ct_stm32f429ig,
-      ct_stm32f429vi,
-      ct_stm32f429zi,
-      ct_discoveryf429zi,
-      ct_stm32f429ii,
-      ct_stm32f429ve,
-      ct_stm32f429ze,
-      ct_stm32f429ie,
-      ct_stm32f429bg,
-      ct_stm32f429bi,
-      ct_stm32f429be,
-      ct_stm32f429ng,
-      ct_stm32f429ni,
-      ct_stm32f429ne,
-      ct_stm32f446mc,
-      ct_stm32f446rc,
-      ct_stm32f446vc,
-      ct_stm32f446zc,
-      ct_stm32f446me,
-      ct_stm32f446re,
-      ct_nucleof446re,
-      ct_stm32f446ve,
-      ct_stm32f446ze,
-
-      ct_stm32f745xe,
-      ct_stm32f745xg,
-      ct_stm32f746xe,
-      ct_stm32f746xg,
-      ct_stm32f756xe,
-      ct_stm32f756xg,
 
       { TI - 64 K Flash, 16 K SRAM Devices }
       ct_lm3s1110,
@@ -547,68 +485,6 @@ begin
       ct_xmc4500x768,
       ct_xmc4502x768,
       ct_xmc4504x512,
-
-      { Allwinner }
-      ct_allwinner_a20,
-
-      { Freescale }
-      ct_mk20dx128vfm5,
-      ct_mk20dx128vft5,
-      ct_mk20dx128vlf5,
-      ct_mk20dx128vlh5,
-      ct_teensy30,
-      ct_mk20dx128vmp5,
-
-      ct_mk20dx32vfm5,
-      ct_mk20dx32vft5,
-      ct_mk20dx32vlf5,
-      ct_mk20dx32vlh5,
-      ct_mk20dx32vmp5,
-
-      ct_mk20dx64vfm5,
-      ct_mk20dx64vft5,
-      ct_mk20dx64vlf5,
-      ct_mk20dx64vlh5,
-      ct_mk20dx64vmp5,
-
-      ct_mk20dx128vlh7,
-      ct_mk20dx128vlk7,
-      ct_mk20dx128vll7,
-      ct_mk20dx128vmc7,
-
-      ct_mk20dx256vlh7,
-      ct_mk20dx256vlk7,
-      ct_mk20dx256vll7,
-      ct_mk20dx256vmc7,
-      ct_teensy31,
-      ct_teensy32,
-
-      ct_mk20dx64vlh7,
-      ct_mk20dx64vlk7,
-      ct_mk20dx64vmc7,
-
-      ct_mk22fn512cap12,
-      ct_mk22fn512cbp12,
-      ct_mk22fn512vdc12,
-      ct_mk22fn512vlh12,
-      ct_mk22fn512vll12,
-      ct_mk22fn512vmp12,
-      ct_freedom_k22f,
- 
-      { Atmel }
-      ct_sam3x8e,
-      ct_arduino_due,
-      ct_flip_n_click,
-      
-      { Nordic Semiconductor }
-      ct_nrf51422_xxaa,
-      ct_nrf51422_xxab,
-      ct_nrf51422_xxac,
-      ct_nrf51822_xxaa,
-      ct_nrf51822_xxab,
-      ct_nrf51822_xxac,
-      ct_nrf52832_xxaa,
-      ct_nrf52840_xxaa,
       
       ct_sc32442b,
       ct_thumb2bare:
@@ -616,13 +492,7 @@ begin
          with embedded_controllers[current_settings.controllertype] do
           with linkres do
             begin
-              if (embedded_controllers[current_settings.controllertype].controllerunitstr='MK20D5')
-              or (embedded_controllers[current_settings.controllertype].controllerunitstr='MK20D7')
-              or (embedded_controllers[current_settings.controllertype].controllerunitstr='MK22F51212')
-              or (embedded_controllers[current_settings.controllertype].controllerunitstr='MK64F12') then
-                Add('ENTRY(_LOWLEVELSTART)')
-              else
-                Add('ENTRY(_START)');
+              Add('ENTRY(_START)');
               Add('MEMORY');
               Add('{');
               if flashsize<>0 then
@@ -659,36 +529,26 @@ begin
       Add('     .text :');
       Add('    {');
       Add('    _text_start = .;');
-      Add('    KEEP(*(.init .init.*))');
-      if (embedded_controllers[current_settings.controllertype].controllerunitstr='MK20D5')
-         or (embedded_controllers[current_settings.controllertype].controllerunitstr='MK20D7')
-         or (embedded_controllers[current_settings.controllertype].controllerunitstr='MK22F51212')
-         or (embedded_controllers[current_settings.controllertype].controllerunitstr='MK64F12') then
-        begin
-          Add('    . = 0x400;');
-          Add('    KEEP(*(.flash_config *.flash_config.*))');
-        end;
-      Add('    *(.text .text.*)');
+      Add('    KEEP(*(.init, .init.*))');
+      Add('    *(.text, .text.*)');
       Add('    *(.strings)');
-      Add('    *(.rodata .rodata.*)');
+      Add('    *(.rodata, .rodata.*)');
       Add('    *(.comment)');
-      Add('    . = ALIGN(4);');
       Add('    _etext = .;');
       if embedded_controllers[current_settings.controllertype].flashsize<>0 then
         begin
           Add('    } >flash');
-          Add('    .note.gnu.build-id : { *(.note.gnu.build-id) } >flash ');
         end
       else
         begin
           Add('    } >ram');
-          Add('    .note.gnu.build-id : { *(.note.gnu.build-id) } >ram ');
         end;
+      Add('    .note.gnu.build-id : { *(.note.gnu.build-id) } >flash ');
 
       Add('    .data :');
       Add('    {');
       Add('    _data = .;');
-      Add('    *(.data .data.*)');
+      Add('    *(.data, .data.*)');
       Add('    KEEP (*(.fpc .fpc.n_version .fpc.n_links))');
       Add('    _edata = .;');
       if embedded_controllers[current_settings.controllertype].flashsize<>0 then
@@ -702,7 +562,7 @@ begin
       Add('    .bss :');
       Add('    {');
       Add('    _bss_start = .;');
-      Add('    *(.bss .bss.*)');
+      Add('    *(.bss, .bss.*)');
       Add('    *(COMMON)');
       Add('    } >ram');
       Add('. = ALIGN(4);');
@@ -721,18 +581,17 @@ begin
       Add('     . = 0x100000;');
       Add('     .text ALIGN (0x1000) :');
       Add('    {');
-      Add('    _text = .;');
-      Add('    KEEP(*(.init .init.*))');
-      Add('    *(.text .text.*)');
+      Add('    KEEP(*(.init, .init.*))');
+      Add('    *(.text, .text.*)');
       Add('    *(.strings)');
-      Add('    *(.rodata .rodata.*)');
+      Add('    *(.rodata, .rodata.*)');
       Add('    *(.comment)');
       Add('    _etext = .;');
       Add('    }');
       Add('    .data ALIGN (0x1000) :');
       Add('    {');
       Add('    _data = .;');
-      Add('    *(.data .data.*)');
+      Add('    *(.data, .data.*)');
       Add('    KEEP (*(.fpc .fpc.n_version .fpc.n_links))');
       Add('    _edata = .;');
       Add('    }');
@@ -740,7 +599,7 @@ begin
       Add('    .bss :');
       Add('    {');
       Add('    _bss_start = .;');
-      Add('    *(.bss .bss.*)');
+      Add('    *(.bss, .bss.*)');
       Add('    *(COMMON)');
       Add('    }');
       Add('_bss_end = . ;');
@@ -749,86 +608,22 @@ begin
     end;
 {$endif i386}
 
-{$ifdef x86_64}
-  with linkres do
-    begin
-      Add('ENTRY(_START)');
-      Add('SECTIONS');
-      Add('{');
-      Add('     . = 0x100000;');
-      Add('     .text ALIGN (0x1000) :');
-      Add('    {');
-      Add('    _text = .;');
-      Add('    KEEP(*(.init .init.*))');
-      Add('    *(.text .text.*)');
-      Add('    *(.strings)');
-      Add('    *(.rodata .rodata.*)');
-      Add('    *(.comment)');
-      Add('    _etext = .;');
-      Add('    }');
-      Add('    .data ALIGN (0x1000) :');
-      Add('    {');
-      Add('    _data = .;');
-      Add('    *(.data .data.*)');
-      Add('    KEEP (*(.fpc .fpc.n_version .fpc.n_links))');
-      Add('    _edata = .;');
-      Add('    }');
-      Add('    . = ALIGN(4);');
-      Add('    .bss :');
-      Add('    {');
-      Add('    _bss_start = .;');
-      Add('    *(.bss .bss.*)');
-      Add('    *(COMMON)');
-      Add('    }');
-      Add('_bss_end = . ;');
-      Add('}');
-      Add('_end = .;');
-    end;
-{$endif x86_64}
-
 {$ifdef AVR}
   with linkres do
     begin
       { linker script from ld 2.19 }
       Add('ENTRY(_START)');
       Add('OUTPUT_FORMAT("elf32-avr","elf32-avr","elf32-avr")');
-      case current_settings.cputype of
-       cpu_avr1:
-         Add('OUTPUT_ARCH(avr:1)');
-       cpu_avr2:
-         Add('OUTPUT_ARCH(avr:2)');
-       cpu_avr25:
-         Add('OUTPUT_ARCH(avr:25)');
-       cpu_avr3:
-         Add('OUTPUT_ARCH(avr:3)');
-       cpu_avr31:
-         Add('OUTPUT_ARCH(avr:31)');
-       cpu_avr35:
-         Add('OUTPUT_ARCH(avr:35)');
-       cpu_avr4:
-         Add('OUTPUT_ARCH(avr:4)');
-       cpu_avr5:
-         Add('OUTPUT_ARCH(avr:5)');
-       cpu_avr51:
-         Add('OUTPUT_ARCH(avr:51)');
-       cpu_avr6:
-         Add('OUTPUT_ARCH(avr:6)');
-       else
-         Internalerror(2015072701);
-      end;
+      Add('OUTPUT_ARCH(avr:2)');
       Add('MEMORY');
-      with embedded_controllers[current_settings.controllertype] do
-        begin
-          Add('{');
-          Add('  text      (rx)   : ORIGIN = 0, LENGTH = 0x'+IntToHex(flashsize,6));
-          Add('  data      (rw!x) : ORIGIN = 0x'+IntToHex($800000+srambase,6)+', LENGTH = 0x'+IntToHex(sramsize,6));
-          Add('  eeprom    (rw!x) : ORIGIN = 0x810000, LENGTH = 0x'+IntToHex(eepromsize,6));
-          Add('  fuse      (rw!x) : ORIGIN = 0x820000, LENGTH = 1K');
-          Add('  lock      (rw!x) : ORIGIN = 0x830000, LENGTH = 1K');
-          Add('  signature (rw!x) : ORIGIN = 0x840000, LENGTH = 1K');
-          Add('}');
-          Add('_stack_top = 0x' + IntToHex(srambase+sramsize-1,4) + ';');
-        end;
+      Add('{');
+      Add('  text      (rx)   : ORIGIN = 0, LENGTH = 8K');
+      Add('  data      (rw!x) : ORIGIN = 0x800060, LENGTH = 0xffa0');
+      Add('  eeprom    (rw!x) : ORIGIN = 0x810000, LENGTH = 64K');
+      Add('  fuse      (rw!x) : ORIGIN = 0x820000, LENGTH = 1K');
+      Add('  lock      (rw!x) : ORIGIN = 0x830000, LENGTH = 1K');
+      Add('  signature (rw!x) : ORIGIN = 0x840000, LENGTH = 1K');
+      Add('}');
       Add('SECTIONS');
       Add('{');
       Add('  /* Read-only sections, merged into text segment: */');
@@ -891,7 +686,7 @@ begin
       Add('  /* Internal text space or external memory.  */');
       Add('  .text   :');
       Add('  {');
-      Add('    KEEP(*(.init .init.*))');
+      Add('    KEEP(*(.init, .init.*))');
       Add('    /* For data that needs to reside in the lower 64k of progmem.  */');
       Add('    *(.progmem.gcc*)');
       Add('    *(.progmem*)');
@@ -1044,6 +839,8 @@ begin
       Add('  .debug_loc      0 : { *(.debug_loc) }');
       Add('  .debug_macinfo  0 : { *(.debug_macinfo) }');
       Add('}');
+      { last address of ram on an atmega128 }
+      Add('_stack_top = 0x0fff;');
     end;
 {$endif AVR}
 
@@ -1187,7 +984,7 @@ begin
       Add('    .bss :');
       Add('    {');
       Add('    _bss_start = .;');
-      Add('    *(.bss .bss.*)');
+      Add('    *(.bss, .bss.*)');
       Add('    *(COMMON)');
       Add('    } >ram');
       Add('. = ALIGN(4);');
@@ -1493,26 +1290,9 @@ initialization
   RegisterTarget(system_i386_embedded_info);
 {$endif i386}
 
-{$ifdef x86_64}
-  RegisterLinker(ld_embedded,TLinkerEmbedded);
-  RegisterTarget(system_x86_64_embedded_info);
-{$endif x86_64}
-
-{$ifdef i8086}
-  { no need to register linker ld_embedded, because i8086_embedded uses the
-    regular msdos linker. In case a flat binary, relocated for a specific
-    segment address is needed (e.g. for a BIOS or a real mode bootloader), it
-    can be produced post-compilation with exe2bin or a similar tool. }
-  RegisterTarget(system_i8086_embedded_info);
-{$endif i8086}
-
 {$ifdef mipsel}
   RegisterLinker(ld_embedded,TLinkerEmbedded);
   RegisterTarget(system_mipsel_embedded_info);
 {$endif mipsel}
 
-{$ifdef m68k}
-  RegisterLinker(ld_embedded,TLinkerEmbedded);
-  RegisterTarget(system_m68k_embedded_info);
-{$endif m68k}
 end.

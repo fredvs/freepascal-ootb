@@ -126,17 +126,13 @@ Type
 
 Var  
   DNSServers            : TDNSServerArray;
-  DNSOptions            : String;
   DefaultDomainList     : String;
   CheckResolveFileAge   : Boolean; 
   CheckHostsFileAge     : Boolean; 
   TimeOutS,TimeOutMS    : Longint;
   
-{$ifdef android}
-Function GetDNSServers : Integer;
-{$else}
+  
 Function GetDNSServers(FN : String) : Integer;
-{$endif android}
 
 Function ResolveName(HostName : String; Var Addresses : Array of THostAddr) : Integer;
 Function ResolveName6(HostName : String; Var Addresses : Array of THostAddr6) : Integer;
@@ -177,9 +173,6 @@ uses
    BaseUnix,
    sysutils;
 
-var
-  DefaultDomainListArr : array of string;
-  NDots: Integer;
 
 const
   { from http://www.iana.org/assignments/dns-parameters }
@@ -474,72 +467,6 @@ end;
    Resolve.conf handling
   ---------------------------------------------------------------------}
 
-{$ifdef android}
-
-Function GetDNSServers: Integer;
-var
-  i: integer;
-  s: string;
-  H : THostAddr;
-begin
-  if SystemApiLevel >= 26 then
-    begin
-      // Since Android 8 the net.dnsX properties can't be read.
-      // Use Google Public DNS servers
-      Result:=2;
-      SetLength(DNSServers, Result);
-      DNSServers[0]:=StrToNetAddr('8.8.8.8');
-      DNSServers[1]:=StrToNetAddr('8.8.4.4');
-      exit;
-    end;
-
-  Result:=0;
-  SetLength(DNSServers, 9);
-  for i:=1 to 9 do
-    begin
-      s:=GetSystemProperty(PAnsiChar('net.dns' + IntToStr(i)));
-      if s = '' then
-        break;
-      H:=StrToNetAddr(s);
-      if H.s_bytes[1] <> 0 then
-        begin
-          DNSServers[Result]:=H;
-          Inc(Result);
-        end;
-    end;
-  SetLength(DNSServers, Result);
-end;
-
-var
-  LastChangeProp: string;
-
-Procedure CheckResolveFile;
-var
-  n, v: string;
-begin
-  if not CheckResolveFileAge then
-    exit;
-
-  if (Length(DNSServers) = 0) and (SystemApiLevel >= 26) then
-    begin
-      GetDNSServers;
-      exit;
-    end;
-
-  n:=GetSystemProperty('net.change');
-  if n <> '' then
-    v:=GetSystemProperty(PAnsiChar(n))
-  else
-    v:='';
-  n:=n + '=' + v;
-  if LastChangeProp = n then
-    exit;
-  LastChangeProp:=n;
-  GetDNSServers;
-end;
-
-{$else}
-
 Var
   ResolveFileAge  : Longint;
   ResolveFileName : String;
@@ -572,8 +499,6 @@ begin
   Result:=0;
   ResolveFileName:=Fn;
   ResolveFileAge:=FileAge(FN);
-  DefaultDomainListArr:=[];
-  NDots:=1;
   {$push}{$i-}
   Assign(R,FN);
   Reset(R);
@@ -604,16 +529,11 @@ begin
         else if CheckDirective('domain') then
           DefaultDomainList:=L
         else if CheckDirective('search') then
-          DefaultDomainList:=L
-        else if CheckDirective('options') then
-          DNSOptions:=L;
+          DefaultDomainList:=L;
       end;
   Finally
     Close(R);
-  end;
-  L := GetEnvironmentVariable('LOCALDOMAIN');
-  if L <> '' then
-    DefaultDomainList := L;
+  end;    
 end;
 
 Procedure CheckResolveFile;
@@ -633,8 +553,6 @@ begin
       GetDnsServers(N);
     end;  
 end;
-
-{$endif android}
 
 { ---------------------------------------------------------------------
     Payload handling functions.
@@ -1044,7 +962,7 @@ begin
   end;
 end;
 
-Function ResolveAddressAt(Resolver : Integer; Address : String; Var Names : Array of String; Recurse: Integer) : Integer;
+Function ResolveAddressAt(Resolver : Integer; Address : String; Var Names : Array of String) : Integer;
 
 
 Var
@@ -1067,29 +985,13 @@ begin
     I:=0;
     While (I<=MaxAnswer) and NextRR(Ans.Payload,AnsStart,AnsLen,RR) do
       begin
-      Case Ntohs(RR.AType) of
-        DNSQRY_PTR:
-          if (1=NtoHS(RR.AClass)) then
-            begin
-            Names[i]:=BuildName(Ans.Payload,AnsStart,AnsLen);
-            inc(Result);
-            RR.RDLength := ntohs(RR.RDLength);
-            Inc(AnsStart,RR.RDLength);
-            end;
-        DNSQRY_CNAME:
-          begin
-          if Recurse >= MaxRecursion then
-            begin
-            Result := -1;
-            exit;
-            end;
-          rr.rdlength := ntohs(rr.rdlength);
-          setlength(Address, rr.rdlength);
-          address := stringfromlabel(ans.payload, ansstart);
-          Result := ResolveAddressAt(Resolver, Address, Names, Recurse+1);
-          exit;
-          end;
-      end;
+      if (Ntohs(RR.AType)=DNSQRY_PTR) and (1=NtoHS(RR.AClass)) then
+        begin
+        Names[i]:=BuildName(Ans.Payload,AnsStart,AnsLen);
+        inc(Result);
+        RR.RDLength := ntohs(RR.RDLength);
+        Inc(AnsStart,RR.RDLength);
+        end;
       Inc(I);
       end;  
     end;
@@ -1111,7 +1013,7 @@ begin
   S:=Format('%d.%d.%d.%d.in-addr.arpa',[nt.s_bytes[4],nt.s_bytes[3],nt.s_bytes[2],nt.s_bytes[1]]);
   While (Result=0) and (I<=high(DNSServers)) do
     begin
-    Result:=ResolveAddressAt(I,S,Addresses,1);
+    Result:=ResolveAddressAt(I,S,Addresses);
     Inc(I);
     end;
 end;
@@ -1138,7 +1040,7 @@ begin
   I := 0;
   While (Result=0) and (I<=high(DNSServers)) do
     begin
-    Result:=ResolveAddressAt(I,S,Addresses,1);
+    Result:=ResolveAddressAt(I,S,Addresses);
     Inc(I);
     end;
 end;
@@ -1154,70 +1056,14 @@ begin
    (HostAddr.u6_addr16[5] = $FFFF);
 end;
 
-Function HandleAsFullyQualifiedName(const HostName: String) : Boolean;
-var
-  I,J : Integer;
-begin
-  Result := False;
-  J := 0;
-  for I := 1 to Length(HostName) do
-    if HostName[I] = '.' then
-      begin
-      Inc(J);
-      if J >= NDots then
-        begin
-        Result := True;
-        Break;
-        end;
-      end;
-end;
-
 Function ResolveHostByName(HostName : String; Var H : THostEntry) : Boolean;
 
 Var
   Address : Array[1..MaxResolveAddr] of THostAddr;
-  AbsoluteQueryFirst : Boolean;
   L : Integer;
-  K : Integer;
-
+  
 begin
-  // Use domain or search-list to append to the searched hostname.
-  // When the amount of dots in hostname is higher or equal to ndots,
-  // do the query without adding any search-domain first.
-  // See the resolv.conf manual for more info.
-  if (DefaultDomainList<>'') then
-    begin
-    // Fill the cached DefaultDomainListArr and NDots
-    if (Length(DefaultDomainListArr) = 0) then
-      begin
-      DefaultDomainListArr := DefaultDomainList.Split(' ',Char(9));
-      L := Pos('ndots:', DNSOptions);
-      if L > 0 then
-        NDots := StrToIntDef(Trim(Copy(DNSOptions, L+6, 2)), 1);
-      end;
-
-    AbsoluteQueryFirst := HandleAsFullyQualifiedName(HostName);
-    if AbsoluteQueryFirst then
-      L:=ResolveName(HostName,Address)
-    else
-      L := -1;
-
-    K := 0;
-    while (L < 1) and (K < Length(DefaultDomainListArr)) do
-      begin
-      L:=ResolveName(HostName + '.' + DefaultDomainListArr[K],Address);
-      Inc(K);
-      end;
-    end
-  else
-    begin
-    AbsoluteQueryFirst := False;
-    L := -1;
-    end;
-
-  if (L<1) and not AbsoluteQueryFirst then
-    L:=ResolveName(HostName,Address);
-
+  L:=ResolveName(HostName,Address);
   Result:=(L>0);
   If Result then
     begin
@@ -1601,6 +1447,9 @@ end;
 
 Procedure InitResolver;
 
+//Var
+//  I : Integer;
+
 begin
   TimeOutS :=5;
   TimeOutMS:=0;
@@ -1619,14 +1468,9 @@ begin
 {$ENDIF UNIX_ETC}
   If FileExists (EtcPath + SHostsFile) then
     HostsList := ProcessHosts (EtcPath + SHostsFile);
-{$ifdef android}
-  CheckResolveFileAge:=True;
-  CheckResolveFile;
-{$else}
   CheckResolveFileAge:=False;
   If FileExists(EtcPath + SResolveFile) then
     GetDNsservers(EtcPath + SResolveFile)
-{$endif android}
 {$IFDEF OS2}
   else if FileExists(EtcPath + SResolveFile2) then
     GetDNsservers(EtcPath + SResolveFile2)

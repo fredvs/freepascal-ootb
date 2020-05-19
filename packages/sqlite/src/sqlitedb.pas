@@ -1,7 +1,7 @@
 {$mode objfpc}
 {$h+}
 
-unit SQLiteDB;
+unit SQLitedb;
 
 interface
 

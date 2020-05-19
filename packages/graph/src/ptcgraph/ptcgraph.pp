@@ -17,7 +17,6 @@
 unit ptcgraph;
 
 {//$define logging}
-{$define FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
 {******************************************************************************}
                                     interface
@@ -95,42 +94,27 @@ const
   { VESA Specific video modes. }
   m320x200x32k      = $10D;
   m320x200x64k      = $10E;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  m320x200x16m      = $10F;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
   m640x400x256      = $100;
 
   m640x480x256      = $101;
   m640x480x32k      = $110;
   m640x480x64k      = $111;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  m640x480x16m      = $112;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
   m800x600x16       = $102;
   m800x600x256      = $103;
   m800x600x32k      = $113;
   m800x600x64k      = $114;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  m800x600x16m      = $115;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
   m1024x768x16      = $104;
   m1024x768x256     = $105;
   m1024x768x32k     = $116;
   m1024x768x64k     = $117;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  m1024x768x16m     = $118;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
   m1280x1024x16     = $106;
   m1280x1024x256    = $107;
   m1280x1024x32k    = $119;
   m1280x1024x64k    = $11A;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  m1280x1024x16m    = $11B;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
 const
   FullscreenGraph: Boolean = False;
@@ -311,16 +295,13 @@ var
   PTCFormat8: IPTCFormat;
   PTCFormat15: IPTCFormat;
   PTCFormat16: IPTCFormat;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  PTCFormat32: IPTCFormat;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
   EGAPaletteEnabled: Boolean;
   EGAPalette: TEGAPalette;
   VGAPalette: TVGAPalette;
 
   CurrentActivePage: Integer;
-  ColorMask: ColorType;
+  ColorMask: Word;
 
   DummyHGCBkColor: Word;
   CurrentCGABkColor: Word;
@@ -744,21 +725,6 @@ begin
   ColorMask := 65535;
 end;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_InitMode32bpp(XResolution, YResolution, Pages: LongInt);
-begin
-{$IFDEF logging}
-  LogLn('Initializing mode ' + strf(XResolution) + ', ' + strf(YResolution) + ' 16777216 colours (32bpp)');
-{$ENDIF logging}
-  { open the console }
-  ptc_InternalOpen(WindowTitle, XResolution, YResolution, PTCFormat32, Pages);
-  PTCWidth := XResolution;
-  PTCHeight := YResolution;
-  CurrentActivePage := 0;
-  ColorMask := 16777215;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
 
 procedure ptc_Init640x200x16;
 begin
@@ -906,33 +872,6 @@ begin
   ptc_InitMode64k(1280, 1024, 2);
 end;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_Init320x200x32bpp;
-begin
-  ptc_InitMode32bpp(320, 200, 2);
-end;
-
-procedure ptc_Init640x480x32bpp;
-begin
-  ptc_InitMode32bpp(640, 480, 2);
-end;
-
-procedure ptc_Init800x600x32bpp;
-begin
-  ptc_InitMode32bpp(800, 600, 2);
-end;
-
-procedure ptc_Init1024x768x32bpp;
-begin
-  ptc_InitMode32bpp(1024, 768, 2);
-end;
-
-procedure ptc_Init1280x1024x32bpp;
-begin
-  ptc_InitMode32bpp(1280, 1024, 2);
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
 procedure ptc_InitNonStandard16;
 begin
   ptc_InitMode16(MaxX + 1, MaxY + 1, 2);
@@ -953,13 +892,6 @@ begin
   ptc_InitMode64k(MaxX + 1, MaxY + 1, 2);
 end;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_InitNonStandard32bpp;
-begin
-  ptc_InitMode32bpp(MaxX + 1, MaxY + 1, 2);
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
 procedure ptc_SetVisualPage(page: word);
 begin
   if page > HardwarePages then
@@ -977,7 +909,7 @@ begin
 end;
 
 { compatible with TP7's HERC.BGI }
-procedure SetBkColorHGC720(ColorNum: ColorType);
+procedure SetBkColorHGC720(ColorNum: Word);
 begin
   if ColorNum > 15 then
     exit;
@@ -985,12 +917,12 @@ begin
 end;
 
 { compatible with TP7's HERC.BGI }
-function GetBkColorHGC720: ColorType;
+function GetBkColorHGC720: Word;
 begin
   GetBkColorHGC720 := DummyHGCBkColor;
 end;
 
-procedure SetBkColorCGA320(ColorNum: ColorType);
+procedure SetBkColorCGA320(ColorNum: Word);
 begin
   if ColorNum > 15 then
     exit;
@@ -999,13 +931,13 @@ begin
   ptc_SetEGAPalette(0, ((ColorNum shl 1) and $10) or (ColorNum and $07));
 end;
 
-function GetBkColorCGA320: ColorType;
+function GetBkColorCGA320: Word;
 begin
   GetBkColorCGA320 := CurrentCGABkColor;
 end;
 
 {yes, TP7 CGA.BGI behaves *exactly* like that}
-procedure SetBkColorCGA640(ColorNum: ColorType);
+procedure SetBkColorCGA640(ColorNum: Word);
 begin
   if ColorNum > 15 then
     exit;
@@ -1015,14 +947,14 @@ begin
   ptc_SetEGAPalette(1, ((ColorNum shl 1) and $10) or (ColorNum and $07));
 end;
 
-function GetBkColorCGA640: ColorType;
+function GetBkColorCGA640: Word;
 begin
   GetBkColorCGA640 := CurrentCGABkColor;
 end;
 
 { nickysn: VGA compatible implementation. I don't have a real MCGA to test
   if there's any difference with VGA }
-procedure SetBkColorMCGA640(ColorNum: ColorType);
+procedure SetBkColorMCGA640(ColorNum: Word);
 begin
   if ColorNum > 15 then
     exit;
@@ -1031,7 +963,7 @@ begin
   ptc_SetEGAPalette(0, ((ColorNum shl 1) and $10) or (ColorNum and $07));
 end;
 
-function GetBkColorMCGA640: ColorType;
+function GetBkColorMCGA640: Word;
 begin
   GetBkColorMCGA640 := CurrentCGABkColor;
 end;
@@ -1052,38 +984,6 @@ begin
     ClipCoords:=Not ClipCoords;
     end;
 end;
-
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_DirectPixelProc_32bpp(X,Y: smallint);
-var
-  pixels:Plongword;
-begin
-//  Writeln('ptc_DirectPixelProc_32bpp(', X, ', ', Y, ')');
-  pixels := ptc_surface_lock;
-  case CurrentWriteMode of
-    XORPut:
-      begin
-        pixels[x+y*PTCWidth] := pixels[x+y*PTCWidth] xor CurrentColor;
-      end;
-    OrPut:
-      begin
-        pixels[x+y*PTCWidth] := pixels[x+y*PTCWidth] or CurrentColor;
-      end;
-    AndPut:
-      begin
-        pixels[x+y*PTCWidth] := pixels[x+y*PTCWidth] and CurrentColor;
-      end;
-    NotPut:
-      begin
-        pixels[x+y*PTCWidth] := CurrentColor xor $FFFFFF;
-      end
-  else
-    pixels[x+y*PTCWidth] := CurrentColor;
-  end;
-  ptc_surface_unlock;
-  ptc_update;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
 procedure ptc_DirectPixelProc_16bpp(X,Y: smallint);
 var
@@ -1145,39 +1045,7 @@ begin
   ptc_update;
 end;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_putpixelproc_32bpp(X,Y:smallint;Color:ColorType);
-
-var pixels:Plongword;
-
-begin
-//  Writeln('ptc_putpixelproc_32bpp(', X, ', ', Y, ', ', Color, ')');
-  if clipcoords(X,Y) then
-    begin
-      pixels := ptc_surface_lock;
-      {Plot the pixel on the surface.}
-      pixels[x+y*PTCWidth] := color;
-      ptc_surface_unlock;
-      ptc_update;
-    end;
-end;
-
-function ptc_getpixelproc_32bpp(X,Y: smallint):ColorType;
-
-var pixels:Plongword;
-
-begin
-  if clipcoords(X,Y) then
-    begin
-      pixels := ptc_surface_lock;
-      {Get the pixel from the surface.}
-      ptc_getpixelproc_32bpp:=pixels[x+y*PTCWidth];
-      ptc_surface_unlock;
-    end;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
-procedure ptc_putpixelproc_16bpp(X,Y:smallint;Color:ColorType);
+procedure ptc_putpixelproc_16bpp(X,Y:smallint;Color:Word);
 
 var pixels:Pword;
 
@@ -1193,7 +1061,7 @@ begin
     end;
 end;
 
-function ptc_getpixelproc_16bpp(X,Y: smallint):ColorType;
+function ptc_getpixelproc_16bpp(X,Y: smallint):word;
 
 var pixels:Pword;
 
@@ -1207,7 +1075,7 @@ begin
     end;
 end;
 
-procedure ptc_PutPixelProc_8bpp(X,Y:smallint;Color:ColorType);
+procedure ptc_PutPixelProc_8bpp(X,Y:smallint;Color:Word);
 
 var pixels:PByte;
 
@@ -1223,7 +1091,7 @@ begin
     end;
 end;
 
-function ptc_GetPixelProc_8bpp(X,Y: smallint):ColorType;
+function ptc_GetPixelProc_8bpp(X,Y: smallint):word;
 
 var pixels:PByte;
 
@@ -1237,120 +1105,6 @@ begin
       ptc_update;
     end;
 end;
-
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_HLineProc_32bpp(x, x2,y : smallint);
-
-var pixels:Plongword;
-    i:word;
-    xtmp: smallint;
-
-begin
-//  Writeln('ptc_HLineProc_32bpp(', x, ', ', x2, ', ', y, ')');
-  { must we swap the values? }
-  if x >= x2 then
-  begin
-    xtmp := x2;
-    x2 := x;
-    x:= xtmp;
-  end;
-
-  inc(x,StartXViewPort);
-  inc(x2,StartXViewPort);
-  inc(y,StartYViewPort);
-  if ClipPixels then
-  begin
-    if LineClipped(x,y,x2,y,StartXViewPort,StartYViewPort,
-               StartXViewPort+ViewWidth, StartYViewPort+ViewHeight) then
-      exit;
-  end;
-
-  pixels := ptc_surface_lock;
-
-  case CurrentWriteMode of
-    XORPut:
-      begin
-        for i:=x to x2 do
-          pixels[i+y*PTCWidth] := pixels[i+y*PTCWidth] xor CurrentColor;
-      end;
-    OrPut:
-      begin
-        for i:=x to x2 do
-          pixels[i+y*PTCWidth] := pixels[i+y*PTCWidth] or CurrentColor;
-      end;
-    AndPut:
-      begin
-        for i:=x to x2 do
-          pixels[i+y*PTCWidth] := pixels[i+y*PTCWidth] and CurrentColor;
-      end;
-    NotPut:
-      begin
-        for i:=x to x2 do
-          pixels[i+y*PTCWidth] := CurrentColor xor $FFFFFF;
-      end
-  else
-    for i:=x to x2 do
-      pixels[i+y*PTCWidth] := CurrentColor;
-  end;
-
-  ptc_surface_unlock;
-  ptc_update;
-end;
-
-procedure ptc_VLineProc_32bpp(x,y,y2 : smallint);
-var pixels:PLongWord;
-    i:word;
-    ytmp: smallint;
-begin
-  if y >= y2 then
-   begin
-     ytmp := y2;
-     y2 := y;
-     y:= ytmp;
-   end;
-
-  inc(x,StartXViewPort);
-  inc(y,StartYViewPort);
-  inc(y2,StartYViewPort);
-  if ClipPixels then
-  begin
-    if LineClipped(x,y,x,y2,StartXViewPort,StartYViewPort,
-          StartXViewPort+ViewWidth, StartYViewPort+ViewHeight) then
-      exit;
-  end;
-
-  pixels := ptc_surface_lock;
-
-  case CurrentWriteMode of
-    XORPut:
-      begin
-        for i:=y to y2 do
-          pixels[x+i*PTCWidth] := pixels[x+i*PTCWidth] xor CurrentColor;
-      end;
-    OrPut:
-      begin
-        for i:=y to y2 do
-          pixels[x+i*PTCWidth] := pixels[x+i*PTCWidth] or CurrentColor;
-      end;
-    AndPut:
-      begin
-        for i:=y to y2 do
-          pixels[x+i*PTCWidth] := pixels[x+i*PTCWidth] and CurrentColor;
-      end;
-    NotPut:
-      begin
-        for i:=y to y2 do
-          pixels[x+i*PTCWidth] := CurrentColor xor $FFFFFF;
-      end
-  else
-    for i:=y to y2 do
-      pixels[x+i*PTCWidth] := CurrentColor;
-  end;
-
-  ptc_surface_unlock;
-  ptc_update;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
 procedure ptc_HLineProc_16bpp(x, x2,y : smallint);
 
@@ -1580,167 +1334,6 @@ begin
   ptc_update;
 end;
 
-procedure ptc_PatternLineProc_8bpp(x1,x2,y: smallint);
-{********************************************************}
-{ Draws a horizontal patterned line according to the     }
-{ current Fill Settings.                                 }
-{********************************************************}
-{ Important notes:                                       }
-{  - CurrentColor must be set correctly before entering  }
-{    this routine.                                       }
-{********************************************************}
-var
-  pixels: PByte;
-  NrIterations: smallint;
-  i           : smallint;
-  j           : smallint;
-  TmpFillPattern : byte;
-begin
-  { convert to global coordinates ... }
-  x1 := x1 + StartXViewPort;
-  x2 := x2 + StartXViewPort;
-  y  := y + StartYViewPort;
-  { if line was fully clipped then exit...}
-  if LineClipped(x1,y,x2,y,StartXViewPort,StartYViewPort,
-     StartXViewPort+ViewWidth, StartYViewPort+ViewHeight) then
-      exit;
-
-  { Get the current pattern }
-  TmpFillPattern := FillPatternTable
-    [FillSettings.Pattern][(y and $7)+1];
-
-  pixels := ptc_surface_lock;
-
-  { number of times to go throuh the 8x8 pattern }
-  NrIterations := abs(x2 - x1+8) div 8;
-  for i := 0 to NrIterations do
-    for j := 0 to 7 do
-    begin
-      { x1 mod 8 }
-      if RevBitArray[x1 and 7] and TmpFillPattern <> 0 then
-        pixels[x1+y*PTCWidth] := FillSettings.Color and ColorMask
-      else
-        pixels[x1+y*PTCWidth] := CurrentBkColor and ColorMask;
-      Inc(x1);
-      if x1 > x2 then
-      begin
-        ptc_surface_unlock;
-        ptc_update;
-        exit;
-      end;
-    end;
-  ptc_surface_unlock;
-  ptc_update;
-end;
-
-procedure ptc_PatternLineProc_16bpp(x1,x2,y: smallint);
-{********************************************************}
-{ Draws a horizontal patterned line according to the     }
-{ current Fill Settings.                                 }
-{********************************************************}
-{ Important notes:                                       }
-{  - CurrentColor must be set correctly before entering  }
-{    this routine.                                       }
-{********************************************************}
-var
-  pixels: PWord;
-  NrIterations: smallint;
-  i           : smallint;
-  j           : smallint;
-  TmpFillPattern : byte;
-begin
-  { convert to global coordinates ... }
-  x1 := x1 + StartXViewPort;
-  x2 := x2 + StartXViewPort;
-  y  := y + StartYViewPort;
-  { if line was fully clipped then exit...}
-  if LineClipped(x1,y,x2,y,StartXViewPort,StartYViewPort,
-     StartXViewPort+ViewWidth, StartYViewPort+ViewHeight) then
-      exit;
-
-  { Get the current pattern }
-  TmpFillPattern := FillPatternTable
-    [FillSettings.Pattern][(y and $7)+1];
-
-  pixels := ptc_surface_lock;
-
-  { number of times to go throuh the 8x8 pattern }
-  NrIterations := abs(x2 - x1+8) div 8;
-  for i := 0 to NrIterations do
-    for j := 0 to 7 do
-    begin
-      { x1 mod 8 }
-      if RevBitArray[x1 and 7] and TmpFillPattern <> 0 then
-        pixels[x1+y*PTCWidth] := FillSettings.Color
-      else
-        pixels[x1+y*PTCWidth] := CurrentBkColor;
-      Inc(x1);
-      if x1 > x2 then
-      begin
-        ptc_surface_unlock;
-        ptc_update;
-        exit;
-      end;
-    end;
-  ptc_surface_unlock;
-  ptc_update;
-end;
-
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-procedure ptc_PatternLineProc_32bpp(x1,x2,y: smallint);
-{********************************************************}
-{ Draws a horizontal patterned line according to the     }
-{ current Fill Settings.                                 }
-{********************************************************}
-{ Important notes:                                       }
-{  - CurrentColor must be set correctly before entering  }
-{    this routine.                                       }
-{********************************************************}
-var
-  pixels: PLongWord;
-  NrIterations: smallint;
-  i           : smallint;
-  j           : smallint;
-  TmpFillPattern : byte;
-begin
-  { convert to global coordinates ... }
-  x1 := x1 + StartXViewPort;
-  x2 := x2 + StartXViewPort;
-  y  := y + StartYViewPort;
-  { if line was fully clipped then exit...}
-  if LineClipped(x1,y,x2,y,StartXViewPort,StartYViewPort,
-     StartXViewPort+ViewWidth, StartYViewPort+ViewHeight) then
-      exit;
-
-  { Get the current pattern }
-  TmpFillPattern := FillPatternTable
-    [FillSettings.Pattern][(y and $7)+1];
-
-  pixels := ptc_surface_lock;
-
-  { number of times to go throuh the 8x8 pattern }
-  NrIterations := abs(x2 - x1+8) div 8;
-  for i := 0 to NrIterations do
-    for j := 0 to 7 do
-    begin
-      { x1 mod 8 }
-      if RevBitArray[x1 and 7] and TmpFillPattern <> 0 then
-        pixels[x1+y*PTCWidth] := FillSettings.Color
-      else
-        pixels[x1+y*PTCWidth] := CurrentBkColor;
-      Inc(x1);
-      if x1 > x2 then
-      begin
-        ptc_surface_unlock;
-        ptc_update;
-        exit;
-      end;
-    end;
-  ptc_surface_unlock;
-  ptc_update;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
 procedure ptc_SetRGBAllPaletteProc(const Palette: PaletteType);
 begin
   {...}
@@ -1768,664 +1361,6 @@ begin
   GreenValue := VGAPalette[ColorNum, 1] shl 2;
   BlueValue := VGAPalette[ColorNum, 2] shl 2;
 end;
-
-{**********************************************************}
-{ Procedure PutImage()                                     }
-{----------------------------------------------------------}
-{ Displays the image contained in a bitmap starting at X,Y }
-{ the first 2 bytes of the bitmap structure define the     }
-{ width and height of the bitmap                           }
-{ note: This optomized version does not use PutPixel       }
-{   Which would be checking the viewport for every pixel   }
-{   Instead it just does it's own viewport check once then }
-{   puts all the pixels within the veiwport without further}
-{   checking.  Also instead of checking BitBlt every pixel }
-{   it is only checked once before all the pixels are      }
-{   displayed at once   (JMR)                              }
-{**********************************************************}
-
-Procedure ptc_PutImageproc_8bpp(X,Y: smallint; var Bitmap; BitBlt: Word);
-type
-  pt = array[0..{$ifdef cpu16}16382{$else}$fffffff{$endif}] of word;
-  ptw = array[0..2] of longint;
-var
-  pixels:Pbyte;
-  k: longint;
-  i, j, y1, x1, deltaX, deltaX1, deltaY: smallint;
-  JxW, I_JxW: Longword;
-Begin
-  inc(x,startXViewPort);
-  inc(y,startYViewPort);
-  { width/height are 1-based, coordinates are zero based }
-  x1 := ptw(Bitmap)[0]+x-1; { get width and adjust end coordinate accordingly }
-  y1 := ptw(Bitmap)[1]+y-1; { get height and adjust end coordinate accordingly }
-  deltaY := 0;
-  deltaX := 0;
-  deltaX1 := 0;
-  k := 3 * sizeOf(Longint) div sizeOf(Word); { Three reserved longs at start of bitmap }
- { check which part of the image is in the viewport }
-  if clipPixels then
-    begin
-      if y < startYViewPort then
-        begin
-          deltaY := startYViewPort - y;
-          inc(k,(x1-x+1)*deltaY);
-          y := startYViewPort;
-         end;
-      if y1 > startYViewPort+viewHeight then
-        y1 := startYViewPort+viewHeight;
-      if x < startXViewPort then
-        begin
-          deltaX := startXViewPort-x;
-          x := startXViewPort;
-        end;
-      if x1 > startXViewPort + viewWidth then
-        begin
-          deltaX1 := x1 - (startXViewPort + viewWidth);
-          x1 := startXViewPort + viewWidth;
-        end;
-    end;
-  pixels := ptc_surface_lock;
-  case BitBlt of
-    XORPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] xor (pt(bitmap)[k] and ColorMask);
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    ORPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] or (pt(bitmap)[k] and ColorMask);
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    AndPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] and (pt(bitmap)[k] and ColorMask);
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    NotPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                pixels[i+JxW] := (pt(bitmap)[k] and ColorMask) xor ColorMask;
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    Else
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                pixels[i+JxW] := pt(bitmap)[k] and ColorMask;
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-  End; {case}
-  ptc_surface_unlock;
-  ptc_update;
-end;
-Procedure ptc_PutImageproc_16bpp(X,Y: smallint; var Bitmap; BitBlt: Word);
-type
-  pt = array[0..{$ifdef cpu16}16382{$else}$fffffff{$endif}] of word;
-  ptw = array[0..2] of longint;
-var
-  pixels:Pword;
-  k: longint;
-  i, j, y1, x1, deltaX, deltaX1, deltaY: smallint;
-  JxW, I_JxW: Longword;
-Begin
-  inc(x,startXViewPort);
-  inc(y,startYViewPort);
-  { width/height are 1-based, coordinates are zero based }
-  x1 := ptw(Bitmap)[0]+x-1; { get width and adjust end coordinate accordingly }
-  y1 := ptw(Bitmap)[1]+y-1; { get height and adjust end coordinate accordingly }
-  deltaY := 0;
-  deltaX := 0;
-  deltaX1 := 0;
-  k := 3 * sizeOf(Longint) div sizeOf(Word); { Three reserved longs at start of bitmap }
- { check which part of the image is in the viewport }
-  if clipPixels then
-    begin
-      if y < startYViewPort then
-        begin
-          deltaY := startYViewPort - y;
-          inc(k,(x1-x+1)*deltaY);
-          y := startYViewPort;
-         end;
-      if y1 > startYViewPort+viewHeight then
-        y1 := startYViewPort+viewHeight;
-      if x < startXViewPort then
-        begin
-          deltaX := startXViewPort-x;
-          x := startXViewPort;
-        end;
-      if x1 > startXViewPort + viewWidth then
-        begin
-          deltaX1 := x1 - (startXViewPort + viewWidth);
-          x1 := startXViewPort + viewWidth;
-        end;
-    end;
-  pixels := ptc_surface_lock;
-  case BitBlt of
-    XORPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] xor pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    ORPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] or pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    AndPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] and pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    NotPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                pixels[i+JxW] := pt(bitmap)[k] xor $FFFF;
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    Else
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                pixels[i+JxW] := pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-  End; {case}
-  ptc_surface_unlock;
-  ptc_update;
-end;
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-Procedure ptc_PutImageproc_32bpp(X,Y: smallint; var Bitmap; BitBlt: Word);
-type
-  pt = array[0..{$ifdef cpu16}16382{$else}$fffffff{$endif}] of longword;
-  ptw = array[0..2] of longint;
-var
-  pixels:Plongword;
-  k: longint;
-  i, j, y1, x1, deltaX, deltaX1, deltaY: smallint;
-  JxW, I_JxW: Longword;
-Begin
-  inc(x,startXViewPort);
-  inc(y,startYViewPort);
-  { width/height are 1-based, coordinates are zero based }
-  x1 := ptw(Bitmap)[0]+x-1; { get width and adjust end coordinate accordingly }
-  y1 := ptw(Bitmap)[1]+y-1; { get height and adjust end coordinate accordingly }
-  deltaY := 0;
-  deltaX := 0;
-  deltaX1 := 0;
-  k := 3 * sizeOf(Longint) div sizeOf(LongWord); { Three reserved longs at start of bitmap }
- { check which part of the image is in the viewport }
-  if clipPixels then
-    begin
-      if y < startYViewPort then
-        begin
-          deltaY := startYViewPort - y;
-          inc(k,(x1-x+1)*deltaY);
-          y := startYViewPort;
-         end;
-      if y1 > startYViewPort+viewHeight then
-        y1 := startYViewPort+viewHeight;
-      if x < startXViewPort then
-        begin
-          deltaX := startXViewPort-x;
-          x := startXViewPort;
-        end;
-      if x1 > startXViewPort + viewWidth then
-        begin
-          deltaX1 := x1 - (startXViewPort + viewWidth);
-          x1 := startXViewPort + viewWidth;
-        end;
-    end;
-  pixels := ptc_surface_lock;
-  case BitBlt of
-    XORPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] xor pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    ORPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] or pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    AndPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                I_JxW:=i+JxW;
-                pixels[I_JxW] := pixels[I_JxW] and pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    NotPut:
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                pixels[i+JxW] := pt(bitmap)[k] xor $FFFFFF;
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-    Else
-      Begin
-        for j:=Y to Y1 do
-          Begin
-            JxW:=j*PTCWidth;
-            inc(k,deltaX);
-            for i:=X to X1 do
-              begin
-                pixels[i+JxW] := pt(bitmap)[k];
-                inc(k);
-              end;
-            inc(k,deltaX1);
-          End;
-      End;
-  End; {case}
-  ptc_surface_unlock;
-  ptc_update;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
-{**********************************************************}
-{ Procedure GetScanLine()                                  }
-{----------------------------------------------------------}
-{ Returns the full scanline of the video line of the Y     }
-{ coordinate. The values are returned in a WORD array      }
-{ each WORD representing a pixel of the specified scanline }
-{ note: we only need the pixels inside the ViewPort! (JM)  }
-{ note2: extended so you can specify start and end X coord }
-{   so it is usable for GetImage too (JM)                  }
-{ note3: This optomized version does not use GetPixel,     }
-{   Whcih would be checking the viewport for every pixel.  }
-{   Instead it just does it's own viewport check once then }
-{   gets all the pixels on the scan line without further   }
-{   checking  (JMR)                                        }
-{**********************************************************}
-
-Procedure PTC_GetScanlineProc_8bpp (X1, X2, Y : smallint; Var Data);
-Var
-  pixels        : Pbyte;
-  x,vpx1,vpx2   : smallint;
-Begin
-   vpx1:=X1+StartXViewPort;
-   vpx2:=X2+StartXViewPort;
-   Y:=Y+StartYViewPort;
-    { constrain to the part of the scanline that is in the viewport }
-    if clipPixels then
-       begin
-          if vpx1 <  startXViewPort then
-             vpx1 := startXViewPort;
-          if vpx2 >  startXViewPort + viewWidth then
-             vpx2 := startXViewPort + viewWidth;
-       end;
-    { constrain to the part of the scanline that is on the screen }
-    if vpx1 <  0 then
-       vpx1 := 0;
-    if vpx2 >= PTCwidth then
-       vpx2 := PTCwidth-1;
-    If (ClipPixels AND (y <= startYViewPort+viewHeight) and (y >= startYViewPort) and (y>=0) and (y<PTCheight)) or Not(ClipPixels) then
-       Begin
-          pixels := ptc_surface_lock;
-          For x:=vpx1 to vpx2 Do
-             WordArray(Data)[x-StartXViewPort-x1]:=pixels[x+y*PTCWidth] and ColorMask;
-          ptc_surface_unlock;
-       End;
-End;
-
-Procedure PTC_GetScanlineProc_16bpp (X1, X2, Y : smallint; Var Data);
-Var
-  pixels        : Pword;
-  x,vpx1,vpx2   : smallint;
-Begin
-   vpx1:=X1+StartXViewPort;
-   vpx2:=X2+StartXViewPort;
-   Y:=Y+StartYViewPort;
-    { constrain to the part of the scanline that is in the viewport }
-    if clipPixels then
-       begin
-          if vpx1 <  startXViewPort then
-             vpx1 := startXViewPort;
-          if vpx2 >  startXViewPort + viewWidth then
-             vpx2 := startXViewPort + viewWidth;
-       end;
-    { constrain to the part of the scanline that is on the screen }
-    if vpx1 <  0 then
-       vpx1 := 0;
-    if vpx2 >= PTCwidth then
-       vpx2 := PTCwidth-1;
-    If (ClipPixels AND (y <= startYViewPort+viewHeight) and (y >= startYViewPort) and (y>=0) and (y<PTCheight)) or Not(ClipPixels) then
-       Begin
-          pixels := ptc_surface_lock;
-          For x:=vpx1 to vpx2 Do
-             WordArray(Data)[x-StartXViewPort-x1]:=pixels[x+y*PTCWidth];
-          ptc_surface_unlock;
-       End;
-End;
-
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-Procedure PTC_GetScanlineProc_32bpp (X1, X2, Y : smallint; Var Data);
-Var
-  pixels        : Plongword;
-  x,vpx1,vpx2   : smallint;
-Begin
-   vpx1:=X1+StartXViewPort;
-   vpx2:=X2+StartXViewPort;
-   Y:=Y+StartYViewPort;
-    { constrain to the part of the scanline that is in the viewport }
-    if clipPixels then
-       begin
-          if vpx1 <  startXViewPort then
-             vpx1 := startXViewPort;
-          if vpx2 >  startXViewPort + viewWidth then
-             vpx2 := startXViewPort + viewWidth;
-       end;
-    { constrain to the part of the scanline that is on the screen }
-    if vpx1 <  0 then
-       vpx1 := 0;
-    if vpx2 >= PTCwidth then
-       vpx2 := PTCwidth-1;
-    If (ClipPixels AND (y <= startYViewPort+viewHeight) and (y >= startYViewPort) and (y>=0) and (y<PTCheight)) or Not(ClipPixels) then
-       Begin
-          pixels := ptc_surface_lock;
-          For x:=vpx1 to vpx2 Do
-             LongWordArray(Data)[x-StartXViewPort-x1]:=pixels[x+y*PTCWidth];
-          ptc_surface_unlock;
-       End;
-End;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
-{**********************************************************}
-{ Procedure GetImage()                                     }
-{----------------------------------------------------------}
-{ Returns a bitmap full the video specified by a rectagle  }
-{ defined by X1,Y1 to X2,Y2                                }
-{ the first 2 bytes of the bitmap structure define the     }
-{ width and height of the rectangle                        }
-{ These are later used by PutImage() so the bitmap is      }
-{ properly represented                                     }
-{ there is a 3rd reserved byte before data starts          }
-{ note: This optomized version does not use GetScanLine or }
-{   GetPixel, Whcih would be checking the viewport for     }
-{   every pixel. Instead it just does it's own viewport    }
-{   check once then gets all the pixels within the veiwport}
-{   without further checking  (JMR)                        }
-{**********************************************************}
-
-Procedure PTC_GetImageProc_8bpp(X1,Y1,X2,Y2: smallint; Var Bitmap);
-type
-  pt = array[0..{$ifdef cpu16}16382{$else}$fffffff{$endif}] of word;
-  ptw = array[0..2] of longint;
-var
-  pixels                       : Pbyte;
-  x,y,i,j,vpx1,vpx2,vpy1,vpy2  : smallint;
-  k      : longint;
-Begin
-  ptw(Bitmap)[0] := X2-X1+1;   { First longint  is width  }
-  ptw(Bitmap)[1] := Y2-Y1+1;   { Second longint is height }
-  ptw(bitmap)[2] := 0;         { Third longint is reserved}
-  k:= 3 * Sizeof(longint) div sizeof(word); { Three reserved longs at start of bitmap }
-  vpx1:=x1+StartXViewPort;
-  vpx2:=x2+StartXViewPort;
-  vpy1:=y1+StartYViewPort;
-  vpy2:=y2+StartYViewPort;
-  { check which part of the image is in the viewport }
-  if clipPixels then
-    begin
-      if vpx1 < startXViewPort then
-        vpx1 := startXViewPort;
-      if vpx2 > startXViewPort + viewWidth then
-        vpx2 := startXViewPort + viewWidth;
-      if vpy1 < startYViewPort then
-        vpy1 := startYViewPort;
-      if vpy2 > startYViewPort+viewHeight then
-        vpy2 := startYViewPort+viewHeight;
-    end;
-  { check if coordinates are on the screen}
-  if vpx1 < 0 then
-    vpx1 := 0;
-  if vpx2 >= PTCwidth then
-    vpx2 := PTCwidth-1;
-  if vpy1 < 0 then
-    vpy1 := 0;
-  if vpy2 >= PTCheight then
-    vpy2 := PTCheight-1;
-  i := (x2 - x1 + 1);
-  j := i * (vpy1 - StartYViewPort - y1);
-  inc(k,j);
-  pixels := ptc_surface_lock;
-  for y:=vpy1 to vpy2 do
-   Begin
-     For x:=vpx1 to vpx2 Do
-       pt(Bitmap)[k+(x-StartXViewPort-x1)]:=pixels[x+y*PTCWidth] and ColorMask;
-     inc(k,i);
-   end;
-   ptc_surface_unlock;
-end;
-
-Procedure PTC_GetImageProc_16bpp(X1,Y1,X2,Y2: smallint; Var Bitmap);
-type
-  pt = array[0..{$ifdef cpu16}16382{$else}$fffffff{$endif}] of word;
-  ptw = array[0..2] of longint;
-var
-  pixels : Pword;
-  x,y,i,j,vpx1,vpx2,vpy1,vpy2  : smallint;
-  k      : longint;
-Begin
-  ptw(Bitmap)[0] := X2-X1+1;   { First longint  is width  }
-  ptw(Bitmap)[1] := Y2-Y1+1;   { Second longint is height }
-  ptw(bitmap)[2] := 0;         { Third longint is reserved}
-  k:= 3 * Sizeof(longint) div sizeof(word); { Three reserved longs at start of bitmap }
-  vpx1:=x1+StartXViewPort;
-  vpx2:=x2+StartXViewPort;
-  vpy1:=y1+StartYViewPort;
-  vpy2:=y2+StartYViewPort;
-  { check which part of the image is in the viewport }
-  if clipPixels then
-    begin
-      if vpx1 < startXViewPort then
-        vpx1 := startXViewPort;
-      if vpx2 > startXViewPort + viewWidth then
-        vpx2 := startXViewPort + viewWidth;
-      if vpy1 < startYViewPort then
-        vpy1 := startYViewPort;
-      if vpy2 > startYViewPort+viewHeight then
-        vpy2 := startYViewPort+viewHeight;
-    end;
-  { check if coordinates are on the screen}
-  if vpx1 < 0 then
-    vpx1 := 0;
-  if vpx2 >= PTCwidth then
-    vpx2 := PTCwidth-1;
-  if vpy1 < 0 then
-    vpy1 := 0;
-  if vpy2 >= PTCheight then
-    vpy2 := PTCheight-1;
-  i := (x2 - x1 + 1);
-  j := i * (vpy1 - StartYViewPort - y1);
-  inc(k,j);
-  pixels := ptc_surface_lock;
-  for y:=vpy1 to vpy2 do
-   Begin
-     For x:=vpx1 to vpx2 Do
-       pt(Bitmap)[k+(x-StartXViewPort-x1)]:=pixels[x+y*PTCWidth];
-      inc(k,i);
-   end;
-   ptc_surface_unlock;
-end;
-
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-Procedure PTC_GetImageProc_32bpp(X1,Y1,X2,Y2: smallint; Var Bitmap);
-type
-  pt = array[0..{$ifdef cpu16}16382{$else}$fffffff{$endif}] of longword;
-  ptw = array[0..2] of longint;
-var
-  pixels : Plongword;
-  x,y,i,j,vpx1,vpx2,vpy1,vpy2  : smallint;
-  k      : longint;
-Begin
-  ptw(Bitmap)[0] := X2-X1+1;   { First longint  is width  }
-  ptw(Bitmap)[1] := Y2-Y1+1;   { Second longint is height }
-  ptw(bitmap)[2] := 0;         { Third longint is reserved}
-  k:= 3 * Sizeof(longint) div sizeof(longword); { Three reserved longs at start of bitmap }
-  vpx1:=x1+StartXViewPort;
-  vpx2:=x2+StartXViewPort;
-  vpy1:=y1+StartYViewPort;
-  vpy2:=y2+StartYViewPort;
-  { check which part of the image is in the viewport }
-  if clipPixels then
-    begin
-      if vpx1 < startXViewPort then
-        vpx1 := startXViewPort;
-      if vpx2 > startXViewPort + viewWidth then
-        vpx2 := startXViewPort + viewWidth;
-      if vpy1 < startYViewPort then
-        vpy1 := startYViewPort;
-      if vpy2 > startYViewPort+viewHeight then
-        vpy2 := startYViewPort+viewHeight;
-    end;
-  { check if coordinates are on the screen}
-  if vpx1 < 0 then
-    vpx1 := 0;
-  if vpx2 >= PTCwidth then
-    vpx2 := PTCwidth-1;
-  if vpy1 < 0 then
-    vpy1 := 0;
-  if vpy2 >= PTCheight then
-    vpy2 := PTCheight-1;
-  i := (x2 - x1 + 1);
-  j := i * (vpy1 - StartYViewPort - y1);
-  inc(k,j);
-  pixels := ptc_surface_lock;
-  for y:=vpy1 to vpy2 do
-   Begin
-     For x:=vpx1 to vpx2 Do
-       pt(Bitmap)[k+(x-StartXViewPort-x1)]:=pixels[x+y*PTCWidth];
-      inc(k,i);
-   end;
-   ptc_surface_unlock;
-end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
 {************************************************************************}
 {*                       General routines                               *}
@@ -2551,229 +1486,6 @@ end;
            SortModes(i,r);
       end;
 
-    procedure FillCommonCGA320(var mode: TModeInfo);
-    begin
-      mode.HardwarePages := 0;
-      mode.MaxColor := 4;
-      mode.PaletteSize := 16;
-      mode.DirectColor := FALSE;
-      mode.MaxX := 319;
-      mode.MaxY := 199;
-      mode.DirectPutPixel  := @ptc_DirectPixelProc_8bpp;
-      mode.PutPixel        := @ptc_PutPixelProc_8bpp;
-      mode.GetPixel        := @ptc_GetPixelProc_8bpp;
-      mode.PutImage        := @ptc_PutImageProc_8bpp;
-      mode.GetImage        := @ptc_GetImageProc_8bpp;
-      mode.GetScanLine     := @ptc_GetScanLineProc_8bpp;
-      mode.SetRGBPalette   := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette   := @ptc_GetRGBPaletteProc;
-      //mode.SetAllPalette := {$ifdef fpc}@{$endif}SetVGARGBAllPalette;
-      mode.HLine           := @ptc_HLineProc_8bpp;
-      mode.VLine           := @ptc_VLineProc_8bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_8bpp;
-      mode.SetBkColor      := @SetBkColorCGA320;
-      mode.GetBkColor      := @GetBkColorCGA320;
-      mode.SetVisualPage   := @ptc_SetVisualPage;
-      mode.SetActivePage   := @ptc_SetActivePage;
-      mode.XAspect := 8333;
-      mode.YAspect := 10000;
-    end;
-
-    procedure FillCommonCGA640(var mode: TModeInfo);
-    begin
-      mode.HardwarePages := 0;
-      mode.MaxColor := 2;
-      mode.PaletteSize := 16;
-      mode.DirectColor := FALSE;
-      mode.MaxX := 639;
-      mode.MaxY := 199;
-      mode.DirectPutPixel  := @ptc_DirectPixelProc_8bpp;
-      mode.PutPixel        := @ptc_PutPixelProc_8bpp;
-      mode.GetPixel        := @ptc_GetPixelProc_8bpp;
-      mode.PutImage        := @ptc_PutImageProc_8bpp;
-      mode.GetImage        := @ptc_GetImageProc_8bpp;
-      mode.GetScanLine     := @ptc_GetScanLineProc_8bpp;
-      mode.SetRGBPalette   := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette   := @ptc_GetRGBPaletteProc;
-      //mode.SetAllPalette := {$ifdef fpc}@{$endif}SetVGARGBAllPalette;
-      mode.HLine           := @ptc_HLineProc_8bpp;
-      mode.VLine           := @ptc_VLineProc_8bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_8bpp;
-      mode.SetBkColor      := @SetBkColorCGA640;
-      mode.GetBkColor      := @GetBkColorCGA640;
-      mode.SetVisualPage   := @ptc_SetVisualPage;
-      mode.SetActivePage   := @ptc_SetActivePage;
-      mode.XAspect := 4167;
-      mode.YAspect := 10000;
-    end;
-
-    procedure FillCommonEGAVGA16(var mode: TModeInfo);
-    begin
-      mode.MaxColor := 16;
-      mode.PaletteSize := mode.MaxColor;
-      mode.DirectColor := FALSE;
-      mode.DirectPutPixel := @ptc_DirectPixelProc_8bpp;
-      mode.PutPixel       := @ptc_PutPixelProc_8bpp;
-      mode.GetPixel       := @ptc_GetPixelProc_8bpp;
-      mode.PutImage       := @ptc_PutImageProc_8bpp;
-      mode.GetImage       := @ptc_GetImageProc_8bpp;
-      mode.GetScanLine    := @ptc_GetScanLineProc_8bpp;
-      mode.SetRGBPalette  := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette  := @ptc_GetRGBPaletteProc;
-      //mode.SetAllPalette := {$ifdef fpc}@{$endif}SetVGARGBAllPalette;
-      mode.HLine          := @ptc_HLineProc_8bpp;
-      mode.VLine          := @ptc_VLineProc_8bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_8bpp;
-      mode.SetVisualPage  := @ptc_SetVisualPage;
-      mode.SetActivePage  := @ptc_SetActivePage;
-    end;
-
-    procedure FillCommonVESA16(var mode: TModeInfo);
-    begin
-      mode.HardwarePages := 1;
-      mode.MaxColor := 16;
-      mode.PaletteSize := mode.MaxColor;
-      mode.DirectColor := FALSE;
-      mode.DirectPutPixel  := @ptc_DirectPixelProc_8bpp;
-      mode.PutPixel        := @ptc_PutPixelProc_8bpp;
-      mode.GetPixel        := @ptc_GetPixelProc_8bpp;
-      mode.PutImage        := @ptc_PutImageProc_8bpp;
-      mode.GetImage        := @ptc_GetImageProc_8bpp;
-      mode.GetScanLine     := @ptc_GetScanLineProc_8bpp;
-      mode.SetRGBPalette   := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette   := @ptc_GetRGBPaletteProc;
-      mode.HLine           := @ptc_HLineProc_8bpp;
-      mode.VLine           := @ptc_VLineProc_8bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_8bpp;
-      mode.SetVisualPage   := @ptc_SetVisualPage;
-      mode.SetActivePage   := @ptc_SetActivePage;
-    end;
-
-    procedure FillCommonVESA256(var mode: TModeInfo);
-    begin
-      mode.HardwarePages := 1;
-      mode.MaxColor := 256;
-      mode.PaletteSize := mode.MaxColor;
-      mode.DirectColor := FALSE;
-      mode.DirectPutPixel  := @ptc_DirectPixelProc_8bpp;
-      mode.PutPixel        := @ptc_PutPixelProc_8bpp;
-      mode.GetPixel        := @ptc_GetPixelProc_8bpp;
-      mode.PutImage        := @ptc_PutImageProc_8bpp;
-      mode.GetImage        := @ptc_GetImageProc_8bpp;
-      mode.GetScanLine     := @ptc_GetScanLineProc_8bpp;
-      mode.SetRGBPalette   := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette   := @ptc_GetRGBPaletteProc;
-      //mode.SetAllPalette := {$ifdef fpc}@{$endif}SetVGARGBAllPalette;
-      mode.HLine           := @ptc_HLineProc_8bpp;
-      mode.VLine           := @ptc_VLineProc_8bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_8bpp;
-      mode.SetVisualPage   := @ptc_SetVisualPage;
-      mode.SetActivePage   := @ptc_SetActivePage;
-    end;
-
-    procedure FillCommonVESA32kOr64k(var mode: TModeInfo);
-    begin
-      mode.HardwarePages := 1;
-      mode.DirectColor := TRUE;
-      mode.DirectPutPixel  := @ptc_DirectPixelProc_16bpp;
-      mode.PutPixel        := @ptc_PutPixelProc_16bpp;
-      mode.GetPixel        := @ptc_GetPixelProc_16bpp;
-      mode.PutImage        := @ptc_PutImageProc_16bpp;
-      mode.GetImage        := @ptc_GetImageProc_16bpp;
-      mode.GetScanLine     := @ptc_GetScanLineProc_16bpp;
-      mode.SetRGBPalette   := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette   := @ptc_GetRGBPaletteProc;
-      //mode.SetAllPalette := {$ifdef fpc}@{$endif}SetVGARGBAllPalette;
-      mode.HLine           := @ptc_HLineProc_16bpp;
-      mode.VLine           := @ptc_VLineProc_16bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_16bpp;
-      mode.SetVisualPage   := @ptc_SetVisualPage;
-      mode.SetActivePage   := @ptc_SetActivePage;
-    end;
-
-    procedure FillCommonVESA32k(var mode: TModeInfo);
-    begin
-      FillCommonVESA32kOr64k(mode);
-      mode.MaxColor := 32768;
-      mode.PaletteSize := mode.MaxColor;
-    end;
-    procedure FillCommonVESA64k(var mode: TModeInfo);
-    begin
-      FillCommonVESA32kOr64k(mode);
-      mode.MaxColor := 65536;
-      mode.PaletteSize := mode.MaxColor;
-    end;
-
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-    procedure FillCommonVESA32bpp(var mode: TModeInfo);
-    begin
-      mode.HardwarePages := 1;
-      mode.MaxColor := 16777216;
-      mode.PaletteSize := mode.MaxColor;
-      mode.DirectColor := TRUE;
-      mode.DirectPutPixel  := @ptc_DirectPixelProc_32bpp;
-      mode.PutPixel        := @ptc_PutPixelProc_32bpp;
-      mode.GetPixel        := @ptc_GetPixelProc_32bpp;
-      mode.PutImage        := @ptc_PutImageProc_32bpp;
-      mode.GetImage        := @ptc_GetImageProc_32bpp;
-      mode.GetScanLine     := @ptc_GetScanLineProc_32bpp;
-      mode.SetRGBPalette   := @ptc_SetRGBPaletteProc;
-      mode.GetRGBPalette   := @ptc_GetRGBPaletteProc;
-      //mode.SetAllPalette := {$ifdef fpc}@{$endif}SetVGARGBAllPalette;
-      mode.HLine           := @ptc_HLineProc_32bpp;
-      mode.VLine           := @ptc_VLineProc_32bpp;
-      mode.PatternLine     := @ptc_PatternLineProc_32bpp;
-      mode.SetVisualPage   := @ptc_SetVisualPage;
-      mode.SetActivePage   := @ptc_SetActivePage;
-    end;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
-
-    procedure FillCommonVESA320x200(var mode: TModeInfo);
-    begin
-      mode.DriverNumber := VESA;
-      mode.ModeName:='320 x 200 VESA';
-      mode.MaxX := 319;
-      mode.MaxY := 199;
-      mode.XAspect := 8333;
-      mode.YAspect := 10000;
-    end;
-    procedure FillCommonVESA640x480(var mode: TModeInfo);
-    begin
-      mode.DriverNumber := VESA;
-      mode.ModeName:='640 x 480 VESA';
-      mode.MaxX := 639;
-      mode.MaxY := 479;
-      mode.XAspect := 10000;
-      mode.YAspect := 10000;
-    end;
-    procedure FillCommonVESA800x600(var mode: TModeInfo);
-    begin
-      mode.DriverNumber := VESA;
-      mode.ModeName:='800 x 600 VESA';
-      mode.MaxX := 799;
-      mode.MaxY := 599;
-      mode.XAspect := 10000;
-      mode.YAspect := 10000;
-    end;
-    procedure FillCommonVESA1024x768(var mode: TModeInfo);
-    begin
-      mode.DriverNumber := VESA;
-      mode.ModeName:='1024 x 768 VESA';
-      mode.MaxX := 1023;
-      mode.MaxY := 767;
-      mode.XAspect := 10000;
-      mode.YAspect := 10000;
-    end;
-    procedure FillCommonVESA1280x1024(var mode: TModeInfo);
-    begin
-      mode.DriverNumber := VESA;
-      mode.ModeName:='1280 x 1024 VESA';
-      mode.MaxX := 1279;
-      mode.MaxY := 1023;
-      mode.XAspect := 10000;
-      mode.YAspect := 10000;
-    end;
-
    var
     graphmode:Tmodeinfo;
     I: Integer;
@@ -2796,83 +1508,333 @@ end;
      RestoreVideoState:=@ptc_restorevideostate;
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := CGA;
-     graphmode.ModeNumber := CGAC0;
-     graphmode.ModeName := '320 x 200 CGA C0';
-     graphmode.InitMode := @ptc_Init320x200x4cgaC0;
+     with graphmode do
+     begin
+       ModeNumber:=CGAC0;
+       DriverNumber := CGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C0';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC0;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := CGA;
-     graphmode.ModeNumber := CGAC1;
-     graphmode.ModeName := '320 x 200 CGA C1';
-     graphmode.InitMode := @ptc_Init320x200x4cgaC1;
+     with graphmode do
+     begin
+       ModeNumber:=CGAC1;
+       DriverNumber := CGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C1';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC1;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := CGA;
-     graphmode.ModeNumber := CGAC2;
-     graphmode.ModeName := '320 x 200 CGA C2';
-     graphmode.InitMode := @ptc_Init320x200x4cgaC2;
+     with graphmode do
+     begin
+       ModeNumber:=CGAC2;
+       DriverNumber := CGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C2';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC2;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := CGA;
-     graphmode.ModeNumber := CGAC3;
-     graphmode.ModeName := '320 x 200 CGA C3';
-     graphmode.InitMode := @ptc_Init320x200x4cgaC3;
+     with graphmode do
+     begin
+       ModeNumber:=CGAC3;
+       DriverNumber := CGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C3';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC3;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA640(graphmode);
-     graphmode.DriverNumber := CGA;
-     graphmode.ModeNumber := CGAHi;
-     graphmode.ModeName:='640 x 200 CGA';
-     graphmode.InitMode := @ptc_Init640x200x2;
+     with graphmode do
+     begin
+       ModeNumber:=CGAHi;
+       DriverNumber := CGA;
+       HardwarePages := 0;
+       ModeName:='640 x 200 CGA';
+       MaxColor := 2;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 639;
+       MaxY := 199;
+       InitMode       := @ptc_Init640x200x2;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA640;
+       GetBkColor     := @GetBkColorCGA640;
+
+       XAspect := 4167;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := MCGA;
-     graphmode.ModeNumber := MCGAC0;
-     graphmode.ModeName := '320 x 200 CGA C0'; { yes, it says 'CGA' even for the MCGA driver; this is TP7 compatible }
-     graphmode.InitMode := @ptc_Init320x200x4cgaC0;
+     with graphmode do
+     begin
+       ModeNumber:=MCGAC0;
+       DriverNumber := MCGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C0';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC0;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := MCGA;
-     graphmode.ModeNumber := MCGAC1;
-     graphmode.ModeName := '320 x 200 CGA C1'; { yes, it says 'CGA' even for the MCGA driver; this is TP7 compatible }
-     graphmode.InitMode := @ptc_Init320x200x4cgaC1;
+     with graphmode do
+     begin
+       ModeNumber:=MCGAC1;
+       DriverNumber := MCGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C1';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC1;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := MCGA;
-     graphmode.ModeNumber := MCGAC2;
-     graphmode.ModeName := '320 x 200 CGA C2'; { yes, it says 'CGA' even for the MCGA driver; this is TP7 compatible }
-     graphmode.InitMode := @ptc_Init320x200x4cgaC2;
+     with graphmode do
+     begin
+       ModeNumber:=MCGAC2;
+       DriverNumber := MCGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C2';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC2;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA320(graphmode);
-     graphmode.DriverNumber := MCGA;
-     graphmode.ModeNumber := MCGAC3;
-     graphmode.ModeName := '320 x 200 CGA C3'; { yes, it says 'CGA' even for the MCGA driver; this is TP7 compatible }
-     graphmode.InitMode := @ptc_Init320x200x4cgaC3;
+     with graphmode do
+     begin
+       ModeNumber:=MCGAC3;
+       DriverNumber := MCGA;
+       HardwarePages := 0;
+       ModeName:='320 x 200 CGA C3';
+       MaxColor := 4;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x4cgaC3;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA320;
+       GetBkColor     := @GetBkColorCGA320;
+
+       XAspect := 8333;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonCGA640(graphmode);
-     graphmode.DriverNumber := MCGA;
-     graphmode.ModeNumber := MCGAMed;
-     graphmode.ModeName:='640 x 200 CGA'; { yes, it says 'CGA' even for the MCGA driver; this is TP7 compatible }
-     graphmode.InitMode := @ptc_Init640x200x2;
+     with graphmode do
+     begin
+       ModeNumber:=MCGAMed;
+       DriverNumber := MCGA;
+       HardwarePages := 0;
+       ModeName:='640 x 200 CGA';
+       MaxColor := 2;
+       DirectColor := FALSE;
+       PaletteSize := 16;
+       MaxX := 639;
+       MaxY := 199;
+       InitMode       := @ptc_Init640x200x2;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       SetBkColor     := @SetBkColorCGA640;
+       GetBkColor     := @GetBkColorCGA640;
+
+       XAspect := 4167;
+       YAspect := 10000;
+     end;
      AddMode(graphmode);
 
      InitMode(graphmode);
@@ -2890,16 +1852,12 @@ end;
        InitMode       := @ptc_Init640x480x2;
        DirectPutPixel := @ptc_DirectPixelProc_8bpp;
        PutPixel       := @ptc_PutPixelProc_8bpp;
-       PutImage       := @ptc_PutImageProc_8bpp;
        GetPixel       := @ptc_GetPixelProc_8bpp;
-       GetScanLine    := @ptc_GetScanLineProc_8bpp;
-       GetImage       := @ptc_GetImageProc_8bpp;
        SetRGBPalette  := @ptc_SetRGBPaletteProc;
        GetRGBPalette  := @ptc_GetRGBPaletteProc;
 
        HLine          := @ptc_HLineProc_8bpp;
        VLine          := @ptc_VLineProc_8bpp;
-       PatternLine    := @ptc_PatternLineProc_8bpp;
 
        SetVisualPage  := @ptc_SetVisualPage;
        SetActivePage  := @ptc_SetActivePage;
@@ -2929,15 +1887,11 @@ end;
          InitMode       := @ptc_Init720x348x2;
          DirectPutPixel := @ptc_DirectPixelProc_8bpp;
          PutPixel       := @ptc_PutPixelProc_8bpp;
-         PutImage       := @ptc_PutImageProc_8bpp;
          GetPixel       := @ptc_GetPixelProc_8bpp;
-         GetScanLine    := @ptc_GetScanLineProc_8bpp;
-         GetImage       := @ptc_GetImageProc_8bpp;
          SetRGBPalette  := @ptc_SetRGBPaletteProc;
          GetRGBPalette  := @ptc_GetRGBPaletteProc;
          HLine          := @ptc_HLineProc_8bpp;
          VLine          := @ptc_VLineProc_8bpp;
-         PatternLine    := @ptc_PatternLineProc_8bpp;
          SetVisualPage  := @ptc_SetVisualPage;
          SetActivePage  := @ptc_SetActivePage;
          SetBkColor     := @SetBkColorHGC720;
@@ -2949,80 +1903,150 @@ end;
      end;
 
      InitMode(graphmode);
-     FillCommonEGAVGA16(graphmode);
      with graphmode do
      begin
        ModeNumber:=EGALo;
        DriverNumber := EGA;
+       HardwarePages := 3;
        ModeName:='640 x 200 EGA';
+       MaxColor := 16;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
        MaxX := 639;
        MaxY := 199;
-       HardwarePages := 3;
-       InitMode := @ptc_Init640x200x16;
+       InitMode       := @ptc_Init640x200x16;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
        XAspect := 4500;
        YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonEGAVGA16(graphmode);
      with graphmode do
      begin
        ModeNumber:=EGAHi;
        DriverNumber := EGA;
+       HardwarePages := 1;
        ModeName:='640 x 350 EGA';
+       MaxColor := 16;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
        MaxX := 639;
        MaxY := 349;
-       HardwarePages := 1;
-       InitMode := @ptc_Init640x350x16;
+       InitMode       := @ptc_Init640x350x16;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
        XAspect := 7750;
        YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonEGAVGA16(graphmode);
      with graphmode do
      begin
        ModeNumber:=VGALo;
        DriverNumber := VGA;
-       ModeName:='640 x 200 EGA'; { yes, it says 'EGA' even for the VGA driver; this is TP7 compatible }
+       HardwarePages := 3;
+       ModeName:='640 x 200 EGA';
+       MaxColor := 16;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
        MaxX := 639;
        MaxY := 199;
-       HardwarePages := 3;
-       InitMode := @ptc_Init640x200x16;
+       InitMode       := @ptc_Init640x200x16;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
        XAspect := 4500;
        YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonEGAVGA16(graphmode);
      with graphmode do
      begin
        ModeNumber:=VGAMed;
        DriverNumber := VGA;
-       ModeName:='640 x 350 EGA'; { yes, it says 'EGA' even for the VGA driver; this is TP7 compatible }
+       HardwarePages := 1;
+       ModeName:='640 x 350 EGA';
+       MaxColor := 16;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
        MaxX := 639;
        MaxY := 349;
-       HardwarePages := 1;
-       InitMode := @ptc_Init640x350x16;
+       InitMode       := @ptc_Init640x350x16;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
        XAspect := 7750;
        YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonEGAVGA16(graphmode);
      with graphmode do
      begin
        ModeNumber:=VGAHi;
        DriverNumber := VGA;
+       HardwarePages := 0;
        ModeName:='640 x 480 VGA';
+       MaxColor := 16;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
        MaxX := 639;
        MaxY := 479;
-       HardwarePages := 0;
-       InitMode := @ptc_Init640x480x16;
+       InitMode       := @ptc_Init640x480x16;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
        XAspect := 10000;
        YAspect := 10000;
      end;
@@ -3043,17 +2067,13 @@ end;
        InitMode       := @ptc_Init320x200x256;
        DirectPutPixel := @ptc_DirectPixelProc_8bpp;
        PutPixel       := @ptc_PutPixelProc_8bpp;
-       PutImage       := @ptc_PutImageProc_8bpp;
        GetPixel       := @ptc_GetPixelProc_8bpp;
-       GetScanLine    := @ptc_GetScanLineProc_8bpp;
-       GetImage       := @ptc_GetImageProc_8bpp;
        SetRGBPalette  := @ptc_SetRGBPaletteProc;
        GetRGBPalette  := @ptc_GetRGBPaletteProc;
        //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
 
        HLine          := @ptc_HLineProc_8bpp;
        VLine          := @ptc_VLineProc_8bpp;
-       PatternLine    := @ptc_PatternLineProc_8bpp;
 
        SetVisualPage  := @ptc_SetVisualPage;
        SetActivePage  := @ptc_SetActivePage;
@@ -3078,17 +2098,13 @@ end;
        InitMode       := @ptc_Init320x200x256;
        DirectPutPixel := @ptc_DirectPixelProc_8bpp;
        PutPixel       := @ptc_PutPixelProc_8bpp;
-       PutImage       := @ptc_PutImageProc_8bpp;
        GetPixel       := @ptc_GetPixelProc_8bpp;
-       GetScanLine    := @ptc_GetScanLineProc_8bpp;
-       GetImage       := @ptc_GetImageProc_8bpp;
        SetRGBPalette  := @ptc_SetRGBPaletteProc;
        GetRGBPalette  := @ptc_GetRGBPaletteProc;
        //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
 
        HLine          := @ptc_HLineProc_8bpp;
        VLine          := @ptc_VLineProc_8bpp;
-       PatternLine    := @ptc_PatternLineProc_8bpp;
 
        SetVisualPage  := @ptc_SetVisualPage;
        SetActivePage  := @ptc_SetActivePage;
@@ -3099,255 +2115,537 @@ end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonVESA256(graphmode);
      with graphmode do
      begin
        ModeNumber:=m640x400x256;
        DriverNumber := VESA;
+       HardwarePages := 1;
        ModeName:='640 x 400 VESA';
+       MaxColor := 256;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
        MaxX := 639;
        MaxY := 399;
-       InitMode := @ptc_Init640x400x256;
+       InitMode       := @ptc_Init640x400x256;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+       //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
        XAspect := 8333;
        YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonVESA256(graphmode);
-     FillCommonVESA640x480(graphmode);
      with graphmode do
      begin
        ModeNumber:=m640x480x256;
-       InitMode := @ptc_Init640x480x256;
+       DriverNumber := VESA;
+       HardwarePages := 1;
+       ModeName:='640 x 480 VESA';
+       MaxColor := 256;
+       DirectColor := FALSE;
+       PaletteSize := MaxColor;
+       MaxX := 639;
+       MaxY := 479;
+       InitMode       := @ptc_Init640x480x256;
+       DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+       PutPixel       := @ptc_PutPixelProc_8bpp;
+       GetPixel       := @ptc_GetPixelProc_8bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+       //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
+
+       HLine          := @ptc_HLineProc_8bpp;
+       VLine          := @ptc_VLineProc_8bpp;
+
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       XAspect := 10000;
+       YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonVESA32k(graphmode);
-     FillCommonVESA320x200(graphmode);
      with graphmode do
      begin
        ModeNumber := m320x200x32k;
-       InitMode := @ptc_Init320x200x32k;
+       DriverNumber := VESA;
+       HardwarePages := 1;
+       ModeName:='320 x 200 VESA';
+       MaxColor := 32768;
+       DirectColor := TRUE;
+       PaletteSize := MaxColor;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x32k;
+       DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+       PutPixel       := @ptc_PutPixelProc_16bpp;
+       GetPixel       := @ptc_GetPixelProc_16bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+       HLine          := @ptc_HLineProc_16bpp;
+       VLine          := @ptc_VLineProc_16bpp;
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       XAspect := 8333;
+       YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonVESA32k(graphmode);
-     FillCommonVESA640x480(graphmode);
      with graphmode do
      begin
        ModeNumber := m640x480x32k;
-       InitMode := @ptc_Init640x480x32k;
+       DriverNumber := VESA;
+       HardwarePages := 1;
+       ModeName:='640 x 480 VESA';
+       MaxColor := 32768;
+       DirectColor := TRUE;
+       PaletteSize := MaxColor;
+       MaxX := 639;
+       MaxY := 479;
+       InitMode       := @ptc_Init640x480x32k;
+       DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+       PutPixel       := @ptc_PutPixelProc_16bpp;
+       GetPixel       := @ptc_GetPixelProc_16bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+       HLine          := @ptc_HLineProc_16bpp;
+       VLine          := @ptc_VLineProc_16bpp;
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       XAspect := 10000;
+       YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonVESA64k(graphmode);
-     FillCommonVESA320x200(graphmode);
      with graphmode do
      begin
        ModeNumber := m320x200x64k;
-       InitMode := @ptc_Init320x200x64k;
+       DriverNumber := VESA;
+       HardwarePages := 1;
+       ModeName:='320 x 200 VESA';
+       MaxColor := 65536;
+       DirectColor := TRUE;
+       PaletteSize := MaxColor;
+       MaxX := 319;
+       MaxY := 199;
+       InitMode       := @ptc_Init320x200x64k;
+       DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+       PutPixel       := @ptc_PutPixelProc_16bpp;
+       GetPixel       := @ptc_GetPixelProc_16bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+       HLine          := @ptc_HLineProc_16bpp;
+       VLine          := @ptc_VLineProc_16bpp;
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
+
+       XAspect := 8333;
+       YAspect := 10000;
      end;
      AddMode(graphmode);
 
      InitMode(graphmode);
-     FillCommonVESA64k(graphmode);
-     FillCommonVESA640x480(graphmode);
      with graphmode do
      begin
        ModeNumber := m640x480x64k;
-       InitMode := @ptc_Init640x480x64k;
-     end;
-     AddMode(graphmode);
+       DriverNumber := VESA;
+       HardwarePages := 1;
+       ModeName:='640 x 480 VESA';
+       MaxColor := 65536;
+       DirectColor := TRUE;
+       PaletteSize := MaxColor;
+       MaxX := 639;
+       MaxY := 479;
+       InitMode       := @ptc_Init640x480x64k;
+       DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+       PutPixel       := @ptc_PutPixelProc_16bpp;
+       GetPixel       := @ptc_GetPixelProc_16bpp;
+       SetRGBPalette  := @ptc_SetRGBPaletteProc;
+       GetRGBPalette  := @ptc_GetRGBPaletteProc;
+       HLine          := @ptc_HLineProc_16bpp;
+       VLine          := @ptc_VLineProc_16bpp;
+       SetVisualPage  := @ptc_SetVisualPage;
+       SetActivePage  := @ptc_SetActivePage;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-     InitMode(graphmode);
-     FillCommonVESA32bpp(graphmode);
-     FillCommonVESA320x200(graphmode);
-     with graphmode do
-     begin
-       ModeNumber := m320x200x16m;
-       InitMode := @ptc_Init320x200x32bpp;
+       XAspect := 10000;
+       YAspect := 10000;
      end;
      AddMode(graphmode);
-
-     InitMode(graphmode);
-     FillCommonVESA32bpp(graphmode);
-     FillCommonVESA640x480(graphmode);
-     with graphmode do
-     begin
-       ModeNumber := m640x480x16m;
-       InitMode := @ptc_Init640x480x32bpp;
-     end;
-     AddMode(graphmode);
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
 
      if ContainsAtLeast(800, 600) then
      begin
        InitMode(graphmode);
-       FillCommonVESA16(graphmode);
-       FillCommonVESA800x600(graphmode);
        with graphmode do
        begin
          ModeNumber := m800x600x16;
-         InitMode := @ptc_Init800x600x16;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='800 x 600 VESA';
+         MaxColor := 16;
+         DirectColor := FALSE;
+         PaletteSize := MaxColor;
+         MaxX := 799;
+         MaxY := 599;
+         InitMode       := @ptc_Init800x600x16;
+         DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+         PutPixel       := @ptc_PutPixelProc_8bpp;
+         GetPixel       := @ptc_GetPixelProc_8bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+         HLine          := @ptc_HLineProc_8bpp;
+         VLine          := @ptc_VLineProc_8bpp;
+
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA256(graphmode);
-       FillCommonVESA800x600(graphmode);
        with graphmode do
        begin
          ModeNumber:=m800x600x256;
-         InitMode := @ptc_Init800x600x256;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='800 x 600 VESA';
+         MaxColor := 256;
+         DirectColor := FALSE;
+         PaletteSize := MaxColor;
+         MaxX := 799;
+         MaxY := 599;
+         InitMode       := @ptc_Init800x600x256;
+         DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+         PutPixel       := @ptc_PutPixelProc_8bpp;
+         GetPixel       := @ptc_GetPixelProc_8bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
+
+         HLine          := @ptc_HLineProc_8bpp;
+         VLine          := @ptc_VLineProc_8bpp;
+
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA32k(graphmode);
-       FillCommonVESA800x600(graphmode);
        with graphmode do
        begin
          ModeNumber := m800x600x32k;
-         InitMode := @ptc_Init800x600x32k;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='800 x 600 VESA';
+         MaxColor := 32768;
+         DirectColor := TRUE;
+         PaletteSize := MaxColor;
+         MaxX := 799;
+         MaxY := 599;
+         InitMode       := @ptc_Init800x600x32k;
+         DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+         PutPixel       := @ptc_PutPixelProc_16bpp;
+         GetPixel       := @ptc_GetPixelProc_16bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         HLine          := @ptc_HLineProc_16bpp;
+         VLine          := @ptc_VLineProc_16bpp;
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA64k(graphmode);
-       FillCommonVESA800x600(graphmode);
        with graphmode do
        begin
          ModeNumber := m800x600x64k;
-         InitMode := @ptc_Init800x600x64k;
-       end;
-       AddMode(graphmode);
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='800 x 600 VESA';
+         MaxColor := 65536;
+         DirectColor := TRUE;
+         PaletteSize := MaxColor;
+         MaxX := 799;
+         MaxY := 599;
+         InitMode       := @ptc_Init800x600x64k;
+         DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+         PutPixel       := @ptc_PutPixelProc_16bpp;
+         GetPixel       := @ptc_GetPixelProc_16bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         HLine          := @ptc_HLineProc_16bpp;
+         VLine          := @ptc_VLineProc_16bpp;
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-       InitMode(graphmode);
-       FillCommonVESA32bpp(graphmode);
-       FillCommonVESA800x600(graphmode);
-       with graphmode do
-       begin
-         ModeNumber := m800x600x16m;
-         InitMode := @ptc_Init800x600x32bpp;
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
      end;
 
      if ContainsAtLeast(1024, 768) then
      begin
        InitMode(graphmode);
-       FillCommonVESA16(graphmode);
-       FillCommonVESA1024x768(graphmode);
        with graphmode do
        begin
          ModeNumber := m1024x768x16;
-         InitMode := @ptc_Init1024x768x16;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1024 x 768 VESA';
+         MaxColor := 16;
+         DirectColor := FALSE;
+         PaletteSize := MaxColor;
+         MaxX := 1023;
+         MaxY := 767;
+         InitMode       := @ptc_Init1024x768x16;
+         DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+         PutPixel       := @ptc_PutPixelProc_8bpp;
+         GetPixel       := @ptc_GetPixelProc_8bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+         HLine          := @ptc_HLineProc_8bpp;
+         VLine          := @ptc_VLineProc_8bpp;
+
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA256(graphmode);
-       FillCommonVESA1024x768(graphmode);
        with graphmode do
        begin
          ModeNumber:=m1024x768x256;
-         InitMode := @ptc_Init1024x768x256;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1024 x 768 VESA';
+         MaxColor := 256;
+         DirectColor := FALSE;
+         PaletteSize := MaxColor;
+         MaxX := 1023;
+         MaxY := 767;
+         InitMode       := @ptc_Init1024x768x256;
+         DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+         PutPixel       := @ptc_PutPixelProc_8bpp;
+         GetPixel       := @ptc_GetPixelProc_8bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
+
+         HLine          := @ptc_HLineProc_8bpp;
+         VLine          := @ptc_VLineProc_8bpp;
+
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA32k(graphmode);
-       FillCommonVESA1024x768(graphmode);
        with graphmode do
        begin
          ModeNumber := m1024x768x32k;
-         InitMode := @ptc_Init1024x768x32k;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1024 x 768 VESA';
+         MaxColor := 32768;
+         DirectColor := TRUE;
+         PaletteSize := MaxColor;
+         MaxX := 1023;
+         MaxY := 767;
+         InitMode       := @ptc_Init1024x768x32k;
+         DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+         PutPixel       := @ptc_PutPixelProc_16bpp;
+         GetPixel       := @ptc_GetPixelProc_16bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         HLine          := @ptc_HLineProc_16bpp;
+         VLine          := @ptc_VLineProc_16bpp;
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA64k(graphmode);
-       FillCommonVESA1024x768(graphmode);
        with graphmode do
        begin
          ModeNumber := m1024x768x64k;
-         InitMode := @ptc_Init1024x768x64k;
-       end;
-       AddMode(graphmode);
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1024 x 768 VESA';
+         MaxColor := 65536;
+         DirectColor := TRUE;
+         PaletteSize := MaxColor;
+         MaxX := 1023;
+         MaxY := 767;
+         InitMode       := @ptc_Init1024x768x64k;
+         DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+         PutPixel       := @ptc_PutPixelProc_16bpp;
+         GetPixel       := @ptc_GetPixelProc_16bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         HLine          := @ptc_HLineProc_16bpp;
+         VLine          := @ptc_VLineProc_16bpp;
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-       InitMode(graphmode);
-       FillCommonVESA32bpp(graphmode);
-       FillCommonVESA1024x768(graphmode);
-       with graphmode do
-       begin
-         ModeNumber := m1024x768x16m;
-         InitMode := @ptc_Init1024x768x32bpp;
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
      end;
 
      if ContainsAtLeast(1280, 1024) then
      begin
        InitMode(graphmode);
-       FillCommonVESA16(graphmode);
-       FillCommonVESA1280x1024(graphmode);
        with graphmode do
        begin
          ModeNumber := m1280x1024x16;
-         InitMode := @ptc_Init1280x1024x16;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1280 x 1024 VESA';
+         MaxColor := 16;
+         DirectColor := FALSE;
+         PaletteSize := MaxColor;
+         MaxX := 1279;
+         MaxY := 1023;
+         InitMode       := @ptc_Init1280x1024x16;
+         DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+         PutPixel       := @ptc_PutPixelProc_8bpp;
+         GetPixel       := @ptc_GetPixelProc_8bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+         HLine          := @ptc_HLineProc_8bpp;
+         VLine          := @ptc_VLineProc_8bpp;
+
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA256(graphmode);
-       FillCommonVESA1280x1024(graphmode);
        with graphmode do
        begin
          ModeNumber:=m1280x1024x256;
-         InitMode := @ptc_Init1280x1024x256;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1280 x 1024 VESA';
+         MaxColor := 256;
+         DirectColor := FALSE;
+         PaletteSize := MaxColor;
+         MaxX := 1279;
+         MaxY := 1023;
+         InitMode       := @ptc_Init1280x1024x256;
+         DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+         PutPixel       := @ptc_PutPixelProc_8bpp;
+         GetPixel       := @ptc_GetPixelProc_8bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
+
+         HLine          := @ptc_HLineProc_8bpp;
+         VLine          := @ptc_VLineProc_8bpp;
+
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA32k(graphmode);
-       FillCommonVESA1280x1024(graphmode);
        with graphmode do
        begin
          ModeNumber := m1280x1024x32k;
-         InitMode := @ptc_Init1280x1024x32k;
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1280 x 1024 VESA';
+         MaxColor := 32768;
+         DirectColor := TRUE;
+         PaletteSize := MaxColor;
+         MaxX := 1279;
+         MaxY := 1023;
+         InitMode       := @ptc_Init1280x1024x32k;
+         DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+         PutPixel       := @ptc_PutPixelProc_16bpp;
+         GetPixel       := @ptc_GetPixelProc_16bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         HLine          := @ptc_HLineProc_16bpp;
+         VLine          := @ptc_VLineProc_16bpp;
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
+
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
 
        InitMode(graphmode);
-       FillCommonVESA64k(graphmode);
-       FillCommonVESA1280x1024(graphmode);
        with graphmode do
        begin
          ModeNumber := m1280x1024x64k;
-         InitMode := @ptc_Init1280x1024x64k;
-       end;
-       AddMode(graphmode);
+         DriverNumber := VESA;
+         HardwarePages := 1;
+         ModeName:='1280 x 1024 VESA';
+         MaxColor := 65536;
+         DirectColor := TRUE;
+         PaletteSize := MaxColor;
+         MaxX := 1279;
+         MaxY := 1023;
+         InitMode       := @ptc_Init1280x1024x64k;
+         DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+         PutPixel       := @ptc_PutPixelProc_16bpp;
+         GetPixel       := @ptc_GetPixelProc_16bpp;
+         SetRGBPalette  := @ptc_SetRGBPaletteProc;
+         GetRGBPalette  := @ptc_GetRGBPaletteProc;
+         HLine          := @ptc_HLineProc_16bpp;
+         VLine          := @ptc_VLineProc_16bpp;
+         SetVisualPage  := @ptc_SetVisualPage;
+         SetActivePage  := @ptc_SetActivePage;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-       InitMode(graphmode);
-       FillCommonVESA32bpp(graphmode);
-       FillCommonVESA1280x1024(graphmode);
-       with graphmode do
-       begin
-         ModeNumber := m1280x1024x16m;
-         InitMode := @ptc_Init1280x1024x32bpp;
+         XAspect := 10000;
+         YAspect := 10000;
        end;
        AddMode(graphmode);
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
      end;
 
      { finally, add all the non-standard (i.e. not VESA or classic PC) modes }
@@ -3358,15 +2656,30 @@ end;
             ((I = Low(PTCModeList)) or ((Width <> PTCModeList[I-1].Width) or (Height <> PTCModeList[I-1].Height))) then
          begin
            InitMode(graphmode);
-           FillCommonVESA16(graphmode);
            with graphmode do
            begin
              ModeNumber := NextNonStandardModeNumber;
              DriverNumber := VESA;
+             HardwarePages := 1;
              WriteStr(ModeName, Width, ' x ', Height, ' VESA');
+             MaxColor := 16;
+             DirectColor := FALSE;
+             PaletteSize := MaxColor;
              MaxX := Width - 1;
              MaxY := Height - 1;
-             InitMode := @ptc_InitNonStandard16;
+             InitMode       := @ptc_InitNonStandard16;
+             DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+             PutPixel       := @ptc_PutPixelProc_8bpp;
+             GetPixel       := @ptc_GetPixelProc_8bpp;
+             SetRGBPalette  := @ptc_SetRGBPaletteProc;
+             GetRGBPalette  := @ptc_GetRGBPaletteProc;
+
+             HLine          := @ptc_HLineProc_8bpp;
+             VLine          := @ptc_VLineProc_8bpp;
+
+             SetVisualPage  := @ptc_SetVisualPage;
+             SetActivePage  := @ptc_SetActivePage;
+
              XAspect := 10000;
              YAspect := 10000;
            end;
@@ -3376,15 +2689,31 @@ end;
              break;
 
            InitMode(graphmode);
-           FillCommonVESA256(graphmode);
            with graphmode do
            begin
              ModeNumber := NextNonStandardModeNumber;
              DriverNumber := VESA;
+             HardwarePages := 1;
              WriteStr(ModeName, Width, ' x ', Height, ' VESA');
+             MaxColor := 256;
+             DirectColor := FALSE;
+             PaletteSize := MaxColor;
              MaxX := Width - 1;
              MaxY := Height - 1;
-             InitMode := @ptc_InitNonStandard256;
+             InitMode       := @ptc_InitNonStandard256;
+             DirectPutPixel := @ptc_DirectPixelProc_8bpp;
+             PutPixel       := @ptc_PutPixelProc_8bpp;
+             GetPixel       := @ptc_GetPixelProc_8bpp;
+             SetRGBPalette  := @ptc_SetRGBPaletteProc;
+             GetRGBPalette  := @ptc_GetRGBPaletteProc;
+             //SetAllPalette  := @ptc_SetRGBAllPaletteProc;
+
+             HLine          := @ptc_HLineProc_8bpp;
+             VLine          := @ptc_VLineProc_8bpp;
+
+             SetVisualPage  := @ptc_SetVisualPage;
+             SetActivePage  := @ptc_SetActivePage;
+
              XAspect := 10000;
              YAspect := 10000;
            end;
@@ -3394,15 +2723,28 @@ end;
              break;
 
            InitMode(graphmode);
-           FillCommonVESA32k(graphmode);
            with graphmode do
            begin
              ModeNumber := NextNonStandardModeNumber;
              DriverNumber := VESA;
+             HardwarePages := 1;
              WriteStr(ModeName, Width, ' x ', Height, ' VESA');
+             MaxColor := 32768;
+             DirectColor := TRUE;
+             PaletteSize := MaxColor;
              MaxX := Width - 1;
              MaxY := Height - 1;
-             InitMode := @ptc_InitNonStandard32k;
+             InitMode       := @ptc_InitNonStandard32k;
+             DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+             PutPixel       := @ptc_PutPixelProc_16bpp;
+             GetPixel       := @ptc_GetPixelProc_16bpp;
+             SetRGBPalette  := @ptc_SetRGBPaletteProc;
+             GetRGBPalette  := @ptc_GetRGBPaletteProc;
+             HLine          := @ptc_HLineProc_16bpp;
+             VLine          := @ptc_VLineProc_16bpp;
+             SetVisualPage  := @ptc_SetVisualPage;
+             SetActivePage  := @ptc_SetActivePage;
+
              XAspect := 10000;
              YAspect := 10000;
            end;
@@ -3412,34 +2754,28 @@ end;
              break;
 
            InitMode(graphmode);
-           FillCommonVESA64k(graphmode);
            with graphmode do
            begin
              ModeNumber := NextNonStandardModeNumber;
              DriverNumber := VESA;
+             HardwarePages := 1;
              WriteStr(ModeName, Width, ' x ', Height, ' VESA');
+             MaxColor := 65536;
+             DirectColor := TRUE;
+             PaletteSize := MaxColor;
              MaxX := Width - 1;
              MaxY := Height - 1;
-             InitMode := @ptc_InitNonStandard64k;
-             XAspect := 10000;
-             YAspect := 10000;
-           end;
-           AddMode(graphmode);
-           Inc(NextNonStandardModeNumber);
-           if NextNonStandardModeNumber > NonStandardModeNumberMaxLimit then
-             break;
+             InitMode       := @ptc_InitNonStandard64k;
+             DirectPutPixel := @ptc_DirectPixelProc_16bpp;
+             PutPixel       := @ptc_PutPixelProc_16bpp;
+             GetPixel       := @ptc_GetPixelProc_16bpp;
+             SetRGBPalette  := @ptc_SetRGBPaletteProc;
+             GetRGBPalette  := @ptc_GetRGBPaletteProc;
+             HLine          := @ptc_HLineProc_16bpp;
+             VLine          := @ptc_VLineProc_16bpp;
+             SetVisualPage  := @ptc_SetVisualPage;
+             SetActivePage  := @ptc_SetActivePage;
 
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-           InitMode(graphmode);
-           FillCommonVESA32bpp(graphmode);
-           with graphmode do
-           begin
-             ModeNumber := NextNonStandardModeNumber;
-             DriverNumber := VESA;
-             WriteStr(ModeName, Width, ' x ', Height, ' VESA');
-             MaxX := Width - 1;
-             MaxY := Height - 1;
-             InitMode := @ptc_InitNonStandard32bpp;
              XAspect := 10000;
              YAspect := 10000;
            end;
@@ -3447,7 +2783,6 @@ end;
            Inc(NextNonStandardModeNumber);
            if NextNonStandardModeNumber > NonStandardModeNumberMaxLimit then
              break;
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
          end;
   end;
 
@@ -3456,9 +2791,6 @@ initialization
   PTCFormat8 := TPTCFormatFactory.CreateNew(8);
   PTCFormat15 := TPTCFormatFactory.CreateNew(16, $7C00, $03E0, $001F);
   PTCFormat16 := TPTCFormatFactory.CreateNew(16, $F800, $07E0, $001F);
-{$ifdef FPC_GRAPH_SUPPORTS_TRUECOLOR}
-  PTCFormat32 := TPTCFormatFactory.CreateNew(32, $00FF0000, $0000FF00, $000000FF);
-{$endif FPC_GRAPH_SUPPORTS_TRUECOLOR}
   PTCWrapperObject := TPTCWrapperThread.Create;
   InitializeGraph;
 finalization

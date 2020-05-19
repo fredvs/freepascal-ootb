@@ -137,6 +137,7 @@ function TWavWriter.WriteBuf(var Buffer; BufferSize: Integer): Integer;
 var
   sz: Integer;
 begin
+  WriteLn('[TWavWriter.WriteBuf] BufferSize = ', BufferSize);
   Result := 0;
   with fStream do begin
     sz := Write(Buffer, BufferSize);

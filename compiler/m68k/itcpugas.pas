@@ -61,8 +61,8 @@ interface
          { mc64040 instructions }
          'move16',
          { coldfire v4 instructions }
-         'mov3q','mvz','mvs','sats','byterev','ff1','remu','rems',
-         { fpu processor instructions - directly supported }
+         'mov3q','mvz','mvs','sats','byterev','ff1',
+         { fpu processor instructions - directly supported only. }
          { ieee aware and misc. condition codes not supported   }
          'fabs','fadd',
          'fbeq','fbne','fbngt','fbgt','fbge','fbnge',
@@ -76,9 +76,6 @@ interface
          'fsflmul','ftst',
          'ftrapeq','ftrapne','ftrapgt','ftrapngt','ftrapge','ftrapnge',
          'ftraplt','ftrapnlt','ftraple','ftrapgl','ftrapngl','ftrapgle','ftrapngle',
-         'fint','fintrz',
-         { fpu instructions - indirectly supported }
-         'fsin','fcos',
          { protected instructions }
          'cprestore','cpsave',
          { fpu unit protected instructions                    }
@@ -86,7 +83,7 @@ interface
          { (this may include 68040 mmu instructions)          }
          'frestore','fsave','pflush','pflusha','pload','pmove','ptest',
          { useful for assembly language output }
-         'label','db','s','b','fs','fb');
+         'label','db','s','b','fb');
 
     function gas_regnum_search(const s:string):Tregister;
     function gas_regname(r:Tregister):string;

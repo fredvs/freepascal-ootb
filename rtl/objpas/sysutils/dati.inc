@@ -167,7 +167,7 @@ begin
     if Date>MaxDateTime then
       Date:=MaxDateTime;
 //       Raise EConvertError.CreateFmt('%f is not a valid TDatetime encoding, maximum value is %f.',[Date,MaxDateTime]);
-    j := pred((longint(Trunc(System.Int(Date))) + 693900) SHL 2);
+    j := pred((Trunc(System.Int(Date)) + 693900) SHL 2);
     ly:= j DIV 146097;
     j:= j - 146097 * cardinal(ly);
     ld := j SHR 2;
@@ -337,7 +337,7 @@ begin
   DateTimeToString(Result, FormatSettings.LongTimeFormat, Time, FormatSettings);
 end;
 
-{   DateTimeToStr returns a string representation of DateTime using ShortDateFormat and LongTimeFormat   }
+{   DateTimeToStr returns a string representation of DateTime using LongDateTimeFormat   }
 
 Const
   DateTimeToStrFormat : Array[Boolean] of string = ('c','f');
@@ -368,11 +368,11 @@ end;
 
 var
    df:string;
-   d,m,y,ly:integer;
+   d,m,y,ly:word;
    n,i:longint;
    c:word;
    dp,mp,yp,which : Byte;
-   s1:string;
+   s1:string[4];
    values:array[0..3] of longint;
    LocalTime:tsystemtime;
    YearMoreThenTwoDigits : boolean;
@@ -446,7 +446,6 @@ begin
          // Check if the year has more then two digits (if n=yp, then we are evaluating the year.)
         if (n=yp) and (length(s1)>2) then YearMoreThenTwoDigits := True;
         val(s1, values[n], c);
-//        Writeln(s1,'->',values[n]);
         if c<>0 then
           begin
             FixErrorMsg(SInvalidDateFormat,s);
@@ -468,12 +467,6 @@ begin
   // Fill in values.
   getLocalTime(LocalTime);
   ly := LocalTime.Year;
-  for I:=1 to 3 do
-    if values[i]>high(Word) then
-      begin
-      errormsg:='Invalid date';
-      exit;
-      end;
   If N=3 then
    begin
      y:=values[yp];
@@ -507,7 +500,6 @@ begin
     if (defs.TwoDigitYearCenturyWindow > 0) and (Y < ly) then
       Inc(Y, 100);
     end;
-
   if not TryEncodeDate(y, m, d, result) then
     errormsg:='Invalid date';
 end;
@@ -796,7 +788,6 @@ function SplitDateTimeStr(DateTimeStr: AnsiString; const FS: TFormatSettings; ou
 }
 const
   WhiteSpace = [#9,#10,#13,#32];
-  Space : String = #32; // String, to avoid error 'Cannot decide what overload to call'
 
 var
   p: Integer;
@@ -819,7 +810,7 @@ begin
     end;
   p:=1;
   //find separator
-  if Pos(Space,FS.DateSeparator)=0 then
+  if (FS.DateSeparator<>#32) then
     begin  
     while (p<Length(DateTimeStr)) and (not (DateTimeStr[p+1] in WhiteSpace)) do 
       Inc(p);
@@ -912,11 +903,13 @@ var
   ResultLen: integer;
   ResultBuffer: array[0..255] of char;
   ResultCurrent: pchar;
-{$if defined(win32) or defined(win64)}
+{$IFDEF MSWindows}
   isEnable_E_Format : Boolean;
   isEnable_G_Format : Boolean;
   eastasiainited : boolean;
+{$ENDIF MSWindows}
 
+{$IFDEF MSWindows}
   procedure InitEastAsia;
   var     ALCID : LCID;
          PriLangID , SubLangID : Word;
@@ -947,7 +940,7 @@ var
                   );
     eastasiainited :=true;
   end;
-{$endif win32 or win64}
+{$ENDIF MSWindows}
 
   procedure StoreStr(Str: PChar; Len: Integer);
   begin
@@ -989,6 +982,7 @@ var
 
 var
   Year, Month, Day, DayOfWeek, Hour, Minute, Second, MilliSecond: word;
+  DT : TDateTime;
 
   procedure StoreFormat(const FormatStr: string; Nesting: Integer; TimeFlag: Boolean);
   var
@@ -1080,7 +1074,7 @@ var
         ':': StoreStr(@FormatSettings.TimeSeparator, 1);
 	'[': if (fdoInterval in Options) then isInterval := true else StoreStr(FormatCurrent, 1);
 	']': if (fdoInterval in Options) then isInterval := false else StoreStr(FormatCurrent, 1);
-        ' ', 'C', 'D', 'H', 'M', 'N', 'S', 'T', 'Y', 'Z', 'F' {$IFDEF MSWindows}, 'G', 'E'{$ENDIF MSWindows} :
+        ' ', 'C', 'D', 'H', 'M', 'N', 'S', 'T', 'Y', 'Z', 'F' :
         begin
           while (P < FormatEnd) and (UpCase(P^) = Token) do
             Inc(P);
@@ -1180,11 +1174,11 @@ var
                    StoreString(' ');
                    StoreFormat(FormatSettings.LongTimeFormat, Nesting+1, True);
                  end;
-{$if defined(win32) or defined(win64)}
+{$IFDEF MSWindows}
             'E':
                begin
                  if not Eastasiainited then InitEastAsia;
-                 if Not(isEnable_E_Format) then StoreStr(FormatCurrent, 1)
+                 if Not(isEnable_E_Format) then StoreStr(@FormatCurrent^, 1)
                   else
                    begin
                      while (P < FormatEnd) and (UpCase(P^) = Token) do
@@ -1198,7 +1192,7 @@ var
              'G':
                begin
                  if not Eastasiainited then InitEastAsia;
-                 if Not(isEnable_G_Format) then StoreStr(FormatCurrent, 1)
+                 if Not(isEnable_G_Format) then StoreStr(@FormatCurrent^, 1)
                   else
                    begin
                      while (P < FormatEnd) and (UpCase(P^) = Token) do
@@ -1209,7 +1203,7 @@ var
 		 prevlasttoken := lastformattoken;
                  lastformattoken:=token;
                end;
-{$endif win32 or win64}
+{$ENDIF MSWindows}
           end;
 	  prevlasttoken := lastformattoken;
           lastformattoken := token;
@@ -1222,9 +1216,9 @@ var
   end;
 
 begin
-{$if defined(win32) or defined(win64)}
+{$ifdef MSWindows}
   eastasiainited:=false;
-{$endif win32 or win64}
+{$endif MSWindows}
   DecodeDateFully(DateTime, Year, Month, Day, DayOfWeek);
   DecodeTime(DateTime, Hour, Minute, Second, MilliSecond);
   ResultLen := 0;
@@ -1440,12 +1434,7 @@ end;
 
 function StrToDateTimeDef(const S: ShortString; const Defvalue : TDateTime): TDateTime;
 begin
-  Result:=StrToDateTimeDef(S,DefValue,DefaultFormatSettings);
-end;
-
-function StrToDateTimeDef(const S: AnsiString; const Defvalue : TDateTime; const FormatSettings: TFormatSettings): TDateTime;
-begin
-  if not TryStrToDateTime(s,Result,FormatSettings) Then
+  if not TryStrToDateTime(s,Result) Then
     result:=defvalue;
 end;
 

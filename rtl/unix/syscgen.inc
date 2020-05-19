@@ -6,6 +6,7 @@ Function fpgetenv(name:pchar):pchar;[public, alias : 'FPC_SYSC_FPGETENVPCHAR'];
 
 var
   p     : ppchar;
+  found : boolean;
   np,cp : pchar;
   len,i : longint;
 Begin

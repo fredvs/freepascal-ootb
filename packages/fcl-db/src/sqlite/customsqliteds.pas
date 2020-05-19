@@ -1,4 +1,4 @@
-unit CustomSQLiteDS;
+unit CustomSqliteDS;
 
 {
   This is TCustomSqliteDataset, a TDataset descendant class for use with fpc compiler
@@ -219,7 +219,7 @@ type
     procedure SetFieldData(Field: TField; Buffer: Pointer); override;
     procedure SetFieldData(Field: TField; Buffer: Pointer; NativeFormat: Boolean); override;
     // Additional procedures
-    procedure ApplyUpdates;
+    function ApplyUpdates: Boolean;
     procedure ClearUpdates(RecordStates: TRecordStateSet = [rsAdded, rsDeleted, rsUpdated]);
     function CreateTable: Boolean;
     function CreateTable(const ATableName: String): Boolean;
@@ -1634,21 +1634,28 @@ begin
   ExecSQL(FSQL);
 end;
 
-procedure TCustomSqliteDataset.ApplyUpdates;
+function TCustomSqliteDataset.ApplyUpdates: Boolean;
 var
   iFields, iItems, StatementsCounter: Integer;
-  SQLTemp, WhereKeyNameEqual, SQLLine, TemplateStr, ErrorMessage: String;
+  SQLTemp, WhereKeyNameEqual, SQLLine, TemplateStr: String;
   TempItem: PDataRecord;
 begin
+  Result := False;
   CheckBrowseMode;
   if not UpdatesPending then
+  begin
+    Result := True;
     Exit;
+  end;
   //A PrimaryKey is only necessary to update or delete records
   if FPrimaryKeyNo <> -1 then
   begin
     WhereKeyNameEqual := ' WHERE ' + FieldDefs[FPrimaryKeyNo].Name + ' = ';
-  end else if (FUpdatedItems.Count + FDeletedItems.Count) > 0 then
-    DatabaseError('No PrimaryKey field specified', Self);
+    Result := True;
+  end else if (FUpdatedItems.Count + FDeletedItems.Count) = 0 then
+    Result := True;
+  if not Result then
+    Exit;
 
   FReturnCode := SQLITE_OK;
   StatementsCounter := 0;
@@ -1680,9 +1687,8 @@ begin
         SQLTemp := 'BEGIN;';
         if FReturnCode <> SQLITE_OK then
         begin
-          ErrorMessage := ReturnString;
           SqliteExec('ROLLBACK;', nil, nil);
-          DatabaseError(ErrorMessage, Self);
+          Break;
         end;
       end;
     end;
@@ -1715,9 +1721,8 @@ begin
         SQLTemp := 'BEGIN;';
         if FReturnCode <> SQLITE_OK then
         begin
-          ErrorMessage := ReturnString;
           SqliteExec('ROLLBACK;', nil, nil);
-          DatabaseError(ErrorMessage, Self);
+          Break;
         end;
       end;
     end;
@@ -1748,9 +1753,8 @@ begin
         SQLTemp := 'BEGIN;';
         if FReturnCode <> SQLITE_OK then
         begin
-          ErrorMessage := ReturnString;
           SqliteExec('ROLLBACK;', nil, nil);
-          DatabaseError(ErrorMessage, Self);
+          Break;
         end;
       end;
     end;
@@ -1763,12 +1767,12 @@ begin
     SQLTemp := SQLTemp + 'COMMIT;';
     FReturnCode := SqliteExec(PAnsiChar(SQLTemp), nil, nil);
     if FReturnCode <> SQLITE_OK then
-    begin
-      ErrorMessage := ReturnString;
       SqliteExec('ROLLBACK;', nil, nil);
-      DatabaseError(ErrorMessage, Self);
-    end;
   end;
+  Result := FReturnCode = SQLITE_OK;
+  {$ifdef DEBUG_SQLITEDS}
+  WriteLn('  Result: ', Result);
+  {$endif}   
 end;
 
 procedure TCustomSqliteDataset.ClearUpdates(RecordStates: TRecordStateSet);

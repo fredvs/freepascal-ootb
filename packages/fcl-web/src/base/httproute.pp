@@ -37,8 +37,6 @@ Type
   // Some common HTTP methods.
 
   TRouteMethod = (rmUnknown,rmAll,rmGet,rmPost,rmPut,rmDelete,rmOptions,rmHead, rmTrace);
-  TRouteOption = (roCaseSensitive,roEmptyMatchesAll);
-  TRouteOptions = Set of TRouteOption;
 
   { THTTPRoute }
 
@@ -53,13 +51,11 @@ Type
   Public
     Destructor Destroy; override;
     Procedure HandleRequest(ARequest : TRequest; AResponse : TResponse);
-    Function Matches(Const APattern : String; AMethod : TRouteMethod; Options : TRouteOptions) : Boolean;
-    Function MatchPattern(Const Path : String; L : TStrings; Options : TRouteOptions) : Boolean;
+    Function Matches(Const APattern : String; AMethod : TRouteMethod) : Boolean;
+    Function MatchPattern(Const Path : String; L : TStrings) : Boolean;
     Function MatchMethod(Const AMethod : TRouteMethod) : Boolean;
   Published
-    // Default route is per method. This means you can register
     Property Default : Boolean Read FDefault Write FDefault;
-    // Depending on options, an empty URLPattern matches all, and acts as default.
     Property URLPattern : String Read FURLPattern Write SetURLPattern;
     Property Method : TRouteMethod Read FMethod Write FMethod;
   end;
@@ -134,7 +130,6 @@ Type
 
   TRouteObject = Class(TObject,IRouteInterface)
   Public
-    Constructor Create; virtual; 
     Procedure HandleRequest(ARequest : TRequest; AResponse : TResponse); virtual; abstract;
   end;
   TRouteObjectClass = Class of TRouteObject;
@@ -158,7 +153,6 @@ Type
   private
     FAfterRequest: THTTPRouteRequestEvent;
     FBeforeRequest: THTTPRouteRequestEvent;
-    FRouteOptions: TRouteOptions;
     FRoutes : THTTPRouteList;
     function GetR(AIndex : Integer): THTTPRoute;
     Class Procedure DoneService;
@@ -224,8 +218,6 @@ Type
     Property BeforeRequest : THTTPRouteRequestEvent Read FBeforeRequest Write FBeforeRequest;
     // Called after the request is routed, if no exception was raised during or before the request.
     Property AfterRequest : THTTPRouteRequestEvent Read FAfterRequest Write FAfterRequest;
-    // Global options used when routing a request.
-    Property RouteOptions : TRouteOptions Read FRouteOptions Write FRouteOptions;
   end;
 
 Function RouteMethodToString (R : TRouteMethod)  : String;
@@ -264,14 +256,6 @@ end;
 procedure THTTPRouteCallback.DoHandleRequest(ARequest: TRequest; AResponse: TResponse);
 begin
   CallBack(ARequest, AResponse);
-end;
-
-{ TRouteObject }
-
-Constructor TRouteObject.Create;
-
-begin
-  // Do nothing, added to make sure descendents can override it.
 end;
 
 { THTTPRouteObject }
@@ -325,7 +309,7 @@ begin
     R:=FRoutes[I];
     if R.Default then
       DI:=I;
-    if R.Matches(APattern,AMethod,FRouteOptions) then
+    if R.Matches(APattern,AMethod) then
       Raise EHTTPRoute.CreateFmt(EDuplicateRoute,[APattern,RouteMethodToString(AMethod)]);
     end;
   if isDefault and (DI<>-1) then
@@ -422,7 +406,7 @@ Var
 begin
   Result:=High(TRouteMethod);
   MN:=Uppercase(S);
-  While (Result>Low(TRouteMethod)) and (RouteMethodNames[Result]<>MN) do
+  While (Result>=Low(TRouteMethod)) and (RouteMethodNames[Result]<>MN) do
     Result:=Pred(Result);
   if Result=rmAll then Result:=rmUnknown;
 end;
@@ -533,7 +517,7 @@ begin
   While (Result=Nil) and (I<FRoutes.Count) do
     begin
     Result:=FRoutes[i];
-    If Not Result.MatchPattern(APathInfo,Params,FRouteOptions) then
+    If Not Result.MatchPattern(APathInfo,Params) then
       Result:=Nil
     else if Not Result.MatchMethod(AMethod) then
       begin
@@ -542,18 +526,6 @@ begin
       MethodMisMatch:=True;
       end;
     Inc(I);
-    end;
-  // Find default route.
-  if (Result=Nil) then
-    begin
-    I:=0;
-    While (Result=Nil) and (I<FRoutes.Count) do
-      begin
-      Result:=FRoutes[i];
-      if Not (Result.Default and Result.MatchMethod(AMethod)) then
-        Result:=Nil;
-      Inc(I);
-      end;
     end;
 end;
 
@@ -624,7 +596,7 @@ Var
 
 begin
   V:=IncludeHTTPPathDelimiter(AValue);
-  if (V<>'') and (V<>'/') and (V[1]='/') then
+  if (V<>'/') and (V[1]='/') then
     Delete(V,1,1);
   if FURLPattern=V then Exit;
   FURLPattern:=V;
@@ -646,24 +618,22 @@ begin
   DoHandleRequest(ARequest,AResponse);
 end;
 
-function THTTPRoute.Matches(const APattern: String; AMethod: TRouteMethod; Options: TRouteOptions): Boolean;
+function THTTPRoute.Matches(const APattern: String; AMethod: TRouteMethod
+  ): Boolean;
 begin
-  Result:=((Method=rmAll) or (AMethod=Method));
-  if Result then
-    Result:=SameText(URLPattern,APattern) or ((URLPattern='') and (roEmptyMatchesAll in Options))
+  Result:=(CompareText(URLPattern,APattern)=0)
+          and ((Method=rmAll) or (AMethod=Method))
 end;
 
-Function THTTPRoute.MatchPattern(Const Path : String; L : TStrings; Options: TRouteOptions) : Boolean;
+Function THTTPRoute.MatchPattern(Const Path : String; L : TStrings) : Boolean;
 
-  // This is used only with special chars, so we do not check case sensitivity
   Function StartsWith(C : Char; S : String): Boolean; 
   
   begin
     Result:=(Length(S)>0) and (S[1]=C);
   end;
   
-  // This is used only with special chars, so we do not check case sensitivity
-  Function EndsWith(C : Char; S : String): Boolean;
+  Function EndsWith(C : Char; S : String): Boolean; 
   
   Var
   L : Integer;
@@ -671,15 +641,6 @@ Function THTTPRoute.MatchPattern(Const Path : String; L : TStrings; Options: TRo
   begin
     L:=Length(S);
     Result:=(L>0) and (S[L]=C);
-  end;
-
-  Function SameString(A,B : String) : Boolean;
-
-  begin
-    if roCaseSensitive in Options then
-      Result:=(A=B)
-    else
-      Result:=SameText(A,B);
   end;
   
 
@@ -730,9 +691,9 @@ var
   VLeftPat, VRightPat, VLeftVal, VRightVal, VVal, VPat, VName: string;
 
 begin
-  Result:=False;
+  Result:= False;
   if (URLPattern='') then
-     Exit(roEmptyMatchesAll in Options);
+     Exit; // Maybe empty pattern should match any path?
   APathInfo:=Path;
   APattern:=URLPattern;
   Delete(APattern, Pos('?', APattern), MaxInt);
@@ -780,7 +741,7 @@ begin
             end
           else
             // *path/const
-            if not ((VPat='') and (VLeftPat='')) and Not SameString(VPat,VVal) then
+            if not ((VPat='') and (VLeftPat='')) and (VPat<>VVal) then
               Exit;
           // Check if we already done
           if (VLeftPat='') or (VLeftVal='') then
@@ -797,7 +758,7 @@ begin
         end
       else
         // const
-        if Not SameString(VPat,VVal) then
+        if (VPat <> VVal) then
           Exit;
     // Check if we already done
     if (VRightPat='') or (VRightVal='') then

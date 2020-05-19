@@ -1,5 +1,3 @@
-{ %recompile }
-
 program tmacpas1;
 
 {Tests of mac pascal constructs, concerning two units}

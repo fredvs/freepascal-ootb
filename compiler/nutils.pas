@@ -68,7 +68,6 @@ interface
     procedure checktreenodetypes(n : tnode;typeset : tnodetypeset);
 
     procedure load_procvar_from_calln(var p1:tnode);
-    function get_local_or_para_sym(const aname: string): tsym;
     function maybe_call_procvar(var p1:tnode;tponly:boolean):boolean;
     function load_high_value_node(vs:tparavarsym):tnode;
     function load_self_node:tnode;
@@ -76,9 +75,6 @@ interface
     function load_self_pointer_node:tnode;
     function load_vmt_pointer_node:tnode;
     function is_self_node(p:tnode):boolean;
-    { create a tree that loads the VMT based on a self-node of an object/class/
-      interface }
-    function load_vmt_for_self_node(self_node: tnode): tnode;
 
     function node_complexity(p: tnode): cardinal;
     function node_resources_fpu(p: tnode): cardinal;
@@ -93,7 +89,7 @@ interface
       which was determined during an earlier typecheck pass (because the value
       may e.g. be a parameter to a call, which needs to be of the declared
       parameter type) }
-    function create_simplified_ord_const(const value: tconstexprint; def: tdef; forinline, rangecheck: boolean): tnode;
+    function create_simplified_ord_const(value: tconstexprint; def: tdef; forinline: boolean): tnode;
 
     { returns true if n is only a tree of administrative nodes
       containing no code }
@@ -123,8 +119,6 @@ interface
       rough estimation how large the tree "node" is }
     function node_count(node : tnode) : dword;
 
-    function node_count_weighted(node : tnode) : dword;
-
     { returns true, if the value described by node is constant/immutable, this approximation is safe
       if no dirty tricks like buffer overflows or pointer magic are used }
     function is_const(node : tnode) : boolean;
@@ -147,22 +141,12 @@ interface
     }
     function get_open_const_array(p : tnode) : tnode;
 
-    { excludes the flags passed in nf from the node tree passed }
-    procedure node_reset_flags(p : tnode;nf : tnodeflags);
-
-    { include or exclude cs from p.localswitches }
-    procedure node_change_local_switch(p : tnode;cs : tlocalswitch;enable : boolean);
-
-    { returns true, if p is a node which shall be short boolean evaluated,
-      if it is not an orn/andn with boolean operans, the result is undefined }
-    function doshortbooleval(p : tnode) : Boolean;
-
 implementation
 
     uses
-      cutils,verbose,globals,compinnr,
+      cutils,verbose,globals,
       symconst,symdef,
-      defcmp,defutil,
+      defutil,defcmp,
       nbas,ncon,ncnv,nld,nflw,nset,ncal,nadd,nmem,ninl,
       cpubase,cgbase,procinfo,
       pass_1;
@@ -188,7 +172,7 @@ implementation
               result := foreachnode(procmethod,tcallnode(n).funcretnode,f,arg) or result;
               result := foreachnode(procmethod,tnode(tcallnode(n).callcleanupblock),f,arg) or result;
             end;
-          ifn, whilerepeatn, forn, tryexceptn:
+          ifn, whilerepeatn, forn, tryexceptn, tryfinallyn:
             begin
               { not in one statement, won't work because of b- }
               result := foreachnode(procmethod,tloopnode(n).t1,f,arg) or result;
@@ -285,7 +269,7 @@ implementation
               result := foreachnodestatic(procmethod,tcallnode(n).funcretnode,f,arg) or result;
               result := foreachnodestatic(procmethod,tnode(tcallnode(n).callcleanupblock),f,arg) or result;
             end;
-          ifn, whilerepeatn, forn, tryexceptn:
+          ifn, whilerepeatn, forn, tryexceptn, tryfinallyn:
             begin
               { not in one statement, won't work because of b- }
               result := foreachnodestatic(procmethod,tloopnode(n).t1,f,arg) or result;
@@ -423,8 +407,6 @@ implementation
             typeconvn,
             subscriptn :
               hp:=tunarynode(hp).left;
-            blockn:
-              hp:=laststatement(tblocknode(hp)).left
             else
               break;
           end;
@@ -440,7 +422,7 @@ implementation
       end;
 
 
-    function get_local_or_para_sym(const aname: string): tsym;
+    function get_local_or_para_sym(const aname:string):tsym;
       var
         pd : tprocdef;
       begin
@@ -568,134 +550,6 @@ implementation
       end;
 
 
-    function load_vmt_for_self_node(self_node: tnode): tnode;
-      var
-        self_resultdef: tdef;
-        obj_def: tobjectdef;
-        self_temp,
-        vmt_temp: ttempcreatenode;
-        check_self,n: tnode;
-        stat: tstatementnode;
-        block: tblocknode;
-        paras: tcallparanode;
-        docheck,is_typecasted_classref: boolean;
-      begin
-        self_resultdef:=self_node.resultdef;
-        case self_resultdef.typ of
-          classrefdef:
-            begin
-              obj_def:=tobjectdef(tclassrefdef(self_resultdef).pointeddef);
-            end;
-          objectdef:
-            obj_def:=tobjectdef(self_resultdef);
-          else
-            internalerror(2015052701);
-        end;
-        n:=self_node;
-        is_typecasted_classref:=false;
-	if (n.nodetype=typeconvn) then
-          begin
-            while assigned(n) and (n.nodetype=typeconvn) and (nf_explicit in ttypeconvnode(n).flags) do
-              n:=ttypeconvnode(n).left;
-            if assigned(n) and (n.resultdef.typ=classrefdef) then
-              is_typecasted_classref:=true;
-	  end;
-        if is_classhelper(obj_def) then
-          obj_def:=tobjectdef(tobjectdef(obj_def).extendeddef);
-        docheck:=
-          not(is_interface(obj_def)) and
-          not(is_cppclass(obj_def)) and
-          not(is_objc_class_or_protocol(obj_def)) and
-          (([cs_check_object,cs_check_range]*current_settings.localswitches)<>[]);
-
-        block:=nil;
-        stat:=nil;
-        if docheck then
-          begin
-            { check for nil self-pointer }
-            block:=internalstatements(stat);
-            self_temp:=ctempcreatenode.create_value(
-              self_resultdef,self_resultdef.size,tt_persistent,true,
-              self_node);
-            addstatement(stat,self_temp);
-
-            { in case of an object, self can only be nil if it's a dereferenced
-              node somehow
-            }
-            if not is_object(self_resultdef) or
-               (actualtargetnode(@self_node)^.nodetype=derefn) then
-              begin
-                check_self:=ctemprefnode.create(self_temp);
-                if is_object(self_resultdef) then
-                  check_self:=caddrnode.create(check_self);
-                addstatement(stat,cifnode.create(
-                  caddnode.create(equaln,
-                    ctypeconvnode.create_explicit(
-                      check_self,
-                      voidpointertype
-                    ),
-                    cnilnode.create),
-                  ccallnode.createintern('fpc_objecterror',nil),
-                  nil)
-                );
-              end;
-            addstatement(stat,ctempdeletenode.create_normal_temp(self_temp));
-            self_node:=ctemprefnode.create(self_temp);
-          end;
-        { in case of a classref, the "instance" is a pointer
-          to pointer to a VMT and there is no vmt field }
-        if is_typecasted_classref or (self_resultdef.typ=classrefdef) then
-          result:=self_node
-        { get the VMT field in case of a class/object }
-        else if (self_resultdef.typ=objectdef) and
-           assigned(tobjectdef(self_resultdef).vmt_field) then
-          result:=csubscriptnode.create(tobjectdef(self_resultdef).vmt_field,self_node)
-        { in case of an interface, the "instance" is a pointer to a pointer
-          to a VMT -> dereference once already }
-        else
-          { in case of an interface/classref, the "instance" is a pointer
-            to pointer to a VMT and there is no vmt field }
-          result:=cderefnode.create(
-            ctypeconvnode.create_explicit(
-              self_node,
-              cpointerdef.getreusable(voidpointertype)
-            )
-          );
-        result:=ctypeconvnode.create_explicit(
-          result,
-          cpointerdef.getreusable(obj_def.vmt_def));
-        typecheckpass(result);
-        if docheck then
-          begin
-            { add a vmt validity check }
-            vmt_temp:=ctempcreatenode.create_value(result.resultdef,result.resultdef.size,tt_persistent,true,result);
-            addstatement(stat,vmt_temp);
-            paras:=ccallparanode.create(ctemprefnode.create(vmt_temp),nil);
-            if cs_check_object in current_settings.localswitches then
-              begin
-                paras:=ccallparanode.create(
-                  cloadvmtaddrnode.create(ctypenode.create(obj_def)),
-                  paras
-                );
-                addstatement(stat,
-                  ccallnode.createintern(
-                    'fpc_check_object_ext',paras
-                  )
-                );
-              end
-            else
-              addstatement(stat,
-                ccallnode.createintern(
-                  'fpc_check_object',paras
-                )
-              );
-            addstatement(stat,ctempdeletenode.create_normal_temp(vmt_temp));
-            addstatement(stat,ctemprefnode.create(vmt_temp));
-            result:=block;
-          end
-      end;
-
-
     { this function must return a very high value ("infinity") for   }
     { trees containing a call, the rest can be balanced more or less }
     { at will, probably best mainly in terms of required memory      }
@@ -759,25 +613,9 @@ implementation
                   p := tunarynode(p).left;
                 end;
               labeln,
-              blockn:
-                p := tunarynode(p).left;
+              blockn,
               callparan:
-                begin
-                  { call to decr? }
-                  if is_managed_type(tunarynode(p).left.resultdef) and
-                     assigned(tcallparanode(p).parasym) and (tcallparanode(p).parasym.varspez=vs_out) then
-                    begin
-                      result:=NODE_COMPLEXITY_INF;
-                      exit;
-                    end
-                  else
-                    begin
-                      inc(result);
-                      if (result = NODE_COMPLEXITY_INF) then
-                        exit;
-                      p := tunarynode(p).left;
-                    end;
-                end;
+                p := tunarynode(p).left;
               notn,
               derefn :
                 begin
@@ -796,10 +634,9 @@ implementation
               typeconvn:
                 begin
                   { may be more complex in some cases }
-                  if not(ttypeconvnode(p).retains_value_location) and
-                    not((ttypeconvnode(p).convtype=tc_pointer_2_array) and (ttypeconvnode(p).left.expectloc in [LOC_CREGISTER,LOC_REGISTER,LOC_CONSTANT])) then
+                  if not(ttypeconvnode(p).retains_value_location) then
                     inc(result);
-                  if result = NODE_COMPLEXITY_INF then
+                  if (result = NODE_COMPLEXITY_INF) then
                     exit;
                   p := tunarynode(p).left;
                 end;
@@ -837,7 +674,7 @@ implementation
               ordconstn:
                 begin
 {$ifdef ARM}
-                  if not(is_shifter_const(aint(tordconstnode(p).value.svalue),dummy)) then
+                  if not(is_shifter_const(tordconstnode(p).value.svalue,dummy)) then
                     result:=2;
 {$endif ARM}
                   exit;
@@ -1090,12 +927,12 @@ implementation
       end;
 
 
-    function create_simplified_ord_const(const value: tconstexprint; def: tdef; forinline, rangecheck: boolean): tnode;
+    function create_simplified_ord_const(value: tconstexprint; def: tdef; forinline: boolean): tnode;
       begin
         if not forinline then
           result:=genintconstnode(value)
         else
-          result:=cordconstnode.create(value,def,rangecheck);
+          result:=cordconstnode.create(value,def,cs_check_range in current_settings.localswitches);
       end;
 
 
@@ -1343,15 +1180,13 @@ implementation
         if (n.nodetype in [assignn,calln,asmn]) or
           ((n.nodetype=inlinen) and
            (tinlinenode(n).inlinenumber in [in_write_x,in_writeln_x,in_read_x,in_readln_x,in_str_x_string,
-             in_val_x,in_reset_x,in_rewrite_x,in_reset_typedfile,in_rewrite_typedfile,
-             in_reset_typedfile_name,in_rewrite_typedfile_name,in_settextbuf_file_x,
+             in_val_x,in_reset_x,in_rewrite_x,in_reset_typedfile,in_rewrite_typedfile,in_settextbuf_file_x,
              in_inc_x,in_dec_x,in_include_x_y,in_exclude_x_y,in_break,in_continue,in_setlength_x,
-             in_finalize_x,in_new_x,in_dispose_x,in_exit,in_copy_x,in_initialize_x,in_leave,in_cycle,
-             in_and_assign_x_y,in_or_assign_x_y,in_xor_assign_x_y,in_sar_assign_x_y,in_shl_assign_x_y,
-             in_shr_assign_x_y,in_rol_assign_x_y,in_ror_assign_x_y,in_neg_assign_x,in_not_assign_x])
+             in_finalize_x,in_new_x,in_dispose_x,in_exit,in_copy_x,in_initialize_x,in_leave,in_cycle])
           ) then
           result:=fen_norecurse_true;
       end;
+
 
     function might_have_sideeffects(n : tnode) : boolean;
       begin
@@ -1376,27 +1211,9 @@ implementation
       end;
 
 
-    function donodecount_weighted(var n: tnode; arg: pointer): foreachnoderesult;
-      begin
-        if not(n.nodetype in [blockn,statementn,callparan,nothingn]) then
-          inc(nodecount);
-        result:=fen_false;
-      end;
-
-
-    function node_count_weighted(node : tnode) : dword;
-      begin
-        nodecount:=0;
-        foreachnodestatic(node,@donodecount_weighted,nil);
-        result:=nodecount;
-      end;
-
-
     function is_const(node : tnode) : boolean;
       begin
-        result:=is_constnode(node) or
-          ((node.nodetype=temprefn) and (ti_const in ttemprefnode(node).tempflags)) or
-          ((node.nodetype=loadn) and (tloadnode(node).symtableentry.typ=paravarsym) and (tparavarsym(tloadnode(node).symtableentry).varspez in [vs_const,vs_constref]));
+        result:=(node.nodetype=temprefn) and (ti_const in ttemprefnode(node).tempinfo^.flags)
       end;
 
 
@@ -1429,51 +1246,6 @@ implementation
         result:=p;
         if (p.nodetype=derefn) and (tderefnode(p).left.nodetype=addrn) then
           result:=get_open_const_array(taddrnode(tderefnode(result).left).left);
-      end;
-
-
-    function do_node_reset_flags(var n: tnode; arg: pointer): foreachnoderesult;
-      begin
-        result:=fen_false;
-        n.flags:=n.flags-tnodeflags(arg^);
-      end;
-
-
-    procedure node_reset_flags(p : tnode; nf : tnodeflags);
-      begin
-        foreachnodestatic(p,@do_node_reset_flags,@nf);
-      end;
-
-    type
-       tlocalswitchchange = record
-         cs : tlocalswitch;
-         enable : boolean;
-       end;
-       plocalswitchchange = ^tlocalswitchchange;
-
-
-    function do_change_local_settings(var p : tnode;plsc : pointer) : foreachnoderesult;
-      begin
-        if plocalswitchchange(plsc)^.enable then
-          include(p.localswitches, plocalswitchchange(plsc)^.cs)
-        else
-          exclude(p.localswitches, plocalswitchchange(plsc)^.cs);
-        result:=fen_true;
-     end;
-   
-    procedure node_change_local_switch(p : tnode;cs : tlocalswitch;enable : boolean);
-      var
-        lsc : tlocalswitchchange;
-      begin
-        lsc.cs:=cs;
-        lsc.enable:=enable;
-        foreachnodestatic(p,@do_change_local_settings,@lsc);
-      end;
-
-
-    function doshortbooleval(p : tnode) : Boolean;
-      begin
-        Result:=(p.nodetype in [orn,andn]) and ((nf_short_bool in taddnode(p).flags) or not(cs_full_boolean_eval in p.localswitches));
       end;
 
 end.

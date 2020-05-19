@@ -274,17 +274,6 @@ function  IndexWord(const buf: array of jchar;len:SizeInt;b:jshort):SizeInt;
                                  String
 ****************************************************************************}
 
-{$define FPC_SYSTEM_HAS_FPC_PCHAR_LENGTH}
-
-function fpc_pchar_length(p:pchar):sizeint;[public,alias:'FPC_PCHAR_LENGTH']; compilerproc;
-begin
-  if assigned(p) then
-    Result:=IndexByte(TAnsiCharArray(p),high(Result),0)
-  else
-    Result:=0;
-end;
-
-
 {$define FPC_SYSTEM_HAS_FPC_PCHAR_TO_SHORTSTR}
 procedure fpc_pchar_to_shortstr(out res : shortstring;p:pchar); compilerproc;
 var
@@ -388,7 +377,6 @@ begin
   if zerobased then
     begin
       foundnull:=false;
-      index:=0;
       for index:=low(arr) to l-1 do
         if arr[index]=#0 then
           begin

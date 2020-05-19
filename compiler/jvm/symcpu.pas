@@ -221,7 +221,7 @@ implementation
   uses
     verbose,cutils,cclasses,globals,
     symconst,symbase,symtable,symcreat,jvmdef,
-    pdecsub,pparautl,pjvm,
+    pdecsub,pjvm,
     paramgr;
 
 
@@ -241,7 +241,7 @@ implementation
       accessorname: string;
       callthroughprop: tpropertysym;
       accesstyp: tpropaccesslisttypes;
-      accessortyp: tprocoption;
+      sktype: tsynthetickind;
       procoptions: tprocoptions;
       paranr: word;
       explicitwrapper: boolean;
@@ -273,11 +273,7 @@ implementation
           (not getter and
            (prop_auto_setter_prefix<>''));
         sym:=nil;
-        if getter then
-          accessortyp:=po_is_auto_getter
-        else
-          accessortyp:=po_is_auto_setter;
-        procoptions:=[accessortyp];
+        procoptions:=[];
         if explicitwrapper then
           begin
             if getter then
@@ -285,11 +281,15 @@ implementation
             else
               accessorname:=prop_auto_setter_prefix+realname;
             sym:=search_struct_member_no_helper(obj,upper(accessorname));
+            if getter then
+              sktype:=tsk_field_getter
+            else
+              sktype:=tsk_field_setter;
             if assigned(sym) then
               begin
                 if ((sym.typ<>procsym) or
                     (tprocsym(sym).procdeflist.count<>1) or
-                    not(accessortyp in tprocdef(tprocsym(sym).procdeflist[0]).procoptions)) and
+                    (tprocdef(tprocsym(sym).procdeflist[0]).synthetickind<>sktype)) and
                    (not assigned(orgaccesspd) or
                     (sym<>orgaccesspd.procsym)) then
                   begin
@@ -379,15 +379,15 @@ implementation
         { create procdef }
         if not assigned(orgaccesspd) then
           begin
-            pd:=cprocdef.create(normal_function_level,true);
+            pd:=cprocdef.create(normal_function_level);
             if df_generic in obj.defoptions then
               include(pd.defoptions,df_generic);
             { method of this objectdef }
             pd.struct:=obj;
             { can only construct the artificial accessorname now, because it requires
-              pd.unique_id_str }
+              pd.defid }
             if not explicitwrapper then
-              accessorname:='$'+obj.symtable.realname^+'$'+realname+'$'+accessorname+'$'+pd.unique_id_str;
+              accessorname:='$'+obj.symtable.realname^+'$'+realname+'$'+accessorname+'$'+tostr(pd.defid);
           end
         else
           begin
@@ -397,9 +397,9 @@ implementation
             exclude(pd.procoptions,po_abstractmethod);
             exclude(pd.procoptions,po_overridingmethod);
             { can only construct the artificial accessorname now, because it requires
-              pd.unique_id_str }
+              pd.defid }
             if not explicitwrapper then
-              accessorname:='$'+obj.symtable.realname^+'$'+realname+'$'+accessorname+'$'+pd.unique_id_str;
+              accessorname:='$'+obj.symtable.realname^+'$'+realname+'$'+accessorname+'$'+tostr(pd.defid);
             finish_copied_procdef(pd,accessorname,obj.symtable,obj);
             sym:=pd.procsym;
           end;
@@ -489,9 +489,9 @@ implementation
           begin
             { calling convention, self, ... }
             if obj.typ=recorddef then
-              handle_calling_convention(pd,[hcc_declaration,hcc_check])
+              handle_calling_convention(pd,[hcc_check])
             else
-              handle_calling_convention(pd,hcc_default_actions_intf);
+              handle_calling_convention(pd,hcc_all);
             { register forward declaration with procsym }
             proc_add_definition(pd);
           end;
@@ -677,7 +677,7 @@ implementation
             container:=owner;
             while container.symtabletype=localsymtable do
               begin
-                tmpresult:='$'+tprocdef(owner.defowner).procsym.realname+'$$'+tprocdef(owner.defowner).unique_id_str+'$'+tmpresult;
+                tmpresult:='$'+tprocdef(owner.defowner).procsym.realname+'$'+tostr(tprocdef(owner.defowner).procsym.symid)+'$'+tmpresult;
                 container:=container.defowner.owner;
               end;
           end;

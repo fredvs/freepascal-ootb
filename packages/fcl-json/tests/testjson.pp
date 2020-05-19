@@ -17,10 +17,7 @@
 program testjson;
 
 uses
-  {$ifdef unix}
-  cwstring,
-  {$endif}
-  Classes, testjsondata, testjsonparser, testjsonrtti, consoletestrunner, testjsonreader;
+  Classes, testjsondata, testjsonparser, testjsonrtti, consoletestrunner;
 
 type
   { TLazTestRunner }

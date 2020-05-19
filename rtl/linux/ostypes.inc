@@ -173,7 +173,7 @@ type
                 l_start : kernel_off_t; { starting offset }
                 l_len   : kernel_off_t; { len = 0 means until end of file }
                 l_pid   : pid_t;        { lock owner }
-{$if defined(cpusparc) or defined(cpusparc64)}
+{$ifdef cpusparc}
                 __pad   : cshort;
 {$endif}
                End;
@@ -200,9 +200,8 @@ type
    TTms      = tms;
    PTms      = ^tms;
 
-  TFDSetEl  = cuLong;
-  TFDSet    = ARRAY[0..(FD_MAXFDSET div BITSINWORD)-1] of TFDSetEl;
-  pFDSet    = ^TFDSet;
+ TFDSet    = ARRAY[0..(FD_MAXFDSET div BITSINWORD)-1] of cuLong;
+ pFDSet    = ^TFDSet;
 
   timezone = record
     tz_minuteswest,tz_dsttime:cint;
@@ -251,7 +250,7 @@ CONST
     O_RDONLY  =          0;        { Open read-only.  }
     O_WRONLY  =          1;        { Open write-only. }
     O_RDWR    =          2;        { Open read/write. }
-{$if defined(cpusparc) or defined(cpusparc64)}
+{$ifdef cpusparc}
     O_APPEND  =          8;
     O_CREAT   =       $200;
     O_TRUNC   =       $400;
@@ -263,7 +262,7 @@ CONST
     O_DIRECTORY =   $10000;
     O_NOFOLLOW =    $20000;
     O_DIRECT  =    $100000;
-{$else : not (cpusparc or cpusparc64)}
+{$else : not cpusparc}
 {$ifdef cpumips}
     O_CREAT   =       $100;
     O_EXCL    =       $400;
@@ -289,14 +288,9 @@ CONST
     O_DIRECTORY =   $10000;
     O_NOFOLLOW =    $20000;
 {$endif not cpumips}
-{$endif not (cpusparc or cpusparc64)}
+{$endif not cpusparc}
 
-    AT_FDCWD = -100;
-    AT_REMOVEDIR = $200;
-    clone_flags_fork = $01200011;
-      { SIGCHLD | CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID }
-
-{$if defined(cpuarm) or defined(cpualpha) or defined(cpublackfin) or defined(cpum68k) or defined(aarch64)}
+{$if defined(cpuarm) or defined(cpualpha) or defined(cpublackfin) or defined(cpum68k)}
     O_LARGEFILE =   $20000;
 {$endif}
 {$if defined(cpusparc) or defined(cpusparc64)}

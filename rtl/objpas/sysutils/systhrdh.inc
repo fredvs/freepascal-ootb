@@ -40,28 +40,17 @@ type
    TMultiReadExclusiveWriteSynchronizer = class(TInterfacedObject,IReadWriteSync)
 {$ifdef FPC_HAS_FEATURE_THREADING}
    private
-     fThreadList: array [0..15] of Pointer;
-     freaderqueue: peventstate;
-     fwritelock : TRtlCriticalSection;
-     fwaitingwriterlock: prtlevent;
-     fWriterThreadID: TThreadID;
-     fRevisionLevel: cardinal;
-     fwriterequests: cardinal;
-     factivethreads: cardinal;
-   protected
-     function ThreadIDtoIndex( aThreadID: TThreadID ): integer; inline;
-     function GetThreadInfo(AutoCreate: Boolean): Pointer;
-     procedure RemoveThread(AThreadInfo: Pointer);
+      freaderqueue: peventstate;
+      fwritelock : TRtlCriticalSection;
+      fwaitingwriterlock: prtlevent;
+      freadercount: cardinal;
+      fwritelocked: longint;
    public
-     constructor Create; virtual;
-     destructor  Destroy; override;
-     function Beginwrite : boolean;
-     procedure Endwrite;
-     procedure Beginread;
-     procedure Endread;
-     property RevisionLevel: cardinal read fRevisionLevel;
-     property WriterThreadID: TThreadID read fWriterThreadID;
+      constructor Create; virtual;
+      destructor  Destroy; override;
+      function Beginwrite : boolean;
+      procedure Endwrite;
+      procedure Beginread;
+      procedure Endread;
 {$endif FPC_HAS_FEATURE_THREADING}
    end;
-
-   TMREWException = class(Exception);

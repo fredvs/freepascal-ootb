@@ -2,7 +2,7 @@ Type
   HKEY = THandle;
   PHKEY = ^HKEY;
   
-{$if defined(windows) and not defined(XMLREG)}
+{$ifdef windows}
 
 { Direct mapping to constants in Windows unit }
 

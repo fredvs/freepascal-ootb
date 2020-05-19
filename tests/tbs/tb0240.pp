@@ -29,7 +29,7 @@ begin
 end;
 
 var
-   mem : sizeuint;
+   mem : sizeint;
 begin
   DoMem(mem);
   dotest;

@@ -36,13 +36,9 @@ unit cpunode;
        }
        ,navradd
        ,navrmat
-       ,navrcnv
-       ,navrinl
-       ,navrmem
-       ,navrutil,
+       ,navrcnv,
        { symtable }
-       symcpu,
-       aasmdef
+       symcpu
        ;
 
 

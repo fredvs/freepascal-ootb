@@ -9,17 +9,6 @@
 uses
   erroru;
 
-{$ifdef CPU16}
-  const
-    StartSize = 16*1024;
-    MaxSize = $10000;
-{$else}
-  const
-    StartSize = 1024*1024;
-    MaxSize =  2000000000{$ifdef CPU64}*2000000000{$endif CPU64};
-{$endif}
-
-
 type
   matrix_element = array[1..1] of byte;
   big_matrix = array[1..1000000,1..610] of matrix_element;
@@ -34,17 +23,17 @@ var p:pointer;
   size, storage : ptruint;
   i,j:longint;
   done:boolean;
-  mem : sizeuint;
+  mem : sizeint;
 begin
   ReturnNilIfGrowHeapFails:=true;
   domem(mem);
   done := false;
-  size := StartSize;
+  size := 40000000;
   repeat
     size := size+(size div 10);
     storage := size * sizeof(real);
-    if storage>MaxSize then
-      storage:=MaxSize;
+    if storage>2000000000{$ifdef CPU64}*2000000000{$endif CPU64} then
+      storage:=2000000000{$ifdef CPU64}*2000000000{$endif CPU64};
     writeln('size=',size,' (storage=',storage,')');
     getmem(l,storage);
     if (l=nil) then

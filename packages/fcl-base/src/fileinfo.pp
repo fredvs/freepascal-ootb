@@ -13,7 +13,7 @@
 
  **********************************************************************}
 
-unit FileInfo;
+unit fileinfo;
 
 {$mode objfpc}
 {$h+}
@@ -172,10 +172,7 @@ procedure TVersionInfo.FreeResources;
 
 begin
   if Assigned(FResources) then
-    begin
-      FreeAndNil(FResources);
-      FVersionInfo := nil;
-    end
+    FreeAndNil(FResources)
   else
     FreeAndNil(FVersionInfo);
 end;

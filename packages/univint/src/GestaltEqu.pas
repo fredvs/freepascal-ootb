@@ -2,14 +2,18 @@
      File:       CarbonCore/Gestalt.h
  
      Contains:   Gestalt Interfaces.
-                 The contents of this header file are deprecated.
-                 Use sysctl(3) instead.
  
-     Copyright:  © 1988-2011 by Apple Inc. All rights reserved.
+     Version:    CarbonCore-859.2~1
+ 
+     Copyright:  © 1988-2008 by Apple Computer, Inc.  All rights reserved
+ 
+     Bugs?:      For bug reports, consult the following page on
+                 the World Wide Web:
+ 
+                     http://www.freepascal.org/bugs.html
+ 
 }
 {   Pascal Translation Updated:  Jonas Maebe, <jonas@freepascal.org>, October 2009 }
-{   Pascal Translation Updated:  Gale R Paeper, <gpaeper@empirenet.com>, June 2018 }
-
 {
     Modified for use with Free Pascal
     Version 308
@@ -18,7 +22,6 @@
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -65,11 +68,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -88,7 +86,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -99,7 +96,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -110,7 +106,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -127,16 +122,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -144,26 +132,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -301,7 +276,7 @@ type
  *    Non-Carbon CFM:   in InterfaceLib 7.1 and later
  }
 function Gestalt( selector: OSType; var response: SInt32 ): OSErr; external name '_Gestalt';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 
 {$ifc not TARGET_CPU_64}
@@ -345,7 +320,7 @@ function Gestalt( selector: OSType; var response: SInt32 ): OSErr; external name
  *    Non-Carbon CFM:   in InterfaceLib 7.1 and later
  }
 function ReplaceGestalt( selector: OSType; gestaltFunction: SelectorFunctionUPP; var oldGestaltFunction: SelectorFunctionUPP ): OSErr; external name '_ReplaceGestalt';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_3, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_3 *)
 
 
 {$endc} {not TARGET_CPU_64}
@@ -400,7 +375,7 @@ function ReplaceGestalt( selector: OSType; gestaltFunction: SelectorFunctionUPP;
  *    Non-Carbon CFM:   in InterfaceLib 7.1 and later
  }
 function NewGestalt( selector: OSType; gestaltFunction: SelectorFunctionUPP ): OSErr; external name '_NewGestalt';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_3, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_3 *)
 
 
 {$endc} {not TARGET_CPU_64}
@@ -445,7 +420,7 @@ function NewGestalt( selector: OSType; gestaltFunction: SelectorFunctionUPP ): O
  *    Non-Carbon CFM:   in InterfaceLib 7.5 and later
  }
 function NewGestaltValue( selector: OSType; newValue: SInt32 ): OSErr; external name '_NewGestaltValue';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 
 {
@@ -483,7 +458,7 @@ function NewGestaltValue( selector: OSType; newValue: SInt32 ): OSErr; external 
  *    Non-Carbon CFM:   in InterfaceLib 7.5 and later
  }
 function ReplaceGestaltValue( selector: OSType; replacementValue: SInt32 ): OSErr; external name '_ReplaceGestaltValue';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 
 {
@@ -520,7 +495,7 @@ function ReplaceGestaltValue( selector: OSType; replacementValue: SInt32 ): OSEr
  *    Non-Carbon CFM:   in InterfaceLib 7.5 and later
  }
 function SetGestaltValue( selector: OSType; newValue: SInt32 ): OSErr; external name '_SetGestaltValue';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 
 {
@@ -553,7 +528,7 @@ function SetGestaltValue( selector: OSType; newValue: SInt32 ): OSErr; external 
  *    Non-Carbon CFM:   in InterfaceLib 7.5 and later
  }
 function DeleteGestaltValue( selector: OSType ): OSErr; external name '_DeleteGestaltValue';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 
 {
@@ -565,7 +540,7 @@ function DeleteGestaltValue( selector: OSType ): OSErr; external name '_DeleteGe
  *    Non-Carbon CFM:   available as macro/inline
  }
 function NewSelectorFunctionUPP( userRoutine: SelectorFunctionProcPtr ): SelectorFunctionUPP; external name '_NewSelectorFunctionUPP';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 {
  *  DisposeSelectorFunctionUPP()
@@ -576,7 +551,7 @@ function NewSelectorFunctionUPP( userRoutine: SelectorFunctionProcPtr ): Selecto
  *    Non-Carbon CFM:   available as macro/inline
  }
 procedure DisposeSelectorFunctionUPP( userUPP: SelectorFunctionUPP ); external name '_DisposeSelectorFunctionUPP';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 {
  *  InvokeSelectorFunctionUPP()
@@ -587,7 +562,7 @@ procedure DisposeSelectorFunctionUPP( userUPP: SelectorFunctionUPP ); external n
  *    Non-Carbon CFM:   available as macro/inline
  }
 function InvokeSelectorFunctionUPP( selector: OSType; var response: SInt32; userUPP: SelectorFunctionUPP ): OSErr; external name '_InvokeSelectorFunctionUPP';
-(* __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_0, __MAC_10_8, __IPHONE_NA, __IPHONE_NA) *)
+(* AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER *)
 
 
 { Environment Selectors }
@@ -2036,14 +2011,13 @@ const
     Mac OS X 10.3.15 will be returned as 0x1039, and Mac OS X 10.10.5 will
     return 0x1095.
     
-    A better way to get version information with the deprecated Gestalt API
-	would be to use the gestaltSystemVersionMajor, gestaltSystemVersionMinor,
-    and gestaltSystemVersionBugFix selectors, which don't have arbitrary limits
-    on the values returned. However, because Gestalt is deprecated, you should
-	use NSProcessInfo's operatingSystemVersion property instead.
+    A better way to get version information on Mac OS X would be to use the
+    new gestaltSystemVersionMajor, gestaltSystemVersionMinor, and 
+    gestaltSystemVersionBugFix selectors, which don't have arbitrary limits
+    on the values returned.
  
     If you want to know the product build version string, product name, or
-    the user visible version string you should read in the system version
+    the user visible version string you shuold read in the system version
     information from the file /System/Library/CoreServices/SystemVersion.plist.
  
 }

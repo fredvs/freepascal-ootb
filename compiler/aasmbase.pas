@@ -40,12 +40,7 @@ interface
        TAsmsymbind=(
          AB_NONE,AB_EXTERNAL,AB_COMMON,AB_LOCAL,AB_GLOBAL,AB_WEAK_EXTERNAL,
          { global in the current program/library, but not visible outside it }
-         AB_PRIVATE_EXTERN,AB_LAZY,AB_IMPORT,
-         { a symbol that's internal to the compiler and used as a temp }
-         AB_TEMP,
-         { a global symbol that points to another global symbol and is only used
-           to allow indirect loading in case of packages and indirect imports }
-         AB_INDIRECT,AB_EXTERNAL_INDIRECT);
+         AB_PRIVATE_EXTERN,AB_LAZY,AB_IMPORT);
 
        TAsmsymtype=(
          AT_NONE,AT_FUNCTION,AT_DATA,AT_SECTION,AT_LABEL,
@@ -54,17 +49,6 @@ interface
            so it must be taken care of it when creating pic
          }
          AT_ADDR,
-         { Label for debug or other non-program information }
-         AT_METADATA,
-         { label for data that must always be accessed indirectly, because it
-           is handled explcitely in the system unit or (e.g. RTTI and threadvar
-           tables) -- never seen in an assembler/assembler writer, always
-           changed to AT_DATA }
-         AT_DATA_FORCEINDIRECT,
-         { don't generate an implicit indirect symbol as that might be provided
-           by other means (e.g. the typed const builder) to ensure a correct
-           section name }
-         AT_DATA_NOINDIRECT,
          { Thread-local symbol (ELF targets) }
          AT_TLS,
          { GNU indirect function (ELF targets) }
@@ -78,10 +62,6 @@ interface
 
     const
        asmlabeltypeprefix : array[TAsmLabeltype] of char = ('j','a','d','l','f','t','c');
-       asmsymbindname : array[TAsmsymbind] of string[23] = ('none', 'external','common',
-       'local','global','weak external','private external','lazy','import','internal temp',
-       'indirect','external indirect');
-       asmsymbindindirect = [AB_INDIRECT,AB_EXTERNAL_INDIRECT];
 
     type
        TAsmSectiontype=(sec_none,
@@ -114,8 +94,6 @@ interface
          sec_debug_info,
          sec_debug_line,
          sec_debug_abbrev,
-         sec_debug_aranges,
-         sec_debug_ranges,
          { Yury: "sec_fpc is intended for storing fpc specific data
                   which must be recognized and processed specially by linker.
                   Currently fpc version string, dummy links to stab sections
@@ -169,8 +147,6 @@ interface
          sec_heap
        );
 
-       TObjCAsmSectionType = sec_objc_class..sec_objc_protolist;
-
        TAsmSectionOrder = (secorder_begin,secorder_default,secorder_end);
 
        TAsmSymbol = class(TFPHashObject)
@@ -186,10 +162,6 @@ interface
 {$endif AVR}
          bind       : TAsmsymbind;
          typ        : TAsmsymtype;
-{$ifdef llvm}
-         { have we generated a declaration for this symbol? }
-         declared   : boolean;
-{$endif llvm}
          { Alternate symbol which can be used for 'renaming' needed for
            asm inlining. Also used for external and common solving during linking }
          altsymbol  : TAsmSymbol;
@@ -207,22 +179,12 @@ interface
        TAsmLabel = class(TAsmSymbol)
        protected
          function getname:TSymStr;override;
-         {$push}{$warnings off}
-         { new visibility section to let "warnings off" take effect }
-       protected
-         { this constructor is only supposed to be used internally by
-           createstatoc/createlocal -> disable warning that constructors should
-           be public }
-         constructor create_non_global(AList: TFPHashObjectList; nr: longint; ltyp: TAsmLabelType; const prefix: TSymStr);
        public
-         {$pop}
          labelnr   : longint;
          labeltype : TAsmLabelType;
          is_set    : boolean;
-         is_public : boolean;
-         constructor Createlocal(AList: TFPHashObjectList; nr: longint; ltyp: TAsmLabelType);
-         constructor Createstatic(AList: TFPHashObjectList; nr: longint; ltyp: TAsmLabelType);
-         constructor Createglobal(AList: TFPHashObjectList; const modulename: TSymStr; nr: longint; ltyp: TAsmLabelType);
+         constructor Createlocal(AList:TFPHashObjectList;nr:longint;ltyp:TAsmLabelType);
+         constructor Createglobal(AList:TFPHashObjectList;const modulename:TSymStr;nr:longint;ltyp:TAsmLabelType);
          function getaltcopy(AList:TFPHashObjectList;altnr: longint): TAsmSymbol; override;
        end;
 
@@ -449,15 +411,22 @@ implementation
                                  TAsmLabel
 *****************************************************************************}
 
-    constructor TAsmLabel.Createlocal(AList: TFPHashObjectList; nr: longint; ltyp: TAsmLabelType);
+    constructor TAsmLabel.Createlocal(AList:TFPHashObjectList;nr:longint;ltyp:TAsmLabelType);
+      var
+        asmtyp: TAsmsymtype;
       begin
-        create_non_global(AList,nr,ltyp,target_asm.labelprefix);
-      end;
-
-
-    constructor TAsmLabel.Createstatic(AList:TFPHashObjectList;nr:longint;ltyp:TAsmLabelType);
-      begin
-        create_non_global(AList,nr,ltyp,'_$$fpclocal$_l');
+        case ltyp of
+          alt_addr:
+            asmtyp:=AT_ADDR;
+          alt_data:
+            asmtyp:=AT_DATA;
+          else
+            asmtyp:=AT_LABEL;
+        end;
+        inherited Create(AList,target_asm.labelprefix+asmlabeltypeprefix[ltyp]+tostr(nr),AB_LOCAL,asmtyp);
+        labelnr:=nr;
+        labeltype:=ltyp;
+        is_set:=false;
       end;
 
 
@@ -497,28 +466,8 @@ implementation
         increfs;
       end;
 
-
-    constructor TAsmLabel.create_non_global(AList: TFPHashObjectList; nr: longint; ltyp: TAsmLabelType; const prefix: TSymStr);
-      var
-        asmtyp: TAsmsymtype;
-      begin
-        case ltyp of
-          alt_addr:
-            asmtyp:=AT_ADDR;
-          alt_data:
-            asmtyp:=AT_DATA;
-          else
-            asmtyp:=AT_LABEL;
-        end;
-        inherited Create(AList,prefix+asmlabeltypeprefix[ltyp]+tostr(nr),AB_LOCAL,asmtyp);
-        labelnr:=nr;
-        labeltype:=ltyp;
-        is_set:=false;
-      end;
-
-
-    procedure default_global_used;
-      begin
-      end;
+	procedure default_global_used;
+	  begin
+	  end;
 
 end.

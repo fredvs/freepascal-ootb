@@ -1022,7 +1022,7 @@ IMPLEMENTATION
 
     var
       i : {$ifopt r+} __lo_bh + 1 ..__hi_bh {$else} Integer {$endif};
-      j : {$ifopt r+} __low_fraction..__high_fraction+1 {$else} Integer {$endif};
+      j : {$ifopt r+} -1..__high_fraction {$else} Integer {$endif};
       vv : {$ifopt r+} $00..$99 {$else} Integer {$endif};
 
     begin
@@ -1612,7 +1612,7 @@ IMPLEMENTATION
                 if p < low ( Singles )
                   then begin
                     exitloop := True;
-(* what to do if error occurred? *)
+(* what to do if error occured? *)
                     RAISE eBCDOverflowException.create ( 'in IntegerToBCD' );
                    end;
               UNTIL exitloop;
@@ -4129,12 +4129,6 @@ begin
         not_implemented;
     else { array or something like that }
         not_implemented;
-    end;
-  // peephole, avoids problems with databases, mantis #30853
-  if (Result.Precision = 0) and (Result.SignSpecialPlaces = 0) then 
-    begin
-      Result.Precision := 10;
-      Result.SignSpecialPlaces := 2;
     end;
 end;
 

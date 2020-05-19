@@ -1,15 +1,10 @@
-{ Parsed from AppKit.framework NSSliderCell.h }
-
-
-{$ifdef TYPES}
-type
-  NSSliderCellPtr = ^NSSliderCell;
-{$endif}
+{ Parsed from Appkit.framework NSSliderCell.h }
 
 {$ifdef TYPES}
-type
-  NSTickMarkPosition = NSUInteger;
-  NSTickMarkPositionPtr = ^NSTickMarkPosition;
+{$ifndef NSSLIDERCELL_PAS_T}
+{$define NSSLIDERCELL_PAS_T}
+
+{ Constants }
 
 const
   NSTickMarkBelow = 0;
@@ -17,89 +12,119 @@ const
   NSTickMarkLeft = NSTickMarkAbove;
   NSTickMarkRight = NSTickMarkBelow;
 
-type
-  NSSliderType = NSUInteger;
-  NSSliderTypePtr = ^NSSliderType;
-
 const
   NSLinearSlider = 0;
   NSCircularSlider = 1;
+
+{ Types }
+type
+  NSTickMarkPosition = NSUInteger;
+  NSTickMarkPositionPtr = ^NSTickMarkPosition;
+  NSSliderType = NSUInteger;
+  NSSliderTypePtr = ^NSSliderType;
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSSLIDERCELL_PAS_R}
+{$define NSSLIDERCELL_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSSLIDERCELL_PAS_F}
+{$define NSSLIDERCELL_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSSLIDERCELL_PAS_S}
+{$define NSSLIDERCELL_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSSliderCell = objcclass;
+  NSSliderCellPointer = ^NSSliderCell;
+  NSSliderCellPtr = NSSliderCellPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSSLIDERCELL_PAS_C}
+{$define NSSLIDERCELL_PAS_C}
 
-type
+{ NSSliderCell }
   NSSliderCell = objcclass external (NSActionCell)
   private
-    _sliderCellPrivateData: id;
-    _previousValue: CGFloat;
-    _knobOffset: CGFloat;
+    _reserved: array[0..(3)-1] of cint;
     _numberOfTickMarks: cint;
     _altIncValue: double;
     _value: double;
     _maxValue: double;
     _minValue: double;
     _trackRect: NSRect;
-    _scFlags: bitpacked record
+    __scFlags: record
       case byte of
-        0: (_anonBitField___scFlags0: cuint);
-        1: (
-          weAreVertical: 0..1;
-          weAreVerticalSet: 0..1;
-          reserved1: 0..1;
-          isPressed: 0..1;
-          allowsTickMarkValuesOnly: 0..1;
-          tickMarkPosition: 0..1;
-          sliderType: 0..((1 shl 2)-1);
-          drawing: 0..1;
-          snappedToTickMark: 0..1;
-          snappingAllowed: 0..1;
-          reserved2: 0..((1 shl 21)-1);
-        );
+       0: (_anonbitfield_NSSliderCell0: cuint);
+       1: (data: bitpacked record
+        weAreVertical: 0..1;
+        weAreVerticalSet: 0..1;
+        reserved1: 0..1;
+        isPressed: 0..1;
+        _allowsTickMarkValuesOnly: 0..1;
+        _tickMarkPosition: 0..1;
+        _sliderType: 0..((1 shl 2)-1);
+        drawing: 0..1;
+        reserved2: 0..((1 shl 23)-1);
+       end;
+      );
       end;
+    
   public
-    class function prefersTrackingUntilMouseUp: ObjCBOOL; message 'prefersTrackingUntilMouseUp';
-    procedure setMinValue(newValue: double); message 'setMinValue:';
+    class function prefersTrackingUntilMouseUp: Boolean; message 'prefersTrackingUntilMouseUp';
     function minValue: double; message 'minValue';
-    procedure setMaxValue(newValue: double); message 'setMaxValue:';
+    procedure setMinValue(aDouble: double); message 'setMinValue:';
     function maxValue: double; message 'maxValue';
-    procedure setAltIncrementValue(newValue: double); message 'setAltIncrementValue:';
+    procedure setMaxValue(aDouble: double); message 'setMaxValue:';
+    procedure setAltIncrementValue(incValue: double); message 'setAltIncrementValue:';
     function altIncrementValue: double; message 'altIncrementValue';
-    procedure setSliderType(newValue: NSSliderType); message 'setSliderType:';
-    function sliderType: NSSliderType; message 'sliderType';
     function isVertical: NSInteger; message 'isVertical';
-    function trackRect: NSRect; message 'trackRect';
+    procedure setTitleColor(newColor: NSColor); message 'setTitleColor:';
+    function titleColor: NSColor; message 'titleColor';
+    procedure setTitleFont(fontObj: NSFont); message 'setTitleFont:';
+    function titleFont: NSFont; message 'titleFont';
+    function title: NSString; message 'title';
+    procedure setTitle(aString: NSString); message 'setTitle:';
+    procedure setTitleCell(aCell: NSCell); message 'setTitleCell:';
+    function titleCell: id; message 'titleCell';
+    procedure setKnobThickness(aFloat: CGFloat); message 'setKnobThickness:';
     function knobThickness: CGFloat; message 'knobThickness';
-    function knobRectFlipped (flipped: ObjCBOOL): NSRect; message 'knobRectFlipped:';
-    procedure drawKnob (knobRect: NSRect); message 'drawKnob:';
-    procedure drawKnob_; message 'drawKnob';
-    function barRectFlipped (flipped: ObjCBOOL): NSRect; message 'barRectFlipped:'; { available in 10_9 }
-    procedure drawBarInside_flipped (aRect: NSRect; flipped: ObjCBOOL); message 'drawBarInside:flipped:';
-    procedure setTitleColor (newColor: NSColor); message 'setTitleColor:'; deprecated 'in 10_0, 10_9';
-    function titleColor: NSColor; message 'titleColor'; deprecated 'in 10_0, 10_9';
-    procedure setTitleFont (fontObj: NSFont); message 'setTitleFont:'; deprecated 'in 10_0, 10_9';
-    function titleFont: NSFont; message 'titleFont'; deprecated 'in 10_0, 10_9';
-    function title_: NSString; message 'title'; deprecated 'in 10_0, 10_9';
-    procedure setTitle (aString: NSString); message 'setTitle:'; deprecated 'in 10_0, 10_9';
-    procedure setTitleCell (aCell: NSCell); message 'setTitleCell:'; deprecated 'in 10_0, 10_9';
-    function titleCell: id; message 'titleCell'; deprecated 'in 10_0, 10_9';
-    procedure setKnobThickness (aFloat: CGFloat); message 'setKnobThickness:'; deprecated 'in 10_0, 10_9';
+    function knobRectFlipped(flipped: Boolean): NSRect; message 'knobRectFlipped:';
+    procedure drawKnob(knobRect: NSRect); message 'drawKnob:';
+    procedure drawBarInside_flipped(aRect: NSRect; flipped: Boolean); message 'drawBarInside:flipped:';
+    function trackRect: NSRect; message 'trackRect';
+    procedure setSliderType(sliderType_: NSSliderType); message 'setSliderType:';
+    function sliderType: NSSliderType; message 'sliderType';
   end;
 
-
-type
-  NSSliderCell_NSTickMarkSupport = objccategory external name 'NSTickMarkSupport' (NSSliderCell)
-    procedure setNumberOfTickMarks(newValue: NSInteger); message 'setNumberOfTickMarks:';
+{ NSTickMarkSupportCategory }
+  NSTickMarkSupportCategory = objccategory external (NSSliderCell)
+    procedure setNumberOfTickMarks(count: NSInteger); message 'setNumberOfTickMarks:';
     function numberOfTickMarks: NSInteger; message 'numberOfTickMarks';
-    procedure setTickMarkPosition(newValue: NSTickMarkPosition); message 'setTickMarkPosition:';
+    procedure setTickMarkPosition(position: NSTickMarkPosition); message 'setTickMarkPosition:';
     function tickMarkPosition: NSTickMarkPosition; message 'tickMarkPosition';
-    procedure setAllowsTickMarkValuesOnly(newValue: ObjCBOOL); message 'setAllowsTickMarkValuesOnly:';
-    function allowsTickMarkValuesOnly: ObjCBOOL; message 'allowsTickMarkValuesOnly';
-    function tickMarkValueAtIndex (index: NSInteger): double; message 'tickMarkValueAtIndex:';
-    function rectOfTickMarkAtIndex (index: NSInteger): NSRect; message 'rectOfTickMarkAtIndex:';
-    function indexOfTickMarkAtPoint (point: NSPoint): NSInteger; message 'indexOfTickMarkAtPoint:';
-    function closestTickMarkValueToValue (value: double): double; message 'closestTickMarkValueToValue:';
-    procedure drawTickMarks; message 'drawTickMarks'; { available in 10_9 }
+    procedure setAllowsTickMarkValuesOnly(yorn: Boolean); message 'setAllowsTickMarkValuesOnly:';
+    function allowsTickMarkValuesOnly: Boolean; message 'allowsTickMarkValuesOnly';
+    function tickMarkValueAtIndex(index: NSInteger): double; message 'tickMarkValueAtIndex:';
+    function rectOfTickMarkAtIndex(index: NSInteger): NSRect; message 'rectOfTickMarkAtIndex:';
+    function indexOfTickMarkAtPoint(point: NSPoint): NSInteger; message 'indexOfTickMarkAtPoint:';
+    function closestTickMarkValueToValue(value: double): double; message 'closestTickMarkValueToValue:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

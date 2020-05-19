@@ -56,7 +56,6 @@ TTestComponentStream = Class(TTestStreaming)
     Procedure TestTStreamedOwnedComponents;
     Procedure TestTMethodComponent;
     Procedure TestTMethodComponent2;
-    Procedure TestTOwnedInterface;
   end;
   { TMyItem }
 
@@ -1223,28 +1222,6 @@ begin
     ExpectBareString('MethodProp');
     ExpectIdent('MyMethod2');
     ExpectEndOfList;
-    ExpectEndOfList;
-    ExpectEndOfList;
-  Finally
-    C.Free;
-    end;
-end;
-
-Procedure TTestComponentStream.TestTOwnedInterface;
-
-Var
-  C : TComponent;
-
-begin
-  C:=TOwnedInterface.Create(Nil);
-  Try
-    SaveToStream(C);
-    ExpectSignature;
-    ExpectFlags([],0);
-    ExpectBareString('TOwnedInterface');
-    ExpectBareString('TestTOwnedInterface');
-    ExpectBareString('IntfProp');
-    ExpectIdent('InterfacedComponent');
     ExpectEndOfList;
     ExpectEndOfList;
   Finally

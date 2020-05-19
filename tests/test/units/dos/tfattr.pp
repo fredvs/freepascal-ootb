@@ -76,10 +76,7 @@ Procedure CheckDosError(err: Integer);
   11 : s := '(11) : Invalid format.';
   18 : s := '(18) : No more files.';
   else
-   begin
-    Str (X, S);
-    s := '(' + s + ') - INVALID DOSERROR';
-   end
+    s := 'INVALID DOSERROR';
   end;
   if err <> x then
     Begin
@@ -301,9 +298,9 @@ end;
 
 var
  f: file;
- oldexit : codepointer;
+ oldexit : pointer;
 
-  procedure MyExit;
+  procedure MyExit;far;
    begin
      ExitProc := OldExit;
      RmDir(TestDir);

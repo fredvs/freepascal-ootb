@@ -46,15 +46,15 @@ begin
 end;
 
 
-Function FileExists (Const FileName : UnicodeString; FollowLink : Boolean) : Boolean;
+Function FileExists (Const FileName : UnicodeString) : Boolean;
 begin
-  Result:=FileExists(ToSingleByteFileSystemEncodedFileName(FileName), FollowLink);
+  Result:=FileExists(ToSingleByteFileSystemEncodedFileName(FileName));
 end;
 
 
-Function DirectoryExists (Const Directory : UnicodeString; FollowLink : Boolean) : Boolean;
+Function DirectoryExists (Const Directory : UnicodeString) : Boolean;
 begin
-  Result:=DirectoryExists(ToSingleByteFileSystemEncodedFileName(Directory), FollowLink);
+  Result:=DirectoryExists(ToSingleByteFileSystemEncodedFileName(Directory));
 end;
 
 
@@ -122,26 +122,6 @@ end;
 Function FileAge(const FileName: UnicodeString; out FileDateTime: TDateTime; FollowLink: Boolean = True): Boolean;
 begin
   Result:=FileAge(ToSingleByteFileSystemEncodedFileName(FileName),FileDateTime,FollowLink);
-end;
-
-
-function FileGetSymLinkTarget(const FileName: UnicodeString; out SymLinkRec: TUnicodeSymLinkRec): Boolean;
-var
-  sr: TRawbyteSymLinkRec;
-begin
-  Result := FileGetSymLinkTarget(ToSingleByteFileSystemEncodedFileName(FileName), sr);
-  if Result then
-    begin
-      SymLinkRec.TargetName := UnicodeString(sr.TargetName);
-      SymLinkRec.Size := sr.Size;
-      SymLinkRec.Attr := sr.Attr;
-{$ifdef SYMLINKREC_USEFINDDATA}
-      SymLinkRec.FindData := sr.FindData;
-{$endif}
-{$ifdef unix}
-      SymLinkRec.Mode := sr.Mode;
-{$endif}
-    end;
 end;
 
 
@@ -263,15 +243,15 @@ begin
 end;
 
 
-Function FileExists (Const FileName : RawByteString; FollowLink : Boolean) : Boolean;
+Function FileExists (Const FileName : RawByteString) : Boolean;
 begin
-  Result:=FileExists(UnicodeString(FileName), FollowLink);
+  Result:=FileExists(UnicodeString(FileName));
 end;
 
 
-Function DirectoryExists (Const Directory : RawByteString; FollowLink : Boolean) : Boolean;
+Function DirectoryExists (Const Directory : RawByteString) : Boolean;
 begin
-  Result:=DirectoryExists(UnicodeString(Directory), FollowLink);
+  Result:=DirectoryExists(UnicodeString(Directory));
 end;
 
 
@@ -337,26 +317,6 @@ end;
 Function FileAge(const FileName: RawbyteString; out FileDateTime: TDateTime; FollowLink: Boolean = True): Boolean;
 begin
   Result:=FileAge(UnicodeString(FileName),FileDateTime,FollowLink);
-end;
-
-
-function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
-var
-  sr: TUnicodeSymLinkRec;
-begin
-  Result := FileGetSymLinkTarget(UnicodeString(FileName), sr);
-  if Result then
-    begin
-      SymLinkRec.TargetName := ToSingleByteFileSystemEncodedFileName(sr.TargetName);
-      SymLinkRec.Size := sr.Size;
-      SymLinkRec.Attr := sr.Attr;
-{$ifdef SYMLINKREC_USEFINDDATA}
-      SymLinkRec.FindData := sr.FindData;
-{$endif}
-{$ifdef unix}
-      SymLinkRec.Mode := sr.Mode;
-{$endif}
-    end;
 end;
 
 
@@ -443,26 +403,6 @@ end;
 {$endif}
 
 
-function FileGetSymLinkTarget(const FileName: UnicodeString; out TargetName: UnicodeString): Boolean;
-var
-  sr: TUnicodeSymLinkRec;
-begin
-  Result := FileGetSymLinkTarget(FileName, sr);
-  if Result then
-    TargetName := sr.TargetName;
-end;
-
-
-function FileGetSymLinkTarget(const FileName: RawByteString; out TargetName: RawByteString): Boolean;
-var
-  sr: TRawbyteSymLinkRec;
-begin
-  Result := FileGetSymLinkTarget(FileName, sr);
-  if Result then
-    TargetName := sr.TargetName;
-end;
-
-
 Function GetFileHandle(var f : File):THandle;
 begin
   Result:=filerec(f).handle;
@@ -497,7 +437,7 @@ type
   {$ifdef unix}
     Mode : TMode;
   {$endif unix}
-  {$ifdef SEARCHREC_USEFINDDATA}
+  {$ifdef USEFINDDATA}
     FindData : TFindData;
   {$endif}
   end;
@@ -513,7 +453,7 @@ Function InternalFindFirst (Const Path : UnicodeString; Attr : Longint; out Rslt
 Function InternalFindNext (var Rslt : TAbstractSearchRec; var Name : UnicodeString) : Longint; forward;
 {$endif SYSUTILS_HAS_UNICODESTR_FILEUTIL_IMPL}
 
-procedure InternalFindClose(var Handle: {$ifdef FINDHANDLE_IS_POINTER}Pointer{$else}THandle{$endif}{$ifdef SEARCHREC_USEFINDDATA};var FindData: TFindData{$endif}); forward;
+procedure InternalFindClose(var Handle: {$ifdef FINDHANDLE_IS_POINTER}Pointer{$else}THandle{$endif}{$ifdef USEFINDDATA};var FindData: TFindData{$endif}); forward;
 
 
 {$ifndef SYSUTILS_HAS_ANSISTR_FILEUTIL_IMPL}
@@ -593,61 +533,14 @@ end;
 
 Procedure FindClose(Var f: TRawByteSearchRec);
 begin
-  InternalFindClose(f.FindHandle{$ifdef SEARCHREC_USEFINDDATA},f.FindData{$endif});
+  InternalFindClose(f.FindHandle{$ifdef USEFINDDATA},f.FindData{$endif});
 end;
 
 
 Procedure FindClose(Var f: TUnicodeSearchRec);
 begin
-  InternalFindClose(f.FindHandle{$ifdef SEARCHREC_USEFINDDATA},f.FindData{$endif});
+  InternalFindClose(f.FindHandle{$ifdef USEFINDDATA},f.FindData{$endif});
 end;
-
-{ TUnicodeSearchRec }
-
-function TUnicodeSearchRec.GetTimeStamp: TDateTime;
-begin
-  Result := FileDateToDateTime(Time);
-end;
-
-{ TRawbyteSearchRec }
-
-function TRawbyteSearchRec.GetTimeStamp: TDateTime;
-begin
-  Result := FileDateToDateTime(Time);
-end;
-
-{ TUnicodeSymLinkRec }
-
-function TUnicodeSymLinkRec.GetTimeStamp: TDateTime;
-{$if defined(win32) or defined(win64) or defined(wince)}
-var
-  st: TSystemTime;
-{$endif}
-begin
-{$if defined(win32) or defined(win64) or defined(wince)}
-  FileTimeToSystemTime(FindData.ftLastWriteTime, st);
-  Result := SystemTimeToDateTime(st);
-{$else}
-  Result := 0;
-{$endif}
-end;
-
-{ TRawbyteSymLinkRec }
-
-function TRawbyteSymLinkRec.GetTimeStamp: TDateTime;
-{$if defined(win32) or defined(win64) or defined(wince)}
-var
-  st: TSystemTime;
-{$endif}
-begin
-{$if defined(win32) or defined(win64) or defined(wince)}
-  FileTimeToSystemTime(FindData.ftLastWriteTime, st);
-  Result := SystemTimeToDateTime(st);
-{$else}
-  Result := 0;
-{$endif}
-end;
-
 
 {$ifndef SYSUTILS_HAS_FILEFLUSH_IMPL}
 function FileFlush(Handle: THandle): Boolean;

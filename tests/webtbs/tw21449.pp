@@ -49,8 +49,6 @@ begin
 end;
 
 begin
-  DecimalSeparator := '.';
   test;
-  writeln('ok');
 end.
 

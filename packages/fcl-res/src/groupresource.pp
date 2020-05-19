@@ -86,8 +86,11 @@ begin
   fItemList:=TFPList.Create;
   //read NewHeader from resource
   RawData.Position:=0;
-  if RawData.Read(nh,sizeof(nh))<>sizeof(nh) then 
-    exit;
+  try
+    RawData.ReadBuffer(nh,sizeof(nh));
+  except
+    on e : EReadError do exit; //empty stream
+  end;
   {$IFDEF ENDIAN_BIG}
   nh.reserved:=SwapEndian(nh.reserved);
   nh.restype:=SwapEndian(nh.restype);

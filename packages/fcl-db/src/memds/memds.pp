@@ -401,13 +401,12 @@ end;
 
 destructor TMemDataset.Destroy;
 begin
-//  FStream.Free;
+  FStream.Free;
   FreeMem(FFieldOffsets);
   FreeMem(FFieldSizes);
   FBlobs.Clear;
   FBlobs.Free;
   inherited Destroy;
-  FStream.Free;
 end;
 
 function TMemDataset.BookmarkValid(ABookmark: TBookmark): Boolean;
@@ -464,9 +463,9 @@ var
 begin
  FD := FieldDefs.Items[FieldNo-1];
  case FD.DataType of
-  ftString : Result:=FD.Size*FD.CharSize+1;
-  ftGuid:   result:=FD.Size+1;
-  ftFixedChar:result:=FD.Size*FD.CharSize+1;
+  ftString,
+    ftGuid:   result:=FD.Size+1;
+  ftFixedChar:result:=FD.Size+1;
   ftBoolean:  result:=SizeOf(Wordbool);
   ftCurrency,
   ftFloat:    result:=SizeOf(Double);
@@ -653,7 +652,7 @@ end;
 procedure TMemDataset.InternalOpen;
 
 begin
-  If (FFileName<>'') and FileExists(FFileName) then
+  If (FFileName<>'') then
     FOpenStream:=TFileStream.Create(FFileName,fmOpenRead);
   Try
     InternalInitFieldDefs;
@@ -1037,7 +1036,7 @@ end;
 
 procedure TMemDataset.calcrecordlayout;
 var
-  i,Count,aSize : integer;
+  i,Count : integer;
 begin
  Count := FieldDefs.Count;
  // Avoid mem-leak if CreateTable is called twice
@@ -1057,9 +1056,8 @@ begin
  for i:= 0 to Count-1 do
    begin
    GetIntegerPointer(FFieldOffsets, i)^ := FRecSize;
-   aSize:=MDSGetBufferSize(i+1);
-   GetIntegerPointer(FFieldSizes,   i)^ := aSize;
-   FRecSize:= FRecSize+aSize;
+   GetIntegerPointer(FFieldSizes,   i)^ := MDSGetBufferSize(i+1);
+   FRecSize:= FRecSize+GetIntegerPointer(FFieldSizes, i)^;
    end;
  FRecInfoOffset:=FRecSize;
  FRecSize:=FRecSize+SizeRecInfo;
@@ -1161,22 +1159,19 @@ begin
               begin
               F1:=TField(L1[i]);
               F2:=TField(L2[I]);
-              if F2.IsNull then
-                F1.Clear
-              else
-                Case F1.DataType of
-                  ftFixedChar,
-                  ftString   : F1.AsString:=F2.AsString;
-                  ftBoolean  : F1.AsBoolean:=F2.AsBoolean;
-                  ftFloat    : F1.AsFloat:=F2.AsFloat;
-                  ftLargeInt : F1.AsLargeInt:=F2.AsLargeInt;
-                  ftSmallInt : F1.AsInteger:=F2.AsInteger;
-                  ftInteger  : F1.AsInteger:=F2.AsInteger;
-                  ftDate     : F1.AsDateTime:=F2.AsDateTime;
-                  ftTime     : F1.AsDateTime:=F2.AsDateTime;
-                  ftDateTime : F1.AsDateTime:=F2.AsDateTime;
-                  else         F1.AsString:=F2.AsString;
-                end;
+              Case F1.DataType of
+                ftFixedChar,
+                ftString   : F1.AsString:=F2.AsString;
+                ftBoolean  : F1.AsBoolean:=F2.AsBoolean;
+                ftFloat    : F1.AsFloat:=F2.AsFloat;
+                ftLargeInt : F1.AsInteger:=F2.AsInteger;
+                ftSmallInt : F1.AsInteger:=F2.AsInteger;
+                ftInteger  : F1.AsInteger:=F2.AsInteger;
+                ftDate     : F1.AsDateTime:=F2.AsDateTime;
+                ftTime     : F1.AsDateTime:=F2.AsDateTime;
+                ftDateTime : F1.AsDateTime:=F2.AsDateTime;
+                else         F1.AsString:=F2.AsString;
+              end;
               end;
             Try
               Post;
@@ -1221,8 +1216,7 @@ var
   AKeyValues: variant;
   i: integer;
   AField: TField;
-  s1,s2: UTF8String;
-
+  s1,s2: string;
 begin
   Result := false;
   SaveState := SetTempState(dsFilter);
@@ -1261,16 +1255,8 @@ begin
           // string fields
           if AField.DataType in [ftString, ftFixedChar] then
           begin
-            if TStringField(AField).CodePage=CP_UTF8 then
-              begin
-              s1 := AField.AsUTF8String;
-              s2 := UTF8Encode(VarToUnicodeStr(AKeyValues[i]));
-              end
-            else
-              begin
-              s1 := AField.AsString;
-              s2 := VarToStr(AKeyValues[i]);
-              end;
+            s1 := AField.AsString;
+            s2 := VarToStr(AKeyValues[i]);
             if loPartialKey in Options then
               s1 := copy(s1, 1, length(s2));
             if loCaseInsensitive in Options then

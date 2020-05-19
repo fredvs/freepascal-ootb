@@ -28,16 +28,15 @@ end;}
     TFieldDef
   ---------------------------------------------------------------------}
 
-constructor TFieldDef.Create(ACollection: TCollection);
+Constructor TFieldDef.Create(ACollection : TCollection);
 
 begin
   Inherited Create(ACollection);
   FFieldNo:=Index+1;
 end;
 
-constructor TFieldDef.Create(AOwner: TFieldDefs; const AName: string;
-  ADataType: TFieldType; ASize: Integer; ARequired: Boolean; AFieldNo: Longint;
-  ACodePage: TSystemCodePage);
+Constructor TFieldDef.Create(AOwner: TFieldDefs; const AName: string;
+      ADataType: TFieldType; ASize: Integer; ARequired: Boolean; AFieldNo: Longint);
 
 begin
 {$ifdef dsdebug }
@@ -50,17 +49,9 @@ begin
   FRequired:=ARequired;
   FPrecision:=-1;
   FFieldNo:=AFieldNo;
-  case FDataType of
-    ftString, ftFixedChar, ftMemo:
-      FCodePage := ACodePage;
-    ftWideString, ftFixedWideChar, ftWideMemo:
-      FCodePage := CP_UTF16;
-    else
-      FCodePage := 0;
-  end;
 end;
 
-destructor TFieldDef.Destroy;
+Destructor TFieldDef.Destroy;
 
 begin
   Inherited destroy;
@@ -80,16 +71,14 @@ begin
       Size := fd.Size;
       Precision := fd.Precision;
       FRequired := fd.Required;
-      FCodePage := fd.FCodePage;
     finally
       Collection.EndUpdate;
     end;
-  end
-  else
-    inherited Assign(APersistent);
+  end else
+  inherited Assign(APersistent);
 end;
 
-function TFieldDef.CreateField(AOwner: TComponent): TField;
+Function TFieldDef.CreateField(AOwner: TComponent): TField;
 
 var TheField : TFieldClass;
 
@@ -115,16 +104,12 @@ begin
     Writeln ('TFieldDef.CreateField : Trying to set dataset');
 {$endif dsdebug}
     Result.Dataset:=TFieldDefs(Collection).Dataset;
-    if (Result is TStringField) then
-      TStringField(Result).FCodePage := FCodePage
-    else if (Result is TMemoField) then
-      TMemoField(Result).FCodePage := FCodePage
-    else if (Result is TFloatField) then
-      TFloatField(Result).Precision := FPrecision
-    else if (Result is TBCDField) then
-      TBCDField(Result).Precision := FPrecision
-    else if (Result is TFmtBCDField) then
-      TFmtBCDField(Result).Precision := FPrecision;
+    If (Result is TFloatField) then
+      TFloatField(Result).Precision:=FPrecision;
+    if (Result is TBCDField) then
+      TBCDField(Result).Precision:=FPrecision;
+    if (Result is TFmtBCDField) then
+      TFmtBCDField(Result).Precision:=FPrecision;
   except
     Result.Free;
     Raise;
@@ -161,7 +146,7 @@ begin
   Changed(False);
 end;
 
-function TFieldDef.GetFieldClass: TFieldClass;
+Function TFieldDef.GetFieldClass : TFieldClass;
 
 begin
   //!! Should be owner as tdataset but that doesn't work ??
@@ -172,21 +157,6 @@ begin
     Result:=TFieldDefs(Collection).Dataset.GetFieldClass(FDataType)
   else
     Result:=Nil;
-end;
-
-function TFieldDef.GetCharSize: Word;
-begin
-  case FDataType of
-   ftString, ftFixedChar:
-     case FCodePage of
-       CP_UTF8: Result := 4;
-       else     Result := 1;
-     end;
-   ftWideString, ftFixedWideChar:
-     Result := 2;
-   else
-     Result := 0;
-  end;
 end;
 
 { ---------------------------------------------------------------------
@@ -225,7 +195,7 @@ begin
   // fieldno is 1 based !
   BeginUpdate;
   try
-    Add(AName,ADataType,ASize,ARequired,Count+1);
+    Add(AName,ADataType,ASize,Arequired,Count+1);
   finally
     EndUpdate;
   end;
@@ -252,21 +222,9 @@ begin
   Inherited Create(ADataset, Owner, FieldDefClass);
 end;
 
-function TFieldDefs.Add(const AName: string; ADataType: TFieldType; ASize, APrecision: Integer;
-  ARequired, AReadOnly: Boolean; AFieldNo: Integer; ACodePage: TSystemCodePage): TFieldDef;
-begin
-  Result:=FieldDefClass.Create(Self, MakeNameUnique(AName), ADataType, ASize, ARequired, AFieldNo, ACodePage);
-  case ADataType of
-    ftBCD, ftFmtBCD:
-      Result.Precision := APrecision;
-  end;
-  if AReadOnly then
-    Result.Attributes := Result.Attributes + [faReadOnly];
-end;
-
 function TFieldDefs.Add(const AName: string; ADataType: TFieldType; ASize: Word; ARequired: Boolean; AFieldNo: Integer): TFieldDef;
 begin
-  Result:=FieldDefClass.Create(Self,AName,ADataType,ASize,ARequired,AFieldNo);
+  Result:=FieldDefClass.create(Self,AName,ADataType,ASize,ARequired,AFieldNo);
 end;
 
 procedure TFieldDefs.Assign(FieldDefs: TFieldDefs);
@@ -409,14 +367,12 @@ begin
           Assign(TPersistent(VObject))
         else
           Error;
+      vtAnsiString:
+        AsString := string(VAnsiString);
       vtCurrency:
         AsCurrency := VCurrency^;
       vtVariant:
         if not VarIsClear(VVariant^) then Self.Value := VVariant^;
-      vtAnsiString:
-        AsAnsiString := AnsiString(VAnsiString);
-      vtUnicodeString:
-        AsUnicodeString := UnicodeString(VUnicodeString);
       vtWideString:
         AsWideString := WideString(VWideString);
       vtInt64:
@@ -496,16 +452,9 @@ end;
 
 function TField.GetAsBytes: TBytes;
 begin
-  Result:=Default(TBytes);
-//  Writeln('Allocating ',Datasize,' bytes');
   SetLength(Result, DataSize);
   if assigned(result) and not GetData(@Result[0], False) then
     Result := nil;
-end;
-
-function TField.GetAsCurrency: Currency;
-begin
-  Result := GetAsFloat;
 end;
 
 function TField.GetAsDateTime: TDateTime;
@@ -518,11 +467,6 @@ function TField.GetAsFloat: Double;
 
 begin
   raise AccessError(SDateTime);
-end;
-
-function TField.GetAsLargeInt: Largeint;
-begin
-  Raise AccessError(SLargeInt);
 end;
 
 function TField.GetAsLongint: Longint;
@@ -545,28 +489,14 @@ end;
 
 
 function TField.GetAsString: string;
-begin
-  Result := GetClassDesc
-end;
 
-function TField.GetAsAnsiString: AnsiString;
 begin
-  Result := GetAsString;
-end;
-
-function TField.GetAsUnicodeString: UnicodeString;
-begin
-  Result := GetAsString;
-end;
-
-function TField.GetAsUTF8String: UTF8String;
-begin
-  Result := GetAsString;
+  Result := GetClassDesc;
 end;
 
 function TField.GetAsWideString: WideString;
 begin
-  Result := GetAsUnicodeString;
+  Result := GetAsString;
 end;
 
 function TField.GetOldValue: variant;
@@ -699,7 +629,7 @@ begin
   Result:=(DisplayLabel<>FieldName);
 end;
 
-function TField.IsDisplayWidthStored: Boolean;
+Function TField.IsDisplayWidthStored : Boolean;
 
 begin
   Result:=(FDisplayWidth<>0);
@@ -732,6 +662,16 @@ end;
 function TField.GetLookup: Boolean;
 begin
   Result := FieldKind = fkLookup;
+end;
+
+function TField.GetAsLargeInt: LargeInt;
+begin
+  Raise AccessError(SLargeInt);
+end;
+
+function TField.GetAsCurrency: Currency;
+begin
+  Result := GetAsFloat;
 end;
 
 procedure TField.SetAlignment(const AValue: TAlignMent);
@@ -879,8 +819,7 @@ begin
     try
       SetVarValue(AValue);
     except
-      on EVariantError do
-        DatabaseErrorFmt(SFieldError+SInvalidVariant, [DisplayName]);
+      on EVariantError do DatabaseErrorFmt(SFieldValueError, [DisplayName]);
     end;
 end;
 
@@ -905,24 +844,9 @@ begin
   Raise AccessError(SString);
 end;
 
-procedure TField.SetAsAnsiString(const AValue: AnsiString);
-begin
-  SetAsString(AValue);
-end;
-
-procedure TField.SetAsUnicodeString(const AValue: UnicodeString);
-begin
-  SetAsString(AValue);
-end;
-
-procedure TField.SetAsUTF8String(const AValue: UTF8String);
-begin
-  SetAsString(AValue);
-end;
-
 procedure TField.SetAsWideString(const AValue: WideString);
 begin
-  SetAsUnicodeString(AValue);
+  SetAsString(AValue);
 end;
 
 
@@ -936,7 +860,7 @@ procedure TField.SetData(Buffer: Pointer; NativeFormat : Boolean);
 
 begin
   If Not Assigned(FDataset) then
-    DatabaseErrorFmt(SNoDataset,[DisplayName]);
+    DatabaseErrorFmt(SNoDataset,[FieldName]);
   FDataSet.SetFieldData(Self,Buffer, NativeFormat);
 end;
 
@@ -990,7 +914,7 @@ end;
 procedure TField.SetText(const AValue: string);
 
 begin
-  SetAsString(AValue);
+  AsString:=AValue;
 end;
 
 procedure TField.SetVarValue(const AValue: Variant);
@@ -1116,10 +1040,9 @@ constructor TStringField.Create(AOwner: TComponent);
 begin
   Inherited Create(AOwner);
   SetDataType(ftString);
-  FCodePage := CP_ACP;
   FFixedChar := False;
   FTransliterate := False;
-  FSize := 20;
+  FSize:=20;
 end;
 
 procedure TStringField.SetFieldType(AValue: TFieldType);
@@ -1135,7 +1058,7 @@ begin
 // a query like: 'select '' as fieldname from table' which
 // results in a string with size 0.
   If (AValue<0) Then
-    DatabaseErrorFmt(SInvalidFieldSize,[AValue])
+    databaseErrorFmt(SInvalidFieldSize,[AValue])
 end;
 
 function TStringField.GetAsBoolean: Boolean;
@@ -1171,44 +1094,20 @@ begin
   Result:=StrToInt64(GetAsString);
 end;
 
-function TStringField.GetAsString: String;
-begin
-{$IFDEF UNICODE}
-  Result := GetAsAnsiString;
-{$ELSE}
-  if GetValue(RawByteString(Result)) then
-    SetCodePage(RawByteString(Result), CP_ACP, True)
-  else
-    Result:='';
-{$ENDIF}
-end;
+function TStringField.GetAsString: string;
 
-function TStringField.GetAsAnsiString: AnsiString;
 begin
-  if GetValue(RawByteString(Result)) then
-    SetCodePage(RawByteString(Result), CP_ACP, True)
-  else
+  If Not GetValue(Result) then
     Result:='';
 end;
 
-function TStringField.GetAsUTF8String: UTF8String;
-begin
-  if GetValue(RawByteString(Result)) then
-    SetCodePage(RawByteString(Result), CP_UTF8, True)
-  else
-    Result:='';
-end;
+function TStringField.GetAsVariant: Variant;
 
-function TStringField.GetAsVariant: variant;
-
-var s : rawbytestring;
+var s : string;
 
 begin
   If GetValue(s) then
-    begin
-    SetCodePage(s, CP_ACP, True); 
     Result:=s
-    end
   else
     Result:=Null;
 end;
@@ -1217,10 +1116,7 @@ end;
 function TStringField.GetDataSize: Integer;
 
 begin
-  case FCodePage of
-    CP_UTF8: Result := 4*Size+1;
-    else     Result :=   Size+1;
-  end;
+  Result:=Size+1;
 end;
 
 function TStringField.GetDefaultWidth: Longint;
@@ -1229,22 +1125,22 @@ begin
   result:=Size;
 end;
 
-procedure TStringField.GetText(var AText: string; ADisplayText: Boolean);
+Procedure TStringField.GetText(var AText: string; ADisplayText: Boolean);
 
 begin
     AText:=GetAsString;
 end;
 
-function TStringField.GetValue(out AValue: RawByteString): Boolean;
+function TStringField.GetValue(var AValue: string): Boolean;
 
 var Buf, TBuf : TStringFieldBuffer;
-    DynBuf, TDynBuf : Array of AnsiChar;
+    DynBuf, TDynBuf : Array of char;
 
 begin
   if DataSize <= dsMaxStringSize then
     begin
     Result:=GetData(@Buf);
-    Buf[DataSize-1]:=#0;  //limit string to Size
+    Buf[Size]:=#0;  //limit string to Size
     If Result then
       begin
       if Transliterate then
@@ -1260,20 +1156,19 @@ begin
     begin
     SetLength(DynBuf,DataSize);
     Result:=GetData(@DynBuf[0]);
-    DynBuf[DataSize-1]:=#0;  //limit string to Size
+    DynBuf[Size]:=#0;  //limit string to Size
     If Result then
       begin
       if Transliterate then
         begin
         SetLength(TDynBuf,DataSize);
         DataSet.Translate(@DynBuf[0],@TDynBuf[0],False);
-        AValue:=PAnsiChar(TDynBuf);
+        AValue:=pchar(TDynBuf);
         end
       else
-        AValue:=PAnsiChar(DynBuf);
+        AValue:=pchar(DynBuf);
       end
     end;
-  SetCodePage(AValue, FCodePage, False);
 end;
 
 procedure TStringField.SetAsBoolean(AValue: Boolean);
@@ -1309,67 +1204,44 @@ begin
   SetAsString(IntToStr(AValue));
 end;
 
-procedure TStringField.SetValue(AValue: RawByteString);
+procedure TStringField.SetAsString(const AValue: string);
+
 var Buf      : TStringFieldBuffer;
-    DynBuf   : array of AnsiChar;
+    DynBuf   : array of char;
+
 begin
-  if AValue='' then
+  if Length(AValue)=0 then
     begin
     Buf := #0;
     SetData(@Buf);
     end
+  else if DataSize <= dsMaxStringSize then
+    begin
+    if FTransliterate then
+      DataSet.Translate(@AValue[1],Buf,True)
+    else
+      // The data is copied into the buffer, since some TDataset descendents copy
+      // the whole buffer-length in SetData. (See bug 8477)
+      StrPLCopy(PChar(Buf), AValue, Size);
+    // If length(AValue) > Size the buffer isn't terminated properly ?
+    Buf[Size] := #0;
+    SetData(@Buf);
+    end
   else
     begin
-    if StringCodePage(AValue) <> FCodePage then
-      SetCodePage(AValue, FCodePage, FCodePage<>CP_NONE);
-    if DataSize <= dsMaxStringSize then
-      begin
-      if FTransliterate then
-        DataSet.Translate(@AValue[1],Buf,True)
-      else
-        // The data is copied into the buffer, since some TDataset descendents copy
-        // the whole buffer-length in SetData. (See bug 8477)
-        StrPLCopy(PAnsiChar(Buf), AValue, DataSize-1);
-      // If length(AValue) > Size the buffer isn't terminated properly ?
-      Buf[DataSize-1] := #0;
-      SetData(@Buf);
-      end
+    SetLength(DynBuf, DataSize);
+    if FTransliterate then
+      DataSet.Translate(@AValue[1],@DynBuf[0],True)
     else
-      begin
-      SetLength(DynBuf, DataSize);
-      if FTransliterate then
-        DataSet.Translate(@AValue[1],@DynBuf[0],True)
-      else
-        StrPLCopy(PAnsiChar(DynBuf), AValue, DataSize-1);
-      SetData(@DynBuf[0]);
-      end;
-    end;
-end;
-
-procedure TStringField.SetAsString(const AValue: String);
-begin
-{$IFDEF UNICODE}
-  SetAsAnsiString(AValue);
-{$ELSE}
-  SetValue(AValue);
-{$ENDIF}
-end;
-
-procedure TStringField.SetAsAnsiString(const AValue: AnsiString);
-begin
-  SetValue(AValue);
-end;
-
-procedure TStringField.SetAsUTF8String(const AValue: UTF8String);
-begin
-  SetValue(AValue);
+      StrPLCopy(PChar(DynBuf), AValue, Size);
+    SetData(@DynBuf[0]);
+    end
 end;
 
 procedure TStringField.SetVarValue(const AValue: Variant);
 begin
   SetAsString(AValue);
 end;
-
 
 { ---------------------------------------------------------------------
     TWideStringField
@@ -1381,14 +1253,13 @@ begin
 // a query like: 'select '' as fieldname from table' which
 // results in a string with size 0.
   If (AValue<0) Then
-    DatabaseErrorFmt(SInvalidFieldSize,[AValue]);
+    databaseErrorFmt(SInvalidFieldSize,[AValue]);
 end;
 
 constructor TWideStringField.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   SetDataType(ftWideString);
-  FCodePage := CP_UTF16;
 end;
 
 procedure TWideStringField.SetFieldType(AValue: TFieldType);
@@ -1397,11 +1268,11 @@ begin
     SetDataType(AValue);
 end;
 
-function TWideStringField.GetValue(out AValue: UnicodeString): Boolean;
+function TWideStringField.GetValue(var AValue: WideString): Boolean;
 var
-  FixBuffer : array[0..dsMaxStringSize div 2] of UnicodeChar;
-  DynBuffer : array of UnicodeChar;
-  Buffer    : PUnicodeChar;
+  FixBuffer : array[0..dsMaxStringSize div 2] of WideChar;
+  DynBuffer : array of WideChar;
+  Buffer    : PWideChar;
 begin
   if DataSize <= dsMaxStringSize then begin
     Result := GetData(@FixBuffer, False);
@@ -1409,7 +1280,7 @@ begin
     AValue := FixBuffer;
   end else begin
     SetLength(DynBuffer, Succ(Size));
-    Buffer := PUnicodeChar(DynBuffer);
+    Buffer := PWideChar(DynBuffer);
     Result := GetData(Buffer, False);
     Buffer[Size]:=#0;     //limit string to Size
     if Result then
@@ -1419,43 +1290,20 @@ end;
 
 function TWideStringField.GetAsString: string;
 begin
-{$IFDEF UNICODE}
-  if not GetValue(Result) then
-    Result := '';
-{$ELSE}
-  Result := GetAsUnicodeString;
-{$ENDIF}
+  Result := GetAsWideString;
 end;
 
 procedure TWideStringField.SetAsString(const AValue: string);
 begin
-  SetAsUnicodeString(AValue);
-end;
-
-function TWideStringField.GetAsUnicodeString: UnicodeString;
-begin
-  if not GetValue(Result) then
-    Result := '';
-end;
-
-procedure TWideStringField.SetAsUnicodeString(const AValue: UnicodeString);
-const
-  NullUnicodeChar : UnicodeChar = #0;
-var
-  Buffer : PUnicodeChar;
-begin
-  if Length(AValue)>0 then
-    Buffer := PUnicodeChar(@AValue[1])
-  else
-    Buffer := @NullUnicodeChar;
-  SetData(Buffer, False);
+  SetAsWideString(AValue);
 end;
 
 function TWideStringField.GetAsVariant: Variant;
-var us: UnicodeString;
+var
+  ws: WideString;
 begin
-  if GetValue(us) then
-    Result := us
+  if GetValue(ws) then
+    Result := ws
   else
     Result := Null;
 end;
@@ -1466,32 +1314,28 @@ begin
 end;
 
 function TWideStringField.GetAsWideString: WideString;
-var us: UnicodeString;
 begin
-  if GetValue(us) then
-    Result := us
-  else
+  if not GetValue(Result) then
     Result := '';
 end;
 
 procedure TWideStringField.SetAsWideString(const AValue: WideString);
+const
+  NullWideChar : WideChar = #0;
+var
+  Buffer : PWideChar;
 begin
-  SetAsUnicodeString(AValue);
-end;
-
-function TWideStringField.GetAsUTF8String: UTF8String;
-begin
-  Result := GetAsUnicodeString;
-end;
-
-procedure TWideStringField.SetAsUTF8String(const AValue: UTF8String);
-begin
-  SetAsUnicodeString(AValue);
+  if Length(AValue)>0 then
+    Buffer := PWideChar(@AValue[1])
+  else
+    Buffer := @NullWideChar;
+  SetData(Buffer, False);
 end;
 
 function TWideStringField.GetDataSize: Integer;
 begin
-  Result := (Size + 1) * 2;
+  Result :=
+    (Size + 1) * 2;
 end;
 
 
@@ -1519,7 +1363,7 @@ end;
 procedure TNumericField.RangeError(AValue, Min, Max: Double);
 
 begin
-  DatabaseErrorFmt(SFieldError+SRangeError2,[DisplayName,AValue,Min,Max]);
+  DatabaseErrorFmt(SRangeError,[AValue,Min,Max,FieldName]);
 end;
 
 procedure TNumericField.SetDisplayFormat(const AValue: string);
@@ -1691,7 +1535,7 @@ begin
     If Code=0 then
       SetAsInteger(L)
     else
-      DatabaseErrorFmt(SFieldError+SNotAnInteger,[DisplayName,AValue]);
+      DatabaseErrorFmt(SNotAnInteger,[AValue]);
     end;
 end;
 
@@ -1846,7 +1690,7 @@ begin
     If Code=0 then
       SetAsLargeInt(L)
     else
-      DatabaseErrorFmt(SFieldError+SNotAnInteger,[DisplayName,AValue]);
+      DatabaseErrorFmt(SNotAnInteger,[AValue]);
     end;
 end;
 
@@ -2009,7 +1853,7 @@ begin
   Result:=SizeOf(Double);
 end;
 
-procedure TFloatField.GetText(var AText: string; ADisplayText: Boolean);
+procedure TFloatField.GetText(var TheText: string; ADisplayText: Boolean);
 
 Var
     fmt : string;
@@ -2018,7 +1862,7 @@ Var
     ff: TFloatFormat;
 
 begin
-  AText:='';
+  TheText:='';
   If Not GetData(@E) then exit;
   If ADisplayText or (Length(FEditFormat) = 0) Then
     Fmt:=FDisplayFormat
@@ -2039,9 +1883,9 @@ begin
 
 
   If fmt<>'' then
-    AText:=FormatFloat(fmt,E)
+    TheText:=FormatFloat(fmt,E)
   else
-    AText:=FloatToStrF(E,ff,FPrecision,Digits);
+    TheText:=FloatToStrF(E,ff,FPrecision,Digits);
 end;
 
 procedure TFloatField.SetAsBCD(const AValue: TBCD);
@@ -2077,10 +1921,11 @@ begin
   If (AValue='') then
     Clear
   else  
-    begin
-    If not TryStrToFloat(AValue,F) then
+    try
+      f := StrToFloat(AValue);
+      SetAsFloat(f);
+    except
       DatabaseErrorFmt(SNotAFloat, [AValue]);
-    SetAsFloat(f);
     end;
 end;
 
@@ -2223,7 +2068,7 @@ begin
     begin
     I:=Pos(';',AValue);
     If (I<2) or (I=Length(AValue)) then
-      DatabaseErrorFmt(SFieldError+SInvalidDisplayValues,[DisplayName,AValue]);
+      DatabaseErrorFmt(SInvalidDisplayValues,[AValue]);
     FdisplayValues:=AValue;
     // Store display values and their uppercase equivalents;
     FDisplays[False,True]:=Copy(AValue,1,I-1);
@@ -2288,14 +2133,14 @@ begin
 end;
 
 
-procedure TDateTimeField.GetText(var AText: string; ADisplayText: Boolean);
+procedure TDateTimeField.GetText(var TheText: string; ADisplayText: Boolean);
 
 var R : TDateTime;
     F : String;
 
 begin
   If Not GetData(@R,False) then
-    AText:=''
+    TheText:=''
   else
     begin
     If (ADisplayText) and (Length(FDisplayFormat)<>0) then
@@ -2307,7 +2152,7 @@ begin
       else
        F:='c'
       end;
-    AText:=FormatDateTime(F,R);
+    TheText:=FormatDateTime(F,R);
     end;
 end;
 
@@ -2389,7 +2234,7 @@ class procedure TBinaryField.CheckTypeSize(AValue: Longint);
 begin
   // Just check for really invalid stuff; actual size is
   // dependent on the record...
-  If AValue<0 then // MSSQL can have a null/0 field length in a view
+  If AValue<1 then
     DatabaseErrorFmt(SInvalidFieldSize,[AValue]);
 end;
 
@@ -2426,6 +2271,13 @@ begin
       VarArrayUnlock(Result);
     end;
   end;
+end;
+
+
+procedure TBinaryField.GetText(var TheText: string; ADisplayText: Boolean);
+
+begin
+  TheText:=GetAsString;
 end;
 
 
@@ -2488,6 +2340,12 @@ begin
   end;
 end;
 
+
+procedure TBinaryField.SetText(const AValue: string);
+
+begin
+  SetAsString(AValue);
+end;
 
 procedure TBinaryField.SetVarValue(const AValue: Variant);
 var P: Pointer;
@@ -2637,27 +2495,27 @@ begin
   else Result := 10;
 end;
 
-procedure TBCDField.GetText(var AText: string; ADisplayText: Boolean);
+procedure TBCDField.GetText(var TheText: string; ADisplayText: Boolean);
 var
   c : system.currency;
   fmt: String;
 begin
   if GetData(@C) then begin
-    if ADisplayText or (FEditFormat='') then
+    if aDisplayText or (FEditFormat='') then
       fmt := FDisplayFormat
     else
       fmt := FEditFormat;
     if fmt<>'' then
-      AText := FormatFloat(fmt,C)
+      TheText := FormatFloat(fmt,C)
     else if fCurrency then begin
-      if ADisplayText then
-        AText := FloatToStrF(C, ffCurrency, FPrecision, 2{digits?})
+      if aDisplayText then
+        TheText := FloatToStrF(C, ffCurrency, FPrecision, 2{digits?})
       else
-        AText := FloatToStrF(C, ffFixed, FPrecision, 2{digits?});
+        TheText := FloatToStrF(C, ffFixed, FPrecision, 2{digits?});
     end else
-      AText := FloatToStrF(C, ffGeneral, FPrecision, 0{digits?});
+      TheText := FloatToStrF(C, ffGeneral, FPrecision, 0{digits?});
   end else
-    AText := '';
+    TheText := '';
 end;
 
 procedure TBCDField.SetAsBCD(const AValue: TBCD);
@@ -2815,27 +2673,27 @@ begin
     Result:='';
 end;
 
-procedure TFMTBCDField.GetText(var AText: string; ADisplayText: Boolean);
+procedure TFMTBCDField.GetText(var TheText: string; ADisplayText: Boolean);
 var
   bcd: TBCD;
   fmt: String;
 begin
   if GetData(@bcd) then begin
-    if ADisplayText or (FEditFormat='') then
+    if aDisplayText or (FEditFormat='') then
       fmt := FDisplayFormat
     else
       fmt := FEditFormat;
     if fmt<>'' then
-      AText := FormatBCD(fmt,bcd)
+      TheText := FormatBCD(fmt,bcd)
     else if fCurrency then begin
-      if ADisplayText then
-        AText := BcdToStrF(bcd, ffCurrency, FPrecision, 2)
+      if aDisplayText then
+        TheText := BcdToStrF(bcd, ffCurrency, FPrecision, 2)
       else
-        AText := BcdToStrF(bcd, ffFixed, FPrecision, 2);
+        TheText := BcdToStrF(bcd, ffFixed, FPrecision, 2);
     end else
-      AText := BcdToStrF(bcd, ffGeneral, FPrecision, FSize);
+      TheText := BcdToStrF(bcd, ffGeneral, FPrecision, FSize);
   end else
-    AText := '';
+    TheText := '';
 end;
 
 function TFMTBCDField.GetMaxValue: string;
@@ -2912,14 +2770,6 @@ end;
 
 { TBlobField }
 
-constructor TBlobField.Create(AOwner: TComponent);
-
-begin
-  Inherited Create(AOwner);
-  SetDataType(ftBlob);
-end;
-
-
 function TBlobField.GetBlobStream(Mode: TBlobStreamMode): TStream;
 
 begin
@@ -2928,7 +2778,7 @@ end;
 
 function TBlobField.GetBlobType: TBlobType;
 begin
-  Result:= TBlobType(DataType);
+  result:= TBlobType(DataType);
 end;
 
 procedure TBlobField.SetBlobType(AValue: TBlobType);
@@ -2937,6 +2787,7 @@ begin
 end;
 
 procedure TBlobField.FreeBuffers;
+
 begin
 end;
 
@@ -2960,19 +2811,11 @@ begin
 end;
 
 function TBlobField.GetAsString: string;
-begin
-{$IFDEF UNICODE}
-  Result := GetAsUnicodeString;
-{$ELSE}
-  Result := GetAsAnsiString;
-{$ENDIF}
-end;
-
-function TBlobField.GetAsAnsiString: AnsiString;
 var
   Stream : TStream;
   Len    : Integer;
-  S      : AnsiString;
+  S : String;
+  
 begin
   Stream := GetBlobStream(bmRead);
   if Stream <> nil then
@@ -2994,13 +2837,13 @@ begin
         else
           Result := '';
       finally
-        Free;
+        Free;    
       end
   else
     Result := '';
 end;
 
-function TBlobField.GetAsUnicodeString: UnicodeString;
+function TBlobField.GetAsWideString: WideString;
 var
   Stream : TStream;
   Len    : Integer;
@@ -3021,11 +2864,15 @@ begin
 end;
 
 function TBlobField.GetAsVariant: Variant;
+var s : string;
 begin
   if not GetIsNull then
-    Result := GetAsString
+    begin
+    s := GetAsString;
+    result := s;
+    end
   else
-    Result := Null;
+    result := Null;
 end;
 
 
@@ -3060,11 +2907,12 @@ begin
       end;
 end;
 
-procedure TBlobField.GetText(var AText: string; ADisplayText: Boolean);
-begin
-  AText := inherited GetAsString;
-end;
 
+procedure TBlobField.GetText(var TheText: string; ADisplayText: Boolean);
+
+begin
+  TheText:=inherited GetAsString;
+end;
 
 procedure TBlobField.SetAsBytes(const AValue: TBytes);
 var
@@ -3082,18 +2930,10 @@ end;
 
 
 procedure TBlobField.SetAsString(const AValue: string);
-begin
-{$IFDEF UNICODE}
-  SetAsUnicodeString(AValue);
-{$ELSE}
-  SetAsAnsiString(AValue);
-{$ENDIF}
-end;
-
-procedure TBlobField.SetAsAnsiString(const AValue: AnsiString);
 var
   Len : Integer;
-  S   : AnsiString;
+  S : String;
+  
 begin
   with GetBlobStream(bmWrite) do
     try
@@ -3106,7 +2946,7 @@ begin
           begin
           SetLength(S,Len);
           Len:=DataSet.Translate(@AValue[1],@S[1],True);
-          end;
+          end;  
         WriteBuffer(S[1], Len);
         end;
     finally
@@ -3114,13 +2954,13 @@ begin
     end;
 end;
 
-procedure TBlobField.SetAsUnicodeString(const AValue: UnicodeString);
+procedure TBlobField.SetAsWideString(const AValue: WideString);
 var
   Len : Integer;
 begin
   with GetBlobStream(bmWrite) do
     try
-      Len := Length(AValue) * SizeOf(UnicodeChar);
+      Len := Length(AValue) * 2;
       if Len > 0 then
         WriteBuffer(AValue[1], Len);
     finally
@@ -3129,9 +2969,23 @@ begin
 end;
 
 
+procedure TBlobField.SetText(const AValue: string);
+
+begin
+  SetAsString(AValue);
+end;
+
 procedure TBlobField.SetVarValue(const AValue: Variant);
 begin
   SetAsString(AValue);
+end;
+
+
+constructor TBlobField.Create(AOwner: TComponent);
+
+begin
+  Inherited Create(AOWner);
+  SetDataType(ftBlob);
 end;
 
 
@@ -3206,48 +3060,20 @@ end;
 { TMemoField }
 
 constructor TMemoField.Create(AOwner: TComponent);
+
 begin
-  inherited Create(AOwner);
+  Inherited Create(AOwner);
   SetDataType(ftMemo);
 end;
 
-function TMemoField.GetAsAnsiString: AnsiString;
+function TMemoField.GetAsWideString: WideString;
 begin
-  Result := inherited GetAsAnsiString;
-  SetCodePage(RawByteString(Result), FCodePage, False);
-  SetCodePage(RawByteString(Result), CP_ACP, True);
+  Result := GetAsString;
 end;
 
-procedure TMemoField.SetAsAnsiString(const AValue: AnsiString);
-var s: RawByteString;
+procedure TMemoField.SetAsWideString(const AValue: WideString);
 begin
-  s := AValue;
-  SetCodePage(s, FCodePage, FCodePage<>CP_NONE);
-  inherited SetAsAnsiString(s);
-end;
-
-function TMemoField.GetAsUnicodeString: UnicodeString;
-begin
-  Result:=GetAsAnsiString;
-end;
-
-procedure TMemoField.SetAsUnicodeString(const AValue: UnicodeString);
-begin
-  SetAsAnsiString(AValue);
-end;
-
-function TMemoField.GetAsUTF8String: UTF8String;
-var s: RawByteString;
-begin
-  s := inherited GetAsAnsiString;
-  SetCodePage(s, FCodePage, False);
-  SetCodePage(s, CP_UTF8, True);
-  Result := s;
-end;
-
-procedure TMemoField.SetAsUTF8String(const AValue: UTF8String);
-begin
-  SetAsAnsiString(AValue);
+  SetAsString(AValue);
 end;
 
 { TWideMemoField }
@@ -3260,45 +3086,28 @@ end;
 
 function TWideMemoField.GetAsString: string;
 begin
-  Result := GetAsUnicodeString;
+  Result := GetAsWideString;
 end;
 
 procedure TWideMemoField.SetAsString(const AValue: string);
 begin
-  SetAsUnicodeString(AValue);
-end;
-
-function TWideMemoField.GetAsAnsiString: AnsiString;
-begin
-  Result := GetAsUnicodeString;
-end;
-
-procedure TWideMemoField.SetAsAnsiString(const AValue: AnsiString);
-begin
-  SetAsUnicodeString(AValue);
-end;
-
-function TWideMemoField.GetAsUTF8String: UTF8String;
-begin
-  Result := GetAsUnicodeString;
-end;
-
-procedure TWideMemoField.SetAsUTF8String(const AValue: UTF8String);
-begin
-  SetAsUnicodeString(AValue);
+  SetAsWideString(AValue);
 end;
 
 function TWideMemoField.GetAsVariant: Variant;
+var s : string;
 begin
   if not GetIsNull then
-    Result := GetAsUnicodeString
-  else
-    Result := Null;
+    begin
+    s := GetAsWideString;
+    result := s;
+    end
+  else result := Null;
 end;
 
 procedure TWideMemoField.SetVarValue(const AValue: Variant);
 begin
-  SetAsUnicodeString(AValue);
+  SetAsWideString(AValue);
 end;
 
 { TGraphicField }
@@ -3489,8 +3298,7 @@ end;
 procedure TFields.Changed;
 
 begin
-  // Removed FDataSet.Active check, needed for Persistent fields (see bug ID 30954)
-  if (FDataSet <> nil) and not (csDestroying in FDataSet.ComponentState) then
+  if (FDataSet <> nil) and not (csDestroying in FDataSet.ComponentState) and FDataset.Active then
     FDataSet.DataEvent(deFieldListChange, 0);
   If Assigned(FOnChange) then
     FOnChange(Self);
@@ -3500,7 +3308,7 @@ procedure TFields.CheckfieldKind(Fieldkind: TFieldKind; Field: TField);
 
 begin
   If Not (FieldKind in ValidFieldKinds) Then
-    DatabaseErrorFmt(SInvalidFieldKind,[Field.DisplayName]);
+    DatabaseErrorFmt(SInvalidFieldKind,[Field.FieldName]);
 end;
 
 function TFields.GetCount: Longint;

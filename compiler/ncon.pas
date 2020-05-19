@@ -27,11 +27,30 @@ interface
 
     uses
       globtype,widestr,constexp,
+      cclasses,
       node,
-      aasmbase,cpuinfo,globals,
+      aasmbase,aasmtai,aasmdata,cpuinfo,globals,
       symconst,symtype,symdef,symsym;
 
     type
+       tdataconstnode = class(tnode)
+         data : tdynamicarray;
+         maxalign : word;
+         constructor create;virtual;
+         constructor ppuload(t:tnodetype;ppufile:tcompilerppufile);override;
+         destructor destroy;override;
+         procedure ppuwrite(ppufile:tcompilerppufile);override;
+         function dogetcopy : tnode;override;
+         function pass_1 : tnode;override;
+         function pass_typecheck:tnode;override;
+         function docompare(p: tnode) : boolean; override;
+         procedure printnodedata(var t:text);override;
+         procedure append(const d;len : aint);
+         procedure appendbyte(b : byte);
+         procedure align(value : word);
+       end;
+       tdataconstnodeclass = class of tdataconstnode;
+
        trealconstnode = class(tnode)
           typedef : tdef;
           typedefderef : tderef;
@@ -60,7 +79,7 @@ interface
             _rangecheck determines if the value of the ordinal should be checked
             against the ranges of the type definition.
           }
-          constructor create(const v : tconstexprint;def:tdef; _rangecheck : boolean);virtual;
+          constructor create(v : tconstexprint;def:tdef; _rangecheck : boolean);virtual;
           constructor ppuload(t:tnodetype;ppufile:tcompilerppufile);override;
           procedure ppuwrite(ppufile:tcompilerppufile);override;
           procedure buildderefimpl;override;
@@ -86,7 +105,6 @@ interface
           function pass_1 : tnode;override;
           function pass_typecheck:tnode;override;
           function docompare(p: tnode) : boolean; override;
-          procedure printnodedata(var t : text); override;
        end;
        tpointerconstnodeclass = class of tpointerconstnode;
 
@@ -121,9 +139,6 @@ interface
           function docompare(p: tnode) : boolean; override;
           procedure changestringtype(def:tdef);
           function fullcompare(p: tstringconstnode): longint;
-          { returns whether this platform uses the nil pointer to represent
-            empty dynamic strings }
-          class function emptydynstrnil: boolean; virtual;
        end;
        tstringconstnodeclass = class of tstringconstnode;
 
@@ -143,7 +158,6 @@ interface
           function pass_1 : tnode;override;
           function pass_typecheck:tnode;override;
           function docompare(p: tnode) : boolean; override;
-          function elements : AInt;
        end;
        tsetconstnodeclass = class of tsetconstnode;
 
@@ -175,8 +189,9 @@ interface
        csetconstnode : tsetconstnodeclass = tsetconstnode;
        cguidconstnode : tguidconstnodeclass = tguidconstnode;
        cnilnode : tnilnodeclass=tnilnode;
+       cdataconstnode : tdataconstnodeclass = tdataconstnode;
 
-    function genintconstnode(const v : TConstExprInt) : tordconstnode;
+    function genintconstnode(v : TConstExprInt) : tordconstnode;
     function genenumnode(v : tenumsym) : tordconstnode;
 
     { some helper routines }
@@ -194,10 +209,10 @@ implementation
       cutils,
       verbose,systems,sysutils,
       defcmp,defutil,procinfo,
-      cgbase,
+      cpubase,cgbase,
       nld;
 
-    function genintconstnode(const v : TConstExprInt) : tordconstnode;
+    function genintconstnode(v : TConstExprInt) : tordconstnode;
       var
         htype : tdef;
       begin
@@ -234,7 +249,6 @@ implementation
         stringVal: string;
         pWideStringVal: pcompilerwidestring;
       begin
-        stringVal:='';
         if is_constcharnode(p) then
           begin
             SetLength(stringVal,1);
@@ -247,7 +261,7 @@ implementation
             concatwidestringchar(pWideStringVal, tcompilerwidechar(tordconstnode(p).value.uvalue));
             result:=cstringconstnode.createunistr(pWideStringVal);
           end
-        else if p.nodetype=stringconstn then
+        else if is_conststringnode(p) then
           result:=tstringconstnode(p.getcopy)
         else
           begin
@@ -328,6 +342,190 @@ implementation
           internalerror(2013111601);
       end;
 
+
+{*****************************************************************************
+                             TDATACONSTNODE
+*****************************************************************************}
+
+    constructor tdataconstnode.create;
+      begin
+         inherited create(dataconstn);
+         data:=tdynamicarray.create(128);
+      end;
+
+
+    constructor tdataconstnode.ppuload(t:tnodetype;ppufile:tcompilerppufile);
+      var
+        len : tcgint;
+        buf : array[0..255] of byte;
+      begin
+        inherited ppuload(t,ppufile);
+        len:=ppufile.getaint;
+        if len<4096 then
+          data:=tdynamicarray.create(len)
+        else
+          data:=tdynamicarray.create(4096);
+        while len>0 do
+          begin
+            if len>sizeof(buf) then
+              begin
+                ppufile.getdata(buf,sizeof(buf));
+                data.write(buf,sizeof(buf));
+                dec(len,sizeof(buf));
+              end
+            else
+              begin
+                ppufile.getdata(buf,len);
+                data.write(buf,len);
+                len:=0;
+              end;
+          end;
+      end;
+
+
+    destructor tdataconstnode.destroy;
+      begin
+        data.free;
+        inherited destroy;
+      end;
+
+
+    procedure tdataconstnode.ppuwrite(ppufile:tcompilerppufile);
+      var
+        len : tcgint;
+        buf : array[0..255] of byte;
+      begin
+        inherited ppuwrite(ppufile);
+        len:=data.size;
+        ppufile.putaint(len);
+        data.seek(0);
+        while len>0 do
+          begin
+            if len>sizeof(buf) then
+              begin
+                data.read(buf,sizeof(buf));
+                ppufile.putdata(buf,sizeof(buf));
+                dec(len,sizeof(buf));
+              end
+            else
+              begin
+                data.read(buf,len);
+                ppufile.putdata(buf,len);
+                len:=0;
+              end;
+          end;
+      end;
+
+
+    function tdataconstnode.dogetcopy : tnode;
+      var
+        n : tdataconstnode;
+        len : tcgint;
+        buf : array[0..255] of byte;
+      begin
+        n:=tdataconstnode(inherited dogetcopy);
+        len:=data.size;
+        if len<4096 then
+          n.data:=tdynamicarray.create(len)
+        else
+          n.data:=tdynamicarray.create(4096);
+        data.seek(0);
+        while len>0 do
+          begin
+            if len>sizeof(buf) then
+              begin
+                data.read(buf,sizeof(buf));
+                n.data.write(buf,sizeof(buf));
+                dec(len,sizeof(buf));
+              end
+            else
+              begin
+                data.read(buf,len);
+                n.data.write(buf,len);
+                len:=0;
+              end;
+          end;
+          dogetcopy := n;
+      end;
+
+
+    function tdataconstnode.pass_1 : tnode;
+      begin
+        result:=nil;
+        expectloc:=LOC_CREFERENCE;
+      end;
+
+
+    function tdataconstnode.pass_typecheck:tnode;
+      begin
+        result:=nil;
+        resultdef:=voidpointertype;
+      end;
+
+
+    function tdataconstnode.docompare(p: tnode) : boolean;
+      var
+        b1,b2 : byte;
+        I : longint;
+      begin
+        docompare :=
+          inherited docompare(p) and (data.size=tdataconstnode(p).data.size);
+        if docompare then
+          begin
+            data.seek(0);
+            tdataconstnode(p).data.seek(0);
+            for i:=0 to data.size-1 do
+              begin
+                data.read(b1,1);
+                tdataconstnode(p).data.read(b2,1);
+                if b1<>b2 then
+                  begin
+                    docompare:=false;
+                    exit;
+                  end;
+              end;
+          end;
+      end;
+
+
+    procedure tdataconstnode.printnodedata(var t:text);
+      var
+        i : longint;
+        b : byte;
+      begin
+        inherited printnodedata(t);
+        write(t,printnodeindention,'data size = ',data.size,' data = ');
+        data.seek(0);
+        for i:=0 to data.size-1 do
+          begin
+            data.read(b,1);
+            if i=data.size-1 then
+              writeln(t,b)
+            else
+              write(t,b,',');
+          end;
+      end;
+
+
+    procedure tdataconstnode.append(const d;len : aint);
+      begin
+        data.seek(data.size);
+        data.write(d,len);
+      end;
+
+    procedure tdataconstnode.appendbyte(b : byte);
+      begin
+        data.seek(data.size);
+        data.write(b,1);
+      end;
+
+    procedure tdataconstnode.align(value : word);
+      begin
+        if value>maxalign then
+          maxalign:=value;
+        data.align(value);
+      end;
+
 {*****************************************************************************
                              TREALCONSTNODE
 *****************************************************************************}
@@ -341,21 +539,6 @@ implementation
             internalerror(2008022401);
          inherited create(realconstn);
          typedef:=def;
-         case tfloatdef(def).floattype of
-           s32real:
-             v:=single(v);
-           s64real:
-             v:=double(v);
-           s80real,
-           sc80real,
-           s64comp,
-           s64currency:
-             v:=extended(v);
-           s128real:
-             internalerror(2013102701);
-           else
-             internalerror(2013102702);
-         end;
          value_real:=v;
          value_currency:=v;
          lab_real:=nil;
@@ -410,56 +593,11 @@ implementation
          dogetcopy:=n;
       end;
 
-
     function trealconstnode.pass_typecheck:tnode;
       begin
         result:=nil;
         resultdef:=typedef;
-
-        { range checking? }
-        if floating_point_range_check_error or
-           (tfloatdef(resultdef).floattype in [s64comp,s64currency]) then
-          begin
-            { use CGMessage so that the resultdef will get set to errordef
-              by pass1.typecheckpass_internal if a range error was triggered,
-              which in turn will prevent any potential parent type conversion
-              node from creating a new realconstnode with this exact same value
-              and hence trigger the same error again }
-            case tfloatdef(resultdef).floattype of
-              s32real :
-                begin
-                  if ts32real(value_real)=MathInf.Value then
-                    CGMessage(parser_e_range_check_error);
-                end;
-              s64real:
-                begin
-                  if ts64real(value_real)=MathInf.Value then
-                    CGMessage(parser_e_range_check_error);
-                end;
-              s80real,
-              sc80real:
-                begin
-                  if ts80real(value_real)=MathInf.Value then
-                    CGMessage(parser_e_range_check_error);
-                end;
-              s64comp,
-              s64currency:
-                begin
-                  if (value_real>9223372036854775807.0) or
-                     (value_real<-9223372036854775808.0) then
-                    CGMessage(parser_e_range_check_error)
-                end;
-              s128real:
-                begin
-                  if ts128real(value_real)=MathInf.Value then
-                    CGMessage(parser_e_range_check_error);
-                end;
-              else
-                internalerror(2016112902);
-            end;
-          end;
       end;
-
 
     function trealconstnode.pass_1 : tnode;
       begin
@@ -468,7 +606,6 @@ implementation
          if (cs_create_pic in current_settings.moduleswitches) then
            include(current_procinfo.flags,pi_needs_got);
       end;
-
 
     function trealconstnode.docompare(p: tnode): boolean;
       begin
@@ -497,11 +634,7 @@ implementation
     procedure Trealconstnode.printnodedata(var t:text);
       begin
         inherited printnodedata(t);
-        write(t,printnodeindention,'value = ',value_real);
-        if is_currency(resultdef) then
-          writeln(', value_currency = ',value_currency)
-        else
-          writeln;
+        writeln(t,printnodeindention,'value = ',value_real);
       end;
 
 
@@ -509,7 +642,7 @@ implementation
                               TORDCONSTNODE
 *****************************************************************************}
 
-    constructor tordconstnode.create(const v : tconstexprint;def:tdef;_rangecheck : boolean);
+    constructor tordconstnode.create(v : tconstexprint;def:tdef;_rangecheck : boolean);
 
       begin
          inherited create(ordconstn);
@@ -572,7 +705,7 @@ implementation
         { only do range checking when explicitly asked for it
           and if the type can be range checked, see tests/tbs/tb0539.pp }
         if (resultdef.typ in [orddef,enumdef]) then
-          adaptrange(resultdef,value,nf_internal in flags,not rangecheck,rangecheck)
+           testrange(resultdef,value,not rangecheck,false)
       end;
 
     function tordconstnode.pass_1 : tnode;
@@ -669,13 +802,6 @@ implementation
         docompare :=
           inherited docompare(p) and
           (value = tpointerconstnode(p).value);
-      end;
-
-
-    procedure tpointerconstnode.printnodedata(var t : text);
-      begin
-        inherited printnodedata(t);
-        writeln(t,printnodeindention,'value = $',hexstr(PUInt(value),sizeof(PUInt)*2));
       end;
 
 
@@ -986,7 +1112,6 @@ implementation
                             Message1(option_code_page_not_available,IntToStr(cp1));
                           initwidestring(pw);
                           setlengthwidestring(pw,len);
-                          { returns room for terminating 0 }
                           l:=Utf8ToUnicode(PUnicodeChar(pw^.data),len,value_str,len);
                           if (l<>getlengthwidestring(pw)) then
                             begin
@@ -994,7 +1119,6 @@ implementation
                               ReAllocMem(value_str,l);
                             end;
                           unicode2ascii(pw,value_str,cp1);
-                          len:=l-1;
                           donewidestring(pw);
                         end
                       else
@@ -1006,7 +1130,6 @@ implementation
                           initwidestring(pw);
                           setlengthwidestring(pw,len);
                           ascii2unicode(value_str,len,cp2,pw);
-                          { returns room for terminating 0 }
                           l:=UnicodeToUtf8(nil,0,PUnicodeChar(pw^.data),len);
                           if l<>len then
                             ReAllocMem(value_str,l);
@@ -1037,11 +1160,6 @@ implementation
           result:=comparewidestrings(pcompilerwidestring(value_str),pcompilerwidestring(p.value_str))
         else
           result:=compareansistrings(value_str,p.value_str,len,p.len);
-      end;
-
-    class function tstringconstnode.emptydynstrnil: boolean;
-      begin
-        result:=true;
       end;
 
 {*****************************************************************************
@@ -1101,11 +1219,11 @@ implementation
         typedef:=tdef(typedefderef.resolve);
       end;
 
-    type
-       setbytes = array[0..31] of byte;
-       Psetbytes = ^setbytes;
 
     procedure tsetconstnode.adjustforsetbase;
+      type
+         setbytes = array[0..31] of byte;
+         Psetbytes = ^setbytes;
       var
         i, diff: longint;
       begin
@@ -1174,18 +1292,6 @@ implementation
       begin
         docompare:=(inherited docompare(p)) and
                    (value_set^=Tsetconstnode(p).value_set^);
-      end;
-
-
-    function tsetconstnode.elements : AInt;
-      var
-        i : longint;
-      begin
-        result:=0;
-        if not(assigned(value_set)) then
-          exit;
-        for i:=0 to tsetdef(resultdef).size-1 do
-          result:=result+ PopCnt(Psetbytes(value_set)^[i]);
       end;
 
 

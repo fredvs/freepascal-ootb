@@ -1,6 +1,6 @@
 #
 #   This file is part of the Free Pascal Compiler
-#   Copyright (c) 1999-2018 by the Free Pascal Development team
+#   Copyright (c) 1999-2009 by the Free Pascal Development team
 #
 #   Russian (cp866) Language File for Free Pascal
 #
@@ -14,9 +14,6 @@
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-
-# CodePage 866
-
 #
 # Константы записываются в следyющем виде:
 # <part>_<type>_<txtidentifier>
@@ -2506,7 +2503,7 @@ wpo_cant_create_feedback_file=12019_E_евозможно создать файл обратной связи "$1"
 #
 option_logo=11023_[
 Компилятор Free Pascal версии $FPCFULLVERSION [$FPCDATE] для $FPCCPU
-Copyright (c) 1993-2020 by Florian Klaempfl and others
+Copyright (c) 1993-2015 by Florian Klaempfl and others
 ]
 
 #
@@ -2699,10 +2696,6 @@ S*2Aas_Ассемблер GNU AS
 **2Rdefault_Ассемблер по умолчанию для целевой платформы
 3*2Ratt_Чтение ассемблера в стиле AT&T
 3*2Rintel_Чтение ассемблера в стиле Intel
-4*2Ratt_Чтение ассемблера в стиле AT&T
-4*2Rintel_Чтение ассемблера в стиле Intel
-8*2Ratt_Чтение ассемблера в стиле AT&T
-8*2Rintel_Чтение ассемблера в стиле Intel
 6*2RMOT_Чтение ассемблера в стиле Motorola
 **1S<x>_Опции синтаксиса:
 **2S2_То же, что и -Mobjfpc
@@ -2739,6 +2732,7 @@ S*2Aas_Ассемблер GNU AS
 3*2Tnetwlibc_Модуль Novell Netware (libc)
 3*2Topenbsd_OpenBSD
 3*2Tos2_OS/2 / eComStation
+3*2Tsunos_SunOS/Solaris
 3*2Tsymbian_Symbian OS
 3*2Twatcom_Watcom-совместимый расширитель DOS
 3*2Twdosx_асширитель DOS WDOSX

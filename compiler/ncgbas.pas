@@ -26,8 +26,6 @@ unit ncgbas;
 interface
 
     uses
-       globtype,
-       aasmtai,aasmdata,
        cpubase,cgutils,
        node,nbas;
 
@@ -37,9 +35,6 @@ interface
        end;
 
        tcgasmnode = class(tasmnode)
-         protected
-          procedure ResolveRef(const filepos: tfileposinfo; var op:toper); virtual;
-         public
           procedure pass_generate_code;override;
        end;
 
@@ -71,14 +66,13 @@ interface
   implementation
 
     uses
-      globals,
+      globtype,globals,systems,
       cutils,verbose,
-      aasmbase,aasmcpu,
-      symsym,symconst,defutil,
-      pass_2,ncgutil,
+      aasmbase,aasmtai,aasmdata,aasmcpu,
+      symsym,symconst,symdef,defutil,
+      nflw,pass_2,ncgutil,
       cgbase,cgobj,hlcgobj,
       procinfo,
-      cpuinfo,
       tgobj
       ;
 
@@ -122,140 +116,6 @@ interface
                                TASMNODE
 *****************************************************************************}
 
-
-    procedure tcgasmnode.ResolveRef(const filepos: tfileposinfo; var op:toper);
-      var
-        sym : tabstractnormalvarsym;
-{$ifdef x86}
-        segment : tregister;
-        scale : byte;
-{$endif x86}
-        forceref,
-        getoffset : boolean;
-        indexreg : tregister;
-        sofs : longint;
-      begin
-        if (op.typ=top_local) then
-          begin
-            sofs:=op.localoper^.localsymofs;
-            indexreg:=op.localoper^.localindexreg;
-{$ifdef x86}
-            segment:=op.localoper^.localsegment;
-            scale:=op.localoper^.localscale;
-{$endif x86}
-            getoffset:=op.localoper^.localgetoffset;
-            forceref:=op.localoper^.localforceref;
-            sym:=tabstractnormalvarsym(pointer(op.localoper^.localsym));
-            dispose(op.localoper);
-            case sym.localloc.loc of
-              LOC_REFERENCE :
-                begin
-                  if getoffset then
-                    begin
-                      if (indexreg=NR_NO)
-{$ifdef x86}
-                         and (segment=NR_NO)
-{$endif x86}
-                         then
-                        begin
-                          op.typ:=top_const;
-                          op.val:=sym.localloc.reference.offset+sofs;
-                        end
-                      else
-                        begin
-                          op.typ:=top_ref;
-                          new(op.ref);
-                          reference_reset_base(op.ref^,indexreg,sym.localloc.reference.offset+sofs,
-                            sym.localloc.reference.temppos,newalignment(sym.localloc.reference.alignment,sofs),[]);
-{$ifdef x86}
-                          op.ref^.segment:=segment;
-{$endif x86}
-                        end;
-                    end
-                  else
-                    begin
-                      op.typ:=top_ref;
-                      new(op.ref);
-                      reference_reset_base(op.ref^,sym.localloc.reference.base,sym.localloc.reference.offset+sofs,
-                        sym.localloc.reference.temppos,newalignment(sym.localloc.reference.alignment,sofs),[]);
-                      op.ref^.index:=indexreg;
-{$ifdef x86}
-                      op.ref^.segment:=segment;
-                      op.ref^.scalefactor:=scale;
-{$endif x86}
-                    end;
-                end;
-              LOC_REGISTER :
-                begin
-                  if getoffset then
-                    MessagePos(filepos,asmr_e_invalid_reference_syntax);
-                  { Subscribed access }
-                  if forceref or
-{$ifdef avr}                     
-                     (sofs>=tcgsize2size[sym.localloc.size])
-{$else avr}
-                     (sofs<>0)
-{$endif avr}
-                     then
-                    begin
-                      op.typ:=top_ref;
-                      new(op.ref);
-                      { no idea about the actual alignment }
-                      reference_reset_base(op.ref^,sym.localloc.register,sofs,ctempposinvalid,1,[]);
-                      op.ref^.index:=indexreg;
-{$ifdef x86}
-                      op.ref^.scalefactor:=scale;
-{$endif x86}
-                    end
-                  else
-                    begin
-                      op.typ:=top_reg;
-                      op.reg:=sym.localloc.register;
-
-{$ifdef avr}
-                      case sofs of
-                        1: op.reg:=cg.GetNextReg(op.reg);
-                        2: op.reg:=cg.GetNextReg(cg.GetNextReg(op.reg));
-                        3: op.reg:=cg.GetNextReg(cg.GetNextReg(cg.GetNextReg(op.reg)));
-                      end;
-{$endif avr}
-                    end;
-                end;
-              LOC_FPUREGISTER,
-              LOC_MMXREGISTER,
-              LOC_MMREGISTER :
-                begin
-                  op.typ:=top_reg;
-                  op.reg:=NR_NO;
-                  if getoffset then
-                    MessagePos(filepos,asmr_e_invalid_reference_syntax);
-                  { Using an MM/FPU register in a reference is not possible }
-                  if forceref or (sofs<>0) then
-                    MessagePos1(filepos,asmr_e_invalid_ref_register,std_regname(sym.localloc.register))
-                  else
-                    op.reg:=sym.localloc.register;
-                end;
-              LOC_INVALID :
-                begin
-                  { in "assembler; nostackframe;" routines, the
-                    funcret loc is set to LOC_INVALID in case the
-                    result is returned via a complex location
-                    (more than one register, ...) }
-                  if (vo_is_funcret in tabstractvarsym(sym).varoptions) then
-                    MessagePos(filepos,asmr_e_complex_function_result_location)
-                  else
-                    internalerror(2012082101);
-                  { recover }
-                  op.typ:=top_reg;
-                  op.reg:=NR_FUNCTION_RETURN_REG;
-                end;
-              else
-                internalerror(201001031);
-            end;
-          end;
-      end;
-
-
     procedure tcgasmnode.pass_generate_code;
 
       procedure ReLabel(var p:tasmsymbol);
@@ -271,6 +131,115 @@ interface
            end;
         end;
 
+      procedure ResolveRef(const filepos: tfileposinfo; var op:toper);
+        var
+          sym : tabstractnormalvarsym;
+{$ifdef x86}
+          scale : byte;
+{$endif x86}
+          forceref,
+          getoffset : boolean;
+          indexreg : tregister;
+          sofs : longint;
+        begin
+          if (op.typ=top_local) then
+            begin
+              sofs:=op.localoper^.localsymofs;
+              indexreg:=op.localoper^.localindexreg;
+{$ifdef x86}
+              scale:=op.localoper^.localscale;
+{$endif x86}
+              getoffset:=op.localoper^.localgetoffset;
+              forceref:=op.localoper^.localforceref;
+              sym:=tabstractnormalvarsym(pointer(op.localoper^.localsym));
+              dispose(op.localoper);
+              case sym.localloc.loc of
+                LOC_REFERENCE :
+                  begin
+                    if getoffset then
+                      begin
+                        if indexreg=NR_NO then
+                          begin
+                            op.typ:=top_const;
+                            op.val:=sym.localloc.reference.offset+sofs;
+                          end
+                        else
+                          begin
+                            op.typ:=top_ref;
+                            new(op.ref);
+                            reference_reset_base(op.ref^,indexreg,sym.localloc.reference.offset+sofs,
+                              newalignment(sym.localloc.reference.alignment,sofs));
+                          end;
+                      end
+                    else
+                      begin
+                        op.typ:=top_ref;
+                        new(op.ref);
+                        reference_reset_base(op.ref^,sym.localloc.reference.base,sym.localloc.reference.offset+sofs,
+                          newalignment(sym.localloc.reference.alignment,sofs));
+                        op.ref^.index:=indexreg;
+{$ifdef x86}
+                        op.ref^.scalefactor:=scale;
+{$endif x86}
+                      end;
+                  end;
+                LOC_REGISTER :
+                  begin
+                    if getoffset then
+                      MessagePos(filepos,asmr_e_invalid_reference_syntax);
+                    { Subscribed access }
+                    if forceref or
+                       (sofs<>0) then
+                      begin
+                        op.typ:=top_ref;
+                        new(op.ref);
+                        { no idea about the actual alignment }
+                        reference_reset_base(op.ref^,sym.localloc.register,sofs,1);
+                        op.ref^.index:=indexreg;
+{$ifdef x86}
+                        op.ref^.scalefactor:=scale;
+{$endif x86}
+                      end
+                    else
+                      begin
+                        op.typ:=top_reg;
+                        op.reg:=sym.localloc.register;
+                      end;
+                  end;
+                LOC_FPUREGISTER,
+                LOC_MMXREGISTER,
+                LOC_MMREGISTER :
+                  begin
+                    op.typ:=top_reg;
+                    op.reg:=NR_NO;
+                    if getoffset then
+                      MessagePos(filepos,asmr_e_invalid_reference_syntax);
+                    { Using an MM/FPU register in a reference is not possible }
+                    if forceref or (sofs<>0) then
+                      MessagePos1(filepos,asmr_e_invalid_ref_register,std_regname(sym.localloc.register))
+                    else
+                      op.reg:=sym.localloc.register;
+                  end;
+                LOC_INVALID :
+                  begin
+                    { in "assembler; nostackframe;" routines, the
+                      funcret loc is set to LOC_INVALID in case the
+                      result is returned via a complex location
+                      (more than one register, ...) }
+                    if (vo_is_funcret in tabstractvarsym(sym).varoptions) then
+                      MessagePos(filepos,asmr_e_complex_function_result_location)
+                    else
+                      internalerror(2012082101);
+                    { recover }
+                    op.typ:=top_reg;
+                    op.reg:=NR_FUNCTION_RETURN_REG;
+                  end;
+                else
+                  internalerror(201001031);
+              end;
+            end;
+        end;
+
       var
         hp,hp2 : tai;
         i : longint;
@@ -284,13 +253,9 @@ interface
              currenttai:=tai(current_asmdata.CurrAsmList.last);
              exit;
            end;
-         { Switch to the CPU instruction set, specified by the $ASMCPU directive }
-         current_asmdata.CurrAsmList.Concat(tai_directive.create(asd_cpu,cputypestr[current_settings.asmcputype]));
 
          { Allocate registers used in the assembler block }
-         { has_registerlist=true means that registers are specified and already allocated }
-         if (not has_registerlist) then
-           cg.allocallcpuregisters(current_asmdata.CurrAsmList);
+         cg.alloccpuregisters(current_asmdata.CurrAsmList,R_INTREGISTER,used_regs_int);
 
          if (po_inline in current_procinfo.procdef.procoptions) then
            begin
@@ -330,10 +295,6 @@ interface
                                      ReLabel(ref^.symbol);
                                    if assigned(ref^.relsymbol) then
                                      ReLabel(ref^.relsymbol);
-{$ifdef x86}
-                                   if (ref^.segment<>NR_NO) and (ref^.segment<>get_default_segment_of_ref(ref^)) then
-                                     taicpu(hp2).segprefix:=ref^.segment;
-{$endif x86}
                                  end;
                              end;
                            end;
@@ -368,19 +329,7 @@ interface
 {$endif}
                        { fixup the references }
                        for i:=1 to taicpu(hp).ops do
-                         begin
-                           ResolveRef(taicpu(hp).fileinfo,taicpu(hp).oper[i-1]^);
-{$ifdef x86}
-                           with taicpu(hp).oper[i-1]^ do
-                             begin
-                               case typ of
-                                 top_ref :
-                                   if (ref^.segment<>NR_NO) and (ref^.segment<>get_default_segment_of_ref(ref^)) then
-                                     taicpu(hp).segprefix:=ref^.segment;
-                               end;
-                             end;
-{$endif x86}
-                         end;
+                         ResolveRef(taicpu(hp).fileinfo,taicpu(hp).oper[i-1]^);
 {$ifdef x86}
                       { can only be checked now that all local operands }
                       { have been resolved                              }
@@ -394,15 +343,8 @@ interface
              current_asmdata.CurrAsmList.concatlist(p_asm);
            end;
 
-         { Update section count }
-         current_asmdata.currasmlist.section_count:=current_asmdata.currasmlist.section_count+p_asm.section_count;
-
          { Release register used in the assembler block }
-         if (not has_registerlist) then
-           cg.deallocallcpuregisters(current_asmdata.CurrAsmList);
-
-         { Switch back to the CPU instruction set of the target CPU }
-         current_asmdata.CurrAsmList.Concat(tai_directive.create(asd_cpu,cputypestr[current_settings.cputype]));
+         cg.dealloccpuregisters(current_asmdata.CurrAsmList,R_INTREGISTER,used_regs_int);
        end;
 
 
@@ -467,35 +409,35 @@ interface
         location_reset(location,LOC_VOID,OS_NO);
 
         { if we're secondpassing the same tcgtempcreatenode twice, we have a bug }
-        if (ti_valid in tempflags) then
+        if (ti_valid in tempinfo^.flags) then
           internalerror(200108222);
 
         { in case of ti_reference, the location will be initialised using the
           location of the tempinitnode once the first temprefnode is processed }
-        if not(ti_reference in tempflags) then
+        if not(ti_reference in tempinfo^.flags) then
           begin
             { get a (persistent) temp }
             if is_managed_type(tempinfo^.typedef) and
-              not(ti_const in tempflags) then
+              not(ti_const in tempinfo^.flags) then
               begin
-                location_reset_ref(tempinfo^.location,LOC_REFERENCE,def_cgsize(tempinfo^.typedef),0,[]);
-                tg.gethltempmanaged(current_asmdata.CurrAsmList,tempinfo^.typedef,tempinfo^.temptype,tempinfo^.location.reference);
-                if not(ti_nofini in tempflags) then
+                location_reset_ref(tempinfo^.location,LOC_REFERENCE,def_cgsize(tempinfo^.typedef),0);
+                tg.gethltemptyped(current_asmdata.CurrAsmList,tempinfo^.typedef,tempinfo^.temptype,tempinfo^.location.reference);
+                if not(ti_nofini in tempinfo^.flags) then
                   hlcg.g_finalize(current_asmdata.CurrAsmList,tempinfo^.typedef,tempinfo^.location.reference);
               end
-            else if (ti_may_be_in_reg in tempflags) then
+            else if (ti_may_be_in_reg in tempinfo^.flags) then
               begin
                 location_allocate_register(current_asmdata.CurrAsmList,tempinfo^.location,tempinfo^.typedef,tempinfo^.temptype = tt_persistent);
               end
             else
               begin
-                location_reset_ref(tempinfo^.location,LOC_REFERENCE,def_cgsize(tempinfo^.typedef),0,[]);
+                location_reset_ref(tempinfo^.location,LOC_REFERENCE,def_cgsize(tempinfo^.typedef),0);
                 tg.gethltemp(current_asmdata.CurrAsmList,tempinfo^.typedef,size,tempinfo^.temptype,tempinfo^.location.reference);
               end;
           end;
-        includetempflag(ti_valid);
+        include(tempinfo^.flags,ti_valid);
         if assigned(tempinfo^.tempinitcode) then
-          includetempflag(ti_executeinitialisation);
+          include(tempinfo^.flags,ti_executeinitialisation);
       end;
 
 
@@ -505,12 +447,12 @@ interface
 
     procedure tcgtemprefnode.pass_generate_code;
       begin
-        if ti_executeinitialisation in tempflags then
+        if ti_executeinitialisation in tempinfo^.flags then
           begin
             { avoid recursion }
-            excludetempflag(ti_executeinitialisation);
+            exclude(tempinfo^.flags, ti_executeinitialisation);
             secondpass(tempinfo^.tempinitcode);
-            if (ti_reference in tempflags) then
+            if (ti_reference in tempinfo^.flags) then
               begin
                 case tempinfo^.tempinitcode.location.loc of
                   LOC_CREGISTER,
@@ -522,7 +464,7 @@ interface
                         for reading, it's not in case of writing (because the
                         register could change due to SSA -> storing to the saved
                         register afterwards would be wrong). }
-                      if not(ti_readonly in tempflags) then
+                      if not(ti_readonly in tempinfo^.flags) then
                         internalerror(2011031407);
                     end;
                   { in case reference contains CREGISTERS, that doesn't matter:
@@ -533,18 +475,20 @@ interface
               end;
           end;
         { check if the temp is valid }
-        if not(ti_valid in tempflags) then
+        if not(ti_valid in tempinfo^.flags) then
           internalerror(200108231);
         location:=tempinfo^.location;
         case tempinfo^.location.loc of
           LOC_REFERENCE:
             begin
+              inc(location.reference.offset,offset);
+              location.reference.alignment:=newalignment(location.reference.alignment,offset);
               { ti_valid should be excluded if it's a normal temp }
             end;
           LOC_REGISTER,
           LOC_FPUREGISTER,
           LOC_MMREGISTER :
-            excludetempflag(ti_valid);
+            exclude(tempinfo^.flags,ti_valid);
         end;
       end;
 
@@ -552,7 +496,7 @@ interface
     procedure tcgtemprefnode.changelocation(const ref: treference);
       begin
         { check if the temp is valid }
-        if not(ti_valid in tempflags) then
+        if not(ti_valid in tempinfo^.flags) then
           internalerror(200306081);
         if (tempinfo^.location.loc<>LOC_REFERENCE) then
           internalerror(2004020203);
@@ -563,6 +507,8 @@ interface
         tg.ChangeTempType(current_asmdata.CurrAsmList,tempinfo^.location.reference,tempinfo^.temptype);
         { adapt location }
         location.reference := ref;
+        inc(location.reference.offset,offset);
+        location.reference.alignment:=newalignment(location.reference.alignment,offset);
       end;
 
 
@@ -572,7 +518,7 @@ interface
 
     procedure tcgtempdeletenode.pass_generate_code;
       begin
-        if ti_reference in tempflags then
+        if ti_reference in tempinfo^.flags then
           begin
             { release_to_normal means that the temp will be freed the next
               time it's used. However, reference temps reference some other
@@ -583,27 +529,11 @@ interface
             { so we only mark this temp location as "no longer valid" when
               it's deleted (ttempdeletenodes are also used during getcopy, so
               we really do need one) }
-            excludetempflag(ti_valid);
+            exclude(tempinfo^.flags,ti_valid);
             exit;
           end;
 
         location_reset(location,LOC_VOID,OS_NO);
-
-        if ti_cleanup_only in tempflags then
-          exit;
-
-        { see comments at ti_const declaration: if we initialised this temp with
-          the value of another temp, that other temp was not freed because the
-          ti_const flag was set }
-        if (ti_const in tempflags) and
-           assigned(tempinfo^.tempinitcode) then
-          begin
-            if tempinfo^.tempinitcode.nodetype<>assignn then
-              internalerror(2016081201);
-            if tbinarynode(tempinfo^.tempinitcode).right.location.loc in [LOC_REFERENCE,LOC_CREFERENCE] then
-              tg.ungetiftemp(current_asmdata.CurrAsmList,tbinarynode(tempinfo^.tempinitcode).right.location.reference);
-          end;
-
 
         case tempinfo^.location.loc of
           LOC_REFERENCE:
@@ -613,14 +543,14 @@ interface
               else
                 begin
                   tg.UnGetTemp(current_asmdata.CurrAsmList,tempinfo^.location.reference);
-                  excludetempflag(ti_valid);
+                  exclude(tempinfo^.flags,ti_valid);
                 end;
             end;
           LOC_CREGISTER,
           LOC_REGISTER:
             begin
-              if (not(cs_opt_regvar in current_settings.optimizerswitches) or
-                 (pi_has_label in current_procinfo.flags)) and not(ti_no_final_regsync in tempflags) then
+              if not(cs_opt_regvar in current_settings.optimizerswitches) or
+                 (pi_has_label in current_procinfo.flags) then
                 begin
                   { make sure the register allocator doesn't reuse the }
                   { register e.g. in the middle of a loop              }
@@ -635,42 +565,42 @@ interface
                   if tempinfo^.location.size in [OS_64,OS_S64] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reghi);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register64.reghi));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register64.reghi));
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reglo);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register64.reglo));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register64.reglo));
                     end
                   else
                   if tempinfo^.location.size in [OS_32,OS_S32] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register));
                     end
                   else
 {$elseif defined(cpu8bitalu)}
                   if tempinfo^.location.size in [OS_64,OS_S64] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reghi);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register64.reghi));
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(cg.GetNextReg(tempinfo^.location.register64.reghi)));
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(cg.GetNextReg(cg.GetNextReg(tempinfo^.location.register64.reghi))));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register64.reghi));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(GetNextReg(tempinfo^.location.register64.reghi)));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(GetNextReg(GetNextReg(tempinfo^.location.register64.reghi))));
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register64.reglo);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register64.reglo));
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(cg.GetNextReg(tempinfo^.location.register64.reglo)));
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(cg.GetNextReg(cg.GetNextReg(tempinfo^.location.register64.reglo))));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register64.reglo));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(GetNextReg(tempinfo^.location.register64.reglo)));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(GetNextReg(GetNextReg(tempinfo^.location.register64.reglo))));
                     end
                   else
                   if tempinfo^.location.size in [OS_32,OS_S32] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register));
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(cg.GetNextReg(tempinfo^.location.register)));
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(cg.GetNextReg(cg.GetNextReg(tempinfo^.location.register))));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(GetNextReg(tempinfo^.location.register)));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(GetNextReg(GetNextReg(tempinfo^.location.register))));
                     end
                   else
                   if tempinfo^.location.size in [OS_16,OS_S16] then
                     begin
                       cg.a_reg_sync(current_asmdata.CurrAsmList,tempinfo^.location.register);
-                      cg.a_reg_sync(current_asmdata.CurrAsmList,cg.GetNextReg(tempinfo^.location.register));
+                      cg.a_reg_sync(current_asmdata.CurrAsmList,GetNextReg(tempinfo^.location.register));
                     end
                   else
 {$endif}
@@ -679,13 +609,13 @@ interface
               if release_to_normal then
                 tempinfo^.location.loc := LOC_REGISTER
               else
-                excludetempflag(ti_valid);
+                exclude(tempinfo^.flags,ti_valid);
             end;
           LOC_CFPUREGISTER,
           LOC_FPUREGISTER:
             begin
-              if (not(cs_opt_regvar in current_settings.optimizerswitches) or
-                 (pi_has_label in current_procinfo.flags)) and not(ti_no_final_regsync in tempflags) then
+              if not(cs_opt_regvar in current_settings.optimizerswitches) or
+                 (pi_has_label in current_procinfo.flags) then
                 begin
                   { make sure the register allocator doesn't reuse the }
                   { register e.g. in the middle of a loop              }
@@ -694,13 +624,13 @@ interface
               if release_to_normal then
                 tempinfo^.location.loc := LOC_FPUREGISTER
               else
-                excludetempflag(ti_valid);
+                exclude(tempinfo^.flags,ti_valid);
             end;
           LOC_CMMREGISTER,
           LOC_MMREGISTER:
             begin
-              if (not(cs_opt_regvar in current_settings.optimizerswitches) or
-                 (pi_has_label in current_procinfo.flags)) and not(ti_no_final_regsync in tempflags) then
+              if not(cs_opt_regvar in current_settings.optimizerswitches) or
+                 (pi_has_label in current_procinfo.flags) then
                 begin
                   { make sure the register allocator doesn't reuse the }
                   { register e.g. in the middle of a loop              }
@@ -709,7 +639,7 @@ interface
               if release_to_normal then
                 tempinfo^.location.loc := LOC_MMREGISTER
               else
-                excludetempflag(ti_valid);
+                exclude(tempinfo^.flags,ti_valid);
             end;
           else
             internalerror(200507161);

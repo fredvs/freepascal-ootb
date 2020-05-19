@@ -20,11 +20,11 @@
 program dotest;
 uses
   sysutils,
-  strutils,
   dos,
 {$ifdef macos}
   macutils,
 {$endif}
+  strutils,
   teststr,
   testu,
   redir,
@@ -437,17 +437,6 @@ begin
   assign(t,'out.'+UniqueSuffix);
   {$I-}
    reset(t);
-  {$ifdef windows}
-    { try to cope with Windows problems related to AntiVirus scanner
-      that generate lag time during which access to a given if is forbidden }
-   if (inoutres=5) then
-     begin
-       Sleep(5000);
-       ioresult;
-       Verbose(V_Warning,'Windows file not accessible out.'+UniqueSuffix);
-       reset(t);
-     end;
-   {$endif windows}
    readln(t,hs);
    close(t);
    erase(t);
@@ -560,13 +549,11 @@ begin
   TargetHasDosStyleDirectories :=
     (LTarget='emx') or
     (LTarget='go32v2') or
-    (LTarget='msdos') or
     (LTarget='nativent') or
     (LTarget='os2') or
     (LTarget='symbian') or
     (LTarget='watcom') or
     (LTarget='wdosx') or
-    (LTarget='win16') or
     (LTarget='win32') or
     (LTarget='win64');
   TargetAmigaLike:=
@@ -704,8 +691,7 @@ begin
   while not eof(t) do
    begin
      readln(t,s);
-     if (pos('Fatal: Internal error ',s)>0) or
-        (pos('Error: Compilation raised exception internally',s)>0) then
+     if pos('Fatal: Internal error ',s)>0 then
       begin
         ExitWithInternalError:=true;
         break;
@@ -1181,13 +1167,11 @@ begin
   RelativeToConfigMarker:=TObject.Create;
   if RemoteAddr='' then
     begin
-      FileList:=BuildFileList;
-      if assigned(FileList) then
+      If UniqueSuffix<>'' then
         begin
-          LocalPath:=SplitPath(PPFile[current]);
-          if Length(LocalPath) > 0 then
-            LocalPath:=LocalPath+'/';
-          for i:=0 to FileList.count-1 do
+          FileList:=BuildFileList;
+          if assigned(FileList) then
+           for i:=0 to FileList.Count-1 do 
             begin
               if FileList.Names[i]<>'' then
                 begin
@@ -1205,7 +1189,6 @@ begin
                 s:=LocalPath+LocalFile;
               CopyFile(s,TestOutputDir+'/'+RemoteFile,false);
             end;
-          FileList.Free;
         end;
       RelativeToConfigMarker.Free;
       exit(true);
@@ -1292,7 +1275,6 @@ var
   execres  : boolean;
   EndTicks,
   StartTicks : int64;
-  OldExecuteResult: longint;
 begin
   RunExecutable:=false;
   execres:=true;
@@ -1370,7 +1352,6 @@ begin
       if (deAfter in DelExecutable) and
          not Config.NeededAfter then
         begin
-          { Delete executable if not needed after }
           execcmd:=execcmd+' ; rm ';
           if rshprog <> 'adb' then
             execcmd:=execcmd+'-f ';
@@ -1397,16 +1378,7 @@ begin
                 execcmd:=execcmd + 'rm ' + s;
               execcmd:=execcmd + '; ';
             end;
-          execcmd:=execcmd+'}'+rquote;
-          // Save ExecuteResult and EXELogFile
-          OldExecuteResult:=ExecuteResult;
-          s:=EXELogFile;
-          // Output results of cleanup commands to stdout
-          EXELogFile:='';
-          ExecuteRemote(rshprog,execcmd,StartTicks,EndTicks);
-          // Restore
-          EXELogFile:=s;
-          ExecuteResult:=OldExecuteResult;
+          ExecuteRemote(rshprog,execcmd+'}'+rquote,StartTicks,EndTicks);
         end;
     end
   else
@@ -1624,8 +1596,6 @@ procedure getargs;
 
      'L' : begin
              UniqueSuffix:=Para;
-             if UniqueSuffix='' then
-               UniqueSuffix:=toStr(system.GetProcessID);
            end;
 
      'M' : EmulatorName:=Para;
@@ -1756,11 +1726,10 @@ end;
 
 procedure RunTest;
 var
-  PPDir,LibraryName,LogSuffix,PPPrefix : string;
+  PPDir,LibraryName,LogSuffix : string;
   Res : boolean;
 begin
   Res:=GetConfig(PPFile[current],Config);
-  TranslateConfig(Config);
 
   if Res then
     begin
@@ -1787,12 +1756,6 @@ begin
       if PPDir<>'' then
         begin
 {$ifndef MACOS}
-          { handle paths that are parallel to the tests directory (let's hope
-            that noone uses ../../ -.- ) }
-          { ToDo: check relative paths on MACOS }
-          PPPrefix:=Copy(PPDir,1,3);
-          if (PPPrefix='../') or (PPPrefix='..\') then
-            PPDir:='root/'+Copy(PPDir,4,length(PPDir));
           TestOutputDir:=OutputDir+'/'+PPDir;
           if UniqueSuffix<>'' then
             TestOutputDir:=TestOutputDir+'/'+UniqueSuffix;

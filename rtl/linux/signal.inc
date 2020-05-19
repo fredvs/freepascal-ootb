@@ -20,14 +20,14 @@
 
 Const
   { For sending a signal }
-{$if defined(CPUSPARC) or defined(CPUSPARC64)}
+{$ifdef CPUSPARC}
   SA_SIGINFO   = $200;
   SA_NOMASK    = $20;
 
   SIG_BLOCK   = 1;
   SIG_UNBLOCK = 2;
   SIG_SETMASK = 4;
-{$else : not (CPUSPARC or CPUSPARC64)}
+{$else CPUSPARC}
 {$ifdef CPUMIPS}
   SA_NOCLDSTOP = 1;
   SA_NOCLDWAIT = $10000;
@@ -53,13 +53,13 @@ Const
   SA_NOMASK    = SA_NODEFER;
   SA_ONESHOT   = SA_RESETHAND;
 
-{$endif not (CPUSPARC or CPUSPARC64) }
+{$endif CPUSPARC}
 
   SIG_DFL = 0 ;
   SIG_IGN = 1 ;
   SIG_ERR = -1 ;
 
-{$if defined(CPUSPARC) or defined(CPUSPARC64)}
+{$ifdef CPUSPARC}
   SIGHUP     = 1;
   SIGINT     = 2;
   SIGQUIT    = 3;
@@ -94,7 +94,7 @@ Const
   SIGPWR     = SIGLOST;
   SIGUSR1    = 30;
   SIGUSR2    = 31;
-{$else defined(CPUSPARC) or defined(CPUSPARC64)}
+{$else cpusparc}
   SIGHUP     = 1;
   SIGINT     = 2;
   SIGQUIT    = 3;
@@ -151,7 +151,7 @@ Const
   SIGPWR     = 30;
   SIGUNUSED  = 31;
 {$endif not CPUMIPS}
-{$endif defined(CPUSPARC) or defined(CPUSPARC64)}
+{$endif cpusparc}
 
 { si_code field values for tsiginfo.si_code when si_signo = SIGFPE }
 const

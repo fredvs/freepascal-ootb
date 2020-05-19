@@ -24,11 +24,7 @@
   fMachineType:=emtppc;;
   {$ENDIF}
   {$IFDEF CPUPOWERPC64}
-  {$ifdef FPC_BIG_ENDIAN}
-  fMachineType:=emtppc64;
-  {$else FPC_BIG_ENDIAN}
-  fMachineType:=emtppc64le;
-  {$endif FPC_BIG_ENDIAN}
+  fMachineType:=emtppc64;;
   {$ENDIF}
   {$IFDEF CPUARM}
     {$IFDEF ENDIAN_LITTLE}
@@ -36,9 +32,6 @@
     {$ELSE}
     fMachineType:=emtarmeb;
     {$ENDIF}
-  {$ENDIF}
-  {$IFDEF CPUAARCH64}
-  fMachineType:=emtaarch64;
   {$ENDIF}
   {$IFDEF CPU68K}
   fMachineType:=emtm68k;

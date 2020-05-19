@@ -158,8 +158,7 @@ implementation
 uses
        strings,
        cutils,verbose,
-       globtype,globals,fmodule,
-       owar;
+       globtype,globals,fmodule;
 
 
 {****************************************************************************
@@ -377,7 +376,6 @@ end;
     constructor Tlxlinker.Create;
       begin
         inherited Create;
-        CArObjectReader:=TArObjectReader;
         exeoutput:=Tlxexeoutput.createos2;
       end;
 

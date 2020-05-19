@@ -37,11 +37,11 @@
              cpu_no,                       { 0 }
              cpu_i386,                     { 1 }
              cpu_m68k,                     { 2 }
-             obsolete_cpu_alpha,           { 3 }
+             cpu_alpha,                    { 3 }
              cpu_powerpc,                  { 4 }
              cpu_sparc,                    { 5 }
-             obsolete_cpu_vm,              { 6 }
-             obsolete_cpu_ia64,            { 7 }
+             cpu_vm,                       { 6 }
+             cpu_iA64,                     { 7 }
              cpu_x86_64,                   { 8 }
              cpu_mipseb,                   { 9 }
              cpu_arm,                      { 10 }
@@ -49,10 +49,7 @@
              cpu_avr,                      { 12 }
              cpu_mipsel,                   { 13 }
              cpu_jvm,                      { 14 }
-             cpu_i8086,                    { 15 }
-             cpu_aarch64,                  { 16 }
-             cpu_wasm,                     { 17 }
-             cpu_sparc64                   { 18 }
+             cpu_i8086                     { 15 }
        );
 
        tasmmode= (asmmode_none
@@ -71,7 +68,6 @@
             ,asmmode_avr_gas
             ,asmmode_i8086_intel
             ,asmmode_i8086_att
-            ,asmmode_arm_gas_unified
        );
 
      (* IMPORTANT NOTE:
@@ -93,10 +89,10 @@
              system_i386_freebsd,       { 6 }
              system_m68k_Amiga,         { 7 }
              system_m68k_Atari,         { 8 }
-             system_m68k_macos,         { 9 }
+             system_m68k_Mac,           { 9 }
              system_m68k_linux,         { 10 }
              system_m68k_PalmOS,        { 11 }
-             obsolete_system_alpha_linux,{ 12 }
+             system_alpha_linux,        { 12 }
              system_powerpc_linux,      { 13 }
              system_powerpc_macos,      { 14 }
              system_i386_solaris,       { 15 }
@@ -104,12 +100,12 @@
              system_i386_netbsd,        { 17 }
              system_m68k_netbsd,        { 18 }
              system_i386_Netware,       { 19 }
-             obsolete_system_i386_qnx,  { 20 }
+             system_i386_qnx,           { 20 }
              system_i386_wdosx,         { 21 }
              system_sparc_solaris,      { 22 }
              system_sparc_linux,        { 23 }
              system_i386_openbsd,       { 24 }
-             obsolete_system_m68k_openbsd,{ 25 }
+             system_m68k_openbsd,       { 25 }
              system_x86_64_linux,       { 26 }
              system_powerpc_darwin,     { 27 }
              system_i386_EMX,           { 28 }
@@ -123,7 +119,7 @@
              system_powerpc_Amiga,      { 36 }
              system_x86_64_win64,       { 37 }
              system_arm_wince,          { 38 }
-             obsolete_system_ia64_win64,{ 39 }
+             system_ia64_win64,         { 39 }
              system_i386_wince,         { 40 }
              system_x86_6432_linux,     { 41 }
              system_arm_gba,            { 42 }
@@ -134,11 +130,11 @@
              system_arm_nds,            { 47 }
              system_i386_embedded,      { 48 }
              system_m68k_embedded,      { 49 }
-             obsolete_system_alpha_embedded,{ 50 }
+             system_alpha_embedded,     { 50 }
              system_powerpc_embedded,   { 51 }
              system_sparc_embedded,     { 52 }
-             obsolete_system_vm_embedded,{ 53 }
-             obsolete_system_ia64_embedded,{ 54 }
+             system_vm_embedded,        { 53 }
+             system_iA64_embedded,      { 54 }
              system_x86_64_embedded,    { 55 }
              system_mips_embedded,      { 56 }
              system_arm_embedded,       { 57 }
@@ -169,24 +165,7 @@
              system_mipsel_embedded,    { 82 }
              system_i386_aros,          { 83 }
              system_x86_64_aros,        { 84 }
-             system_x86_64_dragonfly,   { 85 }
-             system_aarch64_darwin,     { 86 }
-             system_x86_64_iphonesim,   { 87 }
-             system_aarch64_linux,      { 88 }
-             system_i8086_win16,        { 89 }
-             system_i8086_embedded,     { 90 }
-             system_arm_aros,           { 91 }
-             system_wasm_wasm32,        { 92 }
-             system_sparc64_linux,      { 93 }
-             system_sparc64_solaris,    { 94 }
-             system_arm_netbsd,         { 95 }
-             system_riscv32_linux,      { 96 }
-             system_riscv64_linux,      { 97 }
-             system_riscv64_embedded,   { 98 }
-             system_riscv32_embedded,   { 99 }
-             system_aarch64_android,    { 100 }
-             system_x86_64_android,     { 101 }
-             system_x86_64_haiku        { 102 }
+             system_x86_64_dragonfly    { 85 }
        );
 
      type
@@ -232,15 +211,7 @@
              ,as_i8086_nasm
              ,as_i8086_nasmobj
              ,as_gas_powerpc_xcoff
-             ,as_arm_elf32
-             ,as_i8086_omf
-             ,as_llvm
              ,as_clang
-             ,as_solaris_as
-             ,as_m68k_vasm
-             ,as_m68k_as_aout
-             ,as_wasm_binaryen
-             ,as_powerpc_gas_legacy    { for systems with very old GAS versions only, which don't support eg. named sections }
        );
 
        tlink = (ld_none,
@@ -271,13 +242,11 @@
              ld_wdosx,
              ld_wii,
              ld_windows,
-             ld_win16,
              ld_int_go32v2,    { implemented internal linkers }
              ld_int_linux,
              ld_int_nativent,
              ld_int_netware,
-             ld_int_windows,
-             ld_int_msdos
+             ld_int_windows
        );
 
        tar = (ar_none
@@ -302,7 +271,6 @@
 
        tdbg = (dbg_none
             ,dbg_stabs,dbg_stabx,dbg_dwarf2,dbg_dwarf3,dbg_dwarf4,dbg_jasmin
-            ,dbg_codeview
        );
 
        tscripttype = (script_none
@@ -312,18 +280,9 @@
        );
 
        tabi = (abi_default
-            ,abi_powerpc_sysv,abi_powerpc_aix,abi_powerpc_darwin,abi_powerpc_elfv2
+            ,abi_powerpc_sysv,abi_powerpc_aix
             ,abi_eabi,abi_armeb,abi_eabihf
             ,abi_old_win32_gnu
-            ,abi_aarch64_darwin
-            { stack is aligned and all room for parameters is reserved on
-              entry, but depending on the calling convention, the parameters
-              may still be removed by the callee (and then the stack needs to
-              be restored by the caller) }
-            ,abi_i386_dynalignedstack
        );
-
-     const
-       abi_powerpc_elfv1 = abi_powerpc_sysv;
 
 

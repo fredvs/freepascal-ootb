@@ -169,7 +169,6 @@ type
     Procedure TestFunctionAlias;
     Procedure TestOperatorTokens;
     procedure TestOperatorNames;
-    Procedure TestAssignOperatorAfterObject;
     Procedure TestFunctionNoResult;
   end;
 
@@ -1273,43 +1272,23 @@ procedure TTestProcedureFunction.TestOperatorNames;
 
 Var
   t : TOperatorType;
-  S: String;
 
 begin
   For t:=Succ(otUnknown) to High(TOperatorType) do
       begin
-      S:=GetEnumName(TypeInfo(TOperatorType),Ord(T));
       ResetParser;
       if t in UnaryOperators then
         AddDeclaration(Format('operator %s (a: Integer) : te',[OperatorNames[t]]))
       else
         AddDeclaration(Format('operator %s (a: Integer; b: integer) : te',[OperatorNames[t]]));
       ParseOperator;
-      AssertEquals(S+': Token based',t in [otIn],FOperator.TokenBased);
-      AssertEquals(S+': Correct operator type',T,FOperator.OperatorType);
+      AssertEquals('Token based',False,FOperator.TokenBased);
+      AssertEquals('Correct operator type',T,FOperator.OperatorType);
       if t in UnaryOperators then
         AssertEquals('Correct operator name',format('%s(Integer):te',[OperatorNames[t]]),FOperator.Name)
       else
         AssertEquals('Correct operator name',format('%s(Integer,Integer):te',[OperatorNames[t]]),FOperator.Name);
       end;
-end;
-
-procedure TTestProcedureFunction.TestAssignOperatorAfterObject;
-begin
-  Add('unit afile;');
-  Add('{$mode delphi}');
-  Add('interface');
-  Add('type');
-  Add('  TA =object');
-  Add('      data:integer;');
-  Add('      function transpose:integer;');
-  Add('  end;');
-  Add('');
-  Add('operator := (const v:Tvector2_single) result:Tvector2_double;');
-  Add('implementation');
-  EndSource;
-  Parser.Options:=[po_delphi];
-  ParseModule;
 end;
 
 procedure TTestProcedureFunction.TestFunctionNoResult;

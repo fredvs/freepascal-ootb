@@ -57,7 +57,7 @@ uses
   ctypes, x, xlib, xi;
 
 const
-  libXi = 'libXi.so.6';
+  libXi = 'Xi';
 
   _deviceKeyPress         = 0;
   _deviceKeyRelease       = 1;
@@ -121,7 +121,7 @@ type
     display: PDisplay;           { Display the event was read from }
     window: TWindow;             { "event" window reported relative to }
     deviceid: TXID;
-    root: TWindow;               { root window event occurred on }
+    root: TWindow;               { root window event occured on }
     subwindow: TWindow;          { child window }
     time: TTime;                 { milliseconds }
     x, y: cint;                  { x, y coordinates in event window }
@@ -156,7 +156,7 @@ type
     display: PDisplay;          { Display the event was read from }
     window: TWindow;            { "event" window reported relative to }
     deviceid: TXID;
-    root: TWindow;              { root window that the event occurred on }
+    root: TWindow;              { root window that the event occured on }
     subwindow: TWindow;         { child window }
     time: TTime;                { milliseconds }
     x, y: cint;                 { x, y coordinates in event window }
@@ -191,7 +191,7 @@ type
     display: PDisplay;         { Display the event was read from }
     window: TWindow;           { "event" window reported relative to }
     deviceid: TXID;
-    root: TWindow;             { root window that the event occurred on }
+    root: TWindow;             { root window that the event occured on }
     subwindow: TWindow;        { child window }
     time: TTime;               { milliseconds }
     x, y: cint;                { x, y coordinates in event window }

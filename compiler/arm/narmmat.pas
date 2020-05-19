@@ -51,7 +51,7 @@ interface
 implementation
 
     uses
-      globtype,compinnr,
+      globtype,
       cutils,verbose,globals,constexp,
       aasmbase,aasmcpu,aasmtai,aasmdata,
       defutil,
@@ -75,7 +75,7 @@ implementation
         if not(cs_check_overflow in current_settings.localswitches) and
            (right.nodetype=ordconstn) and
            (nodetype=divn) and
-           not(is_64bit(resultdef)) and
+           not(is_64bitint(resultdef)) and
            {Only the ARM and thumb2-isa support umull and smull, which are required for arbitary division by const optimization}
            (GenerateArmCode or
             GenerateThumb2Code or
@@ -87,11 +87,11 @@ implementation
           result:=nil
         else if ((GenerateThumbCode or GenerateThumb2Code) and (CPUARM_HAS_THUMB_IDIV in cpu_capabilities[current_settings.cputype])) and
           (nodetype=divn) and
-          not(is_64bit(resultdef)) then
+          not(is_64bitint(resultdef)) then
           result:=nil
         else if ((GenerateThumbCode or GenerateThumb2Code) and (CPUARM_HAS_THUMB_IDIV in cpu_capabilities[current_settings.cputype])) and
           (nodetype=modn) and
-          not(is_64bit(resultdef)) then
+          not(is_64bitint(resultdef)) then
           begin
             if (right.nodetype=ordconstn) and
               ispowerof2(tordconstnode(right).value,power) and
@@ -286,8 +286,7 @@ implementation
                 resultreg:=cg.getintregister(current_asmdata.CurrAsmList,size);
               end;
 
-            if (right.nodetype=ordconstn) and
-               (CPUARM_HAS_UMULL in cpu_capabilities[current_settings.cputype]) then
+            if right.nodetype=ordconstn then
               begin
                 if nodetype=divn then
                   genOrdConstNodeDiv
@@ -311,12 +310,28 @@ implementation
 
     procedure tarmnotnode.second_boolean;
       var
-        tmpreg : TRegister;
+        hl : tasmlabel;
       begin
         { if the location is LOC_JUMP, we do the secondpass after the
           labels are allocated
         }
-        if not handle_locjump then
+        if left.expectloc=LOC_JUMP then
+          begin
+            hl:=current_procinfo.CurrTrueLabel;
+            current_procinfo.CurrTrueLabel:=current_procinfo.CurrFalseLabel;
+            current_procinfo.CurrFalseLabel:=hl;
+            secondpass(left);
+
+            if left.location.loc<>LOC_JUMP then
+              internalerror(2012081305);
+
+            maketojumpbool(current_asmdata.CurrAsmList,left,lr_load_regvars);
+            hl:=current_procinfo.CurrTrueLabel;
+            current_procinfo.CurrTrueLabel:=current_procinfo.CurrFalseLabel;
+            current_procinfo.CurrFalseLabel:=hl;
+            location.loc:=LOC_JUMP;
+          end
+        else
           begin
             secondpass(left);
             case left.location.loc of
@@ -330,14 +345,7 @@ implementation
                 begin
                   hlcg.location_force_reg(current_asmdata.CurrAsmList,left.location,left.resultdef,left.resultdef,true);
                   cg.a_reg_alloc(current_asmdata.CurrAsmList,NR_DEFAULTFLAGS);
-                  if is_64bit(resultdef) then
-                    begin
-                      tmpreg:=cg.GetIntRegister(current_asmdata.CurrAsmList,OS_INT);
-                      { OR low and high parts together }
-                      current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg_reg(A_ORR,tmpreg,left.location.register64.reglo,left.location.register64.reghi),PF_S));
-                    end
-                  else
-                    current_asmdata.CurrAsmList.concat(taicpu.op_reg_const(A_CMP,left.location.register,0));
+                  current_asmdata.CurrAsmList.concat(taicpu.op_reg_const(A_CMP,left.location.register,0));
                   location_reset(location,LOC_FLAGS,OS_NO);
                   location.resflags:=F_EQ;
                 end;
@@ -402,7 +410,7 @@ implementation
 
     procedure tarmunaryminusnode.second_float;
       var
-        pf: TOpPostfix;
+        op: tasmop;
       begin
         secondpass(left);
         case current_settings.fputype of
@@ -418,21 +426,18 @@ implementation
             end;
           fpu_vfpv2,
           fpu_vfpv3,
-          fpu_vfpv4,
           fpu_vfpv3_d16:
             begin
               hlcg.location_force_mmregscalar(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
               location:=left.location;
               if (left.location.loc=LOC_CMMREGISTER) then
                 location.register:=cg.getmmregister(current_asmdata.CurrAsmList,location.size);
-
-              if (tfloatdef(left.resultdef).floattype=s32real) then
-                pf:=PF_F32
+              if (location.size=OS_F32) then
+                op:=A_FNEGS
               else
-                pf:=PF_F64;
-
-              current_asmdata.CurrAsmList.concat(setoppostfix(taicpu.op_reg_reg(A_VNEG,
-                location.register,left.location.register), pf));
+                op:=A_FNEGD;
+              current_asmdata.CurrAsmList.concat(taicpu.op_reg_reg(op,
+                location.register,left.location.register));
             end;
           fpu_fpv4_s16:
             begin

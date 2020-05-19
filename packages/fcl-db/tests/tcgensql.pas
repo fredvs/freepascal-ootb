@@ -19,7 +19,7 @@ unit tcgensql;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry,fpsqltree;
+  Classes, SysUtils, fpcunit, testutils, testregistry,fpsqltree;
 
 type
   TSQLDropStatementClass = Class of TSQLDropStatement;
@@ -196,7 +196,10 @@ procedure TTestGenerateSQL.AssertSQL(const AElement: TSQLElement;
   const ASQL: TSQLStringType; AOptions: TSQLFormatOptions = []);
 
 Var
-  S: TSQLStringType;
+  S,S2 : TSQLStringType;
+  L : TStringList;
+  I : Integer;
+
 begin
   S:=AElement.GetAsSQL(AOptions);
   AssertEquals('Correct SQL',ASQL,S);
@@ -1799,6 +1802,7 @@ procedure TTestGenerateSQL.TestBlock;
 
 Var
   B,B2 : TSQLStatementBlock;
+  S : TSQLExitStatement;
   L : TSQLSelectStatement;
 
 begin
@@ -2271,8 +2275,10 @@ procedure TTestGenerateSQL.TestGrantTable;
 
 Var
   G : TSQLTableGrantStatement;
-  {%H-}U : TSQLUserGrantee;
+  U : TSQLUserGrantee;
   PU : TSQLColumnPrivilege;
+  PG : TSQLProcedureGrantee;
+
 begin
   G:=TSQLTableGrantStatement.Create(Nil);
   G.TableName:=CreateIdentifier('A');
@@ -2349,6 +2355,10 @@ procedure TTestGenerateSQL.TestGrantProcedure;
 
 Var
   G : TSQLProcedureGrantStatement;
+  U : TSQLUserGrantee;
+  PU : TSQLColumnPrivilege;
+  PG : TSQLProcedureGrantee;
+
 begin
   G:=TSQLProcedureGrantStatement.Create(Nil);
   G.ProcedureName:=CreateIdentifier('A');
@@ -2380,6 +2390,8 @@ end;
 procedure TTestGenerateSQL.TestGrantRole;
 Var
   G : TSQLRoleGrantStatement;
+  U : TSQLUserGrantee;
+
 begin
   G:=TSQLRoleGrantStatement.Create(Nil);
   G.Roles.Add(CreateIdentifier('A'));
@@ -2400,7 +2412,10 @@ end;
 procedure TTestGenerateSQL.TestRevokeTable;
 Var
   G : TSQLTableRevokeStatement;
+  U : TSQLUserGrantee;
   PU : TSQLColumnPrivilege;
+  PG : TSQLProcedureGrantee;
+
 begin
   G:=TSQLTableRevokeStatement.Create(Nil);
   G.TableName:=CreateIdentifier('A');
@@ -2476,6 +2491,8 @@ end;
 procedure TTestGenerateSQL.TestRevokeProcedure;
 Var
   G : TSQLProcedureRevokeStatement;
+  PG : TSQLProcedureGrantee;
+
 begin
   G:=TSQLProcedureRevokeStatement.Create(Nil);
   G.ProcedureName:=CreateIdentifier('A');

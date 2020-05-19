@@ -44,13 +44,14 @@ _start:
 	popq %rsi		/* Pop the argument count.  */
 	movq %rsp, %rdx		/* argv starts just at the current stack top.  */
 
-        movq    entryinfo@GOTPCREL(%rip),%r10 /* load address of entryinfo variable */
-
-        movq    %rsi,56(%r10)
-        movq    %rsp,64(%r10)   /* argv starts just at the current stack top */
+        movq    operatingsystem_parameter_argc@GOTPCREL(%rip),%rax
+        movq    %rsi,(%rax)
+        movq    operatingsystem_parameter_argv@GOTPCREL(%rip),%rax
+        movq    %rsp,(%rax)   /* argv starts just at the current stack top.  */
         leaq    8(,%rsi,8),%rax
         addq    %rsp,%rax
-        movq    %rax,72(%r10)
+        movq    operatingsystem_parameter_envp@GOTPCREL(%rip),%rcx
+        movq    %rax,(%rcx)
 
 	/* Align the stack to a 16 byte boundary to follow the ABI.  */
 	andq  $~15, %rsp
@@ -97,38 +98,13 @@ main_stub:
         movq    _mcleanup@GOTPCREL(%rip),%rdi
         call    atexit@PLT
 
-        /* fill the remaining fields of the entry information */
-        movq    entryinfo@GOTPCREL(%rip),%rdi /* load address of entryinfo variable into argument for SysEntry*/
-
         /* Save initial stackpointer */
-        movq    %rsp,80(%rdi)
-
-        /* store stack length */
-        movq    __stklen@GOTPCREL(%rip),%rax
-        movq    %rax,88(%rdi)
-
-        /* store pointer to _haltproc */
-        movq    _haltproc@GOTPCREL(%rip),%rax
-        movq    %rax,96(%rdi)
-
-        /* populate the table pointers */
-        movq    INITFINAL@GOTPCREL(%rip),%rax
-        movq    %rax,(%rdi)
-        movq    FPC_THREADVARTABLES@GOTPCREL(%rip),%rax
-        movq    %rax,8(%rdi)
-        movq    FPC_RESOURCESTRINGTABLES@GOTPCREL(%rip),%rax
-        movq    %rax,16(%rdi)
-        movq    FPC_RESSTRINITTABLES@GOTPCREL(%rip),%rax
-        movq    %rax,24(%rdi)
-        movq    FPC_RESLOCATION@GOTPCREL(%rip),%rax
-        movq    %rax,32(%rdi)
-        movq    PASCALMAIN@GOTPCREL(%rip),%rax
-        movq    %rax,40(%rdi)
-        /* valgrind_used can stay 0 */
+        movq    __stkptr@GOTPCREL(%rip),%rax
+        movq    %rsp,(%rax)
 
         /* start the program */
         xorq    %rbp,%rbp
-        call    FPC_SysEntry@PLT
+        call    PASCALMAIN@PLT
         hlt
         .size   main_stub,.-main_stub
 
@@ -142,7 +118,6 @@ _haltproc:
         movq    ___fpc_ret_rbp@GOTPCREL(%rip),%rcx
         movq    (%rcx),%rbp
         movq    ___fpc_ret@GOTPCREL(%rip),%rcx
-        popq    %rdx
         movq    (%rcx),%rdx
         pushq    %rdx
         ret
@@ -180,38 +155,11 @@ ___fpc_ret_rbp:
         .quad   0
 
 .bss
-/* the entry information looks like this:
+        .comm __stkptr,8
 
-  TEntryInformation = record
-    InitFinalTable : Pointer;           // offset 0
-    ThreadvarTablesTable : Pointer;     // offset 8
-    ResourceStringTables : Pointer;     // offset 16
-    ResStrInitTables : Pointer;         // offset 24
-    ResLocation : Pointer;              // offset 32
-    PascalMain : Procedure;             // offset 40
-    valgrind_used : boolean;            // offset 48
-    OS : TEntryInformationOS;           // offset 56
-  end;
-
-  with TEntryInformationOS being
-
-  TEntryInformationOS = record
-    argc: longint;                         // offset 56
-    argv: ppchar;                          // offset 64
-    envp: ppchar;                          // offset 72
-    stkptr: pointer;                       // offset 80
-    stklen: sizeuint;                      // offset 88
-    haltproc: procedure(e:longint);cdecl;  // offset 96
-  end;
-
-  The size of TEntryInformationOS including padding is 5 * sizeof(Pointer) = 40
-
-  The size of TEntryInformation including padding without OS is 8 * sizeof(Pointer) = 64
-
-  Thus the total size of TEntryInformation including padding is 104
-
-*/
-        .comm entryinfo,104
+        .comm operatingsystem_parameter_envp,8
+        .comm operatingsystem_parameter_argc,8
+        .comm operatingsystem_parameter_argv,8
 
 /* We need this stuff to make gdb behave itself, otherwise
    gdb will chokes with SIGILL when trying to debug apps.

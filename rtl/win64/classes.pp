@@ -54,7 +54,6 @@ uses
 function MakeObjectInstance(Method: TWndMethod): Pointer;
   begin
     runerror(211);
-    MakeObjectInstance:=nil;
   end;
 
 
@@ -67,7 +66,6 @@ procedure FreeObjectInstance(ObjectInstance: Pointer);
 function AllocateHWnd(Method: TWndMethod): HWND;
   begin
     runerror(211);
-    AllocateHWnd:=0;
   end;
 
 

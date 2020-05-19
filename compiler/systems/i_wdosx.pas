@@ -89,7 +89,6 @@ unit i_wdosx;
             stacksize    : 32*1024*1024;
             stackalign   : 4;
             abi          : abi_default;
-            llvmdatalayout : 'todo';
           );
 
   implementation

@@ -41,7 +41,6 @@ Type
   TDataEvent   = Procedure (Sender : TObject; Const ContentLength, CurrentPos : Int64) of object;
   // Use this to set up a socket handler. UseSSL is true if protocol was https
   TGetSocketHandlerEvent = Procedure (Sender : TObject; Const UseSSL : Boolean; Out AHandler : TSocketHandler) of object;
-  TSocketHandlerCreatedEvent = Procedure (Sender : TObject; AHandler : TSocketHandler) of object;
 
   TFPCustomHTTPClient = Class;
 
@@ -73,7 +72,6 @@ Type
     FContentLength : Int64;
     FAllowRedirect: Boolean;
     FKeepConnection: Boolean;
-    FMaxChunkSize: SizeUInt;
     FMaxRedirects: Byte;
     FOnDataReceived: TDataEvent;
     FOnHeaders: TNotifyEvent;
@@ -81,7 +79,6 @@ Type
     FOnRedirect: TRedirectEvent;
     FPassword: String;
     FIOTimeout: Integer;
-    FConnectTimeout: Integer;
     FSentCookies,
     FCookies: TStrings;
     FHTTPVersion: String;
@@ -96,14 +93,12 @@ Type
     FTerminated: Boolean;
     FUserName: String;
     FOnGetSocketHandler : TGetSocketHandlerEvent;
-    FAfterSocketHandlerCreated : TSocketHandlerCreatedEvent;
     FProxy : TProxyData;
     function CheckContentLength: Int64;
     function CheckTransferEncoding: string;
     function GetCookies: TStrings;
     function GetProxy: TProxyData;
     Procedure ResetResponse;
-    procedure SetConnectTimeout(AValue: Integer);
     Procedure SetCookies(const AValue: TStrings);
     procedure SetHTTPVersion(const AValue: String);
     procedure SetKeepConnection(AValue: Boolean);
@@ -189,7 +184,7 @@ Type
     Procedure Get(Const AURL : String; Stream : TStream);
     Procedure Get(Const AURL : String; const LocalFileName : String);
     Procedure Get(Const AURL : String; Response : TStrings);
-    Function Get(Const AURL : String) : RawByteString;
+    Function Get(Const AURL : String) : String;
     // Check if responsecode is a redirect code that this class handles (301,302,303,307,308)
     Class Function IsRedirect(ACode : Integer) : Boolean; virtual;
     // If the code is a redirect, then this method  must return TRUE if the next request should happen with a GET (307/308)
@@ -198,70 +193,70 @@ Type
     Class Procedure SimpleGet(Const AURL : String; Stream : TStream);
     Class Procedure SimpleGet(Const AURL : String; const LocalFileName : String);
     Class Procedure SimpleGet(Const AURL : String; Response : TStrings);
-    Class Function SimpleGet(Const AURL : String) : RawByteString;
+    Class Function SimpleGet(Const AURL : String) : String;
     // Simple post
     // Post URL, and Requestbody. Return response in Stream, File, TstringList or String;
     Procedure Post(const URL: string; const Response: TStream);
     Procedure Post(const URL: string; Response : TStrings);
     Procedure Post(const URL: string; const LocalFileName: String);
-    function Post(const URL: string) : RawByteString;
+    function Post(const URL: string) : String;
     // Simple class methods.
     Class Procedure SimplePost(const URL: string; const Response: TStream);
     Class Procedure SimplePost(const URL: string; Response : TStrings);
     Class Procedure SimplePost(const URL: string; const LocalFileName: String);
-    Class function SimplePost(const URL: string) : RawByteString;
+    Class function SimplePost(const URL: string) : String;
     // Simple Put
     // Put URL, and Requestbody. Return response in Stream, File, TstringList or String;
     Procedure Put(const URL: string; const Response: TStream);
     Procedure Put(const URL: string; Response : TStrings);
     Procedure Put(const URL: string; const LocalFileName: String);
-    function Put(const URL: string) : RawByteString;
+    function Put(const URL: string) : String;
     // Simple class methods.
     Class Procedure SimplePut(const URL: string; const Response: TStream);
     Class Procedure SimplePut(const URL: string; Response : TStrings);
     Class Procedure SimplePut(const URL: string; const LocalFileName: String);
-    Class function SimplePut(const URL: string) : RawByteString;
+    Class function SimplePut(const URL: string) : String;
     // Simple Delete
     // Delete URL, and Requestbody. Return response in Stream, File, TstringList or String;
     Procedure Delete(const URL: string; const Response: TStream);
     Procedure Delete(const URL: string; Response : TStrings);
     Procedure Delete(const URL: string; const LocalFileName: String);
-    function Delete(const URL: string) : RawByteString;
+    function Delete(const URL: string) : String;
     // Simple class methods.
     Class Procedure SimpleDelete(const URL: string; const Response: TStream);
     Class Procedure SimpleDelete(const URL: string; Response : TStrings);
     Class Procedure SimpleDelete(const URL: string; const LocalFileName: String);
-    Class function SimpleDelete(const URL: string) : RawByteString;
+    Class function SimpleDelete(const URL: string) : String;
     // Simple Options
     // Options from URL, and Requestbody. Return response in Stream, File, TstringList or String;
     Procedure Options(const URL: string; const Response: TStream);
     Procedure Options(const URL: string; Response : TStrings);
     Procedure Options(const URL: string; const LocalFileName: String);
-    function Options(const URL: string) : RawByteString;
+    function Options(const URL: string) : String;
     // Simple class methods.
     Class Procedure SimpleOptions(const URL: string; const Response: TStream);
     Class Procedure SimpleOptions(const URL: string; Response : TStrings);
     Class Procedure SimpleOptions(const URL: string; const LocalFileName: String);
-    Class function SimpleOptions(const URL: string) : RawByteString;
+    Class function SimpleOptions(const URL: string) : String;
     // Get HEAD
     Class Procedure Head(AURL : String; Headers: TStrings);
     // Post Form data (www-urlencoded).
     // Formdata in string (urlencoded) or TStrings (plain text) format.
     // Form data will be inserted in the requestbody.
     // Return response in Stream, File, TStringList or String;
-    Procedure FormPost(const URL : String; FormData: RawByteString; const Response: TStream);
+    Procedure FormPost(const URL, FormData: string; const Response: TStream);
     Procedure FormPost(const URL : string; FormData:  TStrings; const Response: TStream);
     Procedure FormPost(const URL, FormData: string; const Response: TStrings);
     Procedure FormPost(const URL : string; FormData:  TStrings; const Response: TStrings);
-    function FormPost(const URL : String; Const FormData: RawByteString): RawByteString;
-    function FormPost(const URL: string; FormData : TStrings): RawByteString;
+    function FormPost(const URL, FormData: string): String;
+    function FormPost(const URL: string; FormData : TStrings): String;
     // Simple form 
-    Class Procedure SimpleFormPost(const URL : String; Const FormData: RawByteString; const Response: TStream);
+    Class Procedure SimpleFormPost(const URL, FormData: string; const Response: TStream);
     Class Procedure SimpleFormPost(const URL : string; FormData:  TStrings; const Response: TStream);
-    Class Procedure SimpleFormPost(const URL : String; Const FormData: RawByteString; const Response: TStrings);
+    Class Procedure SimpleFormPost(const URL, FormData: string; const Response: TStrings);
     Class Procedure SimpleFormPost(const URL : string; FormData:  TStrings; const Response: TStrings);
-    Class function SimpleFormPost(const URL: String; Const FormData: RawByteString): RawByteString;
-    Class function SimpleFormPost(const URL: string; FormData : TStrings): RawByteString;
+    Class function SimpleFormPost(const URL, FormData: string): String;
+    Class function SimpleFormPost(const URL: string; FormData : TStrings): String;
     // Post a file
     Procedure FileFormPost(const AURL, AFieldName, AFileName: string; const Response: TStream);
     // Post form with a file
@@ -277,7 +272,6 @@ Type
   Protected
     // Timeouts
     Property IOTimeout : Integer read FIOTimeout write SetIOTimeout;
-    Property ConnectTimeout : Integer read FConnectTimeout write SetConnectTimeout;
     // Before request properties.
     // Additional headers for request. Host; and Authentication are automatically added.
     Property RequestHeaders : TStrings Read FRequestHeaders Write SetRequestHeaders;
@@ -302,9 +296,6 @@ Type
     Property AllowRedirect : Boolean Read FAllowRedirect Write FAllowRedirect;
     // Maximum number of redirects. When this number is reached, an exception is raised.
     Property MaxRedirects : Byte Read FMaxRedirects Write FMaxRedirects default DefMaxRedirects;
-    // Maximum chunk size: If chunk sizes bigger than this are encountered, an error will be raised.
-    // Set to zero to disable the check.
-    Property MaxChunkSize : SizeUInt Read FMaxChunkSize Write FMaxChunkSize;
     // Called On redirect. Dest URL can be edited.
     // If The DEST url is empty on return, the method is aborted (with redirect status).
     Property OnRedirect : TRedirectEvent Read FOnRedirect Write FOnRedirect;
@@ -328,8 +319,7 @@ Type
     Property OnHeaders : TNotifyEvent Read FOnHeaders Write FOnHeaders;
     // Called to create socket handler. If not set, or Nil is returned, a standard socket handler is created.
     Property OnGetSocketHandler : TGetSocketHandlerEvent Read FOnGetSocketHandler Write FOnGetSocketHandler;
-    // Called after create socket handler was created, with the created socket handler.
-    Property AfterSocketHandlerCreate : TSocketHandlerCreatedEvent Read FAfterSocketHandlerCreated Write FAfterSocketHandlerCreated;
+
   end;
 
 
@@ -338,7 +328,6 @@ Type
     Property KeepConnection;
     Property Connected;
     Property IOTimeout;
-    Property ConnectTimeout;
     Property RequestHeaders;
     Property RequestBody;
     Property ResponseHeaders;
@@ -365,8 +354,9 @@ Function EncodeURLElement(S : String) : String;
 Function DecodeURLElement(Const S : String) : String;
 
 implementation
-
+{$if not defined(hasamiga)}
 uses sslsockets;
+{$endif}
 
 resourcestring
   SErrInvalidProtocol = 'Invalid protocol : "%s"';
@@ -374,7 +364,7 @@ resourcestring
   SErrInvalidProtocolVersion = 'Invalid protocol version in response: "%s"';
   SErrInvalidStatusCode = 'Invalid response status code: %s';
   SErrUnexpectedResponse = 'Unexpected response status code: %d';
-  SErrChunkTooBig = 'Chunk too big: Got %d, maximum allowed size: %d';
+  SErrChunkTooBig = 'Chunk too big';
   SErrChunkLineEndMissing = 'Chunk line end missing';
   SErrMaxRedirectsReached = 'Maximum allowed redirects reached : %d';
   //SErrRedirectAborted = 'Redirect aborted.';
@@ -394,7 +384,6 @@ var
   P : PChar;
   c: AnsiChar;
 begin
-  result:='';
   l:=Length(S);
   If (l=0) then Exit;
   SetLength(Result,l*3);
@@ -433,7 +422,6 @@ var
 begin
   l := Length(S);
   if l=0 then exit;
-  Result:='';
   SetLength(Result, l);
   P:=PChar(Result);
   i:=1;
@@ -507,12 +495,6 @@ begin
   FIOTimeout:=AValue;
   if Assigned(FSocket) then
     FSocket.IOTimeout:=AValue;
-end;
-
-procedure TFPCustomHTTPClient.SetConnectTimeout(AValue: Integer);
-begin
-  if FConnectTimeout = AValue then Exit;
-  FConnectTimeout := AValue;
 end;
 
 function TFPCustomHTTPClient.IsConnected: Boolean;
@@ -590,12 +572,12 @@ begin
   if Assigned(FonGetSocketHandler) then
     FOnGetSocketHandler(Self,UseSSL,Result);
   if (Result=Nil) then
+  {$if not defined(HASAMIGA)}
     If UseSSL then
-      Result:=TSSLSocketHandler.GetDefaultHandler
+      Result:=TSSLSocketHandler.Create
     else
+  {$endif}  
       Result:=TSocketHandler.Create;
-  if Assigned(AfterSocketHandlerCreate) then
-    AfterSocketHandlerCreate(Self,Result);
 end;
 
 procedure TFPCustomHTTPClient.ConnectToServer(const AHost: String;
@@ -618,8 +600,6 @@ begin
   try
     if FIOTimeout<>0 then
       FSocket.IOTimeout:=FIOTimeout;
-    if FConnectTimeout<>0 then
-      FSocket.ConnectTimeout:=FConnectTimeout;
     FSocket.Connect;
   except
     FreeAndNil(FSocket);
@@ -656,8 +636,7 @@ procedure TFPCustomHTTPClient.SendRequest(const AMethod: String; URI: TURI);
 Var
   PH,UN,PW,S,L : String;
   I : Integer;
-  AddContentLength : Boolean;
-  
+
 begin
   S:=Uppercase(AMethod)+' '+GetServerURL(URI)+' '+'HTTP/'+FHTTPVersion+CRLF;
   UN:=URI.Username;
@@ -684,8 +663,7 @@ begin
   If (URI.Port<>0) then
     S:=S+':'+IntToStr(URI.Port);
   S:=S+CRLF;
-  AddContentLength:=Assigned(RequestBody) and (IndexOfHeader('Content-Length')=-1);
-  If AddContentLength then
+  If Assigned(RequestBody) and (IndexOfHeader('Content-Length')=-1) then
     AddHeader('Content-Length',IntToStr(RequestBody.Size));
   CheckConnectionCloseHeader;
   For I:=0 to FRequestHeaders.Count-1 do
@@ -694,11 +672,9 @@ begin
     If AllowHeader(L) then
       S:=S+L+CRLF;
     end;
-  If AddContentLength then
-    FRequestHeaders.Delete(FRequestHeaders.IndexOfName('Content-Length'));
   if Assigned(FCookies) then
     begin
-    L:='Cookie: ';
+    L:='Cookie:';
     For I:=0 to FCookies.Count-1 do
       begin
       If (I>0) then
@@ -835,6 +811,8 @@ function TFPCustomHTTPClient.ReadResponseHeaders: integer;
     C : String;
 
   begin
+    If Assigned(FCookies) then
+      FCookies.Clear;
     P:=Pos(':',S);
     System.Delete(S,1,P);
     Repeat
@@ -854,8 +832,6 @@ Var
   StatusLine,S : String;
 
 begin
-  If Assigned(FCookies) then
-    FCookies.Clear;
   if not ReadString(StatusLine) then
     Exit(0);
   Result:=ParseStatusLine(StatusLine);
@@ -1067,7 +1043,7 @@ Function TFPCustomHTTPClient.ReadResponse(Stream: TStream;
 
   var
     c: char;
-    ChunkSize: SizeUInt;
+    ChunkSize: Integer;
     l: Integer;
   begin
     BufPos:=1;
@@ -1076,9 +1052,6 @@ Function TFPCustomHTTPClient.ReadResponse(Stream: TStream;
       ChunkSize:=0;
       repeat
         if ReadData(@c,1)<1 then exit;
-        // Protect from overflow
-        If ChunkSize>(High(SizeUInt) div 16) then
-          Raise EHTTPClient.CreateFmt(SErrChunkTooBig,[ChunkSize,High(SizeUInt) div 16]);
         case c of
         '0'..'9': ChunkSize:=ChunkSize*16+ord(c)-ord('0');
         'a'..'f': ChunkSize:=ChunkSize*16+ord(c)-ord('a')+10;
@@ -1086,8 +1059,8 @@ Function TFPCustomHTTPClient.ReadResponse(Stream: TStream;
         else
           break;
         end;
-        If (MaxChunkSize>0) and (ChunkSize>MaxChunkSize) then
-          Raise EHTTPClient.CreateFmt(SErrChunkTooBig,[ChunkSize,MaxChunkSize]);
+        if ChunkSize>1000000 then
+          Raise EHTTPClient.Create(SErrChunkTooBig);
       until Terminated;
       // read till line end
       while (c<>#10) and not Terminated do
@@ -1218,6 +1191,7 @@ Procedure TFPCustomHTTPClient.DoNormalRequest(const AURI: TURI;
   const AMethod: string; AStream: TStream;
   const AAllowedResponseCodes: array of Integer;
   AHeadersOnly, AIsHttps: Boolean);
+
 Var
   CHost: string;
   CPort: Word;
@@ -1238,6 +1212,7 @@ Procedure TFPCustomHTTPClient.DoKeepConnectionRequest(const AURI: TURI;
   const AMethod: string; AStream: TStream;
   const AAllowedResponseCodes: array of Integer;
   AHeadersOnly, AIsHttps: Boolean);
+
 Var
   T: Boolean;
   CHost: string;
@@ -1293,7 +1268,6 @@ begin
   inherited Create(AOwner);
   // Infinite timeout on most platforms
   FIOTimeout:=0;
-  FConnectTimeout:=3000;
   FRequestHeaders:=TStringList.Create;
   FRequestHeaders.NameValueSeparator:=':';
   FResponseHeaders:=TStringList.Create;
@@ -1316,18 +1290,13 @@ end;
 
 class procedure TFPCustomHTTPClient.AddHeader(HTTPHeaders: TStrings;
   const AHeader, AValue: String);
-
 Var
-  J: Integer;
-  S : String;
-
+J: Integer;
 begin
-  J:=IndexOfHeader(HTTPHeaders,Aheader);
-  S:=AHeader+': '+Avalue;
+  j:=IndexOfHeader(HTTPHeaders,Aheader);
   if (J<>-1) then
-    HTTPHeaders[j]:=S
-  else
-    HTTPHeaders.Add(S);
+    HTTPHeaders.Delete(j);
+  HTTPHeaders.Add(AHeader+': '+Avalue);
 end;
 
 
@@ -1338,8 +1307,8 @@ Var
   L : Integer;
   H : String;
 begin
-  H:=LowerCase(Aheader)+':';
-  l:=Length(H);
+  H:=LowerCase(Aheader);
+  l:=Length(AHeader);
   Result:=HTTPHeaders.Count-1;
   While (Result>=0) and ((LowerCase(Copy(HTTPHeaders[Result],1,l)))<>h) do
     Dec(Result);
@@ -1379,11 +1348,12 @@ begin
   FBuffer:='';
 end;
 
+
 procedure TFPCustomHTTPClient.HTTPMethod(const AMethod, AURL: String;
   Stream: TStream; const AllowedResponseCodes: array of Integer);
 
 Var
-  M,L,NL,RNL : String;
+  M,L,NL : String;
   RC : Integer;
   RR : Boolean; // Repeat request ?
 
@@ -1406,22 +1376,17 @@ begin
         if (RC>MaxRedirects) then
           Raise EHTTPClient.CreateFmt(SErrMaxRedirectsReached,[RC]);
         NL:=GetHeader(FResponseHeaders,'Location');
-        if Assigned(FOnRedirect) then
+        if Not Assigned(FOnRedirect) then
+          L:=NL
+        else
           FOnRedirect(Self,L,NL);
-        if (not IsAbsoluteURI(NL)) and ResolveRelativeURI(L,NL,RNL) then
-          NL:=RNL;
         if (RedirectForcesGET(FResponseStatusCode)) then
           M:='GET';
-        // Request has saved cookies in sentcookies.
-        if ParseURI(L).Host=ParseURI(NL).Host then
-          FreeAndNil(FSentCookies)
-        else
-          begin
-          FreeAndNil(FCookies);
-          FCookies:=FSentCookies;
-          FSentCookies:=Nil;
-          end;
         L:=NL;
+        // Request has saved cookies in sentcookies.
+        FreeAndNil(FCookies);
+        FCookies:=FSentCookies;
+        FSentCookies:=Nil;
         end;
       end;
     if (FResponseStatusCode=401) then
@@ -1431,11 +1396,7 @@ begin
         FOnPassword(Self,RR);
       end
     else
-      begin
       RR:=AllowRedirect and IsRedirect(FResponseStatusCode) and (L<>'');
-      if RR and Assigned(FRequestBody) and (FRequestBody.Size>0) then
-        FRequestBody.Position:=0;
-      end;
   until Terminated or not RR ;
 end;
 
@@ -1464,13 +1425,13 @@ begin
   Response.Text:=Get(AURL);
 end;
 
-function TFPCustomHTTPClient.Get(const AURL: String): RawByteString;
+function TFPCustomHTTPClient.Get(const AURL: String): String;
 
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 
 begin
-  SS:=TRawByteStringStream.Create;
+  SS:=TStringStream.Create('');
   try
     Get(AURL,SS);
     Result:=SS.Datastring;
@@ -1485,8 +1446,7 @@ begin
     301,
     302,
     303,
-    307,
-    308 : Result:=True;
+    307,808 : Result:=True;
   else
     Result:=False;
   end;
@@ -1540,7 +1500,7 @@ begin
 end;
 
 
-class function TFPCustomHTTPClient.SimpleGet(const AURL: String): RawByteString;
+class function TFPCustomHTTPClient.SimpleGet(const AURL: String): String;
  
 begin
   With Self.Create(nil) do
@@ -1580,11 +1540,11 @@ begin
 end;
 
 
-function TFPCustomHTTPClient.Post(const URL: string): RawByteString;
+function TFPCustomHTTPClient.Post(const URL: string): String;
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 begin
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     Post(URL,SS);
     Result:=SS.Datastring;
@@ -1636,7 +1596,7 @@ begin
 end;
 
 
-class function TFPCustomHTTPClient.SimplePost(const URL: string): RawByteString;
+class function TFPCustomHTTPClient.SimplePost(const URL: string): String;
 
 begin
   With Self.Create(nil) do
@@ -1673,11 +1633,11 @@ begin
   end;
 end;
 
-function TFPCustomHTTPClient.Put(const URL: string): RawByteString;
+function TFPCustomHTTPClient.Put(const URL: string): String;
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 begin
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     Put(URL,SS);
     Result:=SS.Datastring;
@@ -1725,7 +1685,7 @@ begin
     end;
 end;
 
-class function TFPCustomHTTPClient.SimplePut(const URL: string): RawByteString;
+class function TFPCustomHTTPClient.SimplePut(const URL: string): String;
 
 begin
   With Self.Create(nil) do
@@ -1763,11 +1723,11 @@ begin
   end;
 end;
 
-function TFPCustomHTTPClient.Delete(const URL: string): RawByteString;
+function TFPCustomHTTPClient.Delete(const URL: string): String;
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 begin
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     Delete(URL,SS);
     Result:=SS.Datastring;
@@ -1815,7 +1775,7 @@ begin
     end;
 end;
 
-class function TFPCustomHTTPClient.SimpleDelete(const URL: string): RawByteString;
+class function TFPCustomHTTPClient.SimpleDelete(const URL: string): String;
 
 begin
   With Self.Create(nil) do
@@ -1853,11 +1813,11 @@ begin
   end;
 end;
 
-function TFPCustomHTTPClient.Options(const URL: string): RawByteString;
+function TFPCustomHTTPClient.Options(const URL: string): String;
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 begin
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     Options(URL,SS);
     Result:=SS.Datastring;
@@ -1905,7 +1865,7 @@ begin
     end;
 end;
 
-class function TFPCustomHTTPClient.SimpleOptions(const URL: string): RawByteString;
+class function TFPCustomHTTPClient.SimpleOptions(const URL: string): String;
 
 begin
   With Self.Create(nil) do
@@ -1929,10 +1889,11 @@ begin
     end;
 end;
 
-procedure TFPCustomHTTPClient.FormPost(const URL : String; FormData: RawBytestring; const Response: TStream);
+procedure TFPCustomHTTPClient.FormPost(const URL, FormData: string;
+  const Response: TStream);
 
 begin
-  RequestBody:=TRawByteStringStream.Create(FormData);
+  RequestBody:=TStringStream.Create(FormData);
   try
     AddHeader('Content-Type','application/x-www-form-urlencoded');
     Post(URL,Response);
@@ -1973,11 +1934,11 @@ begin
   Response.Text:=FormPost(URL,FormData);
 end;
 
-function TFPCustomHTTPClient.FormPost(const URL : String;  Const FormData: RawBytestring): RawByteString;
+function TFPCustomHTTPClient.FormPost(const URL, FormData: string): String;
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 begin
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     FormPost(URL,FormData,SS);
     Result:=SS.Datastring;
@@ -1986,11 +1947,11 @@ begin
   end;
 end;
 
-function TFPCustomHTTPClient.FormPost(const URL: string; FormData: TStrings): RawByteString;
+function TFPCustomHTTPClient.FormPost(const URL: string; FormData: TStrings): String;
 Var
-  SS : TRawByteStringStream;
+  SS : TStringStream;
 begin
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     FormPost(URL,FormData,SS);
     Result:=SS.Datastring;
@@ -1999,7 +1960,8 @@ begin
   end;
 end;
 
-class procedure TFPCustomHTTPClient.SimpleFormPost(const URL : String; Const FormData: RawByteString; const Response: TStream);
+class procedure TFPCustomHTTPClient.SimpleFormPost(const URL, FormData: string;
+  const Response: TStream);
 
 begin
   With Self.Create(nil) do
@@ -2026,7 +1988,8 @@ begin
 end;
 
 
-class procedure TFPCustomHTTPClient.SimpleFormPost(const URL : String; Const FormData: RawBytestring; const Response: TStrings);
+class procedure TFPCustomHTTPClient.SimpleFormPost(const URL, FormData: string;
+  const Response: TStrings);
 
 begin
   With Self.Create(nil) do
@@ -2051,7 +2014,8 @@ begin
     end;
 end;
 
-class function TFPCustomHTTPClient.SimpleFormPost(const URL: string;Const FormData : RawByteString): RawByteString;
+class function TFPCustomHTTPClient.SimpleFormPost(const URL, FormData: string
+  ): String;
 
 begin
   With Self.Create(nil) do
@@ -2063,7 +2027,8 @@ begin
     end;
 end;
 
-class function TFPCustomHTTPClient.SimpleFormPost(const URL: string; FormData: TStrings): RawByteString;
+class function TFPCustomHTTPClient.SimpleFormPost(const URL: string;
+  FormData: TStrings): String;
 
 begin
   With Self.Create(nil) do
@@ -2106,13 +2071,13 @@ procedure TFPCustomHTTPClient.StreamFormPost(const AURL: string;
   const AStream: TStream; const Response: TStream);
 Var
   S, Sep : string;
-  SS : TRawByteStringStream;
+  SS : TStringStream;
   I: Integer;
   N,V: String;
 begin
   Sep:=Format('%.8x_multipart_boundary',[Random($ffffff)]);
   AddHeader('Content-Type','multipart/form-data; boundary='+Sep);
-  SS:=TRawByteStringStream.Create();
+  SS:=TStringStream.Create('');
   try
     if (FormData<>Nil) then
       for I:=0 to FormData.Count -1 do

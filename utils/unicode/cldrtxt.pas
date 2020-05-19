@@ -21,9 +21,7 @@
 }
 unit cldrtxt;
 
-{$mode delphi}
-{$H+}
-{$SCOPEDENUMS ON}
+{$mode objfpc}{$H+}
 {$TypedAddress on}
 
 interface
@@ -32,50 +30,17 @@ uses
   Classes, SysUtils,
   cldrhelper, helper;
 
-  procedure ParseInitialDocument(
-    ASequence : POrderedCharacters;
-    ADoc      : TCustomMemoryStream;
-    ASettings : TSettingRecArray
-  );overload;
-  procedure ParseInitialDocument(
-    ASequence : POrderedCharacters;
-    AFileName : string;
-    ASettings : TSettingRecArray
-  );overload;
-
-const
-  SETTING_WITH_UNICODESET = [
-    TSettingOption.SuppressContractions, TSettingOption.Optimize
-  ];
-
-  SETTING_OPTION_STRINGS :  // Lower case !
-    array[Succ(TSettingOption.Unknown)..High(TSettingOption)] of UTF8String = (
-      'strength', 'alternate', 'backwards', 'normalization', 'caselevel', 'casefirst',
-      'hiraganaq', 'numericordering', 'reorder', 'maxvariable', 'import',
-      'suppresscontractions', 'optimize'
-    );
-
-type
-
-  TStatementKind = (Sequence, Setting);
-  TParsedStatement = record
-    Kind : TStatementKind;
-    ReorderSequence : TReorderSequence;
-    Setting : TSettingRec;
-  end;
-  PParsedStatement = ^TParsedStatement;
+  procedure ParseInitialDocument(ASequence : POrderedCharacters; ADoc : TCustomMemoryStream);overload;
+  procedure ParseInitialDocument(ASequence : POrderedCharacters; AFileName : string);overload;
 
   function ParseStatement(
         AData          : PAnsiChar;
         AStartPosition,
         AMaxLen        : Integer;
-        AStatement     : PParsedStatement;
+        AStatement     : PReorderSequence;
     var ANextPos,
         ALineCount     : Integer
   ) : Boolean;
-
-  procedure Clear(var AItem : TParsedStatement);
-  procedure AddItem(var AList : TSettingRecArray; const AItem : PSettingRec);
 
 implementation
 uses
@@ -117,55 +82,17 @@ begin
     AResult := TReorderWeigthKind.Secondary
   else if (AStr = '<<<') or (AStr = '>>>') then
     AResult := TReorderWeigthKind.Tertiary
-  else if (AStr = '<<<<') or (AStr = '>>>>') then
-    {Quaternary level is treated as Identity !}
-    AResult := TReorderWeigthKind.Identity
   else begin
     AResult := TReorderWeigthKind.Identity;
     Result := False;
   end;
 end;
 
-function StringToSettingOption(const AStr : UTF8String) : TSettingOption;
-var
-  e : TSettingOption;
-  s : UTF8String;
-begin
-  s := LowerCase(AStr);
-  for e := Succ(TSettingOption.Unknown) to High(TSettingOption) do begin
-    if (s = SETTING_OPTION_STRINGS[e]) then
-      exit(e);
-  end;
-  Result := TSettingOption.Unknown;
-end;
-
-procedure Clear(var AItem : TParsedStatement);
-begin
-  AItem.Setting.Clear();
-  AItem.ReorderSequence.Clear();
-  AItem.Kind := TStatementKind(0);
-end;
-
-procedure AddItem(var AList : TSettingRecArray; const AItem : PSettingRec);
-var
-  c : Integer;
-begin
-  c := Length(AList);
-  SetLength(AList,(c+1));
-  AList[c].Assign(AItem);
-end;
-
-procedure FromUCS4(const AValue : UCS4Char; var AHighS, ALowS : UnicodeChar);
-begin
-  AHighS := UnicodeChar((AValue - $10000) shr 10 + $d800);
-  ALowS := UnicodeChar((AValue - $10000) and $3ff + $dc00);
-end;
-
 function ParseStatement(
       AData          : PAnsiChar;
       AStartPosition,
       AMaxLen        : Integer;
-      AStatement     : PParsedStatement;
+      AStatement     : PReorderSequence;
   var ANextPos,
       ALineCount     : Integer
 ) : Boolean;
@@ -300,11 +227,10 @@ var
               AResult := '\';
               exit(True);
             end;
-      '\' : begin
+      {'\' : begin
               AResult := '\';
-              Inc(linePos);
               exit(True);
-            end;
+            end;}
       'u' : begin
               CheckLineLength(linePos+4);
               AResult := '$'+Copy(line,(linePos+1),4);
@@ -397,11 +323,8 @@ var
         Inc(linePos);
       end;
       if (linePos > lineLength) or (line[linePos] = '#') then begin
-        if not NextLine() then begin
-          if (line[linePos] = '#') then
-            linePos := lineLength+1; // A comment terminates a line !
+        if not NextLine() then
           exit('');
-        end;
         Continue;
       end ;
       Break;
@@ -469,10 +392,14 @@ var
     logicalPos : TReorderLogicalReset;
     k : Integer;
   begin
+    s := NextToken();
+    if (s = '') then
+      exit(False);
+    CheckToken(s,'&');
     s := NextToken(True);
-    if (s = '[') and specialChararter then begin
+    if (s = '[') then begin
       s := NextToken();
-      if (s = s_BEFORE)  then begin
+      if (s = s_BEFORE) then begin
         s := NextToken();
         if not(TryStrToInt(s,k)) or (k < 1) or (k > 3) then
           CheckToken(s,'"1" or "2" or "3"');
@@ -664,93 +591,6 @@ var
     Result := True;
   end;
 
-  function ReadUnicodeSet() : UTF8String;
-  var
-    k, c : Integer;
-    ks : UTF8String;
-  begin
-    while True do begin
-      while (linePos <= lineLength) and CharInSet(line[linePos],[' ', #9, #13]) do begin
-        Inc(linePos);
-      end;
-      if (linePos > lineLength) or (line[linePos] = '#') then begin
-        if not NextLine() then begin
-          if (line[linePos] = '#') then
-            linePos := lineLength+1; // A comment terminates a line !
-          exit('');
-        end;
-        Continue;
-      end ;
-      Break;
-    end;
-    if (linePos > lineLength) then
-      exit('');
-    if (line[linePos] <> '[') then
-      exit;
-    k := linePos;
-    c := 1;
-    ks := '';
-    linePos := linePos+1;
-    while (linePos <= lineLength) do begin
-      if (line[linePos] = '[') then
-        c := c+1
-      else if (line[linePos] = ']') then
-        c := c-1;
-      if (c = 0) then
-        break;
-      linePos := linePos+1;
-      if (linePos > lineLength) then begin
-        ks := ks+Copy(line,k,linePos);
-        if not NextLine() then
-          raise Exception.CreateFmt(sInvalidUnicodeSetExpression,[line]);
-        k := linePos;
-      end;
-    end;
-    if (line[linePos] <> ']') then
-      raise Exception.CreateFmt(sInvalidUnicodeSetExpression,[line]);
-    linePos := linePos+1;
-    ks := ks+Copy(line,k,(linePos-k));
-    Result := ks;
-  end;
-
-  function ParseSetting() : Boolean;
-  var
-    name, value : UTF8String;
-    c, k : Integer;
-  begin
-    name := NextToken(True);
-    if (name = ']') then
-      raise Exception.CreateFmt(sInvalidSettingExpression,[line]);
-    AStatement^.Setting.Name := name;
-    AStatement^.Setting.OptionValue := StringToSettingOption(AStatement^.Setting.Name);
-    if (AStatement^.Setting.OptionValue in SETTING_WITH_UNICODESET) then begin
-      value := ReadUnicodeSet();
-      if (value = '') then
-        raise Exception.CreateFmt(sInvalidSettingExpression,[line]);
-      CheckToken(NextToken(True),']');
-      SetLength(AStatement^.Setting.Values,1);
-      AStatement^.Setting.Values[0] := value;
-      Result := True;
-    end else begin
-      c := 0;
-      while True do begin
-        value := NextToken((c = 0));
-        if (value = '') or (specialChararter and (value = ']')) then begin
-          if (c = 0) then
-            raise Exception.CreateFmt(sInvalidSettingExpression,[line]);
-          break;
-        end;
-        k := Length(AStatement^.Setting.Values);
-        SetLength(AStatement^.Setting.Values,(k+1));
-        AStatement^.Setting.Values[k] := value;
-        c := c+1;
-      end;
-      Result := (c > 0);
-    end;
-  end;
-
-var
-  locToken : UTF8String;
 begin
   Result := False;
   elementActualCount := 0;
@@ -762,45 +602,29 @@ begin
   bufferPos := AStartPosition;
   p := AData+AStartPosition;
   SetLength(line,LINE_LENGTH);
-  Clear(AStatement^);
+  statement := AStatement;
+  statement^.Clear();
   if not NextLine() then
     exit;
-  locToken := NextToken();
-  if (locToken = '') then
+  if not parse_reset() then
     exit;
-  if not specialChararter then
-    raise Exception.CreateFmt(sSpecialCharacterExpected,[locToken,CurrentLine()]);
-  if (locToken = '&') then begin
-    AStatement.Kind := TStatementKind.Sequence;
-    statement := @AStatement.ReorderSequence;
-    if not parse_reset() then
-      exit;
-    while ReadNextItem() do begin
-      // All done in the condition
-    end;
-    statement^.SetElementCount(elementActualCount);
-  end else if (locToken = '[') then begin
-    if not ParseSetting() then
-      exit;
-    AStatement.Kind := TStatementKind.Setting;
+  while ReadNextItem() do begin
+    // All done in the condition
   end;
+  statement^.SetElementCount(elementActualCount);
   if (linePos > lineLength) then
-    linePos := lineLength+1;
-  ANextPos := bufferPos-lineLength+linePos-1;
+    linePos := lineLength;
+  ANextPos := bufferPos-lineLength+linePos;
   Result := (ANextPos > AStartPosition);
   ALineCount := lineIndex;
 end;
 
-procedure ParseInitialDocument(
-  ASequence : POrderedCharacters;
-  ADoc      : TCustomMemoryStream;
-  ASettings : TSettingRecArray
-);
+procedure ParseInitialDocument(ASequence : POrderedCharacters; ADoc : TCustomMemoryStream);
 var
   buffer : PAnsiChar;
   bufferLength : Integer;
   i, nextPost : Integer;
-  statement : TParsedStatement;
+  statement : TReorderSequence;
   p : PReorderUnit;
   lineCount : Integer;
 begin
@@ -822,15 +646,12 @@ begin
   nextPost := 0;
   i := 0;
   while (i < bufferLength) do begin
-    Clear(statement);
+    statement.Clear();
     if not ParseStatement(buffer,i,bufferLength,@statement,nextPost,lineCount) then
       Break;
     i := nextPost;
     try
-      if (statement.Kind = TStatementKind.Sequence) then
-        ASequence^.ApplyStatement(@statement.ReorderSequence)
-      else
-        AddItem(ASettings,@statement.Setting);
+      ASequence^.ApplyStatement(@statement);
     except
       on e : Exception do begin
         e.Message := Format('%s  Position = %d',[e.Message,i]);
@@ -847,11 +668,7 @@ begin
   end;
 end;
 
-procedure ParseInitialDocument(
-  ASequence : POrderedCharacters;
-  AFileName : string;
-  ASettings : TSettingRecArray
-);
+procedure ParseInitialDocument(ASequence : POrderedCharacters; AFileName : string);
 var
   doc : TMemoryStream;
 begin
@@ -859,7 +676,7 @@ begin
   try
     doc.LoadFromFile(AFileName);
     doc.Position := 0;
-    ParseInitialDocument(ASequence,doc,ASettings);
+    ParseInitialDocument(ASequence,doc);
   finally
     doc.Free();
   end;

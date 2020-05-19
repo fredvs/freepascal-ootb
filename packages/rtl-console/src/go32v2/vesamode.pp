@@ -73,7 +73,8 @@ const
          regs : registers;
 
       begin
-         regs.ax:=$4f00;
+         regs.ah:=$4f;
+         regs.al:=0;
          regs.es:=tb_segment;
          regs.di:=tb_offset;
          intr($10,regs);
@@ -87,7 +88,8 @@ const
          regs : registers;
 
       begin
-         regs.ax:=$4f02;
+         regs.ah:=$4f;
+         regs.al:=2;
          regs.bx:=m;
          intr($10,regs);
          SetSuperVGAMode:=regs.ax;

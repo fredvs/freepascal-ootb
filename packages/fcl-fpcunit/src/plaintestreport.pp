@@ -19,7 +19,7 @@ unit plaintestreport;
 interface
 
 uses
-  classes, SysUtils, fpcunit, fpcunitreport, testdecorator;
+  classes, SysUtils, fpcunit, fpcunitreport;
 
 type
   TTestResultOption = (ttoSkipAddress,ttoSkipExceptionMessage,ttoErrorsOnly);
@@ -208,21 +208,22 @@ begin
   FSuiteHeaderIdx.Add(Pointer(FDoc.Count - 1));
 end;
 
-function DoTestSuiteAsPlain(aSuite:TTest; Prefix : String; Options : TTestResultOptions = []): string;
-
+function DoTestSuiteAsPlain(aSuite:TTestSuite; Prefix : String; Options : TTestResultOptions = []): string;
 var
   i: integer;
-
+  p : string;
 begin
-  if (ASuite.TestSuiteName<>'') then
-    begin
-    Prefix:='  '+Prefix;
-    Prefix:=Prefix+ASuite.TestSuiteName+'.';
-    end;
-  if (ASuite.TestName<>'') then
-    Result := Prefix+ASuite.TestName+System.sLineBreak;
-  for i := 0 to aSuite.GetChildTestCount - 1 do
-    Result := Result + DoTestSuiteAsPlain(aSuite.GetChildTest(i),Prefix,Options);
+  Result := Prefix+ASuite.TestName+System.sLineBreak;
+  for i := 0 to aSuite.ChildTestCount - 1 do
+    if aSuite.Test[i] is TTestSuite then
+      begin
+      P:=Prefix;
+      if (ASuite.TestName<>'') then
+        P:=P+'  ';
+      Result := Result + DoTestSuiteAsPlain(TTestSuite(aSuite.Test[i]),P,Options);
+      end
+    else if aSuite.Test[i] is TTestCase then
+      Result := Result + Prefix+'  ' + ASuite.TestName+'.' + TTestcase(aSuite.Test[i]).TestName + System.sLineBreak;
 end;
 
 function TestSuiteAsPlain(aSuite:TTestSuite; Options : TTestResultOptions = []): string;

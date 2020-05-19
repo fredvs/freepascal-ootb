@@ -51,7 +51,7 @@ Var
   
 begin
   P:=@Buf;
-  fd:=FileOpen(RandomDevice,fmOpenRead or fmShareDenyNone);
+  fd:=FileOpen(RandomDevice,fmOpenRead);
   Result:=(fd>=0);
   if Result then
     Try

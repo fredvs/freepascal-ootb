@@ -511,12 +511,10 @@ Type
                   sdtChar,sdtVarChar, sdtNChar, sdtNVarChar, sdtCstring,
                   sdtBlob);
 
-  TArrayDim = Array[1..2] of Integer;
-  TArrayDims = Array of TArrayDim;
 
   TSQLTypeDefinition = Class(TSQLElement)
   private
-    FArrayDims: TArrayDims;
+    FArrayDim: Integer;
     FBlobType: Integer;
     FByValue: Boolean;
     FCharSet: TSQLStringType;
@@ -536,7 +534,7 @@ Type
     Property TypeName : String Read FtypeName Write FTypeName;
     Property Len : Integer Read Flen Write Flen; // Length of string or precision for BCD
     Property Scale : Byte Read FScale Write FScale;
-    Property ArrayDims : TArrayDims Read FArrayDims Write FArrayDims;
+    Property ArrayDim : Integer Read FArrayDim Write FArrayDim;
     Property BlobType : Integer Read FBlobType Write FBlobType;
     Property NotNull : Boolean Read FNotNull Write FNotNull;
     Property Collation : TSQLCollation Read FCollation Write FCollation;
@@ -877,24 +875,15 @@ Type
   TSQLCreateOrAlterStatement = Class(TSQLDDLStatement)
   private
     FDBO: TSQLIdentifierName;
-    FIsCreateOrAlter: Boolean;
-    FIsReCreate: Boolean;
   Public
     Destructor Destroy; override;
     Function GetAsSQL(Options : TSQLFormatOptions; AIndent : Integer = 0): TSQLStringType; override;
     Property ObjectName : TSQLIdentifierName Read FDBO Write FDBO;
-    Property IsCreateOrAlter : Boolean Read FIsCreateOrAlter Write FIsCreateOrAlter;
-    Property IsRecreate : Boolean Read FIsReCreate Write FIsReCreate;
   end;
 
   { Generator }
 
-  TSQLCreateOrAlterGenerator = Class(TSQLCreateOrAlterStatement)
-  Private
-    FIsIsSequence: Boolean;
-  public
-    Property IsSequence : Boolean Read FIsIsSequence Write FIsIsSequence;
-  end;
+  TSQLCreateOrAlterGenerator = Class(TSQLCreateOrAlterStatement);
 
   { TSQLCreateGeneratorStatement }
 
@@ -903,18 +892,6 @@ Type
     Function GetAsSQL(Options : TSQLFormatOptions; AIndent : Integer = 0): TSQLStringType; override;
   end;
 
-
-  { TAlterGeneratorStatement }
-
-  TSQLAlterGeneratorStatement = Class(TSQLCreateOrAlterGenerator)
-  private
-    FHasRestart: Boolean;
-    FRestart: Int64;
-  Public
-    Function GetAsSQL(Options : TSQLFormatOptions; AIndent : Integer = 0): TSQLStringType; override;
-    Property Restart : Int64 Read FRestart Write FRestart;
-    Property HasRestart : Boolean Read FHasRestart Write FHasRestart;
-  end;
   { TSQLSetGeneratorStatement }
 
   TSQLSetGeneratorStatement = Class(TSQLCreateOrAlterGenerator)
@@ -1826,16 +1803,6 @@ Type
     Function GetAsSQL(Options : TSQLFormatOptions; AIndent : Integer = 0): TSQLStringType; override;
   end;
 
-  { TSQLSetTermStatement }
-
-  TSQLSetTermStatement = Class(TSQLStatement)
-  private
-    FNewValue: string;
-  Public
-    Function GetAsSQL(Options : TSQLFormatOptions; AIndent : Integer = 0): TSQLStringType; override;
-    Property NewValue : string Read FNewValue Write FNewValue;
-  end;
-
 Const
   CharTypes = [sdtChar,sdtVarChar,sdtNChar,sdtNVarChar,sdtCString];
   ExtractElementNames : Array[TSQLExtractElement] of String
@@ -1844,7 +1811,7 @@ Const
 // Format a SQL keyword according to OPTIONS
 Function SQLKeyWord(Const AWord : TSQLStringType; Options : TSQLFormatOptions) : TSQLStringType;
 Function SQLListSeparator(Options: TSQLFormatOptions) : String;
-Procedure GetSepPrefixIndent(DoNewLine,DoIndent : Boolean; Out Sep,Prefix : TSQLStringType; Out AIndent : Integer);
+Procedure GetSepPrefixIndent(DoNewLine,DoIndent : Boolean; Var Sep,Prefix : TSQLStringType; Var AIndent : Integer);
 Function SQLFormatString(Const AValue : TSQLStringType; Options : TSQLFormatOptions) : TSQLStringType;
 
 implementation
@@ -1881,7 +1848,7 @@ begin
     Delete(Result,Length(Result),1);
 end;
 
-Procedure GetSepPrefixIndent(DoNewLine,DoIndent : Boolean; Out Sep,Prefix : TSQLStringType; Out AIndent : Integer);
+Procedure GetSepPrefixIndent(DoNewLine,DoIndent : Boolean; Var Sep,Prefix : TSQLStringType; Var AIndent : Integer);
 
 begin
   Prefix:='';
@@ -1897,20 +1864,6 @@ begin
     end
   else
     Sep:=', ';
-end;
-
-{ TSQLSetTermStatement }
-
-function TSQLSetTermStatement.GetAsSQL(Options: TSQLFormatOptions; AIndent: Integer): TSQLStringType;
-begin
-  Result:='SET TERM '+NewValue;
-end;
-
-{ TSQLAlterGeneratorStatement }
-
-function TSQLAlterGeneratorStatement.GetAsSQL(Options: TSQLFormatOptions; AIndent: Integer): TSQLStringType;
-begin
-  Result:=inherited GetAsSQL(Options, AIndent);
 end;
 
 { TSQLSetISQLStatement }
@@ -2242,9 +2195,6 @@ Var
              'DECIMAL','NUMERIC','DATE','TIMESTAMP','TIME',
              'CHAR','VARCHAR','NATIONAL CHARACTER','NATIONAL CHARACTER VARYING','CSTRING',
              'BLOB');
-Var
-  D : TArrayDim;
-  I : integer;
 
 begin
   If DataType=sdtDomain then
@@ -2269,21 +2219,8 @@ begin
     end;
   If (CharSet<>'') then
     Result:=Result+SQLKeyWord(' CHARACTER SET ',Options)+CharSet;
-  If (Length(ArrayDims)>0) then
-     begin
-     Result:=Result+'[';
-     For I:=0 to Length(ArrayDims)-1  do
-       begin
-       If I>0 then
-           Result:=Result+',';
-       D:=ArrayDims[I];
-       if D[1]<>1 then
-         Result:=Result+Format('%d:%d',[D[1],D[2]])
-       else
-         Result:=Result+Format('%d',[D[1],D[2]]);
-       end;
-     Result:=Result+']';
-     end;
+  If (ArrayDim<>0) then
+     Result:=Result+Format(' [%d]',[ArrayDim]);
   If Assigned(FDefault) then
     Result:=Result+SQLKeyWord(' DEFAULT ',Options)+DefaultValue.GetAsSQL(Options,AIndent);
   If NotNull then
@@ -2560,13 +2497,7 @@ begin
 end;
 
 destructor TSQLCreateTableStatement.Destroy;
-
-Var
-  N : String;
-
 begin
-  N:=Self.ObjectName.Name;
-  Writeln(N);
   FreeAndNil(FexternalFile);
   FreeAndNil(FFieldDefs);
   FreeAndNil(FConstraints);
@@ -2600,10 +2531,7 @@ begin
     Result:=' ('+sLineBreak+Result+')'
   else
     Result:=' ('+Result+')';
-  S:='CREATE';
-  if IsRecreate then
-    S:='RE'+S;
-  S:=SQLKeyWord(S+' TABLE ',Options)+inherited GetAsSQL(Options, AIndent);
+  S:=SQLKeyWord('CREATE TABLE ',Options)+inherited GetAsSQL(Options, AIndent);
   If Assigned(FExternalFile) then
     S:=S+SQLKeyWord(' EXTERNAL FILE ',Options)+ExternalFileName.GetAsSQL(Options,AIndent);
   Result:=S+Result;
@@ -3161,7 +3089,6 @@ function TSQLAggregateFunctionExpression.GetAsSQL(Options: TSQLFormatOptions;
 
 Const
   OpCodes : Array[TSQLAggregateFunction] of string = ('COUNT','SUM','AVG','MAX','MIN');
-
 Var
   E : TSQLStringType;
 
@@ -3171,8 +3098,6 @@ begin
     aoAsterisk : E:='*';
     aoAll      : E:=SQLKeyword('ALL',Options);
     aoDistinct : E:=SQLKeyWord('DISTINCT',Options);
-  else
-    E:='';
   end;
   If Assigned(FExpression) and (Option<>aoAsterisk) then
     begin
@@ -3642,8 +3567,6 @@ begin
   Result:='';
   If Self is TSQLAlterProcedureStatement then
     Result:=SQLKeyword('ALTER ',Options)
-  else if IsRecreate then
-    Result:=SQLKeyword('RECREATE ',Options)
   else
     Result:=SQLKeyword('CREATE ',Options);
   Result:=Result+SQLKeyWord('PROCEDURE ',Options);
@@ -3730,7 +3653,7 @@ function TSQLStatementBlock.GetAsSQL(Options: TSQLFormatOptions;
   AIndent: Integer): TSQLStringType;
 
 Var
-  I: Integer;
+  I,J : Integer;
   S : String;
 begin
   S:='';
@@ -3798,7 +3721,6 @@ Var
   DoNewLine : Boolean;
 
 begin
-
   S:='';
   Result:=SQLKeyWord('FOR ',Options);
   If Assigned(FSelect) then
@@ -4008,7 +3930,8 @@ Const
 
 Var
   A : Boolean;
-  S: TSQLStringType;
+  S,Sep : TSQLStringType;
+  I : Integer;
   O : TTriggerOperation;
 
 begin
@@ -4257,13 +4180,8 @@ end;
 
 function TSQLCreateGeneratorStatement.GetAsSQL(Options: TSQLFormatOptions;
   AIndent: Integer): TSQLStringType;
-
 begin
-  if IsSequence then
-    Result:=SQLKeyWord('CREATE SEQUENCE ',Options)
-  else
-    Result:=SQLKeyWord('CREATE GENERATOR ',Options);
-  Result:=Result+Inherited GetAsSQL(Options, AIndent);
+  Result:=SQLKeyWord('CREATE GENERATOR ',Options)+Inherited GetAsSQL(Options, AIndent);
 end;
 
 { TSQLCreateRoleStatement }
@@ -4383,11 +4301,7 @@ Var
   I : Integer;
 
 begin
-  if IsRecreate then
-    Result:=SQLKeyWord('RECREATE VIEW ',Options)
-  else
-    Result:=SQLKeyWord('CREATE VIEW ',Options);
-  Result:=Result+inherited GetAsSQL(Options, AIndent);
+  Result:=SQLKeyWord('CREATE VIEW ',Options)+inherited GetAsSQL(Options, AIndent);
   If (Fields.Count>0) then
     begin
     S:='';

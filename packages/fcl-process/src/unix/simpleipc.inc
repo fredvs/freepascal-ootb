@@ -131,6 +131,8 @@ Type
   Private
     FFileName: String;
     FStream: TFileStream;
+  Protected
+    Procedure DoReadMessage; virtual;
   Public
     Constructor Create(AOWner : TSimpleIPCServer); override;
     Procedure StartServer; override;
@@ -142,6 +144,15 @@ Type
     Property Stream : TFileStream Read FStream;
   end;
 
+procedure TPipeServerComm.DoReadMessage;
+
+Var
+  Hdr : TMsgHeader;
+
+begin
+  FStream.ReadBuffer(Hdr,SizeOf(Hdr));
+  PushMessage(Hdr,FStream);
+end;
 
 constructor TPipeServerComm.Create(AOWner: TSimpleIPCServer);
 begin
@@ -176,20 +187,25 @@ begin
 end;
 
 function TPipeServerComm.PeekMessage(TimeOut: Integer): Boolean;
+
 Var
   FDS : TFDSet;
+
 begin
   fpfd_zero(FDS);
   fpfd_set(FStream.Handle,FDS);
-  Result := fpSelect(FStream.Handle+1,@FDS,Nil,Nil,TimeOut)>0;
+  Result:=False;
+  While fpSelect(FStream.Handle+1,@FDS,Nil,Nil,TimeOut)>0 do
+    begin
+    DoReadMessage;
+    Result:=True;
+    end;
 end;
 
 procedure TPipeServerComm.ReadMessage;
-Var
-  Hdr : TMsgHeader;
+
 begin
-  FStream.ReadBuffer(Hdr,SizeOf(Hdr));
-  PushMessage(Hdr,FStream);
+  DoReadMessage;
 end;
 
 

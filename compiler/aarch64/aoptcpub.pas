@@ -118,35 +118,17 @@ Implementation
     End;
 
 
-  function TAoptBaseCpu.RegModifiedByInstruction(reg: tregister; p1: tai): boolean;
+  function TAoptBaseCpu.RegModifiedByInstruction(Reg: TRegister; p1: tai): boolean;
     var
-      i: longint;
-      preg: tregister;
+      i : Longint;
     begin
       result:=false;
       for i:=0 to taicpu(p1).ops-1 do
-        case taicpu(p1).oper[i]^.typ of
-          top_reg:
-            begin
-              preg:=taicpu(p1).oper[i]^.reg;
-              if (getregtype(preg)=getregtype(reg)) and
-                 (getsupreg(preg)=getsupreg(reg)) and
-                 (taicpu(p1).spilling_get_operation_type(i) in [operand_write,operand_readwrite]) then
-                begin
-                  result:=true;
-                  exit;
-                end;
-            end;
-          top_ref:
-            begin
-              if (taicpu(p1).oper[i]^.ref^.addressmode<>am_offset) and
-                 (reg=taicpu(p1).oper[i]^.ref^.base) then
-                begin
-                  result:=true;
-                  exit
-                end;
-            end;
-        end;
+        if (taicpu(p1).oper[i]^.typ=top_reg) and (taicpu(p1).oper[i]^.reg=Reg) and (taicpu(p1).spilling_get_operation_type(i) in [operand_write,operand_readwrite]) then
+          begin
+            result:=true;
+            exit;
+          end;
     end;
 
 End.

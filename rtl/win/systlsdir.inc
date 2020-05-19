@@ -21,11 +21,6 @@
 { This is only useful for executables
   for DLLs, DLL_Entry gets called. PM }
 {$ifdef FPC_INSSIDE_SYSINIT}
-
-{$ifdef win32}
-{$define FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-{$endif win32}
-
 Const
   DLL_PROCESS_ATTACH = 1;
   DLL_THREAD_ATTACH = 2;
@@ -33,7 +28,7 @@ Const
   DLL_THREAD_DETACH = 3;
 
 var
-   TlsKey : PDWord = @TlsKeyVar;
+   TlsKey : dword; external name '_FPC_TlsKey';
 
 type
   TTlsDirectory=packed record
@@ -50,11 +45,6 @@ function TlsGetValue(dwTlsIndex : DWord) : pointer; stdcall;
 procedure InitSystemThreads; external name '_FPC_InitSystemThreads';
 procedure SysAllocateThreadVars; external name '_FPC_SysAllocateThreadVars';
 procedure InitHeap; external name '_FPC_InitHeap';
-
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-procedure SetupEntryInformation(constref info: TEntryInformation); external name '_FPC_SetupEntryInformation';
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-
 {$endif FPC_INSSIDE_SYSINIT}
 
 procedure Exec_Tls_callback(Handle : pointer; reason : Dword; Reserved : pointer);
@@ -77,12 +67,6 @@ procedure Exec_Tls_callback(Handle : pointer; reason : Dword; Reserved : pointer
          and the EntryInformation is a constant which sholud prevent troubles }
        DLL_PROCESS_ATTACH:
          begin
-           {$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-           { since this procedure is called before SetupEntryInformation and thus
-             before EXE_Entry we need to setup the entry information here so that
-             the threadvar handling can be correctly initialized }
-           SetupEntryInformation(SysInitEntryInformation);
-           {$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
            InitHeap;
            InitSystemThreads;
          end;
@@ -107,7 +91,7 @@ procedure Exec_Tls_callback(Handle : pointer; reason : Dword; Reserved : pointer
          end;
        DLL_THREAD_DETACH :
          begin
-           if TlsGetValue(TLSKey^)<>nil then
+           if TlsGetValue(TLSKey)<>nil then
              DoneThread; { Assume everything is idempotent there }
          end;
      end;
@@ -143,16 +127,23 @@ const
     zero_fill_size : 0;
     flags : 0;
   ); cvar; public;
+
 {$ifdef win64}
-  { This was a hack to support external linking.
+  { This is a hack to support external linking.
     All released win64 versions of GNU binutils miss proper prefix handling
     when searching for _tls_used and expect two leading underscores.
     The issue has been fixed in binutils snapshots, but not released yet.
 
-    Using alias allows to support both older and newer binutils.
-    }
-  alias = '__tls_used';
+    TODO: This should be removed as soon as next version of binutils (>2.21) is
+    released and we upgrade to it. }
+    __tls_used : TTlsDirectory = (
+      data_start : @tls_data_start;
+      data_end : @tls_data_end;
+      index_pointer : @_tls_index;
+      callbacks_pointer : @tls_callbacks;
+      zero_fill_size : 0;
+      flags : 0;
+    ); cvar; public;
 {$endif win64}
-
 {$endif FPC_USE_TLS_DIRECTORY}
 

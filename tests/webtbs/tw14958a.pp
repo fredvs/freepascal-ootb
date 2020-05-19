@@ -1,4 +1,4 @@
-{ %target=linux,haiku }
+{ %target=linux }
 { %needlibrary }
 { %norun }
 library tw14958a;

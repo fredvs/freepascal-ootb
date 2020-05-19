@@ -18,7 +18,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'Library: libgba and maxmod from devkitARM; headers: Francesco Lombardi';
     P.License := 'LGPL';
     P.HomepageURL := 'www.freepascal.org';
@@ -31,7 +31,7 @@ begin
      T.IncludePath.Add('src/gba');
      with T.Dependencies do
      begin
-       AddInclude('boyscout.inc');
+       AddInclude('BoyScout.inc');
        AddInclude('core_asm.as');
        AddInclude('disc.inc');
        AddInclude('disc_io.inc');

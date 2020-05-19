@@ -98,8 +98,6 @@ begin
   Writeln(SUsageOption190);
   Writeln(SUsageOption200);
   Writeln(SUsageOption210);
-  Writeln(SUsageOption215);
-  Writeln(SUsageOption215A);
   Writeln(SUsageOption220);
   Writeln(SUsageOption230);
   Writeln(SUsageOption240);
@@ -290,7 +288,7 @@ procedure TFPDocApplication.ParseOption(Const S : String);
 
 var
   i: Integer;
-  Cmd, Arg: String;
+  ProjectFileName,Cmd, Arg: String;
 
 begin
   if (s = '-h') or (s = '--help') then
@@ -394,7 +392,6 @@ end;
 Procedure TFPDocApplication.DoRun;
 
 begin
-   ExceptionExitCode:=1;
   try
   {$IFDEF Unix}
     gettext.TranslateResourceStrings('/usr/local/share/locale/%s/LC_MESSAGES/fpdoc.mo');

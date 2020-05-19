@@ -48,7 +48,7 @@ procedure tmyobject.testsetjmp;
 
 procedure tderivedobject.testlongjmp;
  begin
-    longjmp(envbuf, 127);
+    longjmp(envbuf, 255);
  end;
 
 procedure tderivedobject.testsetjmp;
@@ -67,7 +67,7 @@ procedure tderivedobject.testsetjmp;
             self.testlongjmp;
         end;
      end;
-   127 : WriteLn('Success!');
+   255 : WriteLn('Sucess!');
    else
      begin
        WriteLn('Failure!');
@@ -78,7 +78,7 @@ procedure tderivedobject.testsetjmp;
 
 procedure testlongjmp;
  begin
-    longjmp(global_envbuf, 127);
+    longjmp(global_envbuf, 255);
  end;
 
 
@@ -99,7 +99,7 @@ procedure testsetjmp;
             testlongjmp;
         end;
      end;
-   127 : WriteLn('Success!');
+   255 : WriteLn('Sucess!');
    else
      begin
        WriteLn('Failure!');

@@ -29,7 +29,6 @@ interface
 {$i fpcdefs.inc}
 
   uses
-    globtype,
     aasmdata,
     symtype,symdef,
     parabase,
@@ -42,15 +41,12 @@ interface
     thlcgx86 = class(thlcg2ll)
      protected
       procedure gen_load_uninitialized_function_result(list: TAsmList; pd: tprocdef; resdef: tdef; const resloc: tcgpara); override;
-      procedure a_jmp_external_name(list: TAsmList; const externalname: TSymStr); override;
     end;
 
 implementation
 
   uses
-    globals,systems,
-    aasmbase,
-    cgbase,cgutils,
+    cgbase,
     cpubase,aasmcpu;
 
 { thlcgx86 }
@@ -61,32 +57,6 @@ implementation
       if assigned(resloc.location) and
          (resloc.location^.loc=LOC_FPUREGISTER) then
         list.concat(taicpu.op_none(A_FLDZ));
-    end;
-
-
-  procedure thlcgx86.a_jmp_external_name(list: TAsmList; const externalname: TSymStr);
-    var
-      ref : treference;
-      sym : tasmsymbol;
-    begin
-     if (target_info.system = system_i386_darwin) then
-       begin
-         { a_jmp_name jumps to a stub which is always pic-safe on darwin }
-         inherited;
-         exit;
-       end;
-
-      sym:=current_asmdata.RefAsmSymbol(externalname,AT_FUNCTION);
-      reference_reset_symbol(ref,sym,0,sizeof(pint),[]);
-
-      { create pic'ed? }
-      if (cs_create_pic in current_settings.moduleswitches) and
-         { darwin/x86_64's assembler doesn't want @PLT after call symbols }
-         not(target_info.system in [system_x86_64_darwin,system_i386_iphonesim,system_x86_64_iphonesim]) then
-        ref.refaddr:=addr_pic
-      else
-        ref.refaddr:=addr_full;
-      list.concat(taicpu.op_ref(A_JMP,S_NO,ref));
     end;
 
 end.

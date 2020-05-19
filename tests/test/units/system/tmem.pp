@@ -1,6 +1,3 @@
-{ %OPT=-Sew }
-{ the -Sew causes the compilation to fail if the target supports only unsigned numbers as count for move/fillchar }
-
 { This unit tests the basic routines         }
 { which are usually coded in assembler       }
 { Mainly used in porting to other processors }
@@ -31,6 +28,8 @@ begin
       halt(1);
     end;
 end;
+
+
 
 
 procedure test_fillchar;
@@ -64,8 +63,6 @@ procedure test_fillchar;
   for i := 1 to MAX_TABLE do
     test(dst_arraybyte[i], DEFAULT_VALUE);
   writeln('Passed!');
-{$ifndef CPUI8086}
-  { i8086 uses word as the count parameter for fillchar }
   { test negative fillchar count }
   write('testing fillchar (negative count)...');
   for i := 1 to MAX_TABLE do
@@ -74,7 +71,6 @@ procedure test_fillchar;
   for i := 1 to MAX_TABLE do
     test(dst_arraybyte[i], DEFAULT_VALUE);
   writeln('Passed!');
-{$endif CPUI8086}
  end;
 
 
@@ -117,13 +113,10 @@ begin
   for i:= 1 to MAX_TABLE do
     test(dst_arraybyte[i], DEFAULT_VALUE);
   writeln('Passed!');
-{$ifndef CPUI8086}
-  { i8086 uses word as the count parameter for fillchar }
   { negative move count }
   write('testing move (negative count)...');
   move(src_arraybyte,dst_arraybyte,-12);
   writeln('Passed!');
-{$endif CPUI8086}
 end;
 
 

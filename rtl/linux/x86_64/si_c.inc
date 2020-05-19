@@ -33,9 +33,6 @@
          argc <--- esp
 }
 
-{$asmmode gas}
-
-{$L abitag.o}
 var
   libc_environ: pchar; external name '__environ';
   libc_fpu_control: word; external name '__fpu_control';
@@ -50,7 +47,7 @@ procedure libc_init; external name '__libc_init';
 procedure libc_setfpucw; external name '__setfpucw';
 procedure libc_start_main; external name '__libc_start_main';
 
-procedure _FPC_libc_haltproc(e:longint); forward;
+procedure PASCALMAIN; external name 'PASCALMAIN';
 
 procedure main_stub; assembler; nostackframe;
   asm
@@ -64,22 +61,6 @@ procedure main_stub; assembler; nostackframe;
     movq    %rbp,fpc_ret_rbp(%rip)
     pushq   %rax
 
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    { Save initial stackpointer }
-    movq    SysInitEntryInformation@GOTPCREL(%rip),%rdi
-    movq    %rsp,TEntryInformation.OS.stkptr(%rdi)
-
-    { store stack length }
-    movq StackLength@GOTPCREL(%rip),%rax
-    movq %rax,TEntryInformation.OS.stklen(%rdi)
-
-    { store pointer to haltproc }
-    movq    _FPC_libc_haltproc@GOTPCREL(%rip),%rax
-    movq    %rax,TEntryInformation.OS.haltproc(%rdi)
-
-    xorq    %rbp,%rbp
-    call    SysEntry
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     { Save initial stackpointer }
     movq    initialstkptr@GOTPCREL(%rip),%rax
     movq    %rsp,(%rax)
@@ -87,7 +68,6 @@ procedure main_stub; assembler; nostackframe;
     { start the program }
     xorq    %rbp,%rbp
     call    PASCALMAIN
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     hlt
   end;
 
@@ -125,16 +105,6 @@ procedure _FPC_libc_start; assembler; nostackframe; public name '_start';
     popq %rsi               { Pop the argument count.  }
     movq %rsp, %rdx         { argv starts just at the current stack top.  }
 
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    movq SysInitEntryInformation@GOTPCREL(%rip),%rcx
-
-    { argc is longint in EntryInformation, thus use %edi register }
-    movl %esi,TEntryInformation.OS.argc(%rcx)
-    movq %rsp,TEntryInformation.OS.argv(%rcx)
-    leaq 8(,%rsi,8),%rax
-    addq %rsp,%rax
-    movq %rax,TEntryInformation.OS.envp(%rcx)
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     movq operatingsystem_parameter_argc@GOTPCREL(%rip),%rax
     movq %rsi,(%rax)
     movq operatingsystem_parameter_argv@GOTPCREL(%rip),%rax
@@ -143,7 +113,6 @@ procedure _FPC_libc_start; assembler; nostackframe; public name '_start';
     addq %rsp,%rax
     movq operatingsystem_parameter_envp@GOTPCREL(%rip),%rcx
     movq %rax,(%rcx)
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
 
     { Align the stack to a 16 byte boundary to follow the ABI.  }
     andq  $0xfffffffffffffff0, %rsp
@@ -165,13 +134,30 @@ procedure _FPC_libc_start; assembler; nostackframe; public name '_start';
     call libc_start_main
 
     hlt                     { Crash if somehow `exit' does return.  }
+
+    { We need this stuff to make gdb behave itself, otherwise
+      gdb will chokes with SIGILL when trying to debug apps.
+    }
+(*
+    .section ".note.ABI-tag", "a"
+    .align 4
+    .long 1f - 0f
+    .long 3f - 2f
+    .long  1
+0:  .asciz "GNU"
+1:  .align 4
+2:  .long 0
+    .long 2,4,0
+3:  .align 4
+ *)
   end;
 
 
-procedure _FPC_libc_haltproc(e:longint); assembler; nostackframe; public name '_haltproc';
+procedure _FPC_libc_haltproc; assembler; nostackframe; public name '_haltproc';
   asm
-    movl      %edi,%eax
-    popq    %rdx                    { keep stack aligned }
+    movq      ExitCode@GOTPCREL(%rip),%rax
+    movzwq    (%rax),%rax { load and save exitcode }
+
     movq fpc_ret(%rip),%rdx         { return to libc }
     movq fpc_ret_rbp(%rip),%rbp
     pushq %rdx

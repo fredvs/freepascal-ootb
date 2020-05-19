@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="10"/>
+    <Version Value="9"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
@@ -32,10 +32,12 @@
       <Unit0>
         <Filename Value="pp.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="pp"/>
       </Unit0>
       <Unit1>
         <Filename Value="avr\aasmcpu.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="aasmcpu"/>
       </Unit1>
     </Units>
   </ProjectOptions>
@@ -67,7 +69,11 @@
       <ConfigFile>
         <StopAfterErrCount Value="50"/>
       </ConfigFile>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
       <CustomOptions Value="-davr"/>
+      <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>
 </CONFIG>

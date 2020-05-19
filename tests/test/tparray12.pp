@@ -14,8 +14,7 @@ begin
   a[3]:=ec;
   a[6]:=ef;
   a[5]:=ee;
-  i:=4;
-  a[i]:=ed;
+  a[4]:=ed;
   for i := 1 to 6 do
     begin writeln(tb(a)[i]);
     if (tb(a)[i] <> res[i]) then

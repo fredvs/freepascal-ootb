@@ -1,12 +1,31 @@
 { Parsed from Foundation.framework NSError.h }
 
-
 {$ifdef TYPES}
-type
-  NSErrorPtr = ^NSError;
+{$ifndef NSERROR_PAS_T}
+{$define NSERROR_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSERROR_PAS_R}
+{$define NSERROR_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSERROR_PAS_F}
+{$define NSERROR_PAS_F}
+
+{$endif}
 {$endif}
 
 {$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSERROR_PAS_S}
+{$define NSERROR_PAS_S}
+
+{ External string constants }
 var
   NSCocoaErrorDomain: NSString; cvar; external;
   NSPOSIXErrorDomain: NSString; cvar; external;
@@ -22,20 +41,32 @@ var
   NSStringEncodingErrorKey: NSString; cvar; external;
   NSURLErrorKey: NSString; cvar; external;
   NSFilePathErrorKey: NSString; cvar; external;
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSError = objcclass;
+  NSErrorPointer = ^NSError;
+  NSErrorPtr = NSErrorPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSERROR_PAS_C}
+{$define NSERROR_PAS_C}
 
-type
-  NSError = objcclass external (NSObject, NSCopyingProtocol, NSSecureCodingProtocol)
+{ NSError }
+  NSError = objcclass external (NSObject, NSCopyingProtocol, NSCodingProtocol)
   private
-    _reserved: pointer;
+    _reserved: Pointer;
     _code: NSInteger;
     _domain: NSString;
     _userInfo: NSDictionary;
+    
   public
-    function initWithDomain_code_userInfo (domain: NSString; code: NSInteger; dict: NSDictionary): instancetype; message 'initWithDomain:code:userInfo:'; { NS_DESIGNATED_INITIALIZER }
-    class function errorWithDomain_code_userInfo (domain: NSString; code: NSInteger; dict: NSDictionary): instancetype; message 'errorWithDomain:code:userInfo:';
+    function initWithDomain_code_userInfo(domain_: NSString; code_: NSInteger; dict: NSDictionary): id; message 'initWithDomain:code:userInfo:';
+    class function errorWithDomain_code_userInfo(domain_: NSString; code_: NSInteger; dict: NSDictionary): id; message 'errorWithDomain:code:userInfo:';
     function domain: NSString; message 'domain';
     function code: NSInteger; message 'code';
     function userInfo: NSDictionary; message 'userInfo';
@@ -46,18 +77,17 @@ type
     function recoveryAttempter: id; message 'recoveryAttempter';
     function helpAnchor: NSString; message 'helpAnchor';
 
-    { Adopted protocols }
-    function copyWithZone (zone: NSZonePtr): id; message 'copyWithZone:';
-    procedure encodeWithCoder (aCoder: NSCoder); message 'encodeWithCoder:';
-    function initWithCoder (aDecoder: NSCoder): id; message 'initWithCoder:';
-    class function supportsSecureCoding: ObjCBOOL; message 'supportsSecureCoding';
+    { Adopted Protocols }
+    function copyWithZone(zone_: NSZonePtr): id;
+    procedure encodeWithCoder(aCoder: NSCoder);
+    function initWithCoder(aDecoder: NSCoder): id;
   end;
 
-
-type
-  NSErrorRecoveryAttempting = objccategory external (NSObject)
-    procedure attemptRecoveryFromError_optionIndex_delegate_didRecoverSelector_contextInfo (error: NSError; recoveryOptionIndex: NSUInteger; delegate: id; didRecoverSelector: SEL; contextInfo: pointer); message 'attemptRecoveryFromError:optionIndex:delegate:didRecoverSelector:contextInfo:';
-    function attemptRecoveryFromError_optionIndex (error: NSError; recoveryOptionIndex: NSUInteger): ObjCBOOL; message 'attemptRecoveryFromError:optionIndex:';
+{ NSErrorRecoveryAttemptingCategory }
+  NSErrorRecoveryAttemptingCategory = objccategory external (NSObject)
+    procedure attemptRecoveryFromError_optionIndex_delegate_didRecoverSelector_contextInfo(error: NSError; recoveryOptionIndex: NSUInteger; delegate: id; didRecoverSelector: SEL; contextInfo: Pointer); message 'attemptRecoveryFromError:optionIndex:delegate:didRecoverSelector:contextInfo:';
+    function attemptRecoveryFromError_optionIndex(error: NSError; recoveryOptionIndex: NSUInteger): Boolean; message 'attemptRecoveryFromError:optionIndex:';
   end;
+
 {$endif}
-
+{$endif}

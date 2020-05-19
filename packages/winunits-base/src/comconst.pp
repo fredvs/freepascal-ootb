@@ -14,7 +14,7 @@
 {$mode objfpc}
 {$H+}
 {$inline on}
-unit ComConst;
+unit comconst;
 
   interface
 

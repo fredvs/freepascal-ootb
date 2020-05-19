@@ -170,7 +170,9 @@ unit optvirt;
       fmodule,
       symconst,
       symbase,
+      symtable,
       defcmp,
+      nobj,
       verbose;
 
     const

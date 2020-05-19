@@ -14,7 +14,7 @@
 unit dw_ipflin;
 
 {$mode objfpc}{$H+}
-{$WARN 5024 off : Parameter "$1" not used}
+
 interface
 
 uses
@@ -38,6 +38,7 @@ type
     InHeading: Boolean;
     FInHeadingText: string;
     OrderedList: boolean;
+    TableRowStartFlag: Boolean;
     TableCaptionWritten: Boolean;
     InTableCell: Boolean;
     InTypesDeclaration: Boolean;
@@ -204,12 +205,12 @@ begin
   // IPF has an imposed line length limit.
   if (Length(AText) > cMax) then // then we need to wrap the text.
   begin
-    lText := WrapText(UTF8Encode(AText), LineEnding, [' ', '-', #9], cMax);
+    lText := WrapText(AText, LineEnding, [' ', '-', #9], cMax);
     sl := TStringlist.Create;
     try
       sl.Text := lText;
       for i := 0 to sl.Count-1 do
-        inherited DescrWriteText(UTF8Decode(sl.Strings[i] + LineEnding));
+        inherited DescrWriteText(sl.Strings[i] + LineEnding);
     finally
       sl.Free;
     end;
@@ -245,7 +246,7 @@ end;
 procedure TIPFNewWriter.DescrBeginLink(const AId: DOMString);
 begin
   { Start link to label ID - links are never nested.}
-  FLink := Engine.ResolveLink(Module, UTF8Encode(AId));
+  FLink := Engine.ResolveLink(Module, AId);
   FLink := StringReplace(FLink, ':', '_', [rfReplaceAll]);
   FLink := StringReplace(FLink, '.', '_', [rfReplaceAll]);
   WriteF(':link reftype=hd refid=%s.', [flink]);
@@ -286,7 +287,7 @@ end;
 procedure TIPFNewWriter.DescrWriteCodeLine(const ALine: String);
 begin
   { Write line of code }
-  DescrWriteText(UTF8Decode(ALine + LineEnding));
+  DescrWriteText(ALine + LineEnding);
 //  writeln(EscapeText(ALine));
 end;
 
@@ -504,6 +505,7 @@ end;
 
 procedure TIPFNewWriter.WriteClassInheritanceOverview(ClassDecl: TPasClassType);
 var
+  DocNode: TDocNode;
   ancestor: TPasClassType;
   ancestor2: TPasType;
   List: TStringList;
@@ -514,6 +516,7 @@ var
   var
     s: string;
     o: TPasClassType;
+    t: string;
   begin
     if List.Objects[i] <> nil then
     begin
@@ -522,7 +525,7 @@ var
       begin
         s := ChangeFileExt(ExtractFileName(o.SourceFilename), '');
         s := '#' + PackageName + '.' + s + '.' + o.Name;
-        DescrBeginLink(UTF8Decode(s));
+        DescrBeginLink(s);
         Write(o.Name);
         DescrEndLink;
         writeln('');
@@ -620,7 +623,7 @@ end;
 
 procedure TIPFNewWriter.DescrBeginURL(const AURL: DOMString);
 begin
-  Write(':link reftype=launch object=''netscape'' data=''' + UTF8Encode(AURL) + '''.');
+  Write(':link reftype=launch object=''netscape'' data=''' + AURL + '''.');
 end;
 
 procedure TIPFNewWriter.DescrEndURL;
@@ -645,7 +648,7 @@ function TIPFNewWriter.EscapeText(S: String): String;
 var
   i: Integer;
 begin
-  Result:='';
+  SetLength(Result, 0);
   for i := 1 to Length(S) do
     case S[i] of
       '.':              // Escape these characters
@@ -701,7 +704,8 @@ function TIPFNewWriter.StripText(S: String): String;
 var
   I: Integer;
 begin
-  Result := '';
+  //Result := S;
+  SetLength(Result, 0);
   for i := 1 to Length(S) do
     if not (S[i] in ['&','{','}','#'{,'_'},'$','%','''','~','^', '\', ' ', '<', '>']) then
       Result := Result + S[i];

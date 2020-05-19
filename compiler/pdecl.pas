@@ -37,15 +37,15 @@ interface
 
     function  readconstant(const orgname:string;const filepos:tfileposinfo; out nodetype: tnodetype):tconstsym;
 
-    procedure const_dec(out had_generic:boolean);
-    procedure consts_dec(in_structure, allow_typed_const: boolean;out had_generic:boolean);
+    procedure const_dec;
+    procedure consts_dec(in_structure, allow_typed_const: boolean);
     procedure label_dec;
-    procedure type_dec(out had_generic:boolean);
-    procedure types_dec(in_structure: boolean;out had_generic:boolean);
-    procedure var_dec(out had_generic:boolean);
-    procedure threadvar_dec(out had_generic:boolean);
+    procedure type_dec;
+    procedure types_dec(in_structure: boolean);
+    procedure var_dec;
+    procedure threadvar_dec;
     procedure property_dec;
-    procedure resourcestring_dec(out had_generic:boolean);
+    procedure resourcestring_dec;
 
 implementation
 
@@ -54,14 +54,14 @@ implementation
        cutils,
        { global }
        globals,tokens,verbose,widestr,constexp,
-       systems,aasmdata,fmodule,compinnr,
+       systems,aasmdata,fmodule,
        { symtable }
-       symconst,symbase,symtype,symcpu,symcreat,defutil,defcmp,
+       symconst,symbase,symtype,symcpu,symtable,symcreat,defutil,
        { pass 1 }
-       ninl,ncon,nobj,ngenutil,
+       htypechk,ninl,ncon,nobj,ngenutil,
        { parser }
        scanner,
-       pbase,pexpr,ptype,ptconst,pdecsub,pdecvar,pdecobj,pgenutil,pparautl,
+       pbase,pexpr,ptype,ptconst,pdecsub,pdecvar,pdecobj,pgenutil,
 {$ifdef jvm}
        pjvm,
 {$endif}
@@ -85,7 +85,7 @@ implementation
         if orgname='' then
          internalerror(9584582);
         hp:=nil;
-        p:=comp_expr([ef_accept_equal]);
+        p:=comp_expr(true,false);
         nodetype:=p.nodetype;
         storetokenpos:=current_tokenpos;
         current_tokenpos:=filepos;
@@ -159,17 +159,14 @@ implementation
                { this situation only happens if a intrinsic is parsed that has a
                  generic type as its argument. As we don't know certain
                  information about the final type yet, we need to use safe
-                 values (mostly 0, except for (Bit)SizeOf()) }
+                 values (mostly 0) }
                if not parse_generic then
                  Message(parser_e_illegal_expression);
                case tinlinenode(p).inlinenumber of
-                 in_sizeof_x:
-                   begin
-                     hp:=cconstsym.create_ord(orgname,constord,1,p.resultdef);
-                   end;
+                 in_sizeof_x,
                  in_bitsizeof_x:
                    begin
-                     hp:=cconstsym.create_ord(orgname,constord,8,p.resultdef);
+                     hp:=cconstsym.create_ord(orgname,constord,0,p.resultdef);
                    end;
                  { add other cases here if necessary }
                  else
@@ -184,13 +181,13 @@ implementation
         readconstant:=hp;
       end;
 
-    procedure const_dec(out had_generic:boolean);
+    procedure const_dec;
       begin
         consume(_CONST);
-        consts_dec(false,true,had_generic);
+        consts_dec(false,true);
       end;
 
-    procedure consts_dec(in_structure, allow_typed_const: boolean;out had_generic:boolean);
+    procedure consts_dec(in_structure, allow_typed_const: boolean);
       var
          orgname : TIDString;
          hdef : tdef;
@@ -200,20 +197,15 @@ implementation
          storetokenpos,filepos : tfileposinfo;
          nodetype : tnodetype;
          old_block_type : tblock_type;
-         first,
-         isgeneric,
          skipequal : boolean;
          tclist : tasmlist;
          varspez : tvarspez;
       begin
          old_block_type:=block_type;
          block_type:=bt_const;
-         had_generic:=false;
-         first:=true;
          repeat
            orgname:=orgpattern;
            filepos:=current_tokenpos;
-           isgeneric:=not (m_delphi in current_settings.modeswitches) and (token=_ID) and (idtoken=_GENERIC);
            consume(_ID);
            case token of
 
@@ -274,9 +266,6 @@ implementation
                      to it from the structure or linking will fail }
                    if symtablestack.top.symtabletype in [recordsymtable,ObjectSymtable] then
                      begin
-                       { note: we keep hdef so that we might at least read the
-                               constant data correctly for error recovery }
-                       check_allowed_for_var_or_const(hdef,false);
                        sym:=cfieldvarsym.create(orgname,varspez,hdef,[]);
                        symtablestack.top.insert(sym);
                        sym:=make_field_static(symtablestack.top,tfieldvarsym(sym));
@@ -310,7 +299,7 @@ implementation
                           parse_var_proc_directives(sym);
                        end;
                       { add default calling convention }
-                      handle_calling_convention(tabstractprocdef(hdef),hcc_default_actions_intf);
+                      handle_calling_convention(tabstractprocdef(hdef));
                     end;
                    if not skipequal then
                     begin
@@ -325,17 +314,9 @@ implementation
                 end;
 
               else
-                if not first and isgeneric and (token in [_PROCEDURE,_FUNCTION,_CLASS]) then
-                  begin
-                    had_generic:=true;
-                    break;
-                  end
-                else
-                  { generate an error }
-                  consume(_EQ);
+                { generate an error }
+                consume(_EQ);
            end;
-
-           first:=false;
          until (token<>_ID) or
                (in_structure and
                 ((idtoken in [_PRIVATE,_PROTECTED,_PUBLIC,_PUBLISHED,_STRICT]) or
@@ -386,52 +367,7 @@ implementation
          consume(_SEMICOLON);
       end;
 
-    { From http://clang.llvm.org/docs/LanguageExtensions.html#objective-c-features :
-      To determine whether a method has an inferred related result type, the first word in the camel-case selector
-      (e.g., “init” in “initWithObjects”) is considered, and the method will have a related result type if its return
-      type is compatible with the type of its class and if:
-        * the first word is "alloc" or "new", and the method is a class method, or
-        * the first word is "autorelease", "init", "retain", or "self", and the method is an instance method.
-
-      If a method with a related result type is overridden by a subclass method, the subclass method must also return
-      a type that is compatible with the subclass type.
-    }
-    procedure pd_set_objc_related_result(def: tobject; para: pointer);
-      var
-        pd: tprocdef;
-        i, firstcamelend: longint;
-        inferresult: boolean;
-      begin
-        if tdef(def).typ<>procdef then
-          exit;
-        pd:=tprocdef(def);
-        if not(po_msgstr in pd.procoptions) then
-          internalerror(2019082401);
-        firstcamelend:=length(pd.messageinf.str^);
-        for i:=1 to length(pd.messageinf.str^) do
-          if pd.messageinf.str^[i] in ['A'..'Z'] then
-            begin
-              firstcamelend:=pred(i);
-              break;
-            end;
-        case copy(pd.messageinf.str^,1,firstcamelend) of
-          'alloc',
-          'new':
-             inferresult:=po_classmethod in pd.procoptions;
-          'autorelease',
-          'init',
-          'retain',
-          'self':
-             inferresult:=not(po_classmethod in pd.procoptions);
-          else
-            inferresult:=false;
-        end;
-        if inferresult and
-           def_is_related(tdef(pd.procsym.owner.defowner),pd.returndef) then
-          include(pd.procoptions,po_objc_related_result_type);
-      end;
-
-    procedure types_dec(in_structure: boolean;out had_generic:boolean);
+    procedure types_dec(in_structure: boolean);
 
       function determine_generic_def(name:tidstring):tstoreddef;
         var
@@ -499,17 +435,15 @@ implementation
          old_block_type : tblock_type;
          old_checkforwarddefs: TFPObjectList;
          objecttype : tobjecttyp;
-         first,
          isgeneric,
          isunique,
          istyperenaming : boolean;
          generictypelist : tfphashobjectlist;
-         localgenerictokenbuf : tdynamicarray;
+         generictokenbuf : tdynamicarray;
          vmtbuilder : TVMTBuilder;
          p:tnode;
          gendef : tstoreddef;
          s : shortstring;
-         i : longint;
 {$ifdef x86}
          segment_register: string;
 {$endif x86}
@@ -521,18 +455,14 @@ implementation
          current_module.checkforwarddefs:=TFPObjectList.Create(false);
          block_type:=bt_type;
          hdef:=nil;
-         first:=true;
-         had_generic:=false;
          repeat
            defpos:=current_tokenpos;
            istyperenaming:=false;
            generictypelist:=nil;
-           localgenerictokenbuf:=nil;
+           generictokenbuf:=nil;
 
            { fpc generic declaration? }
-           if first then
-             had_generic:=not(m_delphi in current_settings.modeswitches) and try_to_consume(_GENERIC);
-           isgeneric:=had_generic;
+           isgeneric:=not(m_delphi in current_settings.modeswitches) and try_to_consume(_GENERIC);
 
            typename:=pattern;
            orgtypename:=orgpattern;
@@ -551,13 +481,6 @@ implementation
                consume(_LSHARPBRACKET);
                generictypelist:=parse_generic_parameters(true);
                consume(_RSHARPBRACKET);
-
-               { we are not freeing the type parameters, so register them }
-               for i:=0 to generictypelist.count-1 do
-                 begin
-                    ttypesym(generictypelist[i]).register_sym;
-                    tstoreddef(ttypesym(generictypelist[i]).typedef).register_def;
-                 end;
 
                str(generictypelist.Count,s);
                gentypename:=typename+'$'+s;
@@ -584,8 +507,8 @@ implementation
            { Start recording a generic template }
            if assigned(generictypelist) then
              begin
-               localgenerictokenbuf:=tdynamicarray.create(256);
-               current_scanner.startrecordtokens(localgenerictokenbuf);
+               generictokenbuf:=tdynamicarray.create(256);
+               current_scanner.startrecordtokens(generictokenbuf);
              end;
 
            { is the type already defined? -- must be in the current symtable,
@@ -669,7 +592,7 @@ implementation
                   sym:=tsym(symtablestack.top.Find(typename));
                   if not assigned(sym) then
                     begin
-                      sym:=ctypesym.create(orgtypename,cundefineddef.create(true));
+                      sym:=ctypesym.create(orgtypename,cundefineddef.create);
                       Include(sym.symoptions,sp_generic_dummy);
                       ttypesym(sym).typedef.typesym:=sym;
                       sym.visibility:=symtablestack.top.currentvisibility;
@@ -681,12 +604,9 @@ implementation
                     if not (m_delphi in current_settings.modeswitches) then
                       Message1(sym_e_duplicate_id,genorgtypename)
                     else
-                      begin
-                        { we need to find this symbol even if it's a variable or
-                          something else when doing an inline specialization }
-                        Include(sym.symoptions,sp_generic_dummy);
-                        add_generic_dummysym(sym);
-                      end;
+                      { we need to find this symbol even if it's a variable or
+                        something else when doing an inline specialization }
+                      Include(sym.symoptions,sp_generic_dummy);
                 end
               else
                 begin
@@ -698,8 +618,6 @@ implementation
                         declaration, reuse it }
                       newtype:=ttypesym(sym);
                       newtype.typedef:=hdef;
-                      { use the correct casing }
-                      newtype.RealName:=genorgtypename;
                       sym:=nil;
                     end;
 
@@ -735,49 +653,47 @@ implementation
                          is_java_class_or_interface(hdef) then
                         Message(parser_e_unique_unsupported);
 
-                      if is_object(hdef) or
-                         is_class_or_interface_or_dispinterface(hdef) then
+                      hdef:=tstoreddef(hdef).getcopy;
+
+                      { check if it is an ansistirng(codepage) declaration }
+                      if is_ansistring(hdef) and try_to_consume(_LKLAMMER) then
                         begin
-                          { just create a child class type; this is
-                            Delphi-compatible }
-                          hdef:=cobjectdef.create(tobjectdef(hdef).objecttype,genorgtypename,tobjectdef(hdef),true);
-                        end
-                      else
-                        begin
-                          hdef:=tstoreddef(hdef).getcopy;
-                          { check if it is an ansistirng(codepage) declaration }
-                          if is_ansistring(hdef) and try_to_consume(_LKLAMMER) then
+                          p:=comp_expr(true,false);
+                          consume(_RKLAMMER);
+                          if not is_constintnode(p) then
                             begin
-                              p:=comp_expr([ef_accept_equal]);
-                              consume(_RKLAMMER);
-                              if not is_constintnode(p) then
+                              Message(parser_e_illegal_expression);
+                              { error recovery }
+                            end
+                          else
+                            begin
+                              if (tordconstnode(p).value<0) or (tordconstnode(p).value>65535) then
                                 begin
-                                  Message(parser_e_illegal_expression);
-                                  { error recovery }
-                                end
-                              else
-                                begin
-                                  if (tordconstnode(p).value<0) or (tordconstnode(p).value>65535) then
-                                    begin
-                                      Message(parser_e_invalid_codepage);
-                                      tordconstnode(p).value:=0;
-                                    end;
-                                  tstringdef(hdef).encoding:=int64(tordconstnode(p).value);
+                                  Message(parser_e_invalid_codepage);
+                                  tordconstnode(p).value:=0;
                                 end;
-                              p.free;
+                              tstringdef(hdef).encoding:=int64(tordconstnode(p).value);
                             end;
-                          if (hdef.typ in [pointerdef,classrefdef]) and
-                             (tabstractpointerdef(hdef).pointeddef.typ=forwarddef) then
-                            current_module.checkforwarddefs.add(hdef);
+                          p.free;
                         end;
+
+                      { fix name, it is used e.g. for tables }
+                      if is_class_or_interface_or_dispinterface(hdef) then
+                        with tobjectdef(hdef) do
+                          begin
+                            stringdispose(objname);
+                            stringdispose(objrealname);
+                            objrealname:=stringdup(genorgtypename);
+                            objname:=stringdup(upper(genorgtypename));
+                          end;
+
                       include(hdef.defoptions,df_unique);
+                      if (hdef.typ in [pointerdef,classrefdef]) and
+                         (tabstractpointerdef(hdef).pointeddef.typ=forwarddef) then
+                        current_module.checkforwarddefs.add(hdef);
                     end;
                   if not assigned(hdef.typesym) then
-                    begin
-                      hdef.typesym:=newtype;
-                      if sp_generic_dummy in newtype.symoptions then
-                        add_generic_dummysym(newtype);
-                    end;
+                    hdef.typesym:=newtype;
                 end;
               { in non-Delphi modes we need a reference to the generic def
                 without the generic suffix, so it can be found easily when
@@ -789,26 +705,11 @@ implementation
                   of the defs in the def list of the module}
                 ttypesym(sym).typedef:=hdef;
               newtype.typedef:=hdef;
-              { ensure that the type is registered when no specialization is
-                currently done }
-              if current_scanner.replay_stack_depth=0 then
-                hdef.register_def;
               { KAZ: handle TGUID declaration in system unit }
-              if (cs_compilesystem in current_settings.moduleswitches) and
-                 assigned(hdef) and
-                 (hdef.typ=recorddef) then
-                begin
-                  if not assigned(rec_tguid) and
-                     (gentypename='TGUID') and
-                     (hdef.size=16) then
-                    rec_tguid:=trecorddef(hdef)
-                  else if not assigned(rec_jmp_buf) and
-                     (gentypename='JMP_BUF') then
-                    rec_jmp_buf:=trecorddef(hdef)
-                  else if not assigned(rec_exceptaddr) and
-                     (gentypename='TEXCEPTADDR') then
-                    rec_exceptaddr:=trecorddef(hdef);
-                end;
+              if (cs_compilesystem in current_settings.moduleswitches) and not assigned(rec_tguid) and
+                 (gentypename='TGUID') and { name: TGUID and size=16 bytes that is 128 bits }
+                 assigned(hdef) and (hdef.typ=recorddef) and (hdef.size=16) then
+                rec_tguid:=trecorddef(hdef);
             end;
            if assigned(hdef) then
             begin
@@ -886,28 +787,7 @@ implementation
                            consume(_SEMICOLON);
                          end;
                        parse_var_proc_directives(tsym(newtype));
-                       if po_is_function_ref in tprocvardef(hdef).procoptions then
-                         begin
-                           { these always support everything, no "of object" or
-                             "is_nested" is allowed }
-                           if is_nested_pd(tprocvardef(hdef)) or
-                              is_methodpointer(hdef) then
-                             cgmessage(type_e_function_reference_kind)
-                           else
-                             begin
-                               { this message is only temporary; once Delphi style anonymous functions
-                                 are supported, this check is no longer required }
-                               if not (po_is_block in tprocvardef(hdef).procoptions) then
-                                 comment(v_error,'Function references are not yet supported, only C blocks (add "cblock;" at the end)');
-                             end;
-                         end;
-                       handle_calling_convention(tprocvardef(hdef),hcc_default_actions_intf);
-                       if po_is_function_ref in tprocvardef(hdef).procoptions then
-                         begin
-                           if (po_is_block in tprocvardef(hdef).procoptions) and
-                              not (tprocvardef(hdef).proccalloption in [pocall_cdecl,pocall_mwpascal]) then
-                             message(type_e_cblock_callconv);
-                         end;
+                       handle_calling_convention(tprocvardef(hdef));
                        if try_consume_hintdirective(newtype.symoptions,newtype.deprecatedmsg) then
                          consume(_SEMICOLON);
                      end;
@@ -944,10 +824,7 @@ implementation
                     if is_objc_class_or_protocol(hdef) and
                        (not is_objccategory(hdef) or
                         assigned(tobjectdef(hdef).childof)) then
-                      begin
-                        tobjectdef(hdef).finish_objc_data;
-                        tobjectdef(hdef).symtable.DefList.ForEachCall(@pd_set_objc_related_result,nil);
-                      end;
+                      tobjectdef(hdef).finish_objc_data;
 
                     if is_cppclass(hdef) then
                       tobjectdef(hdef).finish_cpp_data;
@@ -973,23 +850,11 @@ implementation
            if assigned(generictypelist) then
              begin
                current_scanner.stoprecordtokens;
-               tstoreddef(hdef).generictokenbuf:=localgenerictokenbuf;
+               tstoreddef(hdef).generictokenbuf:=generictokenbuf;
                { Generic is never a type renaming }
                hdef.typesym:=newtype;
                generictypelist.free;
              end;
-
-           if not (m_delphi in current_settings.modeswitches) and
-               (token=_ID) and (idtoken=_GENERIC) then
-             begin
-               had_generic:=true;
-               consume(_ID);
-               if token in [_PROCEDURE,_FUNCTION,_CLASS] then
-                 break;
-             end
-           else
-             had_generic:=false;
-           first:=false;
          until (token<>_ID) or
                (in_structure and
                 ((idtoken in [_PRIVATE,_PROTECTED,_PUBLIC,_PUBLISHED,_STRICT]) or
@@ -1005,19 +870,19 @@ implementation
 
 
     { reads a type declaration to the symbol table }
-    procedure type_dec(out had_generic:boolean);
+    procedure type_dec;
       begin
         consume(_TYPE);
-        types_dec(false,had_generic);
+        types_dec(false);
       end;
 
 
-    procedure var_dec(out had_generic:boolean);
+    procedure var_dec;
     { parses variable declarations and inserts them in }
     { the top symbol table of symtablestack         }
       begin
         consume(_VAR);
-        read_var_decls([vd_check_generic],had_generic);
+        read_var_decls([]);
       end;
 
 
@@ -1039,7 +904,7 @@ implementation
       end;
 
 
-    procedure threadvar_dec(out had_generic:boolean);
+    procedure threadvar_dec;
     { parses thread variable declarations and inserts them in }
     { the top symbol table of symtablestack                }
       begin
@@ -1047,16 +912,16 @@ implementation
         if not(symtablestack.top.symtabletype in [staticsymtable,globalsymtable]) then
           message(parser_e_threadvars_only_sg);
         if f_threading in features then
-          read_var_decls([vd_threadvar,vd_check_generic],had_generic)
+          read_var_decls([vd_threadvar])
         else
           begin
             Message1(parser_f_unsupported_feature,featurestr[f_threading]);
-            read_var_decls([vd_check_generic],had_generic);
+            read_var_decls([]);
           end;
       end;
 
 
-    procedure resourcestring_dec(out had_generic:boolean);
+    procedure resourcestring_dec;
       var
          orgname : TIDString;
          p : tnode;
@@ -1066,28 +931,23 @@ implementation
          old_block_type : tblock_type;
          sp : pchar;
          sym : tsym;
-         first,
-         isgeneric : boolean;
       begin
          if target_info.system in systems_managed_vm then
            message(parser_e_feature_unsupported_for_vm);
          consume(_RESOURCESTRING);
          if not(symtablestack.top.symtabletype in [staticsymtable,globalsymtable]) then
            message(parser_e_resourcestring_only_sg);
-         first:=true;
-         had_generic:=false;
          old_block_type:=block_type;
          block_type:=bt_const;
          repeat
            orgname:=orgpattern;
            filepos:=current_tokenpos;
-           isgeneric:=not (m_delphi in current_settings.modeswitches) and (token=_ID) and (idtoken=_GENERIC);
            consume(_ID);
            case token of
              _EQ:
                 begin
                    consume(_EQ);
-                   p:=comp_expr([ef_accept_equal]);
+                   p:=comp_expr(true,false);
                    storetokenpos:=current_tokenpos;
                    current_tokenpos:=filepos;
                    sym:=nil;
@@ -1133,17 +993,8 @@ implementation
                    consume(_SEMICOLON);
                    p.free;
                 end;
-              else
-                if not first and isgeneric and
-                    (token in [_PROCEDURE, _FUNCTION, _CLASS]) then
-                  begin
-                    had_generic:=true;
-                    break;
-                  end
-                else
-                  consume(_EQ);
+              else consume(_EQ);
            end;
-           first:=false;
          until token<>_ID;
          block_type:=old_block_type;
       end;

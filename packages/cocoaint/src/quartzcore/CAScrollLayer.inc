@@ -1,36 +1,67 @@
-{ Parsed from QuartzCore.framework CAScrollLayer.h }
-
+{ Parsed from Quartzcore.framework CAScrollLayer.h }
 
 {$ifdef TYPES}
-type
-  CAScrollLayerPtr = ^CAScrollLayer;
+{$ifndef CASCROLLLAYER_PAS_T}
+{$define CASCROLLLAYER_PAS_T}
+
+{$endif}
 {$endif}
 
-{$ifdef CLASSES}
+{$ifdef RECORDS}
+{$ifndef CASCROLLLAYER_PAS_R}
+{$define CASCROLLLAYER_PAS_R}
 
-type
-  CAScrollLayer = objcclass external (CALayer)
-  public
-    procedure scrollToPoint (p: CGPoint); message 'scrollToPoint:';
-    procedure scrollToRect (r: CGRect); message 'scrollToRect:';
-    procedure setScrollMode(newValue: NSString); message 'setScrollMode:';
-    function scrollMode: NSString; message 'scrollMode';
-  end;
+{$endif}
+{$endif}
 
+{$ifdef FUNCTIONS}
+{$ifndef CASCROLLLAYER_PAS_F}
+{$define CASCROLLLAYER_PAS_F}
 
-type
-  CALayerScrolling = objccategory external (CALayer)
-    procedure scrollPoint (p: CGPoint); message 'scrollPoint:';
-    procedure scrollRectToVisible (r: CGRect); message 'scrollRectToVisible:';
-    function visibleRect: CGRect; message 'visibleRect';
-  end;
+{$endif}
 {$endif}
 
 {$ifdef EXTERNAL_SYMBOLS}
+{$ifndef CASCROLLLAYER_PAS_S}
+{$define CASCROLLLAYER_PAS_S}
+
+{ External string constants }
 var
-  kCAScrollNone: NSString { available starting in __MAC_10_5, __IPHONE_2_0 }; cvar; external;
-  kCAScrollVertically: NSString { available starting in __MAC_10_5, __IPHONE_2_0 }; cvar; external;
-  kCAScrollHorizontally: NSString { available starting in __MAC_10_5, __IPHONE_2_0 }; cvar; external;
-  kCAScrollBoth: NSString { available starting in __MAC_10_5, __IPHONE_2_0 }; cvar; external;
+  kCAScrollNone: NSString; cvar; external;
+  kCAScrollVertically: NSString; cvar; external;
+  kCAScrollHorizontally: NSString; cvar; external;
+  kCAScrollBoth: NSString; cvar; external;
+
+{$endif}
 {$endif}
 
+{$ifdef FORWARD}
+  CAScrollLayer = objcclass;
+  CAScrollLayerPointer = ^CAScrollLayer;
+  CAScrollLayerPtr = CAScrollLayerPointer;
+
+{$endif}
+
+{$ifdef CLASSES}
+{$ifndef CASCROLLLAYER_PAS_C}
+{$define CASCROLLLAYER_PAS_C}
+
+{ CAScrollLayer }
+  CAScrollLayer = objcclass external (CALayer)
+    
+  public
+    procedure scrollToPoint(p: CGPoint); message 'scrollToPoint:';
+    procedure scrollToRect(r: CGRect); message 'scrollToRect:';
+    procedure setScrollMode (newValue: NSString); message 'setScrollMode:';
+    function scrollMode: NSString; message 'scrollMode';
+  end;
+
+{ CALayerScrollingCategory }
+  CALayerScrollingCategory = objccategory external (CALayer)
+    procedure scrollPoint(p: CGPoint); message 'scrollPoint:';
+    procedure scrollRectToVisible(r: CGRect); message 'scrollRectToVisible:';
+    function visibleRect: CGRect; message 'visibleRect';
+  end;
+
+{$endif}
+{$endif}

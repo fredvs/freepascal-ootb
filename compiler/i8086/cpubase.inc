@@ -35,11 +35,9 @@
         S_NEAR,S_FAR,S_SHORT,
         S_T,
         S_XMM,
-        S_YMM,
-        S_ZMM
+        S_YMM
       );
 
-      TOpSizes = set of topsize;
 
 {*****************************************************************************
                                 Registers
@@ -150,6 +148,17 @@
 *****************************************************************************}
 
     const
+      {# Registers which must be saved when calling a routine declared as
+         cppdecl, cdecl, stdcall, safecall, palmossyscall. The registers
+         saved should be the ones as defined in the target ABI and / or GCC.
+
+         This value can be deduced from the CALLED_USED_REGISTERS array in the
+         GCC source.
+      }
+      saved_standard_registers : array[0..0] of tsuperregister = (RS_BP);
+
+      saved_address_registers : array[0..0] of tsuperregister = (RS_INVALID);
+      saved_mm_registers : array[0..0] of tsuperregister = (RS_INVALID);
       {# Required parameter alignment when calling a routine declared as
          stdcall and cdecl. The alignment value should be the one defined
          by GCC or the target ABI.

@@ -198,7 +198,7 @@ const
   SDLttfLibName = 'SDL_ttf';
 {$ENDIF}
 
-{$IFDEF MORPHOS}
+{$IFDEF MACOS}
   SDLttfLibName = 'powersdl_ttf.library';
 {$ENDIF}
 

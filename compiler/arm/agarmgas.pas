@@ -29,27 +29,24 @@ unit agarmgas;
   interface
 
     uses
-       globtype,systems,
+       globtype,
        aasmtai,
-       assemble,aggas,
+       aggas,
        cpubase,cpuinfo;
 
     type
       TARMGNUAssembler=class(TGNUassembler)
-        constructor CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean); override;
+        constructor create(smart: boolean); override;
         function MakeCmdLine: TCmdStr; override;
         procedure WriteExtraHeader; override;
       end;
 
       TArmInstrWriter=class(TCPUInstrWriter)
-        unified_syntax: boolean;
-
         procedure WriteInstruction(hp : tai);override;
       end;
 
       TArmAppleGNUAssembler=class(TAppleGNUassembler)
-        constructor CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean); override;
-        procedure WriteExtraHeader; override;
+        constructor create(smart: boolean); override;
       end;
 
 
@@ -82,6 +79,8 @@ unit agarmgas;
 
     uses
        cutils,globals,verbose,
+       systems,
+       assemble,
        aasmcpu,
        itcpugas,
        cgbase,cgutils;
@@ -90,12 +89,10 @@ unit agarmgas;
 {                         GNU Arm Assembler writer                           }
 {****************************************************************************}
 
-    constructor TArmGNUAssembler.CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean);
+    constructor TArmGNUAssembler.create(smart: boolean);
       begin
-        inherited;
+        inherited create(smart);
         InstrWriter := TArmInstrWriter.create(self);
-        if GenerateThumb2Code then
-          TArmInstrWriter(InstrWriter).unified_syntax:=true;
       end;
 
 
@@ -112,14 +109,13 @@ unit agarmgas;
           result:='-mfpu=vfpv3-d16 '+result;
         if (current_settings.fputype = fpu_fpv4_s16) then
           result:='-mfpu=fpv4-sp-d16 '+result;
-        if (current_settings.fputype = fpu_vfpv4) then
-          result:='-mfpu=vfpv4 '+result;
 
         if GenerateThumb2Code then
           result:='-march='+cputype_to_gas_march[current_settings.cputype]+' -mthumb -mthumb-interwork '+result
         else if GenerateThumbCode then
           result:='-march='+cputype_to_gas_march[current_settings.cputype]+' -mthumb -mthumb-interwork '+result
-        else
+        // EDSP instructions in RTL require armv5te at least to not generate error
+        else if current_settings.cputype >= cpu_armv5te then
           result:='-march='+cputype_to_gas_march[current_settings.cputype]+' '+result;
 
         if target_info.abi = abi_eabihf then
@@ -130,27 +126,18 @@ unit agarmgas;
     procedure TArmGNUAssembler.WriteExtraHeader;
       begin
         inherited WriteExtraHeader;
-        if TArmInstrWriter(InstrWriter).unified_syntax then
-          writer.AsmWriteLn(#9'.syntax unified');
+        if GenerateThumb2Code then
+          AsmWriteLn(#9'.syntax unified');
       end;
 
 {****************************************************************************}
 {                      GNU/Apple ARM Assembler writer                        }
 {****************************************************************************}
 
-    constructor TArmAppleGNUAssembler.CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean);
+    constructor TArmAppleGNUAssembler.create(smart: boolean);
       begin
-        inherited;
+        inherited create(smart);
         InstrWriter := TArmInstrWriter.create(self);
-        TArmInstrWriter(InstrWriter).unified_syntax:=true;
-      end;
-
-
-    procedure TArmAppleGNUAssembler.WriteExtraHeader;
-      begin
-        inherited WriteExtraHeader;
-        if TArmInstrWriter(InstrWriter).unified_syntax then
-          writer.AsmWriteLn(#9'.syntax unified');
       end;
 
 
@@ -221,7 +208,7 @@ unit agarmgas;
       var
         hs : string;
         first : boolean;
-        r, rs : tsuperregister;
+        r : tsuperregister;
       begin
         case o.typ of
           top_reg:
@@ -243,44 +230,14 @@ unit agarmgas;
             begin
               getopstr:='{';
               first:=true;
-              if R_SUBFS=o.subreg then
-                begin
-                  for r:=0 to 31 do // S0 to S31
-                    if r in o.regset^ then
-                      begin
-                        if not(first) then
-                          getopstr:=getopstr+',';
-                        if odd(r) then
-                          rs:=(r shr 1)+RS_S1
-                        else
-                          rs:=(r shr 1)+RS_S0;
-                        getopstr:=getopstr+gas_regname(newreg(o.regtyp,rs,o.subreg));
-                        first:=false;
-                      end;
-                end
-              else if R_SUBFD=o.subreg then
-                begin
-                  for r:=0 to 31 do
-                    if r in o.regset^ then
-                      begin
-                        if not(first) then
-                          getopstr:=getopstr+',';
-                        rs:=r+RS_D0;
-                        getopstr:=getopstr+gas_regname(newreg(o.regtyp,rs,o.subreg));
-                        first:=false;
-                      end;
-                end
-              else
-                begin
-                  for r:=RS_R0 to RS_R15 do
-                    if r in o.regset^ then
-                      begin
-                        if not(first) then
-                          getopstr:=getopstr+',';
-                        getopstr:=getopstr+gas_regname(newreg(o.regtyp,r,o.subreg));
-                        first:=false;
-                      end;
-                end;
+              for r:=RS_R0 to RS_R15 do
+                if r in o.regset^ then
+                  begin
+                    if not(first) then
+                      getopstr:=getopstr+',';
+                    getopstr:=getopstr+gas_regname(newreg(o.regtyp,r,o.subreg));
+                    first:=false;
+                  end;
               getopstr:=getopstr+'}';
               if o.usermode then
                 getopstr:=getopstr+'^';
@@ -318,11 +275,6 @@ unit agarmgas;
                   if srF in o.specialflags then getopstr:=getopstr+'f';
                   if srS in o.specialflags then getopstr:=getopstr+'s';
                 end;
-            end;
-          top_realconst:
-            begin
-              str(o.val_real,Result);
-              Result:='#'+Result;
             end
           else
             internalerror(2002070604);
@@ -337,17 +289,15 @@ unit agarmgas;
         sep: string[3];
     begin
       op:=taicpu(hp).opcode;
-      postfix:='';
       if GenerateThumb2Code then
         begin
+          postfix:='';
           if taicpu(hp).wideformat then
             postfix:='.w';
-        end;
-      if unified_syntax then
-        begin
+
           if taicpu(hp).ops = 0 then
             s:=#9+gas_op2str[op]+cond2str[taicpu(hp).condition]+oppostfix2str[taicpu(hp).oppostfix]
-          else if taicpu(hp).oppostfix in [PF_8..PF_U32F64] then
+          else if (taicpu(hp).opcode>=A_VABS) and (taicpu(hp).opcode<=A_VSUB) then
             s:=#9+gas_op2str[op]+cond2str[taicpu(hp).condition]+oppostfix2str[taicpu(hp).oppostfix]
           else
             s:=#9+gas_op2str[op]+oppostfix2str[taicpu(hp).oppostfix]+cond2str[taicpu(hp).condition]+postfix; // Conditional infixes are deprecated in unified syntax
@@ -364,7 +314,7 @@ unit agarmgas;
                // writeln(taicpu(hp).fileinfo.line);
 
                { LDM and STM use references as first operand but they are written like a register }
-               if (i=0) and (op in [A_LDM,A_STM,A_FSTM,A_FLDM,A_VSTM,A_VLDM,A_SRS,A_RFE]) then
+               if (i=0) and (op in [A_LDM,A_STM,A_FSTM,A_FLDM]) then
                  begin
                    case taicpu(hp).oper[0]^.typ of
                      top_ref:
@@ -395,7 +345,7 @@ unit agarmgas;
                sep:=',';
             end;
         end;
-      owner.writer.AsmWriteLn(s);
+      owner.AsmWriteLn(s);
     end;
 
 
@@ -407,8 +357,8 @@ unit agarmgas;
             idtxt  : 'AS';
             asmbin : 'as';
             asmcmd : '-o $OBJ $EXTRAOPT $ASM';
-            supported_targets : [system_arm_linux,system_arm_netbsd,system_arm_wince,system_arm_gba,system_arm_palmos,system_arm_nds,
-                                 system_arm_embedded,system_arm_symbian,system_arm_android,system_arm_aros];
+            supported_targets : [system_arm_linux,system_arm_wince,system_arm_gba,system_arm_palmos,system_arm_nds,
+                                 system_arm_embedded,system_arm_symbian,system_arm_android];
             flags : [af_needar,af_smartlink_sections];
             labelprefix : '.L';
             comment : '# ';

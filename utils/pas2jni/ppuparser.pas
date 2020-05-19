@@ -169,8 +169,7 @@ begin
     end;
   end;
   ec:=ReadProcessOutput(ppudumpprog, '-Fj' + LineEnding + un, s, err);
-  err:=Trim(err);
-  if (Copy(s, 1, 1) <> '[') and ((ec = 0) or (err = '')) then begin
+  if Copy(s, 1, 1) <> '[' then begin
     ec:=-1;
     err:='Output of ppudump is not in JSON format.' + LineEnding + 'Probably old version of ppudump has been used.';
   end;
@@ -415,13 +414,6 @@ var
                 AncestorClass:=TClassDef(_GetRef(it.Get('Ancestor', TJSONObject(nil)), TClassDef));
               if CType in [ctObject, ctRecord] then
                 Size:=it.Integers['Size'];
-              arr:=it.Get('Options', TJSONArray(nil));
-              if arr <> nil then
-                for j:=0 to arr.Count - 1 do begin
-                  s:=arr.Strings[j];
-                  if s = 'abstract_methods' then
-                    HasAbstractMethods:=True;
-                end;
               _ReadDefs(d, it, 'Fields');
             end;
           dtProc, dtProcType:
@@ -561,8 +553,6 @@ var
             with TClassRefDef(d) do begin
               ClassRef:=_GetRef(it.Get('Ref', TJSONObject(nil)));;
             end;
-          dtNone, dtUnit, dtType, dtJniObject, dtJniEnv:
-            ;  // no action
         end;
       end;
   end;

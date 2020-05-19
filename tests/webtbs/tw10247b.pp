@@ -3,7 +3,6 @@ type
   generic TNode<T> = class
   public
     type
-      TAlias = T;
       PT = T;
   private
     var
@@ -27,7 +26,7 @@ begin
 end;
 
 
-function GetIntNode: TTNodeLongint.TAlias;
+function GetIntNode: TTNodeLongint.T;
 begin
   result := 10;
 end;

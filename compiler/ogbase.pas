@@ -34,8 +34,7 @@ interface
       { outputwriters }
       owbase,
       { assembler }
-      aasmbase,
-      cpuinfo;
+      aasmbase;
 
     type
       TObjSection = class;
@@ -67,26 +66,8 @@ interface
          RELOC_GOT32,
          RELOC_PLT32,
 {$endif i386}
-{$ifdef i8086}
-         RELOC_ABSOLUTE32,
-         RELOC_RELATIVE32,
-         RELOC_FARPTR,
-         RELOC_FARPTR_RELATIVEOFFSET,
-         RELOC_FARPTR48,
-         RELOC_FARPTR48_RELATIVEOFFSET,
-         RELOC_SEG,
-         RELOC_SEGREL,
-         RELOC_DGROUP,
-         RELOC_DGROUPREL,
-         RELOC_FARDATASEG,
-         RELOC_FARDATASEGREL,
-{$endif i8086}
 {$ifdef arm}
          RELOC_RELATIVE_24,
-         RELOC_RELATIVE_CALL,
-         RELOC_RELATIVE_24_THUMB,
-         RELOC_RELATIVE_CALL_THUMB,
-         RELOC_GOT32,
 {$endif arm}
          { Relative relocation }
          RELOC_RELATIVE,
@@ -109,16 +90,10 @@ interface
          RELOC_RAW
       );
 
-{$if defined(x86_64)}
-    { no special aliases for x86_64 }
-{$elseif defined(i8086)}
-    const
-      RELOC_ABSOLUTE16 = RELOC_ABSOLUTE;
-      RELOC_RELATIVE16 = RELOC_RELATIVE;
-{$else}
+{$ifndef x86_64}
     const
       RELOC_ABSOLUTE32 = RELOC_ABSOLUTE;
-{$endif}
+{$endif x86_64}
 
     const
       { stab types }
@@ -172,39 +147,10 @@ interface
        { Must be cloned when writing separate debug file }
        oso_debug_copy,
        { Has relocations with explicit addends (ELF-specific) }
-       oso_rela_relocs,
-       { Supports bss-like allocation of data, even though it is written in file (i.e. also has oso_Data) }
-       oso_sparse_data,
-       { Section to support the resolution of multiple symbols with the same name }
-       oso_comdat
+       oso_rela_relocs
      );
 
      TObjSectionOptions = set of TObjSectionOption;
-
-     TObjSectionComdatSelection = (
-       { Section is not a COMDAT section }
-       oscs_none,
-       { Select any of the symbols }
-       oscs_any,
-       { Select any symbol, but abort if they differ in size }
-       oscs_same_size,
-       { Select any symbol, but abort if they differ in size or content }
-       oscs_exact_match,
-       { Select the symbol only if the associated symbol is linked as well }
-       oscs_associative,
-       { Select the largest symbol }
-       oscs_largest
-     );
-
-{$ifdef i8086}
-     { allow 32-bit sections on i8086. Useful for the dwarf debug info, as well
-       as to allow linking 32-bit obj modules. }
-     TObjSectionOfs = LongWord;
-{$else i8086}
-     TObjSectionOfs = PUInt;
-{$endif i8086}
-
-     TObjSectionGroup = class;
 
      TObjSymbol = class(TFPHashObject)
      public
@@ -217,27 +163,18 @@ interface
        symidx     : longint;
        objsection : TObjSection;
        offset,
-       size       : TObjSectionOfs;
+       size       : aword;
        { Used for external and common solving during linking }
        exesymbol  : TExeSymbol;
 
        { Darwin asm is using indirect symbols resolving }
        indsymbol  : TObjSymbol;
 
-       { Used by the OMF object format and its complicated relocation records }
-       group: TObjSectionGroup;
-{$ifdef ARM}
-       ThumbFunc : boolean;
-{$endif ARM}
-
        constructor create(AList:TFPHashObjectList;const AName:string);
-       function  address:qword;
+       function  address:aword;
        procedure SetAddress(apass:byte;aobjsec:TObjSection;abind:TAsmsymbind;atyp:Tasmsymtype);
        function  ObjData: TObjData;
-       { string representation for the linker map file }
-       function  AddressStr(AImageBase: qword): string;virtual;
      end;
-     TObjSymbolClass = class of TObjSymbol;
 
      { Stabs is common for all targets }
      TObjStabEntry=packed record
@@ -255,43 +192,38 @@ interface
         procedure SetType(v:TObjRelocationType);
      public
         DataOffset,
-        orgsize    : TObjSectionOfs;  { COFF: original size of the symbol to relocate }
-                                      { ELF: explicit addend }
+        orgsize    : aword;  { COFF: original size of the symbol to relocate }
+                             { ELF: explicit addend }
         symbol     : TObjSymbol;
         objsection : TObjSection; { only used if symbol=nil }
-        group      : TObjSectionGroup; { only used if symbol=nil and objsection=nil }
         ftype      : byte;
         size       : byte;
         flags      : byte;
-        constructor CreateSymbol(ADataOffset:TObjSectionOfs;s:TObjSymbol;Atyp:TObjRelocationType);
-        constructor CreateSection(ADataOffset:TObjSectionOfs;aobjsec:TObjSection;Atyp:TObjRelocationType);
-        constructor CreateGroup(ADataOffset:TObjSectionOfs;grp:TObjSectionGroup;Atyp:TObjRelocationType);
-        constructor CreateRaw(ADataOffset:TObjSectionOfs;s:TObjSymbol;ARawType:byte);
+        constructor CreateSymbol(ADataOffset:aword;s:TObjSymbol;Atyp:TObjRelocationType);
+        constructor CreateSection(ADataOffset:aword;aobjsec:TObjSection;Atyp:TObjRelocationType);
+        constructor CreateRaw(ADataOffset:aword;s:TObjSymbol;ARawType:byte);
         function TargetName:TSymStr;
         property typ: TObjRelocationType read GetType write SetType;
      end;
+
+     TObjSectionGroup = class;
 
      TObjSection = class(TFPHashObject)
      private
        FData       : TDynamicArray;
        FSecOptions : TObjSectionOptions;
-       FComdatSelection : TObjSectionComdatSelection;
        FCachedFullName : pshortstring;
-       FSizeLimit : TObjSectionOfs;
        procedure SetSecOptions(Aoptions:TObjSectionOptions);
-       procedure SectionTooLargeError;
      public
        ObjData    : TObjData;
        index      : longword;  { index of section in section headers }
        SecSymIdx  : longint;   { index for the section in symtab }
-       SecAlign   : longint;   { alignment of the section }
+       SecAlign   : shortint;   { alignment of the section }
        { section Data }
        Size,
-       DataPos    : TObjSectionOfs;
-       MemPos     : qword;
+       DataPos,
+       MemPos     : aword;
        Group      : TObjSectionGroup;
-       AssociativeSection : TObjSection;
-       ComdatSelection : TObjSectionComdatSelection;
        DataAlignBytes : shortint;
        { Relocations (=references) to other sections }
        ObjRelocations : TFPObjectList;
@@ -299,38 +231,33 @@ interface
        ExeSection  : TExeSection;
        USed        : Boolean;
        VTRefList : TFPObjectList;
-       constructor create(AList:TFPHashObjectList;const Aname:string;Aalign:longint;Aoptions:TObjSectionOptions);virtual;
+       constructor create(AList:TFPHashObjectList;const Aname:string;Aalign:shortint;Aoptions:TObjSectionOptions);virtual;
        destructor  destroy;override;
-       function  write(const d;l:TObjSectionOfs):TObjSectionOfs;
+       function  write(const d;l:aword):aword;
        { writes string plus zero byte }
-       function  writestr(const s:string):TObjSectionOfs;
-       function  WriteZeros(l:longword):TObjSectionOfs;
+       function  writestr(const s:string):aword;
+       function  WriteZeros(l:longword):aword;
        { writes content of s without null termination }
-       function  WriteBytes(const s:string):TObjSectionOfs;
+       function  WriteBytes(const s:string):aword;
        procedure writeReloc_internal(aTarget:TObjSection;offset:aword;len:byte;reltype:TObjRelocationType);virtual;
        function  setmempos(mpos:qword):qword;
-       procedure setDatapos(var dpos:TObjSectionOfs);
-       procedure alloc(l:TObjSectionOfs);
-       procedure addsymReloc(ofs:TObjSectionOfs;p:TObjSymbol;Reloctype:TObjRelocationType);
-       procedure addsectionReloc(ofs:TObjSectionOfs;aobjsec:TObjSection;Reloctype:TObjRelocationType);
-       procedure addrawReloc(ofs:TObjSectionOfs;p:TObjSymbol;RawReloctype:byte);
+       procedure setDatapos(var dpos:aword);
+       procedure alloc(l:aword);
+       procedure addsymReloc(ofs:aword;p:TObjSymbol;Reloctype:TObjRelocationType);
+       procedure addsectionReloc(ofs:aword;aobjsec:TObjSection;Reloctype:TObjRelocationType);
+       procedure addrawReloc(ofs:aword;p:TObjSymbol;RawReloctype:byte);
        procedure ReleaseData;
        function  FullName:string;
-       { string representation for the linker map file }
-       function  MemPosStr(AImageBase: qword): string;virtual;
        property  Data:TDynamicArray read FData;
        property  SecOptions:TObjSectionOptions read FSecOptions write SetSecOptions;
-       property  SizeLimit:TObjSectionOfs read FSizeLimit write FSizeLimit;
      end;
      TObjSectionClass = class of TObjSection;
 
      TObjSectionGroup = class(TFPHashObject)
      public
-       index: longword;  { index of group in group headers }
        members: array of TObjSection;
        iscomdat: boolean;
      end;
-     TObjSectionGroupClass = class of TObjSectionGroup;
 
      TString80 = string[80];
 
@@ -339,21 +266,11 @@ interface
        Owner: TObjData;
      end;
 
-{$ifdef i8086}
-     { on i8086 we use a longint, to support 32-bit relocations as well (e.g.
-       for allowing 386+ instructions with 32-bit addresses in inline asm code) }
-     TRelocDataInt = longint;
-{$else i8086}
-     TRelocDataInt = aint;
-{$endif i8086}
-
      TObjData = class(TLinkedListItem)
      private
        FCurrObjSec : TObjSection;
        FObjSectionList  : TFPHashObjectList;
-       FCObjSymbol      : TObjSymbolClass;
        FCObjSection     : TObjSectionClass;
-       FCObjSectionGroup: TObjSectionGroupClass;
        { Symbols that will be defined in this object file }
        FObjSymbolList    : TObjSymbolList;
        FCachedAsmSymbolList : TFPObjectList;
@@ -361,28 +278,23 @@ interface
        FStabsObjSec,
        FStabStrObjSec : TObjSection;
        FGroupsList : TFPHashObjectList;
-       FCPUType : tcputype;
        procedure section_reset(p:TObject;arg:pointer);
        procedure section_afteralloc(p:TObject;arg:pointer);
        procedure section_afterwrite(p:TObject;arg:pointer);
      protected
        FName       : TString80;
        property CObjSection:TObjSectionClass read FCObjSection write FCObjSection;
-       property CObjSectionGroup: TObjSectionGroupClass read FCObjSectionGroup write FCObjSectionGroup;
      public
        CurrPass  : byte;
        ExecStack : boolean;
-{$ifdef ARM}
-       ThumbFunc : boolean;
-{$endif ARM}
        constructor create(const n:string);virtual;
        destructor  destroy;override;
        { Sections }
        function  sectionname(atype:TAsmSectiontype;const aname:string;aorder:TAsmSectionOrder):string;virtual;abstract;
        function  sectiontype2options(atype:TAsmSectiontype):TObjSectionOptions;virtual;
-       function  sectiontype2align(atype:TAsmSectiontype):longint;virtual;
-       function  createsection(atype:TAsmSectionType;const aname:string='';aorder:TAsmSectionOrder=secorder_default):TObjSection;virtual;
-       function  createsection(const aname:string;aalign:longint;aoptions:TObjSectionOptions;DiscardDuplicate:boolean=true):TObjSection;virtual;
+       function  sectiontype2align(atype:TAsmSectiontype):shortint;virtual;
+       function  createsection(atype:TAsmSectionType;const aname:string='';aorder:TAsmSectionOrder=secorder_default):TObjSection;
+       function  createsection(const aname:string;aalign:shortint;aoptions:TObjSectionOptions;DiscardDuplicate:boolean=true):TObjSection;virtual;
        function  createsectiongroup(const aname:string):TObjSectionGroup;
        procedure CreateDebugSections;virtual;
        function  findsection(const aname:string):TObjSection;
@@ -396,15 +308,15 @@ interface
        procedure ResetCachedAsmSymbols;
        { Allocation }
        procedure alloc(len:aword);
-       procedure allocalign(len:longint);
+       procedure allocalign(len:shortint);
        procedure writebytes(const Data;len:aword);
-       procedure writeReloc(Data:TRelocDataInt;len:aword;p:TObjSymbol;Reloctype:TObjRelocationType);virtual;abstract;
+       procedure writeReloc(Data:aint;len:aword;p:TObjSymbol;Reloctype:TObjRelocationType);virtual;abstract;
        procedure beforealloc;virtual;
        procedure beforewrite;virtual;
        procedure afteralloc;virtual;
        procedure afterwrite;virtual;
        procedure resetsections;
-       procedure layoutsections(var datapos:TObjSectionOfs);
+       procedure layoutsections(var datapos:aword);
        property Name:TString80 read FName;
        property CurrObjSec:TObjSection read FCurrObjSec;
        property ObjSymbolList:TObjSymbolList read FObjSymbolList;
@@ -412,11 +324,6 @@ interface
        property GroupsList:TFPHashObjectList read FGroupsList;
        property StabsSec:TObjSection read FStabsObjSec write FStabsObjSec;
        property StabStrSec:TObjSection read FStabStrObjSec write FStabStrObjSec;
-       property CObjSymbol: TObjSymbolClass read FCObjSymbol write FCObjSymbol;
-       { Current CPU type for the internal asm writer.
-         Instructions, not supported by the given CPU should produce an error.
-         A value of 'cpu_none' means no restrictions (all instructions should be accepted) }
-       property CPUType : tcputype read FCPUType write FCPUType;
      end;
      TObjDataClass = class of TObjData;
 
@@ -517,8 +424,8 @@ interface
       public
         Size,
         DataPos,
-        MemPos     : qword;
-        SecAlign   : longint;
+        MemPos     : aword;
+        SecAlign   : shortint;
         Disabled   : boolean;
         SecOptions : TObjSectionOptions;
         constructor create(AList:TFPHashObjectList;const AName:string);virtual;
@@ -584,7 +491,6 @@ interface
       TExeOutput = class
       private
         { ExeSectionList }
-        FCObjSymbol       : TObjSymbolClass;
         FCObjData         : TObjDataClass;
         FCExeSection      : TExeSectionClass;
         FCurrExeSec       : TExeSection;
@@ -621,7 +527,6 @@ interface
         function  writeData:boolean;virtual;abstract;
         property CExeSection:TExeSectionClass read FCExeSection write FCExeSection;
         property CObjData:TObjDataClass read FCObjData write FCObjData;
-        property CObjSymbol:TObjSymbolClass read FCObjSymbol write FCObjSymbol;
         procedure Order_ObjSectionList(ObjSectionList : TFPObjectList; const aPattern:string);virtual;
         procedure WriteExeSectionContent;
         procedure DoRelocationFixup(objsec:TObjSection);virtual;abstract;
@@ -700,21 +605,20 @@ interface
       end;
       TExeOutputClass=class of TExeOutput;
 
-    const
-      SectionDataMaxGrow = 4096;
-
     var
       exeoutput : TExeOutput;
 
     function align_aword(v:aword;a:longword):aword;
     function align_qword(v:qword;a:longword):qword;
-    function align_objsecofs(v:TObjSectionOfs;a:longword):TObjSectionOfs;
 
 implementation
 
     uses
       SysUtils,
-      globals,verbose,ogmap;
+      globals,verbose,fmodule,ogmap;
+
+    const
+      SectionDataMaxGrow = 4096;
 
 {$ifdef MEMDEBUG}
     var
@@ -744,15 +648,6 @@ implementation
       end;
 
 
-    function align_objsecofs(v:TObjSectionOfs;a:longword):TObjSectionOfs;
-      begin
-        if a<=1 then
-          result:=v
-        else
-          result:=((v+a-1) div a) * a;
-      end;
-
-
     procedure MaybeSwapStab(var v:TObjStabEntry);
       begin
         if source_info.endian<>target_info.endian then
@@ -768,7 +663,7 @@ implementation
 *****************************************************************************}
 
     constructor TObjSymbol.create(AList:TFPHashObjectList;const AName:string);
-      begin
+      begin;
         inherited create(AList,AName);
         bind:=AB_EXTERNAL;
         typ:=AT_NONE;
@@ -779,7 +674,7 @@ implementation
       end;
 
 
-    function TObjSymbol.address:qword;
+    function TObjSymbol.address:aword;
       begin
         if assigned(objsection) then
           result:=offset+objsection.mempos
@@ -829,62 +724,40 @@ implementation
         result:=(OwnerList as TObjSymbolList).Owner;
       end;
 
-
-    function TObjSymbol.AddressStr(AImageBase: qword): string;
-      begin
-        Result:='0x'+HexStr(address+Aimagebase,sizeof(pint)*2);
-      end;
-
 {****************************************************************************
                               TObjRelocation
 ****************************************************************************}
 
-    constructor TObjRelocation.CreateSymbol(ADataOffset:TObjSectionOfs;s:TObjSymbol;Atyp:TObjRelocationType);
+    constructor TObjRelocation.CreateSymbol(ADataOffset:aword;s:TObjSymbol;Atyp:TObjRelocationType);
       begin
         if not assigned(s) then
           internalerror(200603034);
         DataOffset:=ADataOffset;
         Symbol:=s;
         OrgSize:=0;
-        Group:=nil;
         ObjSection:=nil;
         ftype:=ord(Atyp);
       end;
 
 
-    constructor TObjRelocation.CreateSection(ADataOffset:TObjSectionOfs;aobjsec:TObjSection;Atyp:TObjRelocationType);
+    constructor TObjRelocation.CreateSection(ADataOffset:aword;aobjsec:TObjSection;Atyp:TObjRelocationType);
       begin
         if not assigned(aobjsec) then
           internalerror(200603036);
         DataOffset:=ADataOffset;
         Symbol:=nil;
         OrgSize:=0;
-        Group:=nil;
         ObjSection:=aobjsec;
         ftype:=ord(Atyp);
       end;
 
 
-    constructor TObjRelocation.CreateGroup(ADataOffset:TObjSectionOfs;grp:TObjSectionGroup;Atyp:TObjRelocationType);
-      begin
-        if not assigned(grp) then
-          internalerror(2015111201);
-        DataOffset:=ADataOffset;
-        Symbol:=nil;
-        ObjSection:=nil;
-        OrgSize:=0;
-        Group:=grp;
-        ftype:=ord(Atyp);
-      end;
-
-
-    constructor TObjRelocation.CreateRaw(ADataOffset:TObjSectionOfs;s:TObjSymbol;ARawType:byte);
+    constructor TObjRelocation.CreateRaw(ADataOffset:aword;s:TObjSymbol;ARawType:byte);
       begin
         { nil symbol is allowed here }
         DataOffset:=ADataOffset;
         Symbol:=s;
         ObjSection:=nil;
-        Group:=nil;
         orgsize:=0;
         ftype:=ARawType;
         flags:=rf_raw;
@@ -922,7 +795,7 @@ implementation
                               TObjSection
 ****************************************************************************}
 
-    constructor TObjSection.create(AList:TFPHashObjectList;const Aname:string;Aalign:longint;Aoptions:TObjSectionOptions);
+    constructor TObjSection.create(AList:TFPHashObjectList;const Aname:string;Aalign:shortint;Aoptions:TObjSectionOptions);
       begin
         inherited Create(AList,Aname);
         { Data }
@@ -930,11 +803,6 @@ implementation
         Datapos:=0;
         mempos:=0;
         FData:=Nil;
-{$ifdef i8086}
-        FSizeLimit:=high(word);
-{$else i8086}
-        FSizeLimit:=high(TObjSectionOfs);
-{$endif i8086}
         { Setting the secoptions allocates Data if needed }
         secoptions:=Aoptions;
         secalign:=Aalign;
@@ -965,26 +833,13 @@ implementation
       end;
 
 
-    procedure TObjSection.SectionTooLargeError;
-      begin
-        if oso_executable in SecOptions then
-          Message(asmw_f_code_segment_too_large)
-        else
-          Message(asmw_f_data_segment_too_large);
-      end;
-
-
-    function TObjSection.write(const d;l:TObjSectionOfs):TObjSectionOfs;
+    function TObjSection.write(const d;l:aword):aword;
       begin
         result:=size;
         if assigned(Data) then
           begin
             if Size<>Data.size then
               internalerror(200602281);
-{$ifndef cpu64bitalu}
-            if (qword(size)+l)>SizeLimit then
-              SectionTooLargeError;
-{$endif}
             Data.write(d,l);
             inc(Size,l);
           end
@@ -993,7 +848,7 @@ implementation
       end;
 
 
-    function TObjSection.writestr(const s:string):TObjSectionOfs;
+    function TObjSection.writestr(const s:string):aword;
       var
         b: byte;
       begin
@@ -1003,33 +858,25 @@ implementation
       end;
 
 
-    function TObjSection.WriteBytes(const s:string):TObjSectionOfs;
+    function TObjSection.WriteBytes(const s:string):aword;
       begin
         result:=Write(s[1],length(s));
       end;
 
 
-    function TObjSection.WriteZeros(l:longword):TObjSectionOfs;
+    function TObjSection.WriteZeros(l:longword):aword;
       var
         empty : array[0..1023] of byte;
       begin
-        result:=Size;
         if l>sizeof(empty) then
-          begin
-            fillchar(empty,sizeof(empty),0);
-            while l>sizeof(empty) do
-              begin
-                Write(empty,sizeof(empty));
-                Dec(l,sizeof(empty));
-              end;
-            if l>0 then
-              Write(empty,l);
-          end
-        else if l>0 then
+          internalerror(200404082);
+        if l>0 then
           begin
             fillchar(empty,l,0);
-            Write(empty,l);
-          end;
+            result:=Write(empty,l);
+          end
+        else
+          result:=Size;
       end;
 
 
@@ -1041,7 +888,7 @@ implementation
       end;
 
 
-    procedure TObjSection.setDatapos(var dpos:TObjSectionOfs);
+    procedure TObjSection.setDatapos(var dpos:aword);
       begin
         if oso_Data in secoptions then
           begin
@@ -1064,32 +911,25 @@ implementation
       end;
 
 
-    procedure TObjSection.alloc(l:TObjSectionOfs);
+    procedure TObjSection.alloc(l:aword);
       begin
-{$ifndef cpu64bitalu}
-        if (qword(size)+l)>SizeLimit then
-          SectionTooLargeError;
-{$endif}
-        if oso_sparse_data in SecOptions then
-          WriteZeros(l)
-        else
-          inc(size,l);
+        inc(size,l);
       end;
 
 
-    procedure TObjSection.addsymReloc(ofs:TObjSectionOfs;p:TObjSymbol;Reloctype:TObjRelocationType);
+    procedure TObjSection.addsymReloc(ofs:aword;p:TObjSymbol;Reloctype:TObjRelocationType);
       begin
         ObjRelocations.Add(TObjRelocation.CreateSymbol(ofs,p,reloctype));
       end;
 
 
-    procedure TObjSection.addsectionReloc(ofs:TObjSectionOfs;aobjsec:TObjSection;Reloctype:TObjRelocationType);
+    procedure TObjSection.addsectionReloc(ofs:aword;aobjsec:TObjSection;Reloctype:TObjRelocationType);
       begin
         ObjRelocations.Add(TObjRelocation.CreateSection(ofs,aobjsec,reloctype));
       end;
 
 
-    procedure TObjSection.addrawReloc(ofs:TObjSectionOfs;p:TObjSymbol;RawReloctype:byte);
+    procedure TObjSection.addrawReloc(ofs:aword;p:TObjSymbol;RawReloctype:byte);
       begin
         ObjRelocations.Add(TObjRelocation.CreateRaw(ofs,p,RawReloctype));
       end;
@@ -1125,12 +965,6 @@ implementation
       end;
 
 
-    function  TObjSection.MemPosStr(AImageBase: qword): string;
-      begin
-        result:='0x'+HexStr(mempos+AImageBase,sizeof(pint)*2);
-      end;
-
-
 {****************************************************************************
                                 TObjData
 ****************************************************************************}
@@ -1143,16 +977,11 @@ implementation
         FStabsObjSec:=nil;
         FStabStrObjSec:=nil;
         { symbols }
-        FCObjSymbol:=TObjSymbol;
         FObjSymbolList:=TObjSymbolList.Create(true);
         FObjSymbolList.Owner:=Self;
         FCachedAsmSymbolList:=TFPObjectList.Create(false);
         { section class type for creating of new sections }
         FCObjSection:=TObjSection;
-        FCObjSectionGroup:=TObjSectionGroup;
-{$ifdef ARM}
-        ThumbFunc:=false;
-{$endif ARM}
       end;
 
 
@@ -1215,8 +1044,6 @@ implementation
           {debug_info} [oso_Data,oso_debug],
           {debug_line} [oso_Data,oso_debug],
           {debug_abbrev} [oso_Data,oso_debug],
-          {debug_aranges} [oso_Data,oso_debug],
-          {debug_ranges} [oso_Data,oso_debug],
           {fpc} [oso_Data,oso_load,oso_write],
           {toc} [oso_Data,oso_load],
           {init} [oso_Data,oso_load,oso_executable],
@@ -1263,10 +1090,10 @@ implementation
       end;
 
 
-    function TObjData.sectiontype2align(atype:TAsmSectiontype):longint;
+    function TObjData.sectiontype2align(atype:TAsmSectiontype):shortint;
       begin
         case atype of
-          sec_stabstr,sec_debug_info,sec_debug_line,sec_debug_abbrev,sec_debug_aranges,sec_debug_ranges:
+          sec_stabstr,sec_debug_info,sec_debug_line,sec_debug_abbrev:
             result:=1;
           sec_code,
           sec_bss,
@@ -1292,7 +1119,7 @@ implementation
       end;
 
 
-    function TObjData.createsection(const aname:string;aalign:longint;aoptions:TObjSectionOptions;DiscardDuplicate:boolean):TObjSection;
+    function TObjData.createsection(const aname:string;aalign:shortint;aoptions:TObjSectionOptions;DiscardDuplicate:boolean):TObjSection;
       begin
         if DiscardDuplicate then
           result:=TObjSection(FObjSectionList.Find(aname))
@@ -1311,7 +1138,7 @@ implementation
       begin
         if FGroupsList=nil then
           FGroupsList:=TFPHashObjectList.Create(true);
-        result:=CObjSectionGroup.Create(FGroupsList,aname);
+        result:=TObjSectionGroup.Create(FGroupsList,aname);
       end;
 
 
@@ -1338,12 +1165,7 @@ implementation
       begin
         result:=TObjSymbol(FObjSymbolList.Find(aname));
         if not assigned(result) then
-          result:=CObjSymbol.Create(FObjSymbolList,aname);
-
-{$ifdef ARM}
-        result.ThumbFunc:=ThumbFunc;
-        ThumbFunc:=false;
-{$endif ARM}
+          result:=TObjSymbol.Create(FObjSymbolList,aname);
       end;
 
 
@@ -1351,9 +1173,6 @@ implementation
       begin
         if assigned(asmsym) then
           begin
-            if asmsym.typ = AT_NONE then
-              InternalError(2018062800);
-
             if not assigned(asmsym.cachedObjSymbol) then
               begin
                 result:=symboldefine(asmsym.name,asmsym.bind,asmsym.typ);
@@ -1392,7 +1211,7 @@ implementation
                 result:=TObjSymbol(FObjSymbolList.Find(s));
                 if result=nil then
                   begin
-                    result:=CObjSymbol.Create(FObjSymbolList,s);
+                    result:=TObjSymbol.Create(FObjSymbolList,s);
                     if asmsym.bind=AB_WEAK_EXTERNAL then
                       result.bind:=AB_WEAK_EXTERNAL;
                   end;
@@ -1444,18 +1263,18 @@ implementation
       end;
 
 
-    procedure TObjData.allocalign(len:longint);
+    procedure TObjData.allocalign(len:shortint);
       begin
         if not assigned(CurrObjSec) then
           internalerror(200402253);
-        CurrObjSec.alloc(align_objsecofs(CurrObjSec.size,len)-CurrObjSec.size);
+        CurrObjSec.alloc(align_aword(CurrObjSec.size,len)-CurrObjSec.size);
       end;
 
 
     procedure TObjData.section_afteralloc(p:TObject;arg:pointer);
       begin
         with TObjSection(p) do
-          alloc(align_objsecofs(size,secalign)-size);
+          alloc(align_aword(size,secalign)-size);
       end;
 
 
@@ -1464,7 +1283,7 @@ implementation
         with TObjSection(p) do
           begin
             if assigned(Data) then
-              writezeros(align_objsecofs(size,secalign)-size);
+              writezeros(align_aword(size,secalign)-size);
           end;
       end;
 
@@ -1476,15 +1295,12 @@ implementation
             Size:=0;
             Datapos:=0;
             mempos:=0;
-            if assigned(Data) then
-              Data.reset;
           end;
       end;
 
 
     procedure TObjData.beforealloc;
       begin
-        FCPUType:=current_settings.cputype;
         { create stabs sections if debugging }
         if assigned(StabsSec) then
           begin
@@ -1496,7 +1312,6 @@ implementation
 
     procedure TObjData.beforewrite;
       begin
-        FCPUType:=current_settings.cputype;
         { create stabs sections if debugging }
         if assigned(StabsSec) then
          begin
@@ -1547,7 +1362,7 @@ implementation
       end;
 
 
-    procedure TObjData.layoutsections(var DataPos:TObjSectionOfs);
+    procedure TObjData.layoutsections(var DataPos:aword);
       var
         i: longint;
       begin
@@ -1904,7 +1719,6 @@ implementation
         FixedSectionAlign:=True;
         FCExeSection:=TExeSection;
         FCObjData:=TObjData;
-        FCObjSymbol:=TObjSymbol;
       end;
 
 
@@ -2542,44 +2356,7 @@ implementation
                         exesym.State:=symstate_defined;
                       end
                     else
-                      if (oso_comdat in exesym.ObjSymbol.objsection.SecOptions) and
-                         (oso_comdat in objsym.objsection.SecOptions) then
-                        begin
-                          if exesym.ObjSymbol.objsection.ComdatSelection=objsym.objsection.ComdatSelection then
-                            begin
-                              case objsym.objsection.ComdatSelection of
-                                oscs_none:
-                                  Message1(link_e_duplicate_symbol,objsym.name);
-                                oscs_any:
-                                  Message1(link_d_comdat_discard_any,objsym.name);
-                                oscs_same_size:
-                                  if exesym.ObjSymbol.size<>objsym.size then
-                                    Message1(link_e_comdat_size_differs,objsym.name)
-                                  else
-                                    Message1(link_d_comdat_discard_size,objsym.name);
-                                oscs_exact_match:
-                                  if (exesym.ObjSymbol.size<>objsym.size) and not exesym.ObjSymbol.objsection.Data.equal(objsym.objsection.Data) then
-                                    Message1(link_e_comdat_content_differs,objsym.name)
-                                  else
-                                    Message1(link_d_comdat_discard_content,objsym.name);
-                                oscs_associative:
-                                  { this is handled in a different way }
-                                  Message1(link_e_duplicate_symbol,objsym.name);
-                                oscs_largest:
-                                  if objsym.size>exesym.ObjSymbol.size then
-                                    begin
-                                      Message1(link_d_comdat_replace_size,objsym.name);
-                                      exesym.ObjSymbol.exesymbol:=nil;
-                                      exesym.ObjSymbol:=objsym;
-                                    end;
-                              end;
-                            end
-                          else
-                            Message1(link_e_comdat_selection_differs,objsym.name);
-                        end
-                      else
-                        { specific error if ComDat flags are different? }
-                        Message1(link_e_duplicate_symbol,objsym.name);
+                      Comment(V_Error,'Multiple defined symbol '+objsym.name);
                   end;
                 AB_EXTERNAL :
                   begin
@@ -2945,7 +2722,6 @@ implementation
           objsym.size:=objsym.ExeSymbol.ObjSymbol.size;
           objsym.typ:=objsym.ExeSymbol.ObjSymbol.typ;
           objsym.ObjSection:=objsym.ExeSymbol.ObjSymbol.ObjSection;
-          objsym.group:=objsym.ExeSymbol.ObjSymbol.group;
         end;
 
       var
@@ -3266,13 +3042,10 @@ implementation
         var
           objsym : TObjSymbol;
           refobjsec : TObjSection;
-          refgrp : TObjSectionGroup;
         begin
           { Disabled Relocation to 0  }
           if (objreloc.flags and rf_nosymbol)<>0 then
             exit;
-          refobjsec:=nil;
-          refgrp:=nil;
           if assigned(objreloc.symbol) then
             begin
               objsym:=objreloc.symbol;
@@ -3288,10 +3061,9 @@ implementation
               else
                 refobjsec:=objsym.objsection;
             end
-          else if assigned(objreloc.objsection) then
-            refobjsec:=objreloc.objsection
-          else if assigned(objreloc.group) then
-            refgrp:=objreloc.group
+          else
+            if assigned(objreloc.objsection) then
+              refobjsec:=objreloc.objsection
           else
             internalerror(200603316);
           if assigned(exemap) then
@@ -3300,15 +3072,10 @@ implementation
               if assigned(objsym) and (objsym.typ<>AT_SECTION) then
                 exemap.Add('  References  '+objsym.name+' in '
                   +refobjsec.fullname)
-              else if assigned(refobjsec) then
-                exemap.Add('  References '+refobjsec.fullname)
-              else if assigned(refgrp) then
-                exemap.Add('  References '+refgrp.Name)
               else
-                internalerror(200603316);
+                exemap.Add('  References '+refobjsec.fullname);
             end;
-          if assigned(refobjsec) then
-            AddToObjSectionWorkList(refobjsec);
+          AddToObjSectionWorkList(refobjsec);
         end;
 
         procedure DoVTableRef(vtable:TExeVTable;VTableIdx:longint);

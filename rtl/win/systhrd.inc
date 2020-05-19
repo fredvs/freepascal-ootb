@@ -94,12 +94,7 @@ var
     var
       // public names are used by heaptrc unit
       threadvarblocksize : dword; public name '_FPC_TlsSize';
-      {$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-      TLSKey : PDword = nil; public name '_FPC_TlsKey';
-      {$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-      TLSKeyVar : DWord = $ffffffff;
-      TLSKey : PDWord = @TLSKeyVar; public name '_FPC_TlsKey';
-      {$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
+      TLSKey : DWord = $ffffffff; public name '_FPC_TlsKey';
 
     var
       MainThreadIdWin32 : DWORD;
@@ -126,40 +121,42 @@ var
         { these aren't allocated yet ...            }
         { allocate room on the heap for the thread vars }
         errorsave:=GetLastError;
-        if tlskey^=$ffffffff then
+        if tlskey=$ffffffff then
           RunError(226);
-        dataindex:=TlsGetValue(tlskey^);
+        dataindex:=TlsGetValue(tlskey);
         if dataindex=nil then
           begin
             dataindex:=pointer(LocalAlloc(LMEM_FIXED or LMEM_ZEROINIT,threadvarblocksize));
             if dataindex=nil then
               RunError(226);
-            TlsSetValue(tlskey^,dataindex);
+            TlsSetValue(tlskey,dataindex);
           end;
         SetLastError(errorsave);
       end;
 
     function SysRelocateThreadvar(offset : dword) : pointer; forward;
 
-    procedure SysInitTLS;
+    procedure SysInitMultithreading;
       begin
         { do not check IsMultiThread, as program could have altered it, out of Delphi habit }
 
         { the thread attach/detach code uses locks to avoid multiple calls of this }
-        if TLSKey^=$ffffffff then
+        if TLSKey=$ffffffff then
          begin
            { We're still running in single thread mode, setup the TLS }
-           TLSKey^:=TlsAlloc;
+           TLSKey:=TlsAlloc;
            InitThreadVars(@SysRelocateThreadvar);
+
+           IsMultiThread:=true;
          end;
       end;
 
 
     procedure SysFiniMultithreading;
       begin
-        if TLSKey^<>$ffffffff then
-          TlsFree(TLSKey^);
-        TLSKey^:=$ffffffff;
+        if TLSKey<>$ffffffff then
+          TlsFree(TLSKey);
+        TLSKey:=$ffffffff;
       end;
 
     function SysRelocateThreadvar(offset : dword) : pointer;
@@ -168,11 +165,11 @@ var
         errorsave : dword;
       begin
         errorsave:=GetLastError;
-        dataindex:=TlsGetValue(tlskey^);
+        dataindex:=TlsGetValue(tlskey);
         if dataindex=nil then
           begin
             SysAllocateThreadVars;
-            dataindex:=TlsGetValue(tlskey^);
+            dataindex:=TlsGetValue(tlskey);
             InitThread($1000000);
           end;
         SetLastError(errorsave);
@@ -184,12 +181,12 @@ var
       var
         p: pointer;
       begin
-        if TLSKey^<>$ffffffff then
+        if TLSKey<>$ffffffff then
           begin
-            p:=TlsGetValue(tlskey^);
+            p:=TlsGetValue(tlskey);
             if Assigned(p) then
               LocalFree(p);
-            TlsSetValue(tlskey^, nil);
+            TlsSetValue(tlskey, nil);
           end;
       end;
 
@@ -248,8 +245,7 @@ var
         writeln('Creating new thread');
 {$endif DEBUG_MT}
         { Initialize multithreading if not done }
-        SysInitTLS;
-        IsMultiThread:=true;
+        SysInitMultithreading;
 
         { the only way to pass data to the newly created thread
           in a MT safe way, is to use the heap }
@@ -543,12 +539,12 @@ begin
 {$ifndef FPC_USE_TLS_DIRECTORY}
   if IsLibrary then
 {$endif}
-    SysInitTLS;
+    SysInitMultithreading;
 {$IFDEF SUPPORT_WIN95}
   { Try to find TryEnterCriticalSection function }
   KernelHandle:=GetModuleHandle(KernelDLL);
   if KernelHandle<>0 then
-    WinTryEnterCriticalSection:=TTryEnterCriticalSection(WinGetProcAddress(KernelHandle,'TryEnterCriticalSection'));
+    WinTryEnterCriticalSection:=TTryEnterCriticalSection(GetProcAddress(KernelHandle,'TryEnterCriticalSection'));
   if not assigned(WinTryEnterCriticalSection) then
     WinTryEnterCriticalSection:=@Win95TryEnterCriticalSection;
 {$ENDIF SUPPORT_WIN95}

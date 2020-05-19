@@ -969,7 +969,7 @@ function path(filename : String) : String;
   var i : Integer;
   begin
     i := length(filename);
-    while (i>0) and (filename[i]<>DirectorySeparator) and (filename[i]<>':') do
+    while (i>0) and (filename[i]<>'\') and (filename[i]<>':') do
       dec(i);
     path := copy(filename, 1, i);
   end(*path*);
@@ -985,10 +985,10 @@ function root(filename : String) : String;
             root := copy(filename, 1, i-1);
             exit
           end;
-        DirectorySeparator : exit;
+        '\': exit;
         else
       end;
-  end(*root*);
+  end(*addExt*);
 function addExt(filename, ext : String) : String;
   (* implemented with goto for maximum efficiency *)
   label x;
@@ -999,7 +999,7 @@ function addExt(filename, ext : String) : String;
     for i := length(filename) downto 1 do
       case filename[i] of
         '.' : exit;
-        DirectorySeparator: goto x;
+        '\': goto x;
         else
       end;
     x : addExt := filename+'.'+ext

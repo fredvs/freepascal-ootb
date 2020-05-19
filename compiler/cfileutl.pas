@@ -23,7 +23,9 @@ unit cfileutl;
 
 {$i fpcdefs.inc}
 
+{$ifndef DragonFly}
 {$define usedircache}
+{$endif DragonFly}
 
 interface
 
@@ -37,9 +39,6 @@ interface
 {$if defined(go32v2) or defined(watcom)}
       Dos,
 {$endif}
-{$ifdef macos}
-      macutils,
-{$endif macos}
 {$IFNDEF USE_FAKE_SYSUTILS}
       SysUtils,
 {$ELSE}
@@ -99,7 +98,7 @@ interface
 
       TSearchPathList = class(TCmdStrList)
         procedure AddPath(s:TCmdStr;addfirst:boolean);overload;
-        procedure AddLibraryPath(const sysroot: TCmdStr; s:TCmdStr;addfirst:boolean);overload;
+        procedure AddPath(SrcPath,s:TCmdStr;addfirst:boolean);overload;
         procedure AddList(list:TSearchPathList;addfirst:boolean);
         function  FindFile(const f : TCmdStr;allowcache:boolean;var foundfile:TCmdStr):boolean;
       end;
@@ -498,7 +497,6 @@ end;
       var
          i : longint;
       begin
-        Result:='';
         setlength(bstoslash,length(s));
         for i:=1to length(s) do
          if s[i]='\' then
@@ -992,19 +990,14 @@ end;
         end;
      end;
 
+
     procedure TSearchPathList.AddPath(s:TCmdStr;addfirst:boolean);
       begin
-        {
-         if system.copy(s,1,2) = './' then
-          begin
-           s := AnsiString(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0))) + 
-           system.copy(s,3,length(s)-2));
-         end;
-        }
-      AddLibraryPath('',s,AddFirst);
+        AddPath('',s,AddFirst);
       end;
 
-   procedure TSearchPathList.AddLibraryPath(const sysroot: TCmdStr; s:TCmdStr;addfirst:boolean);
+
+   procedure TSearchPathList.AddPath(SrcPath,s:TCmdStr;addfirst:boolean);
      var
        staridx,
        i,j      : longint;
@@ -1079,10 +1072,7 @@ end;
 
          { fix pathname }
          DePascalQuote(currPath);
-         { GNU LD convention: if library search path starts with '=', it's relative to the
-           sysroot; otherwise, interpret it as a regular path }
-         if (length(currPath) >0) and (currPath[1]='=') then
-           currPath:=sysroot+FixPath(copy(currPath,2,length(currPath)-1),false);
+         currPath:=SrcPath+FixPath(currPath,false);
          if currPath='' then
            currPath:= CurDirRelPath(source_info)
          else
@@ -1292,16 +1282,8 @@ end;
 
 
    function  FindExe(const bin:TCmdStr;allowcache:boolean;var foundfile:TCmdStr):boolean;
-     var
-       b : TCmdStr;
      begin
-       { change extension only on platforms that use an exe extension, otherwise on OpenBSD
-         'ld.bfd' gets converted to 'ld' }
-       if source_info.exeext<>'' then
-         b:=ChangeFileExt(bin,source_info.exeext)
-       else
-         b:=bin;
-       FindExe:=FindFileInExeLocations(b,allowcache,foundfile);
+       FindExe:=FindFileInExeLocations(ChangeFileExt(bin,source_info.exeext),allowcache,foundfile);
      end;
 
 
@@ -1319,7 +1301,6 @@ end;
         GetShortName:=n;
 {$ifdef win32}
         hs:=n+#0;
-        hs2:='';
         { may become longer in case of e.g. ".a" -> "a~1" or so }
         setlength(hs2,length(hs)*2);
         i:=Windows.GetShortPathName(@hs[1],@hs2[1],length(hs)*2);
@@ -1585,13 +1566,15 @@ end;
         expansion under linux }
 {$ifdef hasunix}
       begin
-        do_comment(V_Executable,'Executing "'+Command+'" with fpSystem call');
+        if do_checkverbosity(V_Used) then
+          do_comment(V_Executable,'Executing "'+Command+'" with fpSystem call');
         result := Unix.fpsystem(command);
       end;
 {$else hasunix}
   {$ifdef hasamiga}
       begin
-        do_comment(V_Executable,'Executing "'+Command+'" using RequotedExecuteProcess');
+        if do_checkverbosity(V_Used) then
+          do_comment(V_Executable,'Executing "'+Command+'" using RequotedExecuteProcess');
         result := RequotedExecuteProcess('',command);
       end;
   {$else hasamiga}
@@ -1599,7 +1582,8 @@ end;
         comspec : string;
       begin
         comspec:=GetEnvironmentVariable('COMSPEC');
-        do_comment(V_Executable,'Executing "'+Command+'" using comspec "'
+        if do_checkverbosity(V_Used) then
+          do_comment(V_Executable,'Executing "'+Command+'" using comspec "'
             +ComSpec+'"');
         result := RequotedExecuteProcess(comspec,' /C '+command);
       end;

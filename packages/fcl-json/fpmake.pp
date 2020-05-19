@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('rtl-objpas');
     P.Author := 'Michael van Canneyt';
@@ -26,9 +26,7 @@ begin
     P.Email := '';
     P.Description := 'Json interfacing, part of Free Component Libraries (FCL), FPC''s OOP library.';
     P.NeedLibC:= false;
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
+    P.OSes:=AllOSes-[embedded,msdos];
 
     P.SourcePath.Add('src');
 
@@ -44,14 +42,6 @@ begin
      end;
         
     T:=P.Targets.AddUnit('jsonparser.pp');
-    T.ResourceStrings:=true;
-    with T.Dependencies do
-      begin
-      AddUnit('fpjson');
-      AddUnit('jsonscanner');
-      AddUnit('jsonreader');
-      end;
-    T:=P.Targets.AddUnit('jsonreader.pp');
     T.ResourceStrings:=true;
     with T.Dependencies do
       begin
@@ -78,24 +68,10 @@ begin
       AddUnit('jsonparser');
       end;
 
-    T:=P.Targets.AddUnit('jsonini.pp');
-    with T.Dependencies do
-      begin
-      AddUnit('fpjson');
-      AddUnit('jsonparser');
-     end;
-    T:=P.Targets.AddUnit('json2yaml.pp');
-    with T.Dependencies do
-      begin
-      AddUnit('fpjson');
-     end;
-
     P.ExamplePath.Add('examples');
     T:=P.Targets.AddExampleProgram('confdemo.pp');
     T:=P.Targets.AddExampleProgram('parsedemo.pp');
     T:=P.Targets.AddExampleProgram('simpledemo.pp');
-    T:=P.Targets.AddExampleProgram('ini2json.pp');
-    T:=P.Targets.AddExampleProgram('j2y.pp');
 
     // simpledemo.lpi
     // confdemo.lpi

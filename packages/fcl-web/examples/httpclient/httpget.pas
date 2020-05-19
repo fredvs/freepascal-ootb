@@ -1,16 +1,9 @@
 program httpget;
 
 {$mode objfpc}{$H+}
-{$DEFINE USEGNUTLS}
 
 uses
-  SysUtils, Classes, fphttpclient,
-{$IFNDEF USEGNUTLS}
-  fpopenssl, opensslsockets,
-{$else}
-  gnutls, gnutlssockets,
-{$endif}
-  sslsockets;
+  SysUtils, Classes, fphttpclient, sslsockets, fpopenssl;
 
 Type
 
@@ -89,7 +82,7 @@ procedure TTestApp.Run;
 begin
   if (ParamCount<>2) then
     begin
-    writeln('Usage : ',ExtractFileName(ParamStr(0)), ' URL filename');
+    writeln('Usage : ',ExtractFileName(ParamStr(0)), 'URL filename');
     Halt(1);
     end;
   With TFPHTTPClient.Create(Nil) do

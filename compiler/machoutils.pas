@@ -23,11 +23,9 @@
 
 unit machoutils;
 
-{$i fpcdefs.inc}
-
-{$h+}
-
 interface
+
+{$mode objfpc}{$h+}
 
 uses
   macho;

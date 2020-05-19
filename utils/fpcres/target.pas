@@ -22,7 +22,7 @@ interface
 
 type
   TMachineType = (mtnone, mti386,mtx86_64,mtppc,mtppc64,mtarm,mtarmeb,mtm68k,
-                  mtsparc,mtalpha,mtia64,mtmips,mtmipsel,mtaarch64,mtppc64le,
+                  mtsparc,mtalpha,mtia64,mtmips,mtmipsel,
                   mtBigEndian,mtLittleEndian);
   TMachineTypes = set of TMachineType;
 
@@ -34,7 +34,7 @@ type
       mtarm,mtarmeb:
         (subarm: TSubMachineTypeArm);
       mtnone, mti386,mtx86_64,mtppc,mtppc64,mtm68k,
-      mtsparc,mtalpha,mtia64,mtmips,mtmipsel,mtaarch64,mtppc64le,
+      mtsparc,mtalpha,mtia64,mtmips,mtmipsel,
       mtBigEndian,mtLittleEndian:
         (subgen: TSubMachineTypeGeneric);
   end;
@@ -83,8 +83,6 @@ var
     (name : 'ia64';         formats : [ofElf]),                   //mtia64
     (name : 'mips';         formats : [ofElf]; alias : 'mipseb'), //mtmips
     (name : 'mipsel';       formats : [ofElf]),                   //mtmipsel
-    (name : 'aarch64';      formats : [ofElf, ofMachO]),          //mtaarch64
-    (name : 'powerpc64le';  formats : [ofElf]),                   //mtppc64le
     (name : 'bigendian';    formats : [ofExt]),                   //mtBigEndian
     (name : 'littleendian'; formats : [ofExt])                    //mtLittleEndian
   );
@@ -101,36 +99,35 @@ var
     (name : 'elf';      ext : '.or';     machines : [mti386,mtx86_64,mtppc,
                                                      mtppc64,mtarm,mtarmeb,
                                                      mtm68k,mtsparc,mtalpha,
-                                                     mtia64,mtmips,mtmipsel,
-                                                     mtppc64le,mtaarch64]),
+                                                     mtia64,mtmips,mtmipsel]),
     (name : 'coff';     ext : '.o';      machines : [mti386,mtx86_64,mtarm,
                                                      mtppc,mtppc64]),
     (name : 'xcoff';    ext : '.o';      machines : [mtppc{,mtppc64}]),
     (name : 'mach-o';   ext : '.or';     machines : [mti386,mtx86_64,mtppc,
-                                                     mtppc64,mtarm,mtaarch64]),
+                                                     mtppc64,mtarm]),
     (name : 'external'; ext : '.fpcres'; machines : [mtBigEndian,mtLittleEndian])
   );
 
 
   CurrentTarget : TResTarget =
   (
-  {$if defined(CPUI386)}
+  {$IFDEF CPUI386}
     machine : mti386;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUX86_64)}
+  {$ELSE}
+  {$IFDEF CPUX86_64}
     machine : mtx86_64;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUPOWERPC32)}
+  {$ELSE}
+  {$IFDEF CPUPOWERPC32}
     machine : mtppc;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUPOWERPC64)}
-    {$ifdef FPC_BIG_ENDIAN}
+  {$ELSE}
+  {$IFDEF CPUPOWERPC64}
     machine : mtppc64;
-    {$else FPC_BIG_ENDIAN}
-    machine : mtppc64le;
-    {$endif FPC_BIG_ENDIAN}
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUARM)}
+  {$ELSE}
+  {$IFDEF CPUARM}
     {$IFDEF ENDIAN_LITTLE}
     machine : mtarm;
     submachine : (subarm: smtarm_all);
@@ -138,31 +135,44 @@ var
     machine : mtarmeb;
     submachine : (subarm: smtarm_all);
     {$ENDIF}
-  {$elseif defined(CPU68K)}
+  {$ELSE}
+  {$IFDEF CPU68K}
     machine : mtm68k;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUSPARC)}
+  {$ELSE}
+  {$IFDEF CPUSPARC}
     machine : mtsparc;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUALPHA)}
+  {$ELSE}
+  {$IFDEF CPUALPHA}
     machine : mtalpha;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUIA64)}
+  {$ELSE}
+  {$IFDEF CPUIA64}
     machine : mtia64;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUMIPSEL)}
+  {$ELSE}
+  {$IFDEF CPUMIPSEL}
     machine : mtmipsel;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUMIPS)}
+  {$ELSE}
+  {$IFDEF CPUMIPS}
     machine : mtmips;
     submachine : (subgen: smtgen_all);
-  {$elseif defined(CPUAARCH64)}
-    machine : mtaarch64;
-    submachine : (subgen: smtgen_all);
-  {$else}
+  {$ELSE}
     machine : mti386;  //default i386
     submachine : (subgen: smtgen_all);
-  {$endif}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
+  {$ENDIF}
 
   {$IFDEF WINDOWS}
     objformat : ofCoff;

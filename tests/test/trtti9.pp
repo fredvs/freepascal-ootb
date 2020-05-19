@@ -7,14 +7,11 @@ uses
 
 type
   PProcedureParam = ^TProcedureParam;
-  TProc = procedure(var A: Integer; S: String; constref U: UnicodeString); stdcall;
+  TProc = procedure(var A: Integer; S: String); stdcall;
 
 function TestParam(Param: PProcedureParam; Flags: TParamFlags; ParamType: Pointer; Name: ShortString): Boolean;
 begin
-  Result := (Param^.Flags = PByte(@Flags)^) and 
-            (Param^.ParamFlags = Flags) and
-            (Param^.ParamType = ParamType) and 
-            (Param^.Name = Name);
+  Result := (Param^.Flags = PByte(@Flags)^) and (Param^.ParamType = ParamType) and (Param^.Name = Name);
 end;
 
 var
@@ -30,7 +27,7 @@ begin
     halt(2);
   if Data^.ProcSig.ResultType <> nil then
      halt(3);
-  if Data^.ProcSig.ParamCount <> 3 then
+  if Data^.ProcSig.ParamCount <> 2 then
      halt(4);
   Param := Data^.ProcSig.GetParam(0);
   if not TestParam(Param, [pfVar], TypeInfo(Integer), 'A') then
@@ -38,7 +35,4 @@ begin
   Param := Data^.ProcSig.GetParam(1);
   if not TestParam(Param, [], TypeInfo(String), 'S') then
      halt(6);
-  Param := Data^.ProcSig.GetParam(2);
-  if not TestParam(Param, [pfConstRef], TypeInfo(UnicodeString), 'U') then
-     halt(7);
 end.

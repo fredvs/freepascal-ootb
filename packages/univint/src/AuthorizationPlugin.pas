@@ -22,7 +22,6 @@
  }
 {  Pascal Translation:  Gorazd Krosl <gorazd_1957@yahoo.ca>, October 2009 }
 {  Pascal Translation Update: Jonas Maebe <jonas@freepascal.org>, October 2012 }
-{  Pascal Translation Update: Jonas Maebe <jonas@freepascal.org>, August 2015 }
 
 {
     Modified for use with Free Pascal
@@ -32,7 +31,6 @@
 
 {$ifc not defined MACOSALLINCLUDE or not MACOSALLINCLUDE}
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -79,11 +77,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -102,7 +95,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -113,7 +105,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -124,7 +115,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -141,16 +131,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -158,26 +141,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -377,10 +347,7 @@ const
     The value is matched to the definition in this file.
 }
 const
-	kAuthorizationPluginInterfaceVersion0 = 0;
-	kAuthorizationPluginInterfaceVersion1 = 1; { new in OS X 10.9 }
-
-	kAuthorizationPluginInterfaceVersion = kAuthorizationPluginInterfaceVersion1;
+	kAuthorizationPluginInterfaceVersion = 0;
 
 {!
     @enum
@@ -408,113 +375,53 @@ const
     @field GetSessionId     Read SessionId.
 }
 type
-	AuthorizationCallbacks0 = record
-{ Engine callback version. }
-		version: UInt32;
-
-    { Set a result after a call to AuthorizationSessionInvoke. }
-{    OSStatus (*SetResult)(AuthorizationEngineRef inEngine, AuthorizationResult inResult); }
-	 SetResult : function (inEngine : AuthorizationEngineRef; inResult : AuthorizationResult) : OSStatus;
-
-    { Request authorization engine to interrupt all mechamisms invoked after 
-        this mechamism has called SessionSetResult and then call 
-        AuthorizationSessionInvoke again. }
-     RequestInterrupt : function (inEngine : AuthorizationEngineRef) : OSStatus;
-     
-    { Respond to the Deactivate request. }
-	 DidDeactivate : function (inEngine : AuthorizationEngineRef) : OSStatus;
-
-    { Read value from context.  AuthorizationValue does not own data. }
-        GetContextValue : function (inEngine			: AuthorizationEngineRef;
-        							inKey				: AuthorizationString;
-        							var outContextFlags : AuthorizationContextFlags;
-        							var outValue		: AuthorizationValuePtr) : OSStatus;
-
-    { Write value to context.  AuthorizationValue and data are copied. }
-	 SetContextValue : function (inEngine 	: AuthorizationEngineRef;
-	 							 inKey		: AuthorizationString;
-	 							 inContextFlags	: AuthorizationContextFlags;
-	 							 inValue		: AuthorizationValuePtr) : OSStatus;
-
-    { Read value from hints. AuthorizationValue does not own data. }
-	GetHintValue : function (inEngine		: AuthorizationEngineRef;
-							 inKey			: AuthorizationString;
-							 var outValue	: AuthorizationValuePtr) : OSStatus;
-							 
-    { Write value to hints.  AuthorizationValue and data are copied. }
-	SetHintValue : function (inEngine	: AuthorizationEngineRef;
-							 inKey		: AuthorizationString;
-							 inValue	: AuthorizationValuePtr) : OSStatus;
-							 
-    { Read arguments passed.  AuthorizationValueVector does not own data. }
-	GetArguments : function (inEngine	 		: AuthorizationEngineRef;
-							 var outArguments	: AuthorizationValueVectorPtr) : OSStatus;
-							 
-    { Read SessionId. }
-      GetSessionId : function (inEngine			: AuthorizationEngineRef;
-      						   var outSessionId : AuthorizationSessionId) : OSStatus;
-	end;
-
-	AuthorizationCallbacks1 = record
-{ Engine callback version. }
-		version: UInt32;
-
-    { Set a result after a call to AuthorizationSessionInvoke. }
-{    OSStatus (*SetResult)(AuthorizationEngineRef inEngine, AuthorizationResult inResult); }
-	 SetResult : function (inEngine : AuthorizationEngineRef; inResult : AuthorizationResult) : OSStatus;
-
-    { Request authorization engine to interrupt all mechamisms invoked after 
-        this mechamism has called SessionSetResult and then call 
-        AuthorizationSessionInvoke again. }
-     RequestInterrupt : function (inEngine : AuthorizationEngineRef) : OSStatus;
-     
-    { Respond to the Deactivate request. }
-	 DidDeactivate : function (inEngine : AuthorizationEngineRef) : OSStatus;
-
-    { Read value from context.  AuthorizationValue does not own data. }
-        GetContextValue : function (inEngine			: AuthorizationEngineRef;
-        							inKey				: AuthorizationString;
-        							var outContextFlags : AuthorizationContextFlags;
-        							var outValue		: AuthorizationValuePtr) : OSStatus;
-
-    { Write value to context.  AuthorizationValue and data are copied. }
-	 SetContextValue : function (inEngine 	: AuthorizationEngineRef;
-	 							 inKey		: AuthorizationString;
-	 							 inContextFlags	: AuthorizationContextFlags;
-	 							 inValue		: AuthorizationValuePtr) : OSStatus;
-
-    { Read value from hints. AuthorizationValue does not own data. }
-	GetHintValue : function (inEngine		: AuthorizationEngineRef;
-							 inKey			: AuthorizationString;
-							 var outValue	: AuthorizationValuePtr) : OSStatus;
-							 
-    { Write value to hints.  AuthorizationValue and data are copied. }
-	SetHintValue : function (inEngine	: AuthorizationEngineRef;
-							 inKey		: AuthorizationString;
-							 inValue	: AuthorizationValuePtr) : OSStatus;
-							 
-    { Read arguments passed.  AuthorizationValueVector does not own data. }
-	GetArguments : function (inEngine	 		: AuthorizationEngineRef;
-							 var outArguments	: AuthorizationValueVectorPtr) : OSStatus;
-							 
-    { Read SessionId. }
-      GetSessionId : function (inEngine			: AuthorizationEngineRef;
-      						   var outSessionId : AuthorizationSessionId) : OSStatus;
-
-    { Read value from hints. AuthorizationValue does not own data. }
-  GetImmutableHintValue: function (inEngine: AuthorizationEngineRef;
-                     inKey: AuthorizationString;
-                     var outValue: AuthorizationValuePtr): OSStatus; 
-
-	end;
-	
-	{ support both interface version 0 and 1 }
 	AuthorizationCallbacks = record
-	  case byte of
-	    0: (version0: AuthorizationCallbacks0);
-	    1: (version1: AuthorizationCallbacks1);
+{ Engine callback version. }
+		version: UInt32;
+
+    { Set a result after a call to AuthorizationSessionInvoke. }
+{    OSStatus (*SetResult)(AuthorizationEngineRef inEngine, AuthorizationResult inResult); }
+	 SetResult : function (inEngine : AuthorizationEngineRef; inResult : AuthorizationResult) : OSStatus;
+
+    { Request authorization engine to interrupt all mechamisms invoked after 
+        this mechamism has called SessionSetResult and then call 
+        AuthorizationSessionInvoke again. }
+     RequestInterrupt : function (inEngine : AuthorizationEngineRef) : OSStatus;
+     
+    { Respond to the Deactivate request. }
+	 DidDeactivate : function (inEngine : AuthorizationEngineRef) : OSStatus;
+
+    { Read value from context.  AuthorizationValue does not own data. }
+        GetContextValue : function (inEngine			: AuthorizationEngineRef;
+        							inKey				: AuthorizationString;
+        							var outContextFlags : AuthorizationContextFlags;
+        							var outValue		: AuthorizationValuePtr) : OSStatus;
+
+    { Write value to context.  AuthorizationValue and data are copied. }
+	 SetContextValue : function (inEngine 	: AuthorizationEngineRef;
+	 							 inKey		: AuthorizationString;
+	 							 inContextFlags	: AuthorizationContextFlags;
+	 							 inValue		: AuthorizationValuePtr) : OSStatus;
+
+    { Read value from hints. AuthorizationValue does not own data. }
+	GetHintValue : function (inEngine		: AuthorizationEngineRef;
+							 inKey			: AuthorizationString;
+							 var outValue	: AuthorizationValuePtr) : OSStatus;
+							 
+    { Write value to hints.  AuthorizationValue and data are copied. }
+	SetHintValue : function (inEngine	: AuthorizationEngineRef;
+							 inKey		: AuthorizationString;
+							 inValue	: AuthorizationValuePtr) : OSStatus;
+							 
+    { Read arguments passed.  AuthorizationValueVector does not own data. }
+	GetArguments : function (inEngine	 		: AuthorizationEngineRef;
+							 var outArguments	: AuthorizationValueVectorPtr) : OSStatus;
+							 
+    { Read SessionId. }
+      GetSessionId : function (inEngine			: AuthorizationEngineRef;
+      						   var outSessionId : AuthorizationSessionId) : OSStatus;
 	end;
-	
+
 	AuthorizationCallbacksPtr = ^AuthorizationCallbacks;
 
 {!

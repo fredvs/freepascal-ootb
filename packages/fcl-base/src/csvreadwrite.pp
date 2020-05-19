@@ -124,7 +124,7 @@ Type
     // simple parsing
     procedure ParseValue;
   public
-    constructor Create; override;
+    constructor Create;
     destructor Destroy; override;
     // Source data stream
     procedure SetSource(AStream: TStream); overload;
@@ -161,7 +161,7 @@ Type
     procedure AppendStringToStream(const AString: String; AStream: TStream);
     function  QuoteCSVString(const AValue: String): String;
   public
-    constructor Create; override;
+    constructor Create;
     destructor Destroy; override;
     // Set output/destination stream.
     // If not called, output is sent to DefaultOutput
@@ -404,17 +404,15 @@ end;
 
 procedure TCSVParser.ParseValue;
 begin
-  while not ((FCurrentChar = FDelimiter) or EndOfLine or EndOfFile or (FCurrentChar = FQuoteChar)) do
+  while not ((FCurrentChar = FDelimiter) or EndOfLine or EndOfFile) do
   begin
-    AppendStr(FCellBuffer, FCurrentChar);
+    AppendStr(FWhitespaceBuffer, FCurrentChar);
     NextChar;
   end;
-  if FCurrentChar = FQuoteChar then
-    ParseQuotedValue;
   // merge whitespace buffer
   if FIgnoreOuterWhitespace then
     RemoveTrailingChars(FWhitespaceBuffer, WhitespaceChars);
-  AppendStr(FWhitespaceBuffer,FCellBuffer);
+  AppendStr(FCellBuffer, FWhitespaceBuffer);
   FWhitespaceBuffer := '';
 end;
 
@@ -455,17 +453,12 @@ var
   b: packed array[0..2] of byte;
   n: Integer;
 begin
-  B[0]:=0; B[1]:=0; B[2]:=0;
   ClearOutput;
   FSourceStream.Seek(0, soFromBeginning);
   if FDetectBOM then
   begin
-    if FSourceStream.Read(b[0], 3)<3 then
-      begin
-      n:=0;
-      FBOM:=bomNone;
-      end
-    else if (b[0] = $EF) and (b[1] = $BB) and (b[2] = $BF) then begin
+    FSourceStream.ReadBuffer(b[0], 3);
+    if (b[0] = $EF) and (b[1] = $BB) and (b[2] = $BF) then begin
       FBOM := bomUTF8;
       n := 3;
     end else
@@ -534,7 +527,6 @@ begin
   if StreamSize > 0 then
   begin
     SetLength(Result, StreamSize);
-    FDefaultOutput.Position:=0;
     FDefaultOutput.ReadBuffer(Result[1], StreamSize);
   end;
 end;

@@ -12,8 +12,6 @@
  **********************************************************************}
 
 
-{$ifndef generic_linux_syscalls}
-
 {$define FPC_BASEUNIX_HAS_FPPIPE}
 Function fppipe(var fildes : tfildes):cint;assembler;
 {
@@ -48,5 +46,3 @@ asm
   sw   $v1,4($t1)
 .L2:
 end;
-
-{$endif generic_linux_syscalls}

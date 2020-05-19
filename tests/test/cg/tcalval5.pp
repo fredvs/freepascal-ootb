@@ -36,7 +36,7 @@ program tcalval5;
 {$ifdef cpu68k}
   {$define cpusmall}
 {$endif}
-{$ifdef cpui8086}
+{$ifdef cpu8086}
   {$define cpusmall}
 {$endif}
 

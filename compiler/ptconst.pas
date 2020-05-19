@@ -35,19 +35,19 @@ implementation
     uses
        globtype,systems,globals,verbose,cutils,tokens,
        aasmbase,aasmtai,
-       fmodule,
+       procinfo,fmodule,
        scanner,pbase,pdecvar,
-       node,ngtcon,
+       node,nbas,ngtcon,
        symconst,symbase,symdef
        ;
 
     procedure read_typed_const(list:tasmlist;sym:tstaticvarsym;in_structure:boolean);
       var
         storefilepos : tfileposinfo;
+        cursectype   : TAsmSectionType;
         section      : ansistring;
         tcbuilder    : ttypedconstbuilder;
-        reslist,
-        datalist     : tasmlist;
+        reslist      : tasmlist;
         restree,
         previnit     : tnode;
       begin
@@ -66,7 +66,14 @@ implementation
           begin
             maybe_new_object_file(list);
             tcbuilder:=tasmlisttypedconstbuilderclass(ctypedconstbuilder).create(sym);
-            tasmlisttypedconstbuilder(tcbuilder).parse_into_asmlist;
+            reslist:=tasmlisttypedconstbuilder(tcbuilder).parse_into_asmlist;
+            { Certain types like windows WideString are initialized at runtime and cannot
+              be placed into readonly memory }
+            if (sym.varspez=vs_const) and not (vo_force_finalize in sym.varoptions) then
+              cursectype:=sec_rodata
+            else
+              cursectype:=sec_data;
+            tcbuilder.free;
           end
         else
           begin
@@ -80,6 +87,9 @@ implementation
               current_structdef.tcinitcode:=restree
             else
               current_module.tcinitcode:=restree;
+            tcbuilder.free;
+            reslist:=nil;
+            cursectype:=sec_none;
           end;
 
         { Parse hints }
@@ -92,7 +102,7 @@ implementation
            (
             (
              (token = _ID) and
-             ((idtoken in [_EXPORT,_EXTERNAL,_PUBLIC,_CVAR]) or (idtoken = _WEAKEXTERNAL)) and
+             (idtoken in [_EXPORT,_EXTERNAL,_WEAKEXTERNAL,_PUBLIC,_CVAR]) and
              (m_cvar_support in current_settings.modeswitches)
             ) or
             (
@@ -108,41 +118,54 @@ implementation
 
         { try to parse a section directive }
         if not in_structure and (target_info.system in systems_allow_section) and
-           (symtablestack.top.symtabletype in [staticsymtable,globalsymtable]) and
+          (symtablestack.top.symtabletype in [staticsymtable,globalsymtable]) and
            (idtoken=_SECTION) then
-          begin
-            try_consume_sectiondirective(section);
-            if section<>'' then
-              begin
-                if (sym.varoptions *[vo_is_external,vo_is_weak_external])<>[] then
-                  Message(parser_e_externals_no_section);
-                if sym.typ<>staticvarsym then
-                  Message(parser_e_section_no_locals);
-                tstaticvarsym(sym).section:=section;
-                include(sym.varoptions, vo_has_section);
-              end;
-          end;
-
-        if vo_is_public in sym.varoptions then
-          current_module.add_public_asmsym(sym.mangledname,AB_GLOBAL,AT_DATA);
+               begin
+                 try_consume_sectiondirective(section);
+                 if section<>'' then
+                   begin
+                     if (sym.varoptions *[vo_is_external,vo_is_weak_external])<>[] then
+                       Message(parser_e_externals_no_section);
+                     if sym.typ<>staticvarsym then
+                       Message(parser_e_section_no_locals);
+                     tstaticvarsym(sym).section:=section;
+                     include(sym.varoptions, vo_has_section);
+                   end;
+               end;
 
         if not(target_info.system in systems_typed_constants_node_init) then
           begin
-            { only now get the final asmlist, because inserting the symbol
-              information depends on potential section information set above }
-            tasmlisttypedconstbuilder(tcbuilder).get_final_asmlists(reslist,datalist);
-             { add the parsed value }
+            { only now add items based on the symbolname, because it may }
+            { have been modified by the directives parsed above          }
+            if vo_has_section in sym.varoptions then
+              new_section(list,sec_user,sym.section,const_align(sym.vardef.alignment))
+            else
+              new_section(list,cursectype,lower(sym.mangledname),const_align(sym.vardef.alignment));
+            if sym.globalasmsym then
+              begin
+                { see same code in ncgutil.insertbssdata }
+                if (target_dbg.id=dbg_stabx) and
+                   (cs_debuginfo in current_settings.moduleswitches) and
+                   not assigned(current_asmdata.GetAsmSymbol(sym.name)) then
+                  begin
+                    list.concat(tai_symbol.Create(current_asmdata.DefineAsmSymbol(sym.name,AB_LOCAL,AT_DATA),0));
+                    list.concat(tai_directive.Create(asd_reference,sym.name));
+                  end;
+                list.concat(Tai_symbol.Createname_global(sym.mangledname,AT_DATA,0))
+              end
+            else
+              list.concat(Tai_symbol.Createname(sym.mangledname,AT_DATA,0));
+
+            { add the parsed value }
             list.concatlist(reslist);
-            { and pointed data, if any }
-            current_asmdata.asmlists[al_const].concatlist(datalist);
-            { the (empty) lists themselves are freed by tcbuilder }
+            reslist.free;
+            list.concat(tai_symbol_end.Createname(sym.mangledname));
           end
         else
           begin
             { nothing to do }
           end;
 
-        tcbuilder.free;
         current_filepos:=storefilepos;
       end;
 

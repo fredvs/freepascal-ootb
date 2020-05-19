@@ -1,5 +1,5 @@
 { %target=darwin }
-{ %cpu=powerpc,powerpc64,i386,x86_64,arm,aarch64 }
+{ %cpu=powerpc,powerpc64,i386,x86_64,arm }
 
 { Written by Jonas Maebe in 2010, released into the public domain }
 
@@ -57,7 +57,7 @@ begin
   b:=MyObject.alloc.init;
   b.extraproc(2);
   b.release;
-  c:=MyObject2.alloc.init;
-  c.extraproc(3);
+  c:=MyObject.alloc.init;
+  c.extraproc(2);
   c.release;
 end.

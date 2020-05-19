@@ -24,9 +24,7 @@ unit macho;
 
 { converted by Dmitry Boyarintsev 2009 }
 
-{$i fpcdefs.inc}
-
-{$H+}
+{$mode objfpc}{$H+}
 
 interface
 
@@ -89,7 +87,6 @@ const
   CPU_TYPE_MC98000	= 10;
   CPU_TYPE_HPPA     = 11;
   CPU_TYPE_ARM		  = 12;
-  CPU_TYPE_ARM64          = CPU_TYPE_ARM or CPU_ARCH_ABI64;
   CPU_TYPE_MC88000	= 13;
   CPU_TYPE_SPARC		= 14;
   CPU_TYPE_I860		  = 15;

@@ -63,14 +63,14 @@ implementation
         srsymtable : TSymtable;
         hpname     : shortstring;
         index      : longint;
-        options    : texportoptions;
+        options    : word;
 
         function IsGreater(hp1,hp2:texported_item):boolean;
         var
           i2 : boolean;
         begin
-          i2:=eo_index in hp2.options;
-          if eo_index in hp1.options then
+          i2:=(hp2.options and eo_index)<>0;
+          if (hp1.options and eo_index)<>0 then
            begin
              if i2 then
                IsGreater:=hp1.index>hp2.index
@@ -88,7 +88,7 @@ implementation
          consume(_EXPORTS);
          repeat
            hpname:='';
-           options:=[];
+           options:=0;
            index:=0;
            if token=_ID then
              begin
@@ -136,7 +136,7 @@ implementation
                      end;
                     if try_to_consume(_INDEX) then
                      begin
-                       pt:=comp_expr([ef_accept_equal]);
+                       pt:=comp_expr(true,false);
                        if pt.nodetype=ordconstn then
                         if (Tordconstnode(pt).value<int64(low(index))) or
                            (Tordconstnode(pt).value>int64(high(index))) then
@@ -151,7 +151,7 @@ implementation
                           index:=0;
                           consume(_INTCONST);
                         end;
-                       include(options,eo_index);
+                       options:=options or eo_index;
                        pt.free;
                        if target_info.system in [system_i386_win32,system_i386_wdosx,system_arm_wince,system_i386_wince] then
                         DefString:=srsym.realname+'='+InternalProcName+' @ '+tostr(index)
@@ -160,20 +160,20 @@ implementation
                      end;
                     if try_to_consume(_NAME) then
                      begin
-                       pt:=comp_expr([ef_accept_equal]);
+                       pt:=comp_expr(true,false);
                        if pt.nodetype=stringconstn then
                          hpname:=strpas(tstringconstnode(pt).value_str)
                        else if is_constcharnode(pt) then
                          hpname:=chr(tordconstnode(pt).value.svalue and $ff)
                        else
                          consume(_CSTRING);
-                       include(options,eo_name);
+                       options:=options or eo_name;
                        pt.free;
                        DefString:=hpname+'='+InternalProcName;
                      end;
                     if try_to_consume(_RESIDENT) then
                      begin
-                       include(options,eo_resident);
+                       options:=options or eo_resident;
                        DefString:=srsym.realname+'='+InternalProcName;{Resident ignored!}
                      end;
                     if (DefString<>'') and UseDeffileForExports then
@@ -188,7 +188,7 @@ implementation
                       { export section (it doesn't make sense to export }
                       { the generic mangled name, because the name of   }
                       { the parent unit is used in that)                }
-                      if (options*[eo_name,eo_index]=[]) and
+                      if ((options and (eo_name or eo_index))=0) and
                          (tprocdef(tprocsym(srsym).procdeflist[0]).aliasnames.count>1) then
                         exportallprocsymnames(tprocsym(srsym),options)
                       else
@@ -198,7 +198,7 @@ implementation
                           { same index? And/or should we also export the aliases }
                           { if a name is specified? (JM)                         }
 
-                          if not (eo_name in options) then
+                          if ((options and eo_name)=0) then
                             { Export names are not mangled on Windows and OS/2 }
                             if (target_info.system in (systems_all_windows+[system_i386_emx, system_i386_os2])) then
                               hpname:=orgs
@@ -216,7 +216,7 @@ implementation
                     end;
                   staticvarsym:
                     begin
-                      if not (eo_name in options) then
+                      if ((options and eo_name)=0) then
                         { for "cvar" }
                         if (vo_has_mangledname in tstaticvarsym(srsym).varoptions) then
                           hpname:=srsym.mangledname

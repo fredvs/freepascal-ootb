@@ -302,7 +302,7 @@ const NLM_MAX_DESCRIPTION_LENGTH = 127;
        end;
 
        TNLMCoffassembler = class(tinternalassembler)
-         constructor create(info: pasminfo; smart:boolean);override;
+         constructor create(smart:boolean);override;
        end;
 
       TNLMCoffObjData = class(TCoffObjData)
@@ -314,7 +314,7 @@ const NLM_MAX_DESCRIPTION_LENGTH = 127;
        end;
 
       TNLMCoffObjSection = class(TCoffObjSection)
-         constructor create(AList:TFPHashObjectList;const Aname:string;Aalign:longint;Aoptions:TObjSectionOptions);override;
+         constructor create(AList:TFPHashObjectList;const Aname:string;Aalign:shortint;Aoptions:TObjSectionOptions);override;
        end;
 
 implementation
@@ -326,7 +326,7 @@ implementation
        SysUtils,
        cutils,verbose,globals,
        fmodule,aasmdata,
-       ogmap,export,owar
+       ogmap,export
        ;
 
 
@@ -1452,7 +1452,7 @@ function SecOpts(SecOptions:TObjSectionOptions):string;
                                TNLMoffObjSection
 ****************************************************************************}
 
-    constructor TNLMCoffObjSection.create(AList:TFPHashObjectList;const aname:string;aalign:longint;aoptions:TObjSectionOptions);
+    constructor TNLMCoffObjSection.create(AList:TFPHashObjectList;const aname:string;aalign:shortint;aoptions:TObjSectionOptions);
       begin
         inherited create(alist,aname,aalign,aoptions);
       end;
@@ -1471,11 +1471,10 @@ function SecOpts(SecOptions:TObjSectionOptions):string;
                                  TDJCoffAssembler
 ****************************************************************************}
 
-    constructor TNLMCoffAssembler.Create(info: pasminfo; smart:boolean);
+    constructor TNLMCoffAssembler.Create(smart:boolean);
       begin
-        inherited;
+        inherited Create(smart);
         CObjOutput:=TNLMCoffObjOutput;
-        CInternalAr:=tarobjectwriter;
       end;
 
     constructor TNLMCoffObjInput.create;

@@ -1,54 +1,80 @@
-{ Parsed from AppKit.framework NSFormCell.h }
-
+{ Parsed from Appkit.framework NSFormCell.h }
 
 {$ifdef TYPES}
-type
-  NSFormCellPtr = ^NSFormCell;
+{$ifndef NSFORMCELL_PAS_T}
+{$define NSFORMCELL_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSFORMCELL_PAS_R}
+{$define NSFORMCELL_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSFORMCELL_PAS_F}
+{$define NSFORMCELL_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSFORMCELL_PAS_S}
+{$define NSFORMCELL_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSFormCell = objcclass;
+  NSFormCellPointer = ^NSFormCell;
+  NSFormCellPtr = NSFormCellPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSFORMCELL_PAS_C}
+{$define NSFORMCELL_PAS_C}
 
-type
+{ NSFormCell }
   NSFormCell = objcclass external (NSActionCell)
   private
     _titleWidth: CGFloat;
     _titleCell: id;
     _titleEndPoint: CGFloat;
-    {$if defined(__LP64__)}
-    _preferredTextFieldWidth: CGFloat;
-    {$endif}
+    
   public
-    function initTextCell (aString: NSString): instancetype; message 'initTextCell:';
-    function titleWidth (aSize: NSSize): CGFloat; message 'titleWidth:';
-    procedure setTitleWidth(newValue: CGFloat); message 'setTitleWidth:';
-    function titleWidth_: CGFloat; message 'titleWidth';
-    procedure setTitle(newValue: NSString); message 'setTitle:';
+    function initTextCell(aString: NSString): id; message 'initTextCell:';
+    function titleWidth(aSize: NSSize): CGFloat; message 'titleWidth:';
+    procedure setTitleWidth(width: CGFloat); message 'setTitleWidth:';
     function title: NSString; message 'title';
-    procedure setTitleFont(newValue: NSFont); message 'setTitleFont:';
+    procedure setTitle(aString: NSString); message 'setTitle:';
     function titleFont: NSFont; message 'titleFont';
-    procedure setTitleAlignment(newValue: NSTextAlignment); message 'setTitleAlignment:';
+    procedure setTitleFont(fontObj: NSFont); message 'setTitleFont:';
     function titleAlignment: NSTextAlignment; message 'titleAlignment';
-    function isOpaque: ObjCBOOL; message 'isOpaque';
-    procedure setPlaceholderString(newValue: NSString); message 'setPlaceholderString:';
+    procedure setTitleAlignment(mode: NSTextAlignment); message 'setTitleAlignment:';
+    function isOpaque: Boolean; message 'isOpaque';
+    procedure setPlaceholderString(string_: NSString); message 'setPlaceholderString:';
     function placeholderString: NSString; message 'placeholderString';
-    procedure setPlaceholderAttributedString(newValue: NSAttributedString); message 'setPlaceholderAttributedString:';
+    procedure setPlaceholderAttributedString(string_: NSAttributedString); message 'setPlaceholderAttributedString:';
     function placeholderAttributedString: NSAttributedString; message 'placeholderAttributedString';
-    procedure setTitleBaseWritingDirection(newValue: NSWritingDirection); message 'setTitleBaseWritingDirection:';
     function titleBaseWritingDirection: NSWritingDirection; message 'titleBaseWritingDirection';
-    procedure setPreferredTextFieldWidth(newValue: CGFloat); message 'setPreferredTextFieldWidth:';
-    function preferredTextFieldWidth: CGFloat; message 'preferredTextFieldWidth';
+    procedure setTitleBaseWritingDirection(writingDirection: NSWritingDirection); message 'setTitleBaseWritingDirection:';
   end;
 
-
-type
-  NSKeyboardUI = objccategory external (NSFormCell)
-    procedure setTitleWithMnemonic (stringWithAmpersand: NSString); message 'setTitleWithMnemonic:'; deprecated 'in 10_0, 10_8';
+{ NSKeyboardUI_NSFormCellCategory }
+  NSKeyboardUI_NSFormCellCategory = objccategory external name 'NSKeyboardUI' (NSFormCell)
+    procedure setTitleWithMnemonic(stringWithAmpersand: NSString); message 'setTitleWithMnemonic:';
   end;
 
-type
-  NSFormCellAttributedStringMethods = objccategory external (NSFormCell)
-    procedure setAttributedTitle(newValue: NSAttributedString); message 'setAttributedTitle:';
+{ NSFormCellAttributedStringMethodsCategory }
+  NSFormCellAttributedStringMethodsCategory = objccategory external (NSFormCell)
     function attributedTitle: NSAttributedString; message 'attributedTitle';
+    procedure setAttributedTitle(obj: NSAttributedString); message 'setAttributedTitle:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

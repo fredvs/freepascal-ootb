@@ -23,7 +23,7 @@
 {$inline on}
 {$define VARIANTINLINE}
 
-unit Variants;
+unit variants;
 
 interface
 
@@ -389,6 +389,16 @@ begin
     DoVarClearComplex(v);
 end;
 
+function AlignToPtr(p : Pointer) : Pointer;inline;
+begin
+  {$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  Result:=align(p,SizeOf(p));
+  {$ELSE FPC_REQUIRES_PROPER_ALIGNMENT}
+  Result:=p;
+  {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+end;
+
+
 { ---------------------------------------------------------------------
     String Messages
   ---------------------------------------------------------------------}
@@ -525,7 +535,7 @@ constructor tdynarrayiter.init(d : Pointer;typeInfo : Pointer;_dims: SizeInt;b :
         if i>0 then
           positions[i]:=Pointer(positions[i-1]^);
         { skip kind and name }
-        typeInfo:=AlignTypeData(typeInfo+2+Length(PTypeInfo(typeInfo)^.Name));
+        typeInfo:=aligntoptr(typeInfo+2+Length(PTypeInfo(typeInfo)^.Name));
 
         elesize[i]:=PTypeData(typeInfo)^.elSize;
         typeInfo:=PTypeData(typeInfo)^.elType2;
@@ -804,7 +814,7 @@ begin
 
   { get TypeInfo of second level }
   { skip kind and name }
-  TypeInfo:=AlignTypeData(TypeInfo+2+Length(PTypeInfo(TypeInfo)^.Name));
+  TypeInfo:=aligntoptr(TypeInfo+2+Length(PTypeInfo(TypeInfo)^.Name));
   TypeInfo:=PTypeData(TypeInfo)^.elType2;
 
   { check recursively? }
@@ -1183,10 +1193,10 @@ begin
   if OpCode in [opCmpEq, opCmpNe] then
     if Length(WideString(Left)) <> Length(WideString(Right)) then
       Exit(-1);
-  Result := sign(WideCompareStr(
+  Result := WideCompareStr(
     WideString(Left),
     WideString(Right)
-  ));
+  );
 end;
 
 
@@ -1204,10 +1214,10 @@ begin
   if OpCode in [opCmpEq, opCmpNe] then
     if Length(AnsiString(Left)) <> Length(AnsiString(Right)) then
       Exit(-1);
-  Result := sign(CompareStr(
+  Result := CompareStr(
     AnsiString(Left),
     AnsiString(Right)
-  ));
+  );
 end;
 
 
@@ -2488,25 +2498,12 @@ begin
   DoOleVarFromVar(TVarData(aDest), TVarData(aSource));
 end;
 
-procedure sysolevarfromint(var Dest : olevariant; const Source : Int64; const range : ShortInt);
+procedure sysolevarfromint(var Dest : olevariant; const Source : LongInt; const range : ShortInt);
 begin
   DoVarClearIfComplex(TVarData(Dest));
-  { 64-bit values have their own types, all smaller ones are stored as signed 32-bit value }
   with TVarData(Dest) do begin
-    case range of
-      -8: begin
-        vInt64 := Int64(Source);
-        vType := varInt64;
-      end;
-      8: begin
-        vQWord := QWord(Source);
-        vType := varQWord;
-      end;
-      else begin
-        vInteger := LongInt(Source);
-        vType := varInteger;
-      end;
-    end;
+    vInteger := Source;
+    vType := varInteger;
   end;
 end;
 
@@ -3379,7 +3376,7 @@ function DynArrayGetVariantInfo(p : Pointer; var Dims : sizeint) : sizeint;
   begin
     Result:=varNull;
     { skip kind and name }
-    p:=AlignTypeData(p+2+Length(PTypeInfo(p)^.Name));
+    p:=aligntoptr(p+2+Length(PTypeInfo(p)^.Name));
 
     { search recursive? }
     if PTypeInfo(PTypeData(p)^.elType2)^.kind=tkDynArray then
@@ -3507,6 +3504,8 @@ procedure DynArrayFromVariant(var DynArray: Pointer; const V: Variant; TypeInfo:
     vararraybounds : PVarArrayBoundArray;
     dynarraybounds : tdynarraybounds;
     i : SizeInt;
+  type
+    TDynArray = array of Pointer;
   begin
     VarArrayDims:=VarArrayDimCount(V);
 
@@ -3595,10 +3594,8 @@ function FindCustomVariantType(const aVarType: TVarType; out CustomVariantType: 
     Result:=(aVarType>=CMinVarType);
     if Result then
       begin
-{$ifdef FPC_HAS_FEATURE_THREADING}
         EnterCriticalSection(customvarianttypelock);
         try
-{$endif}
           Result:=(aVarType-CMinVarType)<=high(customvarianttypes);
           if Result then
             begin
@@ -3606,11 +3603,9 @@ function FindCustomVariantType(const aVarType: TVarType; out CustomVariantType: 
               Result:=assigned(CustomVariantType) and
                (CustomVariantType<>InvalidCustomVariantType);
             end;
-{$ifdef FPC_HAS_FEATURE_THREADING}
         finally
           LeaveCriticalSection(customvarianttypelock);
         end;
-{$endif}
       end;
   end;
 
@@ -3623,10 +3618,8 @@ function FindCustomVariantType(const TypeName: string;  out CustomVariantType: T
   begin
     ShortTypeName:=TypeName;  // avoid conversion in the loop
     result:=False;
-{$ifdef FPC_HAS_FEATURE_THREADING}
     EnterCriticalSection(customvarianttypelock);
     try
-{$endif}
       for i:=low(customvarianttypes) to high(customvarianttypes) do
         begin
           tmp:=customvarianttypes[i];
@@ -3638,11 +3631,9 @@ function FindCustomVariantType(const TypeName: string;  out CustomVariantType: T
               Exit;
             end;
         end;
-{$ifdef FPC_HAS_FEATURE_THREADING}
     finally
       LeaveCriticalSection(customvarianttypelock);
     end;
-{$endif}
   end;
 
 function Unassigned: Variant; // Unassigned standard constant
@@ -3888,10 +3879,8 @@ procedure RegisterCustomVariantType(obj: TCustomVariantType; RequestedVarType: T
 var
   index,L: Integer;
 begin
-{$ifdef FPC_HAS_FEATURE_THREADING}
   EnterCriticalSection(customvarianttypelock);
   try
-{$endif}
     L:=Length(customvarianttypes);
     if UseFirstAvailable then
     begin
@@ -3919,11 +3908,9 @@ begin
     end;
     customvarianttypes[index]:=obj;
     obj.FVarType:=RequestedVarType;
-{$ifdef FPC_HAS_FEATURE_THREADING}
   finally
     LeaveCriticalSection(customvarianttypelock);
   end;
-{$endif}
 end;
 
 constructor TCustomVariantType.Create;
@@ -3939,17 +3926,13 @@ end;
 
 destructor TCustomVariantType.Destroy;
 begin
-{$ifdef FPC_HAS_FEATURE_THREADING}
   EnterCriticalSection(customvarianttypelock);
   try
-{$endif}
     if FVarType<>0 then
       customvarianttypes[FVarType-CMinVarType]:=InvalidCustomVariantType;
-{$ifdef FPC_HAS_FEATURE_THREADING}
   finally
     LeaveCriticalSection(customvarianttypelock);
   end;
-{$endif}
   inherited Destroy;
 end;
 
@@ -4553,8 +4536,6 @@ begin
       Result := GetInt64Prop(Instance, PropInfo);
     tkQWord:
       Result := QWord(GetInt64Prop(Instance, PropInfo));
-    tkDynArray:
-      DynArrayToVariant(Result,GetDynArrayProp(Instance, PropInfo), PropInfo^.PropType);
     else
       raise EPropertyConvertError.CreateFmt('Invalid Property Type: %s',[PropInfo^.PropType^.Name]);
   end;
@@ -4569,7 +4550,6 @@ var
  Qw: QWord;
  S: String;
  B: Boolean;
- dynarr: Pointer;
 
 begin
    TypeData := GetTypeData(PropInfo^.PropType);
@@ -4658,13 +4638,7 @@ begin
          if (Qw<TypeData^.MinQWordValue) or (Qw>TypeData^.MaxQWordValue) then
            raise ERangeError.Create(SRangeError);
          SetInt64Prop(Instance, PropInfo,Qw);
-       end;
-     tkDynArray:
-       begin
-         dynarr:=Nil;
-         DynArrayFromVariant(dynarr, Value, PropInfo^.PropType);
-         SetDynArrayProp(Instance, PropInfo, dynarr);
-       end;
+       end
    else
      raise EPropertyConvertError.CreateFmt('SetPropValue: Invalid Property Type %s',
                                     [PropInfo^.PropType^.Name]);
@@ -4675,9 +4649,7 @@ var
   i : LongInt;
 
 Initialization
-{$ifdef FPC_HAS_FEATURE_THREADING}
   InitCriticalSection(customvarianttypelock);
-{$endif}
   // start with one-less value, so first increment yields CFirstUserType
   customvariantcurrtype:=CFirstUserType-1;
   SetSysVariantManager;
@@ -4693,20 +4665,14 @@ Initialization
   InvalidCustomVariantType:=TCustomVariantType(-1);
   SetLength(customvarianttypes,CFirstUserType);
 Finalization
-{$ifdef FPC_HAS_FEATURE_THREADING}
   EnterCriticalSection(customvarianttypelock);
   try
-{$endif}
     for i:=0 to high(customvarianttypes) do
       if customvarianttypes[i]<>InvalidCustomVariantType then
         customvarianttypes[i].Free;
-{$ifdef FPC_HAS_FEATURE_THREADING}
   finally
     LeaveCriticalSection(customvarianttypelock);
   end;
-{$endif}
   UnSetSysVariantManager;
-{$ifdef FPC_HAS_FEATURE_THREADING}
   DoneCriticalSection(customvarianttypelock);
-{$endif}
 end.

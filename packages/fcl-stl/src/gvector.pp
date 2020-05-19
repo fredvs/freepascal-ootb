@@ -33,8 +33,7 @@ type
     procedure SetValue(Position: SizeUInt; const Value: T); inline;
     function GetValue(Position: SizeUInt): T; inline;
     function GetMutable(Position: SizeUInt): PT; inline;
-    function NewCapacity: SizeUInt;
-    procedure IncreaseCapacity;
+    procedure IncreaseCapacity; inline;
 
   const
     // todo: move these constants to implementation when
@@ -51,7 +50,6 @@ type
       function GetCurrent: T; inline;
     public
       constructor Create(AVector: TVector);
-      function GetEnumerator: TVectorEnumerator; inline;
       function MoveNext: Boolean; inline;
       property Current: T read GetCurrent;
     end;
@@ -83,11 +81,6 @@ implementation
 constructor TVector.TVectorEnumerator.Create(AVector: TVector);
 begin
   FVector := AVector;
-end;
-
-function TVector.TVectorEnumerator.GetEnumerator: TVectorEnumerator;
-begin
-  result:=self;
 end;
 
 function TVector.TVectorEnumerator.GetCurrent: T;
@@ -163,32 +156,12 @@ begin
   inc(FDataSize);
 end;
 
-function TVector.NewCapacity: SizeUInt;
-const
-  // if size is small, multiply by 2;
-  // if size bigger but <256M, inc by 1/8*size;
-  // otherwise inc by 1/16*size
-  cSizeSmall = 1*1024*1024;
-  cSizeBig = 256*1024*1024;
-var
-  DataSize:SizeUInt;
-begin
-  DataSize:=FCapacity*SizeOf(T);
-  if FCapacity=0 then
-    Result:=4
-  else
-  if DataSize<cSizeSmall then
-    Result:=FCapacity*2
-  else
-  if DataSize<cSizeBig then
-    Result:=FCapacity+FCapacity div 8
-  else
-    Result:=FCapacity+FCapacity div 16;
-end;
-
 procedure TVector.IncreaseCapacity();
 begin
-  FCapacity:=NewCapacity;
+  if FCapacity=0 then
+    FCapacity:=1
+  else
+    FCapacity:=FCapacity*2;
   SetLength(FData, FCapacity);
 end;
 
@@ -245,7 +218,7 @@ procedure TVector.Reserve(Num: SizeUInt);
 begin
   if(Num < FCapacity) then 
     exit
-  else if (Num <= NewCapacity) then 
+  else if(Num <= 2*FCapacity) then 
     IncreaseCapacity
   else begin 
     SetLength(FData, Num);

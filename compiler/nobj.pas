@@ -46,7 +46,6 @@ interface
         procedure prot_get_procdefs_recursive(ImplProt:TImplementedInterface;ProtDef:TObjectDef);
         procedure intf_optimize_vtbls;
         procedure intf_allocate_vtbls;
-        procedure generate_vmt_def;
       public
         constructor create(c:tobjectdef);
         procedure  generate_vmt;
@@ -57,10 +56,14 @@ interface
 implementation
 
     uses
+       SysUtils,
        globals,verbose,systems,
        node,
-       symbase,symtable,symconst,symtype,symcpu,
-       defcmp;
+       symbase,symtable,symconst,symtype,defcmp,
+       symcpu,
+       dbgbase,
+       wpobase
+       ;
 
 
 {*****************************************************************************
@@ -511,7 +514,6 @@ implementation
         hclass : tobjectdef;
         hashedid : THashedIDString;
         srsym      : tsym;
-        overload: boolean;
       begin
         result:=nil;
         hashedid.id:=name;
@@ -520,16 +522,11 @@ implementation
           begin
             srsym:=tsym(hclass.symtable.FindWithHash(hashedid));
             if assigned(srsym) and
-               (srsym.typ=procsym) and
-               ((hclass=_class) or
-                is_visible_for_object(srsym,_class)) then
+               (srsym.typ=procsym) then
               begin
-                overload:=false;
                 for i:=0 to Tprocsym(srsym).ProcdefList.Count-1 do
                   begin
                     implprocdef:=tprocdef(tprocsym(srsym).ProcdefList[i]);
-                    if po_overload in implprocdef.procoptions then
-                      overload:=true;
                     if (implprocdef.procsym=tprocsym(srsym)) and
                        (compare_paras(proc.paras,implprocdef.paras,cp_all,[cpo_ignorehidden,cpo_ignoreuniv])>=te_equal) and
                        (compare_defs(proc.returndef,implprocdef.returndef,nothingn)>=te_equal) and
@@ -550,10 +547,6 @@ implementation
                         exit;
                       end;
                   end;
-                { like with normal procdef resolution (in htypechk), stop if
-                  we encounter a proc without the overload directive }
-                if not overload then
-                  exit;
               end;
             hclass:=hclass.childof;
           end;
@@ -793,102 +786,6 @@ implementation
       end;
 
 
-    procedure TVMTBuilder.generate_vmt_def;
-      var
-        i: longint;
-        vmtdef: trecorddef;
-        systemvmt: tdef;
-        sym: tsym;
-        vmtdefname: TIDString;
-      begin
-        { these types don't have an actual VMT, we only use the other methods
-          in TVMTBuilder to determine duplicates/overrides }
-        if _class.objecttype in [
-           odt_helper,
-           odt_objcclass,
-           odt_objccategory,
-           odt_objcprotocol,
-           odt_javaclass,
-           odt_interfacecom_property,
-           odt_interfacecom_function,
-           odt_interfacejava] then
-         exit;
-
-        { don't generate VMT for generics (only use duplicates/overrides detection) }
-        { Note: don't use is_generic here as we also need to check nested non-
-                generic classes }
-        if df_generic in _class.defoptions then
-          exit;
-
-        { todo in the future }
-        if _class.objecttype = odt_cppclass then
-          exit;
-
-        { the VMT definition may already exist in case of generics }
-        vmtdefname:=internaltypeprefixName[itp_vmtdef]+_class.mangledparaname;
-        if assigned(try_search_current_module_type(vmtdefname)) then
-          exit;
-        { create VMT type definition }
-        vmtdef:=crecorddef.create_global_internal(
-          vmtdefname,
-          0,
-          target_info.alignment.recordalignmin,
-          target_info.alignment.maxCrecordalign);
-        { standard VMT fields }
-        case _Class.objecttype of
-          odt_class:
-            begin
-              systemvmt:=search_system_type('TVMT').typedef;
-              if not assigned(systemvmt) then
-                Message1(cg_f_internal_type_not_found,'TVMT');
-
-              { does the TVMT type look like we expect? (so that this code is
-                easily triggered in case the definition of the VMT would
-                change) }
-              if (systemvmt.typ<>recorddef) or
-                 (trecorddef(systemvmt).symtable.SymList.count<>27) then
-                Message1(cg_f_internal_type_does_not_match,'TVMT');
-              { system.tvmt is a record that represents the VMT of TObject,
-                including its virtual methods. We only want the non-method
-                fields, as the methods will be added automatically based on
-                the VMT we generated here only add the 12 first fields }
-              for i:=0 to 11 do
-                begin
-                  sym:=tsym(trecorddef(systemvmt).symtable.SymList[i]);
-                  if sym.typ in [procsym,propertysym] then
-                    continue;
-                  if sym.typ<>fieldvarsym then
-                    internalerror(2015052602);
-                  vmtdef.add_field_by_def('',tfieldvarsym(sym).vardef);
-                end;
-            end;
-           odt_interfacecom,odt_interfacecorba,odt_dispinterface:
-             { nothing }
-             ;
-          odt_object:
-            begin
-              { size, -size, parent vmt [, dmt ] (same names as for class) }
-              vmtdef.add_field_by_def('vInstanceSize',sizesinttype);
-              vmtdef.add_field_by_def('vInstanceSize2',sizesinttype);
-              vmtdef.add_field_by_def('vParent',voidpointertype);
-{$ifdef WITHDMT}
-              vmtdef.add_field_by_def('',voidpointertype);
-{$endif WITHDMT}
-            end;
-          else
-            internalerror(2015052605);
-        end;
-
-        { now add the methods }
-        for i:=0 to _class.vmtentries.count-1 do
-          vmtdef.add_field_by_def('',
-            cprocvardef.getreusableprocaddr(pvmtentry(_class.vmtentries[i])^.procdef)
-          );
-        { the VMT ends with a nil pointer }
-        vmtdef.add_field_by_def('',voidcodepointertype);
-      end;
-
-
     procedure TVMTBuilder.generate_vmt;
       var
         i : longint;
@@ -932,7 +829,7 @@ implementation
             { Allocate interface tables }
             intf_allocate_vtbls;
           end;
-        generate_vmt_def;
+
         current_structdef:=old_current_structdef;
       end;
 

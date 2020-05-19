@@ -33,8 +33,6 @@
          argc <--- esp
 }
 
-{$asmmode gas}
-
 var
   libc_environ: pchar; external name '__environ';
   libc_fpu_control: word; external name '__fpu_control';
@@ -44,7 +42,7 @@ var
 
   fpc_ret,fpc_ret_rbp : pointer;
 
-procedure libc_atexit; external name 'atexit';
+procedure libc_atexit; external name '__libc_atexit';
 procedure libc_exit; external name '__libc_exit';
 procedure libc_init; external name '__libc_init';
 procedure libc_setfpucw; external name '__setfpucw';
@@ -53,58 +51,8 @@ procedure libc_start_main; external name '__libc_start_main';
 procedure gmon_monstartup; external name 'monstartup';
 procedure gmon_mcleanup; external name '_mcleanup';
 
-procedure _FPC_libc_start; forward;
-procedure _FPC_libc_haltproc(e:longint); forward;
-
- 
-procedure main_stub; assembler; nostackframe;
-  asm
-    { save return address }
-    popq    %rax
-
-    // stack alignment
-    pushq	%rax
-
-    movq    %rax,fpc_ret(%rip)
-    movq    %rbp,fpc_ret_rbp(%rip)
-    pushq   %rax
-
-    { Initialize gmon }
-    movq    _etext@GOTPCREL(%rip),%rsi
-    movq    _FPC_libc_start@GOTPCREL(%rip),%rdi
-    call    gmon_monstartup@PLT
-
-    movq    gmon_mcleanup@GOTPCREL(%rip),%rdi
-    call    libc_atexit@PLT
-
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    movq    SysInitEntryInformation@GOTPCREL(%rip),%rdi
-
-    { Save initial stackpointer }
-    movq    %rsp,TEntryInformation.OS.stkptr(%rdi)
-
-    { store stack length }
-    movq    StackLength@GOTPCREL(%rip),%rax
-    movq    %rax,TEntryInformation.OS.stklen(%rdi)
-
-    { store pointer to haltproc }
-    movq    _FPC_libc_haltproc@GOTPCREL(%rip),%rax
-    movq    %rax,TEntryInformation.OS.haltproc(%rdi)
-
-    xorq    %rbp,%rbp
-    call    SysEntry@PLT
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    { Save initial stackpointer }
-    movq    initialstkptr@GOTPCREL(%rip),%rax
-    movq    %rsp,(%rax)
-
-    { start the program }
-    xorq    %rbp,%rbp
-    call    PASCALMAIN@PLT
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    hlt
-  end;
-
+procedure PASCALMAIN; external name 'PASCALMAIN';
+procedure main_stub; forward;
 
 procedure ini_dummy;
   begin
@@ -114,7 +62,7 @@ procedure ini_dummy;
                           C library start/halt
  ******************************************************************************}
 
- procedure _FPC_libc_start; assembler; nostackframe; public name '_start';
+procedure _FPC_libc_start; assembler; nostackframe; public name '_start';
   asm
     { Clear the frame pointer.  The ABI suggests this be done, to mark
      the outermost frame obviously.  }
@@ -139,16 +87,6 @@ procedure ini_dummy;
     popq %rsi               { Pop the argument count.  }
     movq %rsp, %rdx         { argv starts just at the current stack top.  }
 
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-    movq SysInitEntryInformation@GOTPCREL(%rip),%rcx
-
-    { argc is longint in EntryInformation, thus use %edi register }
-    movl %esi,TEntryInformation.OS.argc(%rcx)
-    movq %rsp,TEntryInformation.OS.argv(%rcx)
-    leaq 8(,%rsi,8),%rax
-    addq %rsp,%rax
-    movq %rax,TEntryInformation.OS.envp(%rcx)
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     movq operatingsystem_parameter_argc@GOTPCREL(%rip),%rax
     movq %rsi,(%rax)
     movq operatingsystem_parameter_argv@GOTPCREL(%rip),%rax
@@ -157,7 +95,6 @@ procedure ini_dummy;
     addq %rsp,%rax
     movq operatingsystem_parameter_envp@GOTPCREL(%rip),%rcx
     movq %rax,(%rcx)
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
 
     { Align the stack to a 16 byte boundary to follow the ABI.  }
     andq  $0xfffffffffffffff0, %rsp
@@ -197,10 +134,40 @@ procedure ini_dummy;
 *)
   end;
 
-procedure _FPC_libc_haltproc(e:longint); assembler; nostackframe; public name '_haltproc';
+procedure main_stub; assembler; nostackframe;
   asm
-    movl %edi,%eax
-    popq    %rdx                    { keep stack aligned }
+    { save return address }
+    popq    %rax
+
+    // stack alignment
+    pushq	%rax
+
+    movq    %rax,fpc_ret(%rip)
+    movq    %rbp,fpc_ret_rbp(%rip)
+    pushq   %rax
+
+    { Initialize gmon }
+    movq    _etext@GOTPCREL(%rip),%rsi
+    movq    _FPC_libc_start@GOTPCREL(%rip),%rdi
+    call    gmon_monstartup@PLT
+
+    movq    gmon_mcleanup@GOTPCREL(%rip),%rdi
+    call    libc_atexit@PLT
+    { Save initial stackpointer }
+    movq    initialstkptr(%rip),%rax
+    movq    %rsp,(%rax)
+
+    { start the program }
+    xorq    %rbp,%rbp
+    call    PASCALMAIN@PLT
+    hlt
+  end;
+
+procedure _FPC_libc_haltproc; assembler; nostackframe; public name '_haltproc';
+  asm
+    movq      ExitCode@GOTPCREL(%rip),%rax
+    movzwq    (%rax),%rax { load and save exitcode }
+
     movq fpc_ret(%rip),%rdx         { return to libc }
     movq fpc_ret_rbp(%rip),%rbp
     pushq %rdx

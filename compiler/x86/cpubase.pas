@@ -34,7 +34,8 @@ unit cpubase;
 interface
 
 uses
-  globals,
+  cutils,cclasses,
+  globtype,globals,
   cgbase
   ;
 
@@ -54,12 +55,6 @@ uses
 
       { This should define the array of instructions as string }
         op2strtable=array[tasmop] of string[16];
-
-{$ifdef i8086}
-      ImmInt = SmallInt;
-{$else i8086}
-      ImmInt = Longint;
-{$endif i8086}
 
     const
       { First value of opcode enumeration }
@@ -144,13 +139,7 @@ uses
       RS_XMM14       = $0e;
       RS_XMM15       = $0f;
 
-{$if defined(x86_64)}
-      RS_RFLAGS      = $06;
-{$elseif defined(i386)}
-      RS_EFLAGS      = $06;
-{$elseif defined(i8086)}
-      RS_FLAGS       = $06;
-{$endif}
+      RS_FLAGS       = $07;
 
       { Number of first imaginary register }
 {$ifdef x86_64}
@@ -224,16 +213,8 @@ uses
 {$endif}
       );
 
-{$if defined(x86_64)}
-      RS_DEFAULTFLAGS = RS_RFLAGS;
-      NR_DEFAULTFLAGS = NR_RFLAGS;
-{$elseif defined(i386)}
-      RS_DEFAULTFLAGS = RS_EFLAGS;
-      NR_DEFAULTFLAGS = NR_EFLAGS;
-{$elseif defined(i8086)}
       RS_DEFAULTFLAGS = RS_FLAGS;
       NR_DEFAULTFLAGS = NR_FLAGS;
-{$endif}
 
    type
       totherregisterset = set of tregisterindex;
@@ -293,33 +274,6 @@ uses
 
     {$i cpubase.inc}
 
-const
-{$ifdef x86_64}
-  topsize2memsize: array[topsize] of integer =
-    (0, 8,16,32,64,8,8,16,8,16,32,
-     16,32,64,
-     16,32,64,0,0,
-     64,
-     0,0,0,
-     80,
-     128,
-     256,
-     512
-    );
-{$else}
-topsize2memsize: array[topsize] of integer =
-  (0, 8,16,32,64,8,8,16,
-   16,32,64,
-   16,32,64,0,0,
-   64,
-   0,0,0,
-   80,
-   128,
-   256,
-   512
-  );
-{$endif}
-
 {*****************************************************************************
                                   Helpers
 *****************************************************************************}
@@ -335,7 +289,6 @@ topsize2memsize: array[topsize] of integer =
     function std_regnum_search(const s:string):Tregister;
     function std_regname(r:Tregister):string;
     function dwarf_reg(r:tregister):shortint;
-    function dwarf_reg_no_error(r:tregister):shortint;
 
     function inverse_cond(const c: TAsmCond): TAsmCond; {$ifdef USEINLINE}inline;{$endif USEINLINE}
     function conditions_equal(const c1, c2: TAsmCond): boolean; {$ifdef USEINLINE}inline;{$endif USEINLINE}
@@ -343,25 +296,10 @@ topsize2memsize: array[topsize] of integer =
     { checks whether two segment registers are normally equal in the current memory model }
     function segment_regs_equal(r1,r2:tregister):boolean;
 
-    { checks whether the specified op is an x86 string instruction (e.g. cmpsb, movsd, scasw, etc.) }
-    function is_x86_string_op(op: TAsmOp): boolean;
-    { checks whether the specified op is an x86 parameterless string instruction
-      (e.g. returns true for movsb, cmpsw, etc, but returns false for movs, cmps, etc.) }
-    function is_x86_parameterless_string_op(op: TAsmOp): boolean;
-    { checks whether the specified op is an x86 parameterized string instruction
-      (e.g. returns true for movs, cmps, etc, but returns false for movsb, cmpsb, etc.) }
-    function is_x86_parameterized_string_op(op: TAsmOp): boolean;
-    function x86_parameterized_string_op_param_count(op: TAsmOp): shortint;
-    function x86_param2paramless_string_op(op: TAsmOp): TAsmOp;
-    function get_x86_string_op_size(op: TAsmOp): TOpSize;
-    { returns the 0-based operand number (intel syntax) of the ds:[si] param of
-      a x86 string instruction }
-    function get_x86_string_op_si_param(op: TAsmOp):shortint;
-    { returns the 0-based operand number (intel syntax) of the es:[di] param of
-      a x86 string instruction }
-    function get_x86_string_op_di_param(op: TAsmOp):shortint;
-
 {$ifdef i8086}
+    { returns the next virtual register }
+    function GetNextReg(const r : TRegister) : TRegister;
+
     { return whether we need to add an extra FWAIT instruction before the given
       instruction, when we're targeting the i8087. This includes almost all x87
       instructions, but certain ones, which always have or have not a built in
@@ -372,7 +310,6 @@ topsize2memsize: array[topsize] of integer =
 implementation
 
     uses
-      globtype,
       rgbase,verbose;
 
     const
@@ -447,16 +384,10 @@ implementation
               else
                 internalerror(2009071902);
             end;
-          OS_M128,OS_MS128,OS_MF128,OS_MD128:
+          OS_M128,OS_MS128:
             cgsize2subreg:=R_SUBMMX;
-          OS_M256,OS_MS256,OS_MF256,OS_MD256:
+          OS_M256,OS_MS256:
             cgsize2subreg:=R_SUBMMY;
-          OS_M512,OS_MS512,OS_MF512,OS_MD512:
-            cgsize2subreg:=R_SUBMMZ;
-          OS_NO:
-            { error message should have been thrown already before, so avoid only
-              an internal error }
-            cgsize2subreg:=R_SUBNONE;
           else
             internalerror(200301231);
         end;
@@ -465,7 +396,7 @@ implementation
 
     function reg_cgsize(const reg: tregister): tcgsize;
       const subreg2cgsize:array[Tsubregister] of Tcgsize =
-            (OS_NO,OS_8,OS_8,OS_16,OS_32,OS_64,OS_NO,OS_NO,OS_NO,OS_F32,OS_F64,OS_NO,OS_M128,OS_M256,OS_M512,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO,OS_NO);
+            (OS_NO,OS_8,OS_8,OS_16,OS_32,OS_64,OS_NO,OS_NO,OS_NO,OS_F32,OS_F64,OS_NO,OS_M128,OS_M256);
       begin
         case getregtype(reg) of
           R_INTREGISTER :
@@ -496,7 +427,7 @@ implementation
     function reg2opsize(r:Tregister):topsize;
       const
         subreg2opsize : array[tsubregister] of topsize =
-          (S_NO,S_B,S_B,S_W,S_L,S_Q,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO);
+          (S_NO,S_B,S_B,S_W,S_L,S_Q,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO,S_NO);
       begin
         reg2opsize:=S_L;
         case getregtype(r) of
@@ -606,8 +537,7 @@ implementation
       var
         p : tregisterindex;
       begin
-        if (getregtype(r)=R_MMXREGISTER) or
-          ((getregtype(r)=R_MMREGISTER) and not(getsubreg(r) in [R_SUBMMX,R_SUBMMY])) then
+        if getregtype(r) in [R_MMREGISTER,R_MMXREGISTER] then
           r:=newreg(getregtype(r),getsupreg(r),R_SUBNONE);
         p:=findreg_by_number(r);
         if p<>0 then
@@ -640,11 +570,6 @@ implementation
         result:=regdwarf_table[findreg_by_number(r)];
         if result=-1 then
           internalerror(200603251);
-      end;
-
-    function dwarf_reg_no_error(r:tregister):shortint;
-      begin
-        result:=regdwarf_table[findreg_by_number(r)];
       end;
 
 
@@ -692,152 +617,14 @@ implementation
       end;
 
 
-    function is_x86_string_op(op: TAsmOp): boolean;
-      begin
-        case op of
-{$ifdef x86_64}
-          A_MOVSQ,
-          A_CMPSQ,
-          A_SCASQ,
-          A_LODSQ,
-          A_STOSQ,
-{$endif x86_64}
-          A_MOVSB,A_MOVSW,A_MOVSD,
-          A_CMPSB,A_CMPSW,A_CMPSD,
-          A_SCASB,A_SCASW,A_SCASD,
-          A_LODSB,A_LODSW,A_LODSD,
-          A_STOSB,A_STOSW,A_STOSD,
-          A_INSB, A_INSW, A_INSD,
-          A_OUTSB,A_OUTSW,A_OUTSD,
-          A_MOVS,A_CMPS,A_SCAS,A_LODS,A_STOS,A_INS,A_OUTS:
-            result:=true;
-          else
-            result:=false;
-        end;
-      end;
-
-
-    function is_x86_parameterless_string_op(op: TAsmOp): boolean;
-      begin
-        case op of
-{$ifdef x86_64}
-          A_MOVSQ,
-          A_CMPSQ,
-          A_SCASQ,
-          A_LODSQ,
-          A_STOSQ,
-{$endif x86_64}
-          A_MOVSB,A_MOVSW,A_MOVSD,
-          A_CMPSB,A_CMPSW,A_CMPSD,
-          A_SCASB,A_SCASW,A_SCASD,
-          A_LODSB,A_LODSW,A_LODSD,
-          A_STOSB,A_STOSW,A_STOSD,
-          A_INSB, A_INSW, A_INSD,
-          A_OUTSB,A_OUTSW,A_OUTSD:
-            result:=true;
-          else
-            result:=false;
-        end;
-      end;
-
-
-    function is_x86_parameterized_string_op(op: TAsmOp): boolean;
-      begin
-        case op of
-          A_MOVS,A_CMPS,A_SCAS,A_LODS,A_STOS,A_INS,A_OUTS:
-            result:=true;
-          else
-            result:=false;
-        end;
-      end;
-
-
-    function x86_parameterized_string_op_param_count(op: TAsmOp): shortint;
-      begin
-        case op of
-          A_MOVS,A_CMPS,A_INS,A_OUTS:
-            result:=2;
-          A_SCAS,A_LODS,A_STOS:
-            result:=1;
-          else
-            internalerror(2017101203);
-        end;
-      end;
-
-
-    function x86_param2paramless_string_op(op: TAsmOp): TAsmOp;
-      begin
-        case op of
-          A_MOVSB,A_MOVSW,A_MOVSD{$ifdef x86_64},A_MOVSQ{$endif}:
-            result:=A_MOVS;
-          A_CMPSB,A_CMPSW,A_CMPSD{$ifdef x86_64},A_CMPSQ{$endif}:
-            result:=A_CMPS;
-          A_SCASB,A_SCASW,A_SCASD{$ifdef x86_64},A_SCASQ{$endif}:
-            result:=A_SCAS;
-          A_LODSB,A_LODSW,A_LODSD{$ifdef x86_64},A_LODSQ{$endif}:
-            result:=A_LODS;
-          A_STOSB,A_STOSW,A_STOSD{$ifdef x86_64},A_STOSQ{$endif}:
-            result:=A_STOS;
-          A_INSB, A_INSW, A_INSD:
-            result:=A_INS;
-          A_OUTSB,A_OUTSW,A_OUTSD:
-            result:=A_OUTS;
-          else
-            internalerror(2017101201);
-        end;
-      end;
-
-
-    function get_x86_string_op_size(op: TAsmOp): TOpSize;
-      begin
-        case op of
-          A_MOVSB,A_CMPSB,A_SCASB,A_LODSB,A_STOSB,A_INSB,A_OUTSB:
-            result:=S_B;
-          A_MOVSW,A_CMPSW,A_SCASW,A_LODSW,A_STOSW,A_INSW,A_OUTSW:
-            result:=S_W;
-          A_MOVSD,A_CMPSD,A_SCASD,A_LODSD,A_STOSD,A_INSD,A_OUTSD:
-            result:=S_L;
-{$ifdef x86_64}
-          A_MOVSQ,A_CMPSQ,A_SCASQ,A_LODSQ,A_STOSQ:
-            result:=S_Q;
-{$endif x86_64}
-          else
-            internalerror(2017101202);
-        end;
-      end;
-
-
-    function get_x86_string_op_si_param(op: TAsmOp):shortint;
-      begin
-        case op of
-          A_MOVS,A_OUTS:
-            result:=1;
-          A_CMPS,A_LODS:
-            result:=0;
-          A_SCAS,A_STOS,A_INS:
-            result:=-1;
-          else
-            internalerror(2017101102);
-        end;
-      end;
-
-
-    function get_x86_string_op_di_param(op: TAsmOp):shortint;
-      begin
-        case op of
-          A_MOVS,A_SCAS,A_STOS,A_INS:
-            result:=0;
-          A_CMPS:
-            result:=1;
-          A_LODS,A_OUTS:
-            result:=-1;
-          else
-            internalerror(2017101202);
-        end;
-      end;
-
-
 {$ifdef i8086}
+    function GetNextReg(const r: TRegister): TRegister;
+      begin
+        if getsupreg(r)<first_int_imreg then
+          internalerror(2013051401);
+        result:=TRegister(longint(r)+1);
+      end;
+
     function requires_fwait_on_8087(op: TAsmOp): boolean;
       begin
         case op of

@@ -1,10 +1,9 @@
-{ $define USEEPIK}
 unit timer;
 
   interface
 
     uses
-       SysUtils{$ifdef USEEPIK},epiktimer{$endif USEEPIK};
+       SysUtils;
 
     var
        verbosetimer : boolean = true;
@@ -16,11 +15,7 @@ unit timer;
   implementation
 
     var
-{$ifdef USEEPIK}
-       et : TEpiktimer;
-{$else EPIKTIMER}
        stime,etime : cardinal;
-{$endif USEEPIK}
 
     function gt : cardinal;
 
@@ -39,49 +34,24 @@ unit timer;
     procedure start;
 
       begin
-{$ifdef USEEPIK}
-        et:=TEpikTimer.Create;
-        et.Start;
-{$else USEEPIK}
-        stime:=gt;
-{$endif USEEPIK}
+         stime:=gt;
       end;
 
     procedure stop;
 
       var
-{$ifdef USEEPIK}
-         e : extended;
-{$else USEEPIK}
          s : cardinal;
-{$endif USEEPIK}
 
       begin
-{$ifdef USEEPIK}
-         e:=et.elapsed;
-         et.Free;
-{$else USEEPIK}
          etime:=gt;
          s:=etime-stime;
-{$endif USEEPIK}
-         if verbosetimer then
-{$ifdef USEEPIK}
-           write(stderr,e:0:6,' Seconds');
-{$else USEEPIK}
-           write(stderr,s div 1000,'.',format('%.3d',[s mod 1000]),' Seconds');
-{$endif USEEPIK}
-      end;
+	 if verbosetimer then
+           write(stderr,s div 1000,'.',s mod 1000,' Seconds');
+     end;
 
-{$ifdef USEEPIK}
-    function MSec:cardinal;
-      begin
-        Msec:=round(et.elapsed*1000);
-      end;
-{$else USEEPIK}
     function MSec:cardinal;
       begin
         Msec:=etime-stime;
       end;
-{$endif USEEPIK}
 
 end.

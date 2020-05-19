@@ -83,13 +83,15 @@ end;
 Function TStrings.GetSkipLastLineBreak : Boolean;
 
 begin
-  Result:=not TrailingLineBreak;
+  CheckSpecialChars;
+  Result:=FSkipLastLineBreak;
 end;
 
 procedure TStrings.SetSkipLastLineBreak(const AValue : Boolean);
 
 begin
-  TrailingLineBreak:=not AValue;
+  CheckSpecialChars;
+  FSkipLastLineBreak:=AValue;
 end;
 
 Function TStrings.GetLBS : TTextLineBreakStyle;
@@ -108,19 +110,6 @@ procedure TStrings.SetDelimiter(c:Char);
 begin
   CheckSpecialChars;
   FDelimiter:=c;
-end;
-
-Procedure TStrings.SetEncoding(const AEncoding: TEncoding);
-begin
-  if (FEncoding<>nil) and not TEncoding.IsStandardEncoding(FEncoding) then
-    FEncoding.Free;
-
-  if TEncoding.IsStandardEncoding(AEncoding) then
-    FEncoding:=AEncoding
-  else if AEncoding<>nil then
-    FEncoding:=AEncoding.Clone
-  else
-    FEncoding:=nil;
 end;
 
 Function TStrings.GetDelimiter : Char;
@@ -160,8 +149,6 @@ begin
   FNameValueSeparator:=c;
 end;
 
-
-
 Function TStrings.GetNameValueSeparator :Char;
 begin
   CheckSpecialChars;
@@ -192,25 +179,6 @@ begin
   end;
 end;
 
-function TStrings.GetLineBreakCharLBS: string;
-begin
-  CheckSpecialChars;
-  if FLineBreak<>sLineBreak then
-    Result:=FLineBreak
-  else
-    Case FLBS of
-      tlbsLF   : Result:=#10;
-      tlbsCRLF : Result:=#13#10;
-      tlbsCR   : Result:=#13;
-    end;
-end;
-
-function TStrings.GetMissingNameValueSeparatorAction: TMissingNameValueSeparatorAction;
-begin
-  CheckSpecialChars;
-  Result:=FMissingNameValueSeparatorAction;
-end;
-
 
 Function TStrings.GetDelimitedText: string;
 
@@ -219,8 +187,7 @@ Var
   p : pchar;
   BreakChars : set of char;
   S : String;
-  doQuote : Boolean;
-    
+  
 begin
   CheckSpecialChars;
   result:='';
@@ -233,16 +200,11 @@ begin
   For i:=0 to count-1 do
     begin
     S:=Strings[i];
-    doQuote:=FAlwaysQuote;
-    If not DoQuote then
-      begin
-      p:=pchar(S);
-      //Quote strings that include BreakChars:
-      while not(p^ in BreakChars) do
-        inc(p);
-      DoQuote:=(p<>pchar(S)+length(S));  
-      end;
-    if DoQuote then
+    p:=pchar(S);
+    //Quote strings that include BreakChars:
+    while not(p^ in BreakChars) do
+     inc(p);
+    if (p<>pchar(S)+length(S)) then
       Result:=Result+QuoteString(S,QuoteChar)
     else
       Result:=Result+S;
@@ -259,7 +221,6 @@ procedure TStrings.GetNameValue(Index : Integer; Out AName,AValue : String);
 Var L : longint;
 
 begin
-  aName:='';
   CheckSpecialChars;
   AValue:=Strings[Index];
   L:=Pos(FNameValueSeparator,AValue);
@@ -269,18 +230,7 @@ begin
     System.Delete(AValue,1,L);
     end
   else
-    case FMissingNameValueSeparatorAction of
-      mnvaValue : ;
-      mnvaName :
-        begin
-        aName:=aValue;
-        aValue:='';
-        end;
-      mnvaEmpty :
-        aValue:='';
-      mnvaError :
-        Raise EStringListError.CreateFmt(SErrNoNameValuePairAt,[Index]);
-    end;
+    AName:='';
 end;
 
 function TStrings.ExtractName(const s:String):String;
@@ -295,159 +245,6 @@ begin
     Result:='';
 end;
 
-
-procedure TStrings.Filter(aFilter: TStringsFilterMethod; aList: TStrings);
-
-var
-  S : string;
-
-begin
-  for S in self do
-    if aFilter(S) then
-      aList.Add(S);
-end;
-
-
-procedure TStrings.ForEach(aCallback: TStringsForeachMethod);
-
-var
-  S : String;
-
-begin
-  for S in self do
-    aCallBack(S);
-end;
-
-
-procedure TStrings.ForEach(aCallback: TStringsForeachMethodEx);
-
-var
-  i: integer;
-
-begin
-  for i:=0 to Count-1 do
-    aCallBack(Strings[i],i);
-end;
-
-
-procedure TStrings.ForEach(aCallback: TStringsForeachMethodExObj);
-
-var
-  i: integer;
-
-begin
-  for i:=0 to Count-1 do
-    aCallback(Strings[i],i,Objects[i]);
-end;
-
-
-function TStrings.Filter(aFilter: TStringsFilterMethod): TStrings;
-
-begin
-  Result:=TStringsClass(Self.ClassType).Create;
-  try
-    Filter(aFilter,Result);
-  except
-    FreeAndNil(Result);
-    Raise;
-  end;
-end;
-
-procedure TStrings.Fill(const aValue: String; aStart, aEnd: Integer);
-var
-  i: integer;
-begin
-  if aEnd<0 then
-    aEnd:=Self.Count+aEnd;
-  if aEnd>=Count then
-    aEnd:=Count-1;
-  for i:=aStart to aEnd do
-    Strings[i]:=aValue;
-end;
-
-
-Procedure TStrings.Map(aMap: TStringsMapMethod; aList : TStrings);
-
-Var
-  S : String;
-
-begin
-  For S in self do
-    aList.Add(aMap(S));
-end;
-
-
-Function TStrings.Map(aMap: TStringsMapMethod) : TStrings;
-
-begin
-  Result:=TStringsClass(Self.ClassType).Create;
-  try
-    Map(aMap,Result);
-  except
-    FreeAndNil(Result);
-    Raise;
-  end;
-end;
-
-
-function TStrings.Reduce(aReduceMethod: TStringsReduceMethod; const startingValue: string): string;
-
-var
-  S : String;
-
-begin
-  Result:=startingValue;
-  for S in self do
-    Result:=aReduceMethod(Result, S);
-end;
-
-
-Function TStrings.Reverse : TStrings;
-
-begin
-  Result:=TStringsClass(Self.ClassType).Create;
-  try
-    Reverse(Result);
-  except
-    FreeAndNil(Result);
-    Raise;
-  end;
-end;
-
-
-Procedure TStrings.Reverse(aList : TStrings);
-
-Var
-  I : Integer;
-
-begin
-  for I:=Count-1 downto 0 do
-    aList.Add(Strings[i]);
-end;
-
-
-Procedure TStrings.Slice(fromIndex: integer; aList : TStrings);
-
-var
-  i: integer;
-
-begin
-  for i:=fromIndex to Count-1 do
-    aList.Add(Self[i]);
-end;
-
-Function TStrings.Slice(fromIndex: integer) :  TStrings;
-
-begin
-  Result:=TStringsClass(Self.ClassType).Create;
-  try
-    Slice(FromIndex,Result);
-  except
-    FreeAndNil(Result);
-    Raise;
-  end;
-end;
-
 function TStrings.GetName(Index: Integer): string;
 
 Var
@@ -455,26 +252,6 @@ Var
 
 begin
   GetNameValue(Index,Result,V);
-end;
-
-function TStrings.GetStrictDelimiter: Boolean;
-begin
-  Result:=soStrictDelimiter in FOptions;
-end;
-
-function TStrings.GetTrailingLineBreak: Boolean;
-begin
-  Result:=soTrailingLineBreak in FOptions;
-end;
-
-function TStrings.GetUseLocale: Boolean;
-begin
-  Result:=soUseLocale in FOptions;
-end;
-
-function TStrings.GetWriteBOM: Boolean;
-begin
-  Result:=soWriteBOM in FOptions;
 end;
 
 Function TStrings.GetValue(const Name: string): string;
@@ -529,25 +306,10 @@ end;
 
 
 Procedure TStrings.SetDelimitedText(const AValue: string);
-
+var i,j:integer;
+    aNotFirst:boolean;
 begin
-  CheckSpecialChars;
-  DoSetDelimitedText(aValue,True,StrictDelimiter,FQuoteChar,FDelimiter);
-end;
-
-Procedure TStrings.DoSetDelimitedText(const AValue: string; DoClear,aStrictDelimiter : Boolean; aQuoteChar,aDelimiter : Char);
-
-var
-  len,i,j: SizeInt;
-  aNotFirst:boolean;
-
-  Procedure AddQuoted;
-
-  begin
-    Add(StringReplace(Copy(AValue,i+1,j-i-1),aQuoteChar+aQuoteChar,aQuoteChar, [rfReplaceAll]));
-  end;
-
-begin
+ CheckSpecialChars;
  BeginUpdate;
 
  i:=1;
@@ -560,74 +322,73 @@ begin
  QuoteChars in the string must be repeated to distinguish them from the QuoteChars enclosing the string.
  }
  try
-  if DoClear then
-    Clear;
-  len:=length(AValue);
-  If aStrictDelimiter then
+  Clear;
+  If StrictDelimiter then
     begin
-    while i<=Len do begin
+    while i<=length(AValue) do begin
      // skip delimiter
-     if aNotFirst and (i<=len) and (AValue[i]=aDelimiter) then
-       inc(i);
+     if aNotFirst and (i<=length(AValue)) and (AValue[i]=FDelimiter) then inc(i);
 
      // read next string
-     if i<=len then begin
-      if AValue[i]=aQuoteChar then begin
+     if i<=length(AValue) then begin
+      if AValue[i]=FQuoteChar then begin
        // next string is quoted
        j:=i+1;
-       while (j<=len) and
-             ((AValue[j]<>aQuoteChar) or
-              ((j+1<=len) and (AValue[j+1]=aQuoteChar))) do
-        begin
-        if (j<=len) and (AValue[j]=aQuoteChar) then
-          inc(j,2)
-        else
-          inc(j);
-        end;
-       AddQuoted;
+       while (j<=length(AValue)) and
+             ( (AValue[j]<>FQuoteChar) or
+               ( (j+1<=length(AValue)) and (AValue[j+1]=FQuoteChar) ) ) do begin
+        if (j<=length(AValue)) and (AValue[j]=FQuoteChar) then inc(j,2)
+                                                          else inc(j);
+       end;
+       // j is position of closing quote
+       Add( StringReplace (Copy(AValue,i+1,j-i-1),
+                           FQuoteChar+FQuoteChar,FQuoteChar, [rfReplaceAll]));
        i:=j+1;
       end else begin
        // next string is not quoted; read until delimiter
        j:=i;
-       while (j<=len) and
-             (AValue[j]<>aDelimiter) do inc(j);
+       while (j<=length(AValue)) and
+             (AValue[j]<>FDelimiter) do inc(j);
        Add( Copy(AValue,i,j-i));
        i:=j;
       end;
      end else begin
       if aNotFirst then Add('');
      end;
+
      aNotFirst:=true;
     end;
     end
   else 
     begin
-    while i<=len do begin
+    while i<=length(AValue) do begin
      // skip delimiter
-     if aNotFirst and (i<=len) and (AValue[i]=aDelimiter) then inc(i);
+     if aNotFirst and (i<=length(AValue)) and (AValue[i]=FDelimiter) then inc(i);
 
      // skip spaces
-     while (i<=len) and (Ord(AValue[i])<=Ord(' ')) do inc(i);
+     while (i<=length(AValue)) and (Ord(AValue[i])<=Ord(' ')) do inc(i);
     
      // read next string
-     if i<=len then begin
-      if AValue[i]=aQuoteChar then begin
+     if i<=length(AValue) then begin
+      if AValue[i]=FQuoteChar then begin
        // next string is quoted
        j:=i+1;
-       while (j<=len) and
-             ( (AValue[j]<>aQuoteChar) or
-               ( (j+1<=len) and (AValue[j+1]=aQuoteChar) ) ) do begin
-        if (j<=len) and (AValue[j]=aQuoteChar) then inc(j,2)
+       while (j<=length(AValue)) and
+             ( (AValue[j]<>FQuoteChar) or
+               ( (j+1<=length(AValue)) and (AValue[j+1]=FQuoteChar) ) ) do begin
+        if (j<=length(AValue)) and (AValue[j]=FQuoteChar) then inc(j,2)
                                                           else inc(j);
        end;
-       AddQuoted;
+       // j is position of closing quote
+       Add( StringReplace (Copy(AValue,i+1,j-i-1),
+                           FQuoteChar+FQuoteChar,FQuoteChar, [rfReplaceAll]));
        i:=j+1;
       end else begin
        // next string is not quoted; read until control character/space/delimiter
        j:=i;
-       while (j<=len) and
+       while (j<=length(AValue)) and
              (Ord(AValue[j])>Ord(' ')) and
-             (AValue[j]<>aDelimiter) do inc(j);
+             (AValue[j]<>FDelimiter) do inc(j);
        Add( Copy(AValue,i,j-i));
        i:=j;
       end;
@@ -636,7 +397,7 @@ begin
      end;
 
      // skip spaces
-     while (i<=len) and (Ord(AValue[i])<=Ord(' ')) do inc(i);
+     while (i<=length(AValue)) and (Ord(AValue[i])<=Ord(' ')) do inc(i);
 
      aNotFirst:=true;
     end;
@@ -648,69 +409,27 @@ end;
 
 Procedure TStrings.SetCommaText(const Value: string);
 
-begin
-  CheckSpecialChars;
-  DoSetDelimitedText(Value,True,StrictDelimiter,'"',',');
-end;
+Var
+  C1,C2 : Char;
 
-procedure TStrings.SetMissingNameValueSeparatorAction(AValue: TMissingNameValueSeparatorAction);
 begin
   CheckSpecialChars;
-  FMissingNameValueSeparatorAction:=aValue;
+  C1:=Delimiter;
+  C2:=QuoteChar;
+  Delimiter:=',';
+  QuoteChar:='"';
+  Try
+    SetDelimitedText(Value);
+  Finally
+    Delimiter:=C1;
+    QuoteChar:=C2;
+  end;
 end;
 
 
 Procedure TStrings.SetStringsAdapter(const Value: IStringsAdapter);
 
 begin
-end;
-
-procedure TStrings.SetStrictDelimiter(AValue: Boolean);
-begin
-  if AValue then
-    Include(FOptions,soStrictDelimiter)
-  else
-    Exclude(FOptions,soStrictDelimiter);
-end;
-
-procedure TStrings.SetTrailingLineBreak(AValue: Boolean);
-begin
-  if AValue then
-    Include(FOptions,soTrailingLineBreak)
-  else
-    Exclude(FOptions,soTrailingLineBreak);
-end;
-
-procedure TStrings.SetUseLocale(AValue: Boolean);
-begin
-  if AValue then
-    Include(FOptions,soUseLocale)
-  else
-    Exclude(FOptions,soUseLocale);
-end;
-
-
-procedure TStrings.SetWriteBOM(AValue: Boolean);
-begin
-  if AValue then
-    Include(FOptions,soWriteBOM)
-  else
-    Exclude(FOptions,soWriteBOM);
-end;
-
-
-
-Procedure TStrings.SetDefaultEncoding(const ADefaultEncoding: TEncoding);
-begin
-  if (FDefaultEncoding<>nil) and not TEncoding.IsStandardEncoding(FDefaultEncoding) then
-    FDefaultEncoding.Free;
-
-  if TEncoding.IsStandardEncoding(ADefaultEncoding) then
-    FDefaultEncoding:=ADefaultEncoding
-  else if ADefaultEncoding<>nil then
-    FDefaultEncoding:=ADefaultEncoding.Clone
-  else
-    FDefaultEncoding:=TEncoding.Default;
 end;
 
 
@@ -738,13 +457,6 @@ begin
   for i := 0 to Count - 1 do
     Writer.WriteString(Strings[i]);
   Writer.WriteListEnd;
-end;
-
-
-
-function TStrings.CompareStrings(const s1,s2 : string) : Integer;
-begin
-  Result := DoCompareText(s1, s2);
 end;
 
 
@@ -796,12 +508,20 @@ end;
 Function TStrings.GetTextStr: string;
 
 Var P : Pchar;
-    I,L,NLS : SizeInt;
+    I,L,NLS : Longint;
     S,NL : String;
 
 begin
-  NL:=GetLineBreakCharLBS;
+  CheckSpecialChars;
   // Determine needed place
+  if FLineBreak<>sLineBreak then
+    NL:=FLineBreak
+  else
+    Case FLBS of
+      tlbsLF   : NL:=#10;
+      tlbsCRLF : NL:=#13#10;
+      tlbsCR   : NL:=#13;
+    end;
   L:=0;
   NLS:=Length(NL);
   For I:=0 to count-1 do
@@ -854,101 +574,67 @@ begin
   // Empty.
 end;
 
-Class Function TStrings.GetNextLine (Const Value : String; Var S : String; Var P : SizeInt) : Boolean;
+Class Function TStrings.GetNextLine (Const Value : String; Var S : String; Var P : Integer) : Boolean;
 
-var
-  LengthOfValue: SizeInt;
-  StartPos, FuturePos: SizeInt;
-
-begin
-  LengthOfValue := Length(Value);
-  StartPos := P;
-  if (StartPos <= 0) or (StartPos > LengthOfValue) then // True for LengthOfValue <= 0
-    begin
-    S := '';
-    Exit(False);
-    end;
-  FuturePos := StartPos;
-  while (FuturePos <= LengthOfValue) and not (Value[FuturePos] in [#10, #13]) do
-    Inc(FuturePos);
-  // If we use S := Copy(Value, StartPos, FuturePos - StartPos); then compiler
-  // generate TempS := Copy(...); S := TempS to eliminate side effects and
-  // implicit "try finally" for TempS finalization
-  // When we use SetString then no TempS, no try finally generated,
-  // but we must check case when Value and S is same (side effects)
-  if Pointer(S) = Pointer(Value) then
-    System.Delete(S, FuturePos, High(FuturePos))
-  else
-    begin
-    SetString(S, @Value[StartPos], FuturePos - StartPos);
-    if (FuturePos <= LengthOfValue) and (Value[FuturePos] = #13) then
-      Inc(FuturePos);
-    if (FuturePos <= LengthOfValue) and (Value[FuturePos] = #10) then
-      Inc(FuturePos);
-    end;
-  P := FuturePos;
-  Result := True;
-end;
-
-Function TStrings.GetNextLineBreak (Const Value : String; Var S : String; Var P : SizeInt) : Boolean;
-
-var
-  StartPos, FuturePos: SizeInt;
+Var 
+  PS : PChar;
+  IP,L : Integer;
   
 begin
-  StartPos := P;
-  if (StartPos <= 0) or (StartPos > Length(Value)) then // True for Length <= 0
+  L:=Length(Value);
+  S:='';
+  Result:=False;
+  If ((L-P)<0) then 
+    exit;
+  if ((L-P)=0) and (not (value[P] in [#10,#13])) Then
+    Begin
+      s:=value[P];
+      inc(P);
+      Exit(True);
+    End;
+  PS:=PChar(Value)+P-1;
+  IP:=P;
+  While ((L-P)>=0) and (not (PS^ in [#10,#13])) do 
     begin
-    S := '';
-    Exit(False);
+    P:=P+1;
+    Inc(PS);
     end;
-  FuturePos := Pos(FLineBreak, Value, StartPos); // Use PosEx in old RTL
-  // Why we don't use Copy but use SetString read in GetNextLine
-  if FuturePos = 0 then // No line breaks
-    begin
-    FuturePos := Length(Value) + 1;
-    if Pointer(S) = Pointer(Value) then
-      // Nothing to do
-    else
-      SetString(S, @Value[StartPos], FuturePos - StartPos)
-    end
-  else
-    if Pointer(S) = Pointer(Value) then
-      System.Delete(S, FuturePos, High(FuturePos))
-    else
-      begin
-      SetString(S, @Value[StartPos], FuturePos - StartPos);
-      Inc(FuturePos, Length(FLineBreak));
-      end;
-  P := FuturePos;
-  Result := True;
+  SetLength (S,P-IP);
+  System.Move (Value[IP],Pointer(S)^,P-IP);
+  If (P<=L) and (Value[P]=#13) then 
+    Inc(P);
+  If (P<=L) and (Value[P]=#10) then
+    Inc(P); // Point to character after #10(#13)
+  Result:=True;
 end;
 
-{$IF (SizeOf(Integer) < SizeOf(SizeInt)) }
-class function TStrings.GetNextLine(const Value: string; var S: string; var P: Integer) : Boolean;
-var
-  LP: SizeInt;
-begin
-  LP := P;
-  Result := GetNextLine(Value, S, LP);
-  P := LP;
-end;
+Function TStrings.GetNextLineBreak (Const Value : String; Var S : String; Var P : Integer) : Boolean;
 
-function TStrings.GetNextLineBreak(const Value: string; var S: string; var P: Integer) : Boolean;
-var
-  LP: SizeInt;
+Var
+  PS,PC,PP : PChar;
+  IP,L : Integer;
+
 begin
-  LP := P;
-  Result := GetNextLineBreak(Value, S, LP);
-  P := LP;
+  S:='';
+  Result:=False;
+  If ((Length(Value)-P)<0) then
+    exit;
+  PS:=@Value[P];
+  PC:=PS;
+  PP:=AnsiStrPos(PS,PChar(FLineBreak));
+  // Stop on #0.
+  While (PC^<>#0) and (PC<>PP) do
+    Inc(PC);
+  P:=P+(PC-PS)+Length(FLineBreak);
+  SetString(S,PS,PC-PS);
+  Result:=True;
 end;
-{$IFEND}
 
 Procedure TStrings.DoSetTextStr(const Value: string; DoClear : Boolean);
 
 Var
   S : String;
-  P : SizeInt;
+  P : Integer;
 
 begin
   Try
@@ -983,25 +669,6 @@ begin
   DoSetTextStr(S,False);
 end;
 
-procedure TStrings.AddCommaText(const S: String);
-
-begin
-  DoSetDelimitedText(S,False,StrictDelimiter,'"',',');
-end;
-
-procedure TStrings.AddDelimitedText(const S: String; ADelimiter: Char; AStrictDelimiter: Boolean);
-
-begin
-  CheckSpecialChars;
-  DoSetDelimitedText(S,False,AStrictDelimiter,FQuoteChar,ADelimiter);
-end;
-
-procedure TStrings.AddDelimitedText(const S: String);
-begin
-  CheckSpecialChars;
-  DoSetDelimitedText(S,False,StrictDelimiter,FQuoteChar,FDelimiter);
-end;
-
 Procedure TStrings.SetUpdateState(Updating: Boolean);
 
 begin
@@ -1009,62 +676,14 @@ begin
 end;
 
 
+
 destructor TSTrings.Destroy;
 
 begin
-  if (FEncoding<>nil) and not TEncoding.IsStandardEncoding(FEncoding) then
-    FreeAndNil(FEncoding);
-  if (FDefaultEncoding<>nil) and not TEncoding.IsStandardEncoding(FDefaultEncoding) then
-    FreeAndNil(FDefaultEncoding);
   inherited destroy;
 end;
 
-function TStrings.ToObjectArray: TObjectDynArray;
 
-begin
-  Result:=ToObjectArray(0,Count-1);
-end;
-
-function TStrings.ToObjectArray(aStart,aEnd : Integer): TObjectDynArray;
-Var
-  I : Integer;
-
-begin
-  Result:=Nil;
-  if aStart>aEnd then exit;
-  SetLength(Result,aEnd-aStart+1);
-  For I:=aStart to aEnd do
-    Result[i-aStart]:=Objects[i];
-end;
-
-function TStrings.ToStringArray: TStringDynArray;
-
-begin
-  Result:=ToStringArray(0,Count-1);
-end;
-
-function TStrings.ToStringArray(aStart,aEnd : Integer): TStringDynArray;
-
-Var
-  I : Integer;
-
-begin
-  Result:=Nil;
-  if aStart>aEnd then exit;
-  SetLength(Result,aEnd-aStart+1);
-  For I:=aStart to aEnd do
-    Result[i-aStart]:=Strings[i];
-end;
-
-
-constructor TStrings.Create;
-begin
-  inherited Create;
-  FDefaultEncoding:=TEncoding.Default;
-  FEncoding:=nil;
-  FOptions := [soTrailingLineBreak,soUseLocale,soPreserveBOM];
-  FAlwaysQuote:=False;
-end;
 
 Function TStrings.Add(const S: string): Integer;
 
@@ -1093,16 +712,6 @@ begin
   Result:=AddObject(Format(Fmt,Args),AObject);
 end;
 
-function TStrings.AddPair(const AName, AValue: string): TStrings;
-begin
-  Result:=AddPair(AName,AValue,Nil);
-end;
-
-function TStrings.AddPair(const AName, AValue: string; AObject: TObject): TStrings;
-begin
-  Result := Self;
-  AddObject(Concat(AName, NameValueSeparator, AValue), AObject);
-end;
 
 Procedure TStrings.Append(const S: string);
 
@@ -1114,16 +723,13 @@ end;
 
 Procedure TStrings.AddStrings(TheStrings: TStrings; ClearFirst : Boolean);
 
-Var Runner : longint;
+
 begin
   beginupdate;
   try
     if ClearFirst then
       Clear;
-    if Count + TheStrings.Count > Capacity then
-      Capacity := Count + TheStrings.Count;
-    For Runner:=0 to TheStrings.Count-1 do
-      self.AddObject (Thestrings[Runner],TheStrings.Objects[Runner]);
+    AddStrings(TheStrings);
   finally
     EndUpdate;
   end;
@@ -1131,43 +737,34 @@ end;
 
 Procedure TStrings.AddStrings(TheStrings: TStrings);
 
+Var Runner : longint;
 begin
-  AddStrings(TheStrings, False);
+  For Runner:=0 to TheStrings.Count-1 do
+    self.AddObject (Thestrings[Runner],TheStrings.Objects[Runner]);
 end;
 
 Procedure TStrings.AddStrings(const TheStrings: array of string);
 
+Var Runner : longint;
 begin
-  AddStrings(TheStrings, False);
+  if Count + High(TheStrings)+1 > Capacity then
+    Capacity := Count + High(TheStrings)+1;
+  For Runner:=Low(TheStrings) to High(TheStrings) do
+    self.Add(Thestrings[Runner]);
 end;
 
 Procedure TStrings.AddStrings(const TheStrings: array of string; ClearFirst : Boolean);
 
-Var Runner : longint;
+
 begin
   beginupdate;
   try
     if ClearFirst then
       Clear;
-    if Count + High(TheStrings)+1 > Capacity then
-      Capacity := Count + High(TheStrings)+1;
-    For Runner:=Low(TheStrings) to High(TheStrings) do
-      self.Add(Thestrings[Runner]);
+    AddStrings(TheStrings);
   finally
     EndUpdate;
   end;
-end;
-
-procedure TStrings.SetStrings(TheStrings: TStrings);
-
-begin
-  AddStrings(TheStrings,True);
-end;
-
-procedure TStrings.SetStrings(TheStrings: array of string);
-
-begin
-  AddStrings(TheStrings,True);
 end;
 
 Procedure TStrings.Assign(Source: TPersistent);
@@ -1188,9 +785,6 @@ begin
       FNameValueSeparator:=S.FNameValueSeparator;
       FLBS:=S.FLBS;
       FLineBreak:=S.FLineBreak;
-      FOptions:=S.FOptions;
-      DefaultEncoding:=S.DefaultEncoding;
-      SetEncoding(S.Encoding);
       AddStrings(S);
     finally
       EndUpdate;
@@ -1283,29 +877,13 @@ end;
 
 Function TStrings.DoCompareText(const s1,s2 : string) : PtrInt;
   begin
-    if UseLocale then
-      result:=AnsiCompareText(s1,s2)
-    else
-      result:=CompareText(s1,s2);
+    result:=CompareText(s1,s2);
   end;
 
 
 Function TStrings.IndexOf(const S: string): Integer;
 begin
   Result:=0;
-  While (Result<Count) and (DoCompareText(Strings[Result],S)<>0) do Result:=Result+1;
-  if Result=Count then Result:=-1;
-end;
-
-function TStrings.IndexOf(const S: string; aStart: Integer): Integer;
-begin
-  if aStart<0 then
-    begin
-    aStart:=Count+aStart;
-    if aStart<0 then
-      aStart:=0;
-    end;
-  Result:=aStart;
   While (Result<Count) and (DoCompareText(Strings[Result],S)<>0) do Result:=Result+1;
   if Result=Count then Result:=-1;
 end;
@@ -1346,87 +924,38 @@ begin
   Objects[Index]:=AObject;
 end;
 
-function TStrings.LastIndexOf(const S: string): Integer;
 
-begin
-  Result:=LastIndexOf(S,Count-1);
-end;
-
-function TStrings.LastIndexOf(const S: string; aStart : Integer): Integer;
-begin
-  if aStart<0 then
-    begin
-    aStart:=Count+aStart;
-    if aStart<0 then
-      aStart:=0;
-    end;
-  Result:=aStart;
-  if Result>=Count-1 then
-    Result:=Count-1;
-  While (Result>=0) and (DoCompareText(Strings[Result],S)<>0) do
-    Result:=Result-1;
-end;
 
 Procedure TStrings.LoadFromFile(const FileName: string);
-
-begin
-  LoadFromFile(FileName,False)
-end;
-
-Procedure TStrings.LoadFromFile(const FileName: string; IgnoreEncoding : Boolean);
-Var
-  TheStream : TFileStream;
-begin
-  TheStream:=TFileStream.Create(FileName,fmOpenRead or fmShareDenyWrite);
-  try
-    LoadFromStream(TheStream, IgnoreEncoding);
-  finally
-    TheStream.Free;
-  end;
-end;
-
-
-
-Procedure TStrings.LoadFromFile(const FileName: string; AEncoding: TEncoding);
 Var
         TheStream : TFileStream;
 begin
   TheStream:=TFileStream.Create(FileName,fmOpenRead or fmShareDenyWrite);
   try
-    LoadFromStream(TheStream,AEncoding);
+    LoadFromStream(TheStream);
   finally
     TheStream.Free;
   end;
 end;
 
+
+
 Procedure TStrings.LoadFromStream(Stream: TStream);
-
-begin
-  LoadFromStream(Stream,False);
-end;
-
-Const
-  LoadBufSize = 1024;
-  LoadMaxGrow = MaxInt Div 2;
-
-Procedure TStrings.LoadFromStream(Stream: TStream; IgnoreEncoding : Boolean);
 {
    Borlands method is no good, since a pipe for
    instance doesn't have a size.
    So we must do it the hard way.
 }
+Const
+  BufSize = 1024;
+  MaxGrow = 1 shl 29;
 
 Var
-  Buffer : AnsiString;
-  BufLen : SizeInt;
-  BytesRead, I, BufDelta : Longint;
-
+  Buffer     : AnsiString;
+  BytesRead,
+  BufLen,
+  I,BufDelta     : Longint;
 begin
-  if not IgnoreEncoding then
-    begin
-    LoadFromStream(Stream,Nil);
-    Exit;
-    end;
   // reread into a buffer
   beginupdate;
   try
@@ -1434,60 +963,16 @@ begin
     BufLen:=0;
     I:=1;
     Repeat
-      BufDelta:=LoadBufSize*I;
+      BufDelta:=BufSize*I;
       SetLength(Buffer,BufLen+BufDelta);
       BytesRead:=Stream.Read(Buffer[BufLen+1],BufDelta);
       inc(BufLen,BufDelta);
-      If I<LoadMaxGrow then
+      If I<MaxGrow then
         I:=I shl 1;
     Until BytesRead<>BufDelta;
     SetLength(Buffer, BufLen-BufDelta+BytesRead);
     SetTextStr(Buffer);
     SetLength(Buffer,0);
-  finally
-    EndUpdate;
-  end;
-  if soPreserveBOM in FOptions then
-    WriteBOM:=False;
-end;
-
-
-Procedure TStrings.LoadFromStream(Stream: TStream; AEncoding: TEncoding);
-{
-   Borlands method is no good, since a pipe for
-   instance doesn't have a size.
-   So we must do it the hard way.
-}
-
-Var
-  Buffer : TBytes;
-  T : string;
-  BufLen : SizeInt;
-  BytesRead, I, BufDelta, PreambleLength : Longint;
-
-begin
-  // reread into a buffer
-  beginupdate;
-  try
-    SetLength(Buffer,0);
-    BufLen:=0;
-    I:=1;
-    Repeat
-      BufDelta:=LoadBufSize*I;
-      SetLength(Buffer,BufLen+BufDelta);
-      BytesRead:=Stream.Read(Buffer[BufLen],BufDelta);
-      inc(BufLen,BufDelta);
-      If I<LoadMaxGrow then
-        I:=I shl 1;
-    Until BytesRead<>BufDelta;
-    SetLength(Buffer,BufLen-BufDelta+BytesRead);
-    PreambleLength:=TEncoding.GetBufferEncoding(Buffer,AEncoding,FDefaultEncoding);
-    T:=AEncoding.GetAnsiString(Buffer,PreambleLength,Length(Buffer)-PreambleLength);
-    if soPreserveBOM in FOptions then
-      WriteBOM:=PreambleLength>0;
-    SetEncoding(AEncoding);
-    SetLength(Buffer,0);
-    SetTextStr(T);
   finally
     EndUpdate;
   end;
@@ -1511,31 +996,7 @@ begin
     end;
 end;
 
-function TStrings.Pop: string;
 
-var
-  C : Integer;
-
-begin
-  Result:='';
-  C:=Count-1;
-  if (C>=0) then
-    begin
-    Result:=Strings[C];
-    Delete(C);
-    end;
-end;
-
-function TStrings.Shift: String;
-
-begin
-  Result:='';
-  if (Count > 0) then
-    begin
-    Result:=Strings[0];
-    Delete(0);
-    end;
-end;
 
 Procedure TStrings.SaveToFile(const FileName: string);
 
@@ -1552,100 +1013,13 @@ end;
 
 
 
-Procedure TStrings.SaveToFile(const FileName: string; IgnoreEncoding : Boolean);
-
-Var TheStream : TFileStream;
-
-begin
-  TheStream:=TFileStream.Create(FileName,fmCreate);
-  try
-    SaveToStream(TheStream, IgnoreEncoding);
-  finally
-    TheStream.Free;
-  end;
-end;
-
-
-
-Procedure TStrings.SaveToFile(const FileName: string; AEncoding: TEncoding);
-
-Var TheStream : TFileStream;
-
-begin
-  TheStream:=TFileStream.Create(FileName,fmCreate);
-  try
-    SaveToStream(TheStream,AEncoding);
-  finally
-    TheStream.Free;
-  end;
-end;
-
-
-
 Procedure TStrings.SaveToStream(Stream: TStream);
-begin
-  SaveToStream(Stream,False)
-end;
-
-
-
-Procedure TStrings.SaveToStream(Stream: TStream; IgnoreEncoding: Boolean);
 Var
-  I,L,NLS : SizeInt;
-  S,NL : String;
-
+  S : String;
 begin
-  if not IgnoreEncoding then
-    begin
-    SaveToStream(Stream,FEncoding);
-    Exit;
-    end;
-  NL:=GetLineBreakCharLBS;
-  NLS:=Length(NL)*SizeOf(Char);
-  For i:=0 To count-1 do
-    begin
-    S:=Strings[I];
-    L:=Length(S);
-    if L<>0 then
-      Stream.WriteBuffer(S[1], L*SizeOf(Char));
-    if (I<Count-1) or Not SkipLastLineBreak then
-      Stream.WriteBuffer(NL[1], NLS);
-    end;
-end;
-
-
-
-
-Procedure TStrings.SaveToStream(Stream: TStream; AEncoding: TEncoding);
-
-Var B,BNL : TBytes;
-    NL,S: string;
-    i,BNLS: SizeInt;
-
-begin
-  if AEncoding=nil then
-    AEncoding:=FDefaultEncoding;
-  if WriteBOM then
-    begin
-      B:=AEncoding.GetPreamble;
-      if Length(B)>0 then
-        Stream.WriteBuffer(B[0],Length(B));
-    end;
-
-  NL := GetLineBreakCharLBS;
-  BNL:=AEncoding.GetAnsiBytes(NL);
-  BNLS:=Length(BNL);
-  For i:=0 To count-1 do
-    begin
-    S:=Strings[I];
-    if S<>'' then
-      begin
-      B:=AEncoding.GetAnsiBytes(S);
-      Stream.WriteBuffer(B[0],Length(B));
-      end;
-    if (I<Count-1) or Not SkipLastLineBreak then
-      Stream.WriteBuffer(BNL[0],BNLS);
-    end;
+  S:=Text;
+  if S = '' then Exit;
+  Stream.WriteBuffer(Pointer(S)^,Length(S));
 end;
 
 
@@ -1843,7 +1217,8 @@ end;
 function TStringList.Get(Index: Integer): string;
 
 begin
-  CheckIndex(Index);
+  If (Index<0) or (INdex>=Fcount)  then
+    Error (SListIndexError,Index);
   Result:=Flist^[Index].FString;
 end;
 
@@ -1868,7 +1243,8 @@ end;
 function TStringList.GetObject(Index: Integer): TObject;
 
 begin
-  CheckIndex(Index);
+  If (Index<0) or (INdex>=Fcount)  then
+    Error (SListIndexError,Index);
   Result:=Flist^[Index].FObject;
 end;
 
@@ -1879,7 +1255,8 @@ procedure TStringList.Put(Index: Integer; const S: string);
 begin
   If Sorted then
     Error(SSortedListError,0);
-  CheckIndex(Index);
+  If (Index<0) or (INdex>=Fcount)  then
+    Error (SListIndexError,Index);
   Changing;
   Flist^[Index].FString:=S;
   Changed;
@@ -1890,7 +1267,8 @@ end;
 procedure TStringList.PutObject(Index: Integer; AObject: TObject);
 
 begin
-  CheckIndex(Index);
+  If (Index<0) or (INdex>=Fcount)  then
+    Error (SListIndexError,Index);
   Changing;
   Flist^[Index].FObject:=AObject;
   Changed;
@@ -1901,7 +1279,7 @@ end;
 procedure TStringList.SetCapacity(NewCapacity: Integer);
 
 Var NewList : Pointer;
-    MSize : Longint;
+    I,MSize : Longint;
 
 begin
   If (NewCapacity<0) then
@@ -1915,7 +1293,7 @@ begin
       begin
       MSize:=FCapacity*Sizeof(TStringItem);
       System.Move (FList^,NewList^,MSize);
-      FillWord (Pchar(NewList)[MSize],(NewCapacity-FCapacity)*(SizeOf(TStringItem) div SizeOf(Word)), 0);
+      FillWord (Pchar(NewList)[MSize],(NewCapacity-FCapacity)*WordRatio, 0);
       FreeMem (Flist,MSize);
       end;
     Flist:=NewList;
@@ -1966,7 +1344,7 @@ end;
 function TStringList.Add(const S: string): Integer;
 
 begin
-  If (SortStyle<>sslAuto) then
+  If Not (SortStyle=sslAuto) then
     Result:=FCount
   else
     If Find (S,Result) then
@@ -1989,7 +1367,8 @@ end;
 procedure TStringList.Delete(Index: Integer);
 
 begin
-  CheckIndex(Index);
+  If (Index<0) or (Index>=FCount) then
+    Error(SlistINdexError,Index);
   Changing;
   Flist^[Index].FString:='';
   if FOwnsObjects then
@@ -2007,8 +1386,10 @@ end;
 procedure TStringList.Exchange(Index1, Index2: Integer);
 
 begin
-  CheckIndex(Index1);
-  CheckIndex(Index2);
+  If (Index1<0) or (Index1>=FCount) then
+    Error(SListIndexError,Index1);
+  If (Index2<0) or (Index2>=FCount) then
+    Error(SListIndexError,Index2);
   Changing;
   ExchangeItemsInt(Index1,Index2);
   changed;
@@ -2039,28 +1420,19 @@ begin
   FSortStyle:=AValue;
 end;
 
-procedure TStringList.CheckIndex(AIndex: Integer);
-begin
-  If (AIndex<0) or (AIndex>=FCount) then
-    Error(SListIndexError,AIndex);
-end;
-
 
 function TStringList.DoCompareText(const s1, s2: string): PtrInt;
 begin
   if FCaseSensitive then
-  begin
-    if UseLocale then
-      result:=AnsiCompareStr(s1,s2)
-    else
-      result:=CompareStr(s1,s2);
-  end else
-  begin
-    if UseLocale then
-      result:=AnsiCompareText(s1,s2)
-    else
-      result:=CompareText(s1,s2);
-  end;
+    result:=AnsiCompareStr(s1,s2)
+  else
+    result:=AnsiCompareText(s1,s2);
+end;
+
+
+function TStringList.CompareStrings(const s1,s2 : string) : Integer;
+begin
+  Result := DoCompareText(s1, s2);
 end;
 
 
@@ -2116,18 +1488,17 @@ begin
   If SortStyle=sslAuto then
     Error (SSortedListError,0)
   else
-    begin
     If (Index<0) or (Index>FCount) then
-      Error(SListIndexError,Index); // Cannot use CheckIndex, because there >= FCount...
-    InsertItem (Index,S);
-    end;
+      Error (SListIndexError,Index)
+    else
+      InsertItem (Index,S);
 end;
 
 
 procedure TStringList.CustomSort(CompareFn: TStringListSortCompare);
 
 begin
-  If (FCount>1) and (FForceSort or (FSortStyle<>sslAuto))  then
+  If (FForceSort or (Not (FSortStyle=sslAuto))) and (FCount>1) then
     begin
     Changing;
     QuickSort(0,FCount-1, CompareFn);

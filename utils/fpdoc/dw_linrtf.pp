@@ -15,7 +15,7 @@
 {$mode objfpc}
 {$H+}
 unit dw_LinRTF;
-{$WARN 5024 off : Parameter "$1" not used}
+
 interface
 
 uses DOM, dGlobals, PasTree;
@@ -121,8 +121,6 @@ type
     procedure DescrEndItalic; override;
     procedure DescrBeginEmph; override;
     procedure DescrEndEmph; override;
-    procedure DescrBeginUnderline; override;
-    procedure DescrEndUnderline; override;
     procedure DescrWriteFileEl(const AText: DOMString); override;
     procedure DescrWriteKeywordEl(const AText: DOMString); override;
     procedure DescrWriteVarEl(const AText: DOMString); override;
@@ -162,8 +160,8 @@ type
     procedure DescrBeginTableCell; override;
     procedure DescrEndTableCell; override;
     // TFPDocWriter class methods
-  public
     Function InterPretOption(Const Cmd,Arg : String) : boolean; override;
+  public
     Class Function FileNameExtension : String; override;
   end;
 
@@ -214,7 +212,7 @@ var
   I: Integer;
 
 begin
-  Result:='';
+  SetLength(Result, 0);
   for i := 1 to Length(S) do
     If not (S[i] in ['{','}','\']) then
       Result := Result + S[i];
@@ -346,16 +344,6 @@ begin
   Write('}')
 end;
 
-procedure TRTFWriter.DescrBeginUnderline;
-begin
-  Write('{\ul ');
-end;
-
-procedure TRTFWriter.DescrEndUnderline;
-begin
-  Write('}');
-end;
-
 procedure TRTFWriter.DescrWriteFileEl(const AText: DOMString);
 begin
   Write('{\f0 ');
@@ -379,7 +367,7 @@ end;
 
 procedure TRTFWriter.DescrBeginLink(const AId: DOMString);
 begin
-  FLink := Engine.ResolveLink(Module, Utf8Encode(AId));
+  FLink := Engine.ResolveLink(Module, AId);
 //  System.WriteLn('Link "', AId, '" => ', FLink);
 end;
 

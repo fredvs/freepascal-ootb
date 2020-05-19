@@ -1,4 +1,4 @@
-{ %target=linux,haiku }
+{ %target=linux }
 { %needlibrary }
 { %result=182 }
 program loadlib;

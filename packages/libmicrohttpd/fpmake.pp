@@ -16,7 +16,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Author := 'Library: GNU foundation, header: Silvio Clecio';
     P.License := 'Library: LGPL or later, header: LGPL with modification';
     P.HomepageURL := 'https://www.gnu.org/software/libmicrohttpd/';
@@ -24,10 +24,7 @@ begin
     P.Description := 'Event and threaded based micro-http server library interface';
     P.NeedLibC:= true;
     P.Dependencies.Add('rtl-extra');
-    P.OSes := AllUnixOSes + [win32,win64];
-    if Defaults.CPU=jvm then
-      P.OSes := P.OSes - [java,android];
-
+    P.OSes := [android,freebsd,linux,netbsd,openbsd,win32,win64];
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
     T:=P.Targets.AddUnit('libmicrohttpd.pp');

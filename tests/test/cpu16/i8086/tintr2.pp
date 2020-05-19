@@ -71,7 +71,7 @@ begin
   Handled := False;
 
   GetIntVec(IntNo, OldHandler);
-  SetIntVec(IntNo, Ptr(Seg(OurHandler),Ofs(OurHandler)));
+  SetIntVec(IntNo, @OurHandler);
 
   Intr(IntNo, regs);
 

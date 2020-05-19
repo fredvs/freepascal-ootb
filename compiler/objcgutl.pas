@@ -41,12 +41,11 @@ interface
 implementation
 
   uses
-    globtype,globals,fmodule,cutils,
+    globtype,globals,fmodule,
     systems,
     aasmtai,
     cgbase,
     objcdef,objcutil,
-    aasmcnst,
     symconst,symtype,symsym,symtable,
     verbose;
 
@@ -59,8 +58,6 @@ implementation
       fabi: tobjcabi;
       classdefs,
       catdefs: tfpobjectlist;
-      classrttidefs,
-      catrttidefs: tfpobjectlist;
       classsyms,
       catsyms: tfpobjectlist;
       procedure gen_objc_methods(list: tasmlist; objccls: tobjectdef; out methodslabel: tasmsymbol; classmethods, iscategory: Boolean);
@@ -69,8 +66,8 @@ implementation
       procedure gen_objc_cat_methods(list:TAsmList; items: TFPObjectList; section: tasmsectiontype;const sectname: string; out listsym: TAsmLabel);
 
       procedure gen_objc_protocol(list:TAsmList; protocol: tobjectdef; out protocollabel: TAsmSymbol);virtual;abstract;
-      procedure gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol; out catlabeldef: tdef);virtual;abstract;
-      procedure gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol; out classlabeldef: tdef);virtual;abstract;
+      procedure gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol);virtual;abstract;
+      procedure gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol);virtual;abstract;
       procedure gen_objc_info_sections(list: tasmlist);virtual;abstract;
      public
       constructor create(_abi: tobjcabi);
@@ -86,15 +83,15 @@ implementation
       function gen_objc_protocol_ext(list: TAsmList; optinstsym, optclssym: TAsmLabel): TAsmLabel;
       procedure gen_objc_ivars(list: TAsmList; objccls: tobjectdef; out ivarslabel: TAsmLabel);
       procedure gen_objc_protocol(list:TAsmList; protocol: tobjectdef; out protocollabel: TAsmSymbol);override;
-      procedure gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol; out catlabeldef: tdef);override;
-      procedure gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol; out classlabeldef: tdef);override;
+      procedure gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol);override;
+      procedure gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol);override;
       procedure gen_objc_info_sections(list: tasmlist);override;
      public
       constructor create;
     end;
 
 
-    { Used by PowerPC/64, ARM, x86_64 and AArch64 }
+    { Used by PowerPC/64, ARM, and x86_64 }
     tobjcrttiwriter_nonfragile = class(tobjcrttiwriter)
      protected
       ObjCEmptyCacheVar,
@@ -105,8 +102,8 @@ implementation
 
       procedure gen_objc_ivars(list: TAsmList; objccls: tobjectdef; out ivarslabel: TAsmLabel);
       procedure gen_objc_protocol(list:TAsmList; protocol: tobjectdef; out protocollabel: TAsmSymbol);override;
-      procedure gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol; out catlabeldef: tdef);override;
-      procedure gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol; out classlabeldef: tdef);override;
+      procedure gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol);override;
+      procedure gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol);override;
       procedure gen_objc_info_sections(list: tasmlist);override;
      public
       constructor create;
@@ -146,13 +143,12 @@ function objcaddprotocolentry(const p: shortstring; ref: TAsmSymbol): Boolean;
                        Pool section helpers
 *******************************************************************}
 
-procedure objcreatestringpoolentryintern(p: pchar; len: longint; pooltype: tconstpooltype; stringsec: tasmsectiontype; out sym: TAsmLabel; out def: tdef);
+function objcreatestringpoolentryintern(p: pchar; len: longint; pooltype: tconstpooltype; stringsec: tasmsectiontype): TAsmSymbol;
   var
     entry  : PHashSetItem;
     strlab : tasmlabel;
     pc     : pchar;
     pool   : THashSet;
-    tcb    : ttai_typedconstbuilder;
   begin
     pool := current_asmdata.constpools[pooltype];
 
@@ -167,66 +163,53 @@ procedure objcreatestringpoolentryintern(p: pchar; len: longint; pooltype: tcons
         pc[entry^.keylength]:=#0;
 
         { add the string to the approriate section }
-        tcb:=ctai_typedconstbuilder.create([tcalo_is_lab,tcalo_new_section]);
-        def:=tcb.emit_pchar_const(pc,entry^.keylength,false);
-        current_asmdata.asmlists[al_objc_pools].concatList(
-          tcb.get_final_asmlist(strlab,def,stringsec,strlab.name,1)
-        );
-        tcb.free;
-        def:=cpointerdef.getreusable(def);
+        new_section(current_asmdata.asmlists[al_objc_pools],stringsec,strlab.name,0);
+        current_asmdata.asmlists[al_objc_pools].concat(Tai_label.Create(strlab));
+        current_asmdata.asmlists[al_objc_pools].concat(Tai_string.Create_pchar(pc,entry^.keylength+1));
+        Result := strlab;
       end
     else
-      def:=cpointerdef.getreusable(carraydef.getreusable(cansichartype,len+1));
-    sym:=TAsmLabel(Entry^.Data);
+      Result := TAsmLabel(Entry^.Data);
   end;
 
 
 procedure objcfinishstringrefpoolentry(entry: phashsetitem; stringpool: tconstpooltype; refsec, stringsec: tasmsectiontype);
   var
-    reflab,
-    strlab : tasmlabel;
+    reflab : tasmlabel;
+    strlab : tasmsymbol;
     classname: string;
-    tcb: ttai_typedconstbuilder;
-    strdef: tdef;
   begin
     { have we already generated a reference for this string entry? }
     if not assigned(entry^.Data) then
       begin
         { no, add the string to the associated strings section }
-        objcreatestringpoolentryintern(pchar(entry^.key),entry^.keylength,stringpool,stringsec,strlab,strdef);
+        strlab:=objcreatestringpoolentryintern(pchar(entry^.key),entry^.keylength,stringpool,stringsec);
 
         { and now finish the reference }
         current_asmdata.getlabel(reflab,alt_data);
         entry^.Data:=reflab;
 
         { add a pointer to the string in the string references section }
-        tcb:=ctai_typedconstbuilder.create([tcalo_is_lab,tcalo_new_section,tcalo_no_dead_strip]);
-
-        tcb.emit_tai(Tai_const.Create_sym(strlab),strdef);
-        current_asmdata.asmlists[al_objc_pools].concatList(
-          tcb.get_final_asmlist(reflab,strdef,refsec,reflab.name,sizeof(pint))
-          );
-        tcb.free;
+        new_section(current_asmdata.asmlists[al_objc_pools],refsec,reflab.name,sizeof(pint));
+        current_asmdata.asmlists[al_objc_pools].concat(Tai_label.Create(reflab));
+        current_asmdata.asmlists[al_objc_pools].concat(Tai_const.Create_sym(strlab));
 
         { in case of a class reference, also add a lazy symbol reference for
           the class (the linker requires this for the fragile ABI). }
         if (refsec=sec_objc_cls_refs) and
            not(target_info.system in systems_objc_nfabi) then
           begin
-            classname:='';
             setlength(classname,entry^.keylength);
             move(entry^.key^,classname[1],entry^.keylength);
-            { no way to express this in LLVM either, they also just emit
-              module level assembly for it }
-            current_asmdata.asmlists[al_pure_assembler].concat(tai_directive.Create(asd_lazy_reference,'.objc_class_name_'+classname));
+            current_asmdata.asmlists[al_objc_pools].concat(tai_directive.Create(asd_lazy_reference,'.objc_class_name_'+classname));
           end;
       end;
   end;
 
 
-procedure objcreatestringpoolentry(const s: string; pooltype: tconstpooltype; stringsec: tasmsectiontype; out sym: TAsmLabel; out def: tdef);
+function objcreatestringpoolentry(const s: string; pooltype: tconstpooltype; stringsec: tasmsectiontype): TAsmSymbol;
   begin
-    objcreatestringpoolentryintern(@s[1],length(s),pooltype,stringsec,sym,def);
+    result:=objcreatestringpoolentryintern(@s[1],length(s),pooltype,stringsec);
   end;
 
 
@@ -234,7 +217,6 @@ procedure objcfinishclassrefnfpoolentry(entry: phashsetitem; classdef: tobjectde
   var
     reflab: TAsmLabel;
     classym: TasmSymbol;
-    tcb: ttai_typedconstbuilder;
   begin
     { have we already generated a reference for this class ref entry? }
     if not assigned(entry^.Data) then
@@ -244,14 +226,10 @@ procedure objcfinishclassrefnfpoolentry(entry: phashsetitem; classdef: tobjectde
         entry^.Data:=reflab;
 
         { add a pointer to the class }
-        classym:=current_asmdata.RefAsmSymbol(classdef.rtti_mangledname(objcclassrtti),AT_DATA);
-
-        tcb:=ctai_typedconstbuilder.create([tcalo_is_lab,tcalo_new_section]);
-        tcb.emit_tai(Tai_const.Create_sym(classym),voidpointertype);
-        current_asmdata.asmlists[al_objc_pools].concatList(
-          tcb.get_final_asmlist(reflab,voidpointertype,sec_objc_cls_refs,reflab.name,sizeof(pint))
-        );
-        tcb.free;
+        new_section(current_asmdata.asmlists[al_objc_pools],sec_objc_cls_refs,reflab.name,sizeof(pint));
+        current_asmdata.asmlists[al_objc_pools].concat(Tai_label.Create(reflab));
+        classym:=current_asmdata.RefAsmSymbol(classdef.rtti_mangledname(objcclassrtti));
+        current_asmdata.asmlists[al_objc_pools].concat(Tai_const.Create_sym(classym));
       end;
   end;
 
@@ -259,12 +237,12 @@ procedure objcfinishclassrefnfpoolentry(entry: phashsetitem; classdef: tobjectde
                     RTTI generation -- Helpers
 *******************************************************************}
 
-procedure ConcatSymOrNil(tcb: ttai_typedconstbuilder; sym: TAsmSymbol; def: tdef); inline;
+procedure ConcatSymOrNil(list: tasmlist; sym: TAsmSymbol); inline;
 begin
   if Assigned(sym) then
-    tcb.emit_tai(tai_const.Create_sym(sym),def)
+    list.Concat(tai_const.Create_sym(sym))
   else
-    tcb.emit_tai(tai_const.Create_nil_dataptr,def);
+    list.Concat(tai_const.Create_pint(0));
 end;
 
 
@@ -276,39 +254,27 @@ end;
   and both for obj-c classes and categories. }
 procedure tobjcrttiwriter.gen_objc_methods(list: tasmlist; objccls: tobjectdef; out methodslabel: tasmsymbol; classmethods, iscategory: Boolean);
   const
-                     {clas/cat inst/cls}
-    SectType : array [Boolean, Boolean] of tasmsectiontype =
-      ((sec_objc_inst_meth, sec_objc_cls_meth),
-       (sec_objc_cat_inst_meth, sec_objc_cat_cls_meth));
-                     {clas/cat inst/cls}
-    SectName : array [Boolean, Boolean] of string[20] =
-      (('_OBJC_INST_METH','_OBJC_CLS_METH'),
-       ('_OBJC_CAT_INST_METH','_OBJC_CAT_CLS_METH'));
-                   {frag/non-frag ABI}
-    SectFlags : array [Boolean] of ttcasmlistoptions =
-     ([tcalo_new_section],[tcalo_new_section,tcalo_no_dead_strip]);
-                        {inst/cls}
+    clsSectType : array [Boolean] of tasmsectiontype = (sec_objc_inst_meth, sec_objc_cls_meth);
+    clsSectName : array [Boolean] of string = ('_OBJC_INST_METH','_OBJC_CLS_METH');
+    catSectType : array [Boolean] of tasmsectiontype = (sec_objc_cat_inst_meth, sec_objc_cat_cls_meth);
+    catSectName : array [Boolean] of string = ('_OBJC_CAT_INST_METH','_OBJC_CAT_CLS_METH');
     instclsName : array [Boolean] of string = ('INSTANCE','CLASS');
   type
     method_data = record
       def     : tprocdef;
-      selsym  : TAsmLabel;
-      seldef  : tdef;
-      encsym  : TAsmLabel;
-      encdef  : tdef;
+      selsym  : TAsmSymbol;
+      encsym  : TAsmSymbol;
     end;
   var
     i     : Integer;
     def   : tprocdef;
     defs  : array of method_data;
     mcnt  : integer;
+    sym   : tasmsymbol;
     mtype : tdef;
-    tcb   : ttai_typedconstbuilder;
-    mdef  : tdef;
   begin
     methodslabel:=nil;
     mcnt:=0;
-    defs:=nil;
     { collect all instance/class methods }
     SetLength(defs,objccls.vmtentries.count);
     for i:=0 to objccls.vmtentries.count-1 do
@@ -318,60 +284,50 @@ procedure tobjcrttiwriter.gen_objc_methods(list: tasmlist; objccls: tobjectdef; 
            (classmethods = (po_classmethod in def.procoptions)) then
           begin
             defs[mcnt].def:=def;
-            objcreatestringpoolentry(def.messageinf.str^,sp_objcvarnames,sec_objc_meth_var_names,defs[mcnt].selsym,defs[mcnt].seldef);
-            objcreatestringpoolentry(objcencodemethod(def),sp_objcvartypes,sec_objc_meth_var_types,defs[mcnt].encsym,defs[mcnt].encdef);
+            defs[mcnt].selsym:=objcreatestringpoolentry(def.messageinf.str^,sp_objcvarnames,sec_objc_meth_var_names);
+            defs[mcnt].encsym:=objcreatestringpoolentry(objcencodemethod(def),sp_objcvartypes,sec_objc_meth_var_types);
             inc(mcnt);
           end;
       end;
     if mcnt=0 then
       exit;
 
-    tcb:=ctai_typedconstbuilder.create(SectFlags[target_info.system in systems_objc_nfabi]);
-    tcb.begin_anonymous_record(internaltypeprefixName[itp_objc_method_list]+tostr(mcnt),
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    if iscategory then
+      begin
+        new_section(list,catSectType[classmethods],catSectName[classmethods],sizeof(ptrint));
+        methodslabel:=current_asmdata.DefineAsmSymbol('l_OBJC_$_CATEGORY_'+instclsName[classmethods]+'_METHODS_'+objccls.objextname^+'_$_'+objccls.childof.objextname^,AB_LOCAL,AT_DATA);
+      end
+    else
+      begin
+        new_section(list,clsSectType[classmethods],clsSectName[classmethods],sizeof(ptrint));
+        methodslabel:=current_asmdata.DefineAsmSymbol('l_OBJC_$_'+instclsName[classmethods]+'_METHODS_'+objccls.objextname^,AB_LOCAL,AT_DATA);
+      end;
+
+    list.Concat(tai_symbol.Create(methodslabel,0));
 
     if (abi=oa_fragile) then
       { not used, always zero }
-      tcb.emit_ord_const(0,u32inttype)
+      list.Concat(tai_const.Create_32bit(0))
     else
       begin
         { size of each entry -- always 32 bit value }
         mtype:=search_named_unit_globaltype('OBJC','OBJC_METHOD',true).typedef;
-        tcb.emit_ord_const(mtype.size,u32inttype);
+        list.Concat(tai_const.Create_32bit(mtype.size));
       end;
     { number of objc_method entries in the method_list array -- always 32 bit}
-    tcb.emit_ord_const(mcnt,u32inttype);
+    list.Concat(tai_const.Create_32bit(mcnt));
     for i:=0 to mcnt-1 do
       begin
         { reference to the selector name }
-        tcb.queue_init(charpointertype);
-        tcb.queue_emit_asmsym(defs[i].selsym,defs[i].seldef);
+        list.Concat(tai_const.Create_sym(defs[i].selsym));
         { reference to the obj-c encoded function parameters (signature) }
-        tcb.queue_init(charpointertype);
-        tcb.queue_emit_asmsym(defs[i].encsym,defs[i].encdef);
+        list.Concat(tai_const.Create_sym(defs[i].encsym));
         { mangled name of the method }
-        tcb.queue_init(voidcodepointertype);
-        tcb.queue_emit_proc(defs[i].def);
+        sym:=current_asmdata.GetAsmSymbol(defs[i].def.mangledname);
+        if not assigned(sym) then
+          internalerror(2009091601);
+        list.Concat(tai_const.Create_sym(sym));
       end;
-
-    mdef:=tcb.end_anonymous_record;
-    if iscategory then
-      begin
-        methodslabel:=current_asmdata.DefineAsmSymbol('l_OBJC_$_CATEGORY_'+instclsName[classmethods]+'_METHODS_'+objccls.objextname^+'_$_'+objccls.childof.objextname^,AB_LOCAL,AT_DATA,mdef);
-      end
-    else
-      begin
-        methodslabel:=current_asmdata.DefineAsmSymbol('l_OBJC_$_'+instclsName[classmethods]+'_METHODS_'+objccls.objextname^,AB_LOCAL,AT_DATA,mdef);
-      end;
-    list.concatList(
-      tcb.get_final_asmlist(methodslabel,mdef,
-        SectType[iscategory,classmethods],
-        SectName[iscategory,classmethods],sizeof(ptrint)
-      )
-    );
-    tcb.free;
   end;
 
 
@@ -446,7 +402,6 @@ procedure tobjcrttiwriter.gen_objc_protocol_list(list: tasmlist; protolist: tfpo
     i         : Integer;
     protosym  : TAsmSymbol;
     protodef  : tobjectdef;
-    tcb       : ttai_typedconstbuilder;
   begin
     if not Assigned(protolist) or
        (protolist.Count=0) then
@@ -466,20 +421,16 @@ procedure tobjcrttiwriter.gen_objc_protocol_list(list: tasmlist; protolist: tfpo
           end;
       end;
 
-    tcb:=ctai_typedconstbuilder.create([tcalo_is_lab,tcalo_new_section]);
-    tcb.begin_anonymous_record(internaltypeprefixName[itp_objc_proto_list]+tostr(protolist.Count),
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
-
     { protocol lists are stored in .objc_cat_cls_meth section }
+    new_section(list,sec_objc_cat_cls_meth,'_OBJC_PROTOCOLLIST',sizeof(pint));
     current_asmdata.getlabel(protolistsym, alt_data);
+    list.Concat(tai_label.Create(protolistsym));
 
     if (abi=oa_fragile) then
       { From Clang: next, always nil}
-      tcb.emit_tai(tai_const.Create_nil_dataptr,ptruinttype);
+      list.Concat(tai_const.Create_pint(0));
     { From Clang: protocols count}
-    tcb.emit_tai(Tai_const.Create_int_dataptr(protolist.Count),ptruinttype);
+    list.Concat(Tai_const.Create_pint(protolist.Count));
     for i:=0 to protolist.Count-1 do
       begin
         protodef:=(protolist[i] as TImplementedInterface).IntfDef;
@@ -491,16 +442,8 @@ procedure tobjcrttiwriter.gen_objc_protocol_list(list: tasmlist; protolist: tfpo
             }
             InternalError(2009091602);
           end;
-        tcb.emit_tai(tai_const.Create_sym(protosym),voidpointertype);
+        list.Concat(tai_const.Create_sym(protosym));
       end;
-    list.concatList(
-      tcb.get_final_asmlist(
-        protolistsym,tcb.end_anonymous_record,
-        sec_objc_cat_cls_meth,'_OBJC_PROTOCOLLIST',sizeof(pint)
-      )
-    );
-    tcb.free;
-    { the symbol will point to a record }
   end;
 
 
@@ -511,45 +454,33 @@ procedure tobjcrttiwriter.gen_objc_cat_methods(list:TAsmList; items: TFPObjectLi
 var
   i     : integer;
   m     : tprocdef;
-  lab   : tasmlabel;
-  ldef  : tdef;
   mtype : tdef;
-  tcb   : ttai_typedconstbuilder;
 begin
   if not assigned(items) or
      (items.count=0) then
     exit;
 
-  tcb:=ctai_typedconstbuilder.create([tcalo_is_lab,tcalo_new_section]);
+  new_section(list, section, sectname, sizeof(pint));
   current_asmdata.getlabel(listsym,alt_data);
-  tcb.begin_anonymous_record(
-    internaltypeprefixName[itp_objc_cat_methods]+tostr(items.count),
-    C_alignment,1,
-    targetinfos[target_info.system]^.alignment.recordalignmin,
-    targetinfos[target_info.system]^.alignment.maxCrecordalign);
+  list.Concat(tai_label.Create(listsym));
   if (abi=oa_nonfragile) then
     begin
       { size of each entry -- always 32 bit value }
       mtype:=search_named_unit_globaltype('OBJC','OBJC_METHOD',true).typedef;
-      tcb.emit_ord_const(mtype.size,u32inttype);
+      list.Concat(tai_const.Create_32bit(mtype.size));
     end;
-  tcb.emit_ord_const(items.count,u32inttype);
+  list.Concat(Tai_const.Create_32bit(items.count));
   for i:=0 to items.Count-1 do
     begin
       m:=tprocdef(items[i]);
-      objcreatestringpoolentry(m.messageinf.str^,sp_objcvarnames,sec_objc_meth_var_names,lab,ldef);
-      tcb.emit_tai(Tai_const.Create_sym(lab),ldef);
-      objcreatestringpoolentry(objcencodemethod(m),sp_objcvartypes,sec_objc_meth_var_types,lab,ldef);
-      tcb.emit_tai(Tai_const.Create_sym(lab),ldef);
+      list.Concat(Tai_const.Create_sym(
+        objcreatestringpoolentry(m.messageinf.str^,sp_objcvarnames,sec_objc_meth_var_names)));
+      list.Concat(Tai_const.Create_sym(
+        objcreatestringpoolentry(objcencodemethod(m),sp_objcvartypes,sec_objc_meth_var_types)));
       { placeholder for address of implementation? }
       if (abi=oa_nonfragile) then
-        tcb.emit_tai(Tai_const.Create_nil_codeptr,codeptruinttype);
+        list.Concat(Tai_const.Create_pint(0));
     end;
-  list.concatList(
-    tcb.get_final_asmlist(
-      listsym,tcb.end_anonymous_record,section,sectname,sizeof(pint))
-  );
-  tcb.free;
 end;
 
 
@@ -558,9 +489,8 @@ end;
 procedure tobjcrttiwriter.gen_objc_rtti_sections(list:TAsmList; st:TSymtable);
   var
     i: longint;
-    def,
-    rttidef: tdef;
-    sym: TAsmSymbol;
+    def: tdef;
+    sym : TAsmSymbol;
   begin
     if not Assigned(st) then
       exit;
@@ -580,16 +510,14 @@ procedure tobjcrttiwriter.gen_objc_rtti_sections(list:TAsmList; st:TSymtable);
           begin
             if not(oo_is_classhelper in tobjectdef(def).objectoptions) then
               begin
-                gen_objc_classes_sections(list,tobjectdef(def),sym,rttidef);
+                gen_objc_classes_sections(list,tobjectdef(def),sym);
                 classsyms.add(sym);
-                classrttidefs.add(rttidef);
                 classdefs.add(def);
               end
             else
               begin
-                gen_objc_category_sections(list,tobjectdef(def),sym,rttidef);
+                gen_objc_category_sections(list,tobjectdef(def),sym);
                 catsyms.add(sym);
-                catrttidefs.add(rttidef);
                 catdefs.add(def);
               end
           end;
@@ -602,8 +530,6 @@ constructor tobjcrttiwriter.create(_abi: tobjcabi);
     fabi:=_abi;
     classdefs:=tfpobjectlist.create(false);
     classsyms:=tfpobjectlist.create(false);
-    classrttidefs:=tfpobjectlist.create(false);
-    catrttidefs:=tfpobjectlist.create(false);
     catdefs:=tfpobjectlist.create(false);
     catsyms:=tfpobjectlist.create(false);
   end;
@@ -613,8 +539,6 @@ destructor tobjcrttiwriter.destroy;
   begin
     classdefs.free;
     classsyms.free;
-    classrttidefs.free;
-    catrttidefs.free;
     catdefs.free;
     catsyms.free;
     inherited destroy;
@@ -629,10 +553,8 @@ procedure tobjcrttiwriter_fragile.gen_objc_ivars(list: TAsmList; objccls: tobjec
   type
     ivar_data = record
       vf      : tfieldvarsym;
-      namesym : TAsmLabel;
-      namedef : tdef;
-      typesym : TAsmLabel;
-      typedef : tdef;
+      namesym : TAsmSymbol;
+      typesym : TAsmSymbol;
     end;
   var
     i     : integer;
@@ -645,7 +567,6 @@ procedure tobjcrttiwriter_fragile.gen_objc_ivars(list: TAsmList; objccls: tobjec
     ivarslabel:=nil;
 
     vcnt:=0;
-    vars:=nil;
     setLength(vars,objccls.symtable.SymList.Count);
 
     for i:=0 to objccls.symtable.SymList.Count-1 do
@@ -655,8 +576,8 @@ procedure tobjcrttiwriter_fragile.gen_objc_ivars(list: TAsmList; objccls: tobjec
           if objctryencodetype(vf.vardef,enctype,encerr) then
             begin
               vars[vcnt].vf:=vf;
-              objcreatestringpoolentry(vf.RealName,sp_objcvarnames,sec_objc_meth_var_names,vars[vcnt].namesym,vars[vcnt].namedef);
-              objcreatestringpoolentry(enctype,sp_objcvartypes,sec_objc_meth_var_types,vars[vcnt].typesym,vars[vcnt].typedef);
+              vars[vcnt].namesym:=objcreatestringpoolentry(vf.RealName,sp_objcvarnames,sec_objc_meth_var_names);
+              vars[vcnt].typesym:=objcreatestringpoolentry(enctype,sp_objcvartypes,sec_objc_meth_var_types);
               inc(vcnt);
             end
           else
@@ -697,34 +618,21 @@ procedure tobjcrttiwriter_fragile.gen_objc_ivars(list: TAsmList; objccls: tobjec
     }
 *)
 function tobjcrttiwriter_fragile.gen_objc_protocol_ext(list: TAsmList; optinstsym, optclssym: TAsmLabel): TAsmLabel;
-  var
-    tcb: ttai_typedconstbuilder;
   begin
     if assigned(optinstsym) or
        assigned(optclssym) then
       begin
+        new_section(list, sec_objc_protocol_ext,'_OBJC_PROTOCOLEXT',sizeof(pint));
         current_asmdata.getlabel(Result,alt_data);
-        tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-        tcb.begin_anonymous_record(
-          internaltypeprefixName[itb_objc_fr_protocol_ext],
-          C_alignment,1,
-          targetinfos[target_info.system]^.alignment.recordalignmin,
-          targetinfos[target_info.system]^.alignment.maxCrecordalign);
+        list.Concat(tai_label.Create(Result));
         { size of this structure }
-        tcb.emit_ord_const(16,u32inttype);
+        list.Concat(Tai_const.Create_32bit(16));
         { optional instance methods }
-        ConcatSymOrNil(tcb,optinstsym,voidpointertype);
+        ConcatSymOrNil(list,optinstsym);
         { optional class methods }
-        ConcatSymOrNil(tcb,optclssym,voidpointertype);
+        ConcatSymOrNil(list,optclssym);
         { optional properties (todo) }
-        ConcatSymOrNil(tcb,nil,voidpointertype);
-        list.concatList(
-          tcb.get_final_asmlist(
-            result,tcb.end_anonymous_record,
-            sec_objc_protocol_ext,'_OBJC_PROTOCOLEXT',sizeof(pint)
-          )
-        );
-        tcb.free;
+        ConcatSymOrNil(list,nil);
       end
     else
       Result:=nil;
@@ -734,8 +642,7 @@ function tobjcrttiwriter_fragile.gen_objc_protocol_ext(list: TAsmList; optinstsy
 { Generate rtti for an Objective-C protocol  }
 procedure tobjcrttiwriter_fragile.gen_objc_protocol(list:TAsmList; protocol: tobjectdef; out protocollabel: TAsmSymbol);
   var
-    namesym     : TAsmLabel;
-    namedef     : tdef;
+    namesym     : TAsmSymbol;
     protolist   : TAsmLabel;
     reqinstsym,
     optinstsym,
@@ -743,41 +650,27 @@ procedure tobjcrttiwriter_fragile.gen_objc_protocol(list:TAsmList; protocol: tob
     optclssym,
     protoext,
     lbl          : TAsmLabel;
-    tcb          : ttai_typedconstbuilder;
   begin
     gen_objc_protocol_list(list,protocol.ImplementedInterfaces,protolist);
     gen_objc_protocol_elements(list,protocol,reqinstsym,optinstsym,reqclssym,optclssym);
     protoext:=gen_objc_protocol_ext(list,optinstsym,optclssym);
 
+    new_section(list, sec_objc_protocol,'_OBJC_PROTOCOL',sizeof(pint));
     current_asmdata.getlabel(lbl,alt_data);
+    list.Concat(tai_label.Create(lbl));
     protocollabel:=lbl;
 
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-    tcb.begin_anonymous_record(
-      internaltypeprefixName[itb_objc_fr_protocol],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
-
     { protocol's isa - points to information about optional methods/properties }
-    ConcatSymOrNil(tcb,protoext,voidpointertype);
+    ConcatSymOrNil(list,protoext);
     { name }
-    objcreatestringpoolentry(protocol.objextname^,sp_objcclassnames,sec_objc_class_names,namesym,namedef);
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(namesym,namedef);
+    namesym:=objcreatestringpoolentry(protocol.objextname^,sp_objcclassnames,sec_objc_class_names);
+    list.Concat(Tai_const.Create_sym(namesym));
     { protocol's list }
-    ConcatSymOrNil(tcb,protolist,voidpointertype);
+    ConcatSymOrNil(list,protolist);
     { instance methods, in __cat_inst_meth }
-    ConcatSymOrNil(tcb,reqinstsym,voidpointertype);
+    ConcatSymOrNil(list,reqinstsym);
     { class methods, in __cat_cls_meth }
-    ConcatSymOrNil(tcb,reqclssym,voidpointertype);
-    list.concatList(
-      tcb.get_final_asmlist(
-        lbl,tcb.end_anonymous_record,
-        sec_objc_protocol,'_OBJC_PROTOCOL',sizeof(pint)
-      )
-    );
-    tcb.free;
+    ConcatSymOrNil(list,reqclssym);
   end;
 
 
@@ -796,24 +689,20 @@ From Clang:
 *)
 
 { Generate rtti for an Objective-C class and its meta-class. }
-procedure tobjcrttiwriter_fragile.gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol; out catlabeldef: tdef);
+procedure tobjcrttiwriter_fragile.gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol);
   var
-    catstrsym,
-    clsstrsym,
     protolistsym  : TAsmLabel;
     instmthdlist,
     clsmthdlist,
+    catstrsym,
+    clsstrsym,
     catsym        : TAsmSymbol;
-    catstrdef,
-    clsstrdef,
-    catdef        : tdef;
-    tcb           : ttai_typedconstbuilder;
   begin
     { the category name }
-    objcreatestringpoolentry(objccat.objextname^,sp_objcclassnames,sec_objc_class_names,catstrsym,catstrdef);
+    catstrsym:=objcreatestringpoolentry(objccat.objextname^,sp_objcclassnames,sec_objc_class_names);
 
     { the name of the class it extends }
-    objcreatestringpoolentry(objccat.childof.objextname^,sp_objcclassnames,sec_objc_class_names,clsstrsym,clsstrdef);
+    clsstrsym:=objcreatestringpoolentry(objccat.childof.objextname^,sp_objcclassnames,sec_objc_class_names);
 
     { generate the methods lists }
     gen_objc_methods(list,objccat,instmthdlist,false,true);
@@ -823,36 +712,21 @@ procedure tobjcrttiwriter_fragile.gen_objc_category_sections(list:TAsmList; objc
     gen_objc_protocol_list(list,objccat.ImplementedInterfaces,protolistsym);
 
     { category declaration section }
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-    tcb.begin_anonymous_record(
-      internaltypeprefixName[itb_objc_fr_category],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    new_section(list,sec_objc_category,'_OBJC_CATEGORY',sizeof(pint));
+    catsym:=current_asmdata.DefineAsmSymbol(objccat.rtti_mangledname(objcclassrtti),AB_LOCAL,AT_DATA);
+    list.Concat(tai_symbol.Create(catsym,0));
 
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(catstrsym,catstrdef);
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(clsstrsym,clsstrdef);
-    ConcatSymOrNil(tcb,instmthdlist,voidpointertype);
-    ConcatSymOrNil(tcb,clsmthdlist,voidpointertype);
-    ConcatSymOrNil(tcb,protolistsym,voidpointertype);
+    list.Concat(Tai_const.Create_sym(catstrsym));
+    list.Concat(Tai_const.Create_sym(clsstrsym));
+    ConcatSymOrNil(list,instmthdlist);
+    ConcatSymOrNil(list,clsmthdlist);
+    ConcatSymOrNil(list,protolistsym);
     { size of this structure }
-    tcb.emit_ord_const(28,u32inttype);
+    list.Concat(Tai_const.Create_32bit(28));
     { properties, not yet supported }
-    tcb.emit_ord_const(0,u32inttype);
-    catdef:=tcb.end_anonymous_record;
-    catsym:=current_asmdata.DefineAsmSymbol(objccat.rtti_mangledname(objcclassrtti),AB_LOCAL,AT_DATA,catdef);
-    list.concatList(
-      tcb.get_final_asmlist(
-        catsym,catdef,
-        sec_objc_category,'_OBJC_CATEGORY',sizeof(pint)
-      )
-    );
-    tcb.free;
+    list.Concat(Tai_const.Create_32bit(0));
 
     catlabel:=catsym;
-    catlabeldef:=catdef;
   end;
 
 (*
@@ -878,7 +752,7 @@ From Clang:
 
 
 { Generate rtti for an Objective-C class and its meta-class. }
-procedure tobjcrttiwriter_fragile.gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol; out classlabeldef: tdef);
+procedure tobjcrttiwriter_fragile.gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol);
   const
     CLS_CLASS  = 1;
     CLS_META   = 2;
@@ -886,22 +760,15 @@ procedure tobjcrttiwriter_fragile.gen_objc_classes_sections(list:TAsmList; objcl
     META_INST_SIZE = 40+8; // sizeof(objc_class) + 8
   var
     root          : tobjectdef;
-    metasym,
-    mthdlist,
-    clssym        : TAsmSymbol;
-    superStrDef,
-    classStrDef,
-    metaisaStrDef,
-    metaDef,
-    clsDef        : tdef;
     superStrSym,
     classStrSym,
     metaisaStrSym,
+    metasym,
+    mthdlist,
+    clssym        : TAsmSymbol;
     ivarslist,
     protolistsym  : TAsmLabel;
     hiddenflag    : cardinal;
-    tcb           : ttai_typedconstbuilder;
-
   begin
     { generate the class methods list }
     gen_objc_methods(list,objclss,mthdlist,true,false);
@@ -912,22 +779,19 @@ procedure tobjcrttiwriter_fragile.gen_objc_classes_sections(list:TAsmList; objcl
     { register necessary names }
     { 1) the superclass }
     if assigned(objclss.childof) then
-      objcreatestringpoolentry(objclss.childof.objextname^,sp_objcclassnames,sec_objc_class_names,superStrSym,superStrDef)
+      superStrSym:=objcreatestringpoolentry(objclss.childof.objextname^,sp_objcclassnames,sec_objc_class_names)
     else
-      begin
-        { not empty string, but nil! }
-        superStrSym:=nil;
-        superStrDef:=voidpointertype;
-      end;
+      { not empty string, but nil! }
+      superStrSym:=nil;
 
     { 2) the current class }
-    objcreatestringpoolentry(objclss.objextname^,sp_objcclassnames,sec_objc_class_names,classStrSym,classStrDef);
+    classStrSym:=objcreatestringpoolentry(objclss.objextname^,sp_objcclassnames,sec_objc_class_names);
     { 3) the isa }
     { From Clang: The isa for the meta-class is the root of the hierarchy. }
     root:=objclss;
     while assigned(root.childof) do
       root:=root.childof;
-    objcreatestringpoolentry(root.objextname^,sp_objcclassnames,sec_objc_class_names,metaisaStrSym,metaisaStrDef);
+    metaisaStrSym:=objcreatestringpoolentry(root.objextname^,sp_objcclassnames,sec_objc_class_names);
 
     { 4) the flags }
     { consider every class declared in the implementation section of a unit
@@ -939,56 +803,42 @@ procedure tobjcrttiwriter_fragile.gen_objc_classes_sections(list:TAsmList; objcl
       hiddenflag:=CLS_HIDDEN;
 
     { class declaration section }
+    new_section(list,sec_objc_meta_class,'_OBJC_META_CLASS',sizeof(pint));
 
     { 1) meta-class declaration  }
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-    tcb.begin_anonymous_record(internaltypeprefixName[itb_objc_fr_meta_class],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    metasym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcmetartti),AB_LOCAL,AT_DATA);
+    list.Concat(tai_symbol.Create(metasym,0));
 
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(metaisaStrSym,metaisaStrDef);
+    list.Concat(Tai_const.Create_sym(metaisaStrSym));
     { pointer to the superclass name if any, otherwise nil }
     if assigned(superstrsym) then
-      begin
-        tcb.queue_init(voidpointertype);
-        tcb.queue_emit_asmsym(superStrSym,superStrDef);
-      end
+      list.Concat(Tai_const.Create_sym(superStrSym))
     else
-      tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
+      list.concat(tai_const.create_32bit(0));
     { pointer to the class name }
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(classStrSym,classStrDef);
+    list.Concat(Tai_const.Create_sym(classStrSym));
 
     { version is always 0 currently }
-    tcb.emit_ord_const(0,u32inttype);
+    list.Concat(Tai_const.Create_32bit(0));
     { CLS_META for meta-classes }
-    tcb.emit_ord_const(hiddenflag or CLS_META,u32inttype);
+    list.Concat(Tai_const.Create_32bit(hiddenflag or CLS_META));
     { size of the meta-class instance: sizeof(objc_class) + 8 bytes }
-    tcb.emit_ord_const(META_INST_SIZE,u32inttype);
+    list.Concat(Tai_const.Create_32bit(META_INST_SIZE) );
     { meta-classes don't have ivars list (=0) }
-    tcb.emit_ord_const(0,u32inttype);
+    list.Concat(Tai_const.Create_32bit(0));
     { class methods list (stored in "__cls_meth" section) }
-    ConcatSymOrNil(tcb,mthdlist,voidpointertype);
+    if Assigned(mthdlist) then
+      list.Concat(Tai_const.Create_sym(mthdlist))
+    else
+      list.Concat(Tai_const.Create_32bit(0));
     { From Clang: cache is always nil }
-    tcb.emit_ord_const(0,u32inttype);
+    list.Concat(Tai_const.Create_32bit(0));
     { protocols }
-    ConcatSymOrNil(tcb,protolistsym,voidpointertype);
+    ConcatSymOrNil(list, protolistsym);
     { From Clang: ivar_layout for meta-class is always NULL. }
-    tcb.emit_ord_const(0,u32inttype);
+    list.Concat(Tai_const.Create_32bit(0));
     { From Clang: The class extension is always unused for meta-classes. }
-    tcb.emit_ord_const(0,u32inttype);
-    metaDef:=tcb.end_anonymous_record;
-    metasym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcmetartti),AB_LOCAL,AT_DATA,metadef);
-    list.concatList(
-      tcb.get_final_asmlist(
-        metasym,metaDef,
-        sec_objc_meta_class,'_OBJC_META_CLASS',sizeof(pint)
-      )
-    );
-    tcb.free;
-
+    list.Concat(Tai_const.Create_32bit(0));
 
     { 2) regular class declaration }
 
@@ -997,56 +847,46 @@ procedure tobjcrttiwriter_fragile.gen_objc_classes_sections(list:TAsmList; objcl
     { generate the instance variables list }
     gen_objc_ivars(list,objclss,ivarslist);
 
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-    tcb.begin_anonymous_record(internaltypeprefixName[itb_objc_fr_class],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    new_section(list,sec_objc_class,'_OBJC_CLASS',sizeof(pint));
+
+    clssym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcclassrtti),AB_LOCAL,AT_DATA);
+    list.Concat(tai_symbol.Create(clssym,0));
 
     { for class declaration: the isa points to the meta-class declaration }
-    tcb.emit_tai(Tai_const.Create_sym(metasym),cpointerdef.getreusable(metaDef));
+    list.Concat(Tai_const.Create_sym(metasym));
     { pointer to the super_class name if any, nil otherwise }
     if assigned(superStrSym) then
-      begin
-        tcb.queue_init(voidcodepointertype);
-        tcb.queue_emit_asmsym(superStrSym,superStrDef)
-      end
+      list.Concat(Tai_const.Create_sym(superStrSym))
     else
-      tcb.emit_tai(Tai_const.Create_nil_dataptr,voidcodepointertype);
+      list.Concat(Tai_const.Create_32bit(0));
     { pointer to the class name }
-    tcb.queue_init(voidcodepointertype);
-    tcb.queue_emit_asmsym(classStrSym,classStrDef);
+    list.Concat(Tai_const.Create_sym(classStrSym));
     { version is always 0 currently }
-    tcb.emit_ord_const(0,u32inttype);
+    list.Concat(Tai_const.Create_32bit(0));
     { CLS_CLASS for classes }
-    tcb.emit_ord_const(hiddenflag or CLS_CLASS,u32inttype);
+    list.Concat(Tai_const.Create_32bit(hiddenflag or CLS_CLASS));
     { size of instance: total size of instance variables }
-    tcb.emit_ord_const(tobjectsymtable(objclss.symtable).datasize,u32inttype);
+    list.Concat(Tai_const.Create_32bit(tobjectsymtable(objclss.symtable).datasize));
     { objc_ivar_list (stored in "__instance_vars" section) }
-    ConcatSymOrNil(tcb,ivarslist,voidpointertype);
+    if assigned(ivarslist) then
+      list.Concat(Tai_const.Create_sym(ivarslist))
+    else
+      list.Concat(tai_const.create_32bit(0));
     { instance methods list (stored in "__inst_meth" section) }
-    ConcatSymOrNil(tcb,mthdlist,voidpointertype);
+    if Assigned(mthdlist) then
+      list.Concat(Tai_const.Create_sym(mthdlist))
+    else
+      list.Concat(Tai_const.Create_32bit(0));
     { From Clang: cache is always NULL }
-    tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
+    list.Concat(Tai_const.Create_32bit(0));
     { protocols, protolistsym has been created for meta-class, no need to create another one}
-    ConcatSymOrNil(tcb, protolistsym,voidpointertype);
-    { From Clang: strong ivar_layout, necessary for garbage collection support }
-    tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
+    ConcatSymOrNil(list, protolistsym);
+    { TODO: From Clang: strong ivar_layout, necessary for garbage collection support }
+    list.Concat(Tai_const.Create_32bit(0));
     { TODO: From Clang: weak ivar_layout, necessary for garbage collection support }
-    tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
-
-    clsDef:=tcb.end_anonymous_record;
-    clssym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcclassrtti),AB_LOCAL,AT_DATA,clsDef);
-    list.concatList(
-      tcb.get_final_asmlist(
-        clssym,clsDef,
-        sec_objc_class,'_OBJC_CLASS',sizeof(pint)
-      )
-    );
-    tcb.free;
+    list.Concat(Tai_const.Create_32bit(0));
 
     classlabel:=clssym;
-    classlabeldef:=clsDef;
   end;
 
 
@@ -1056,69 +896,47 @@ procedure tobjcrttiwriter_fragile.gen_objc_info_sections(list: tasmlist);
   var
     i: longint;
     sym : TAsmSymbol;
-    lab : TAsmLabel;
-    symsdef,
-    def : tdef;
     parent: tobjectdef;
     superclasses: tfpobjectlist;
-    tcb: ttai_typedconstbuilder;
   begin
     if (classsyms.count<>0) or
        (catsyms.count<>0) then
       begin
-        tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-        tcb.begin_anonymous_record('',
-          C_alignment,1,
-          targetinfos[target_info.system]^.alignment.recordalignmin,
-          targetinfos[target_info.system]^.alignment.maxCrecordalign);
+        new_section(list,sec_objc_symbols,'_OBJC_SYMBOLS',sizeof(pint));
+        sym := current_asmdata.DefineAsmSymbol(target_asm.labelprefix+'_OBJC_SYMBOLS_$',AB_LOCAL,AT_DATA);
+
+        { symbol to refer to this information }
+        list.Concat(tai_symbol.Create(sym,0));
         { ??? (always 0 in Clang) }
-        tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
+        list.Concat(Tai_const.Create_pint(0));
         { ??? (From Clang: always 0, pointer to some selector) }
-        tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
+        list.Concat(Tai_const.Create_pint(0));
         { From Clang: number of defined classes }
-        tcb.emit_ord_const(classsyms.count,u16inttype);
+        list.Concat(Tai_const.Create_16bit(classsyms.count));
         { From Clang: number of defined categories }
-        tcb.emit_ord_const(catsyms.count,u16inttype);
+        list.Concat(Tai_const.Create_16bit(catsyms.count));
         { first all classes }
         for i:=0 to classsyms.count-1 do
-           tcb.emit_tai(Tai_const.Create_sym(tasmsymbol(classsyms[i])),tdef(classrttidefs[i]));
+          list.Concat(Tai_const.Create_sym(tasmsymbol(classsyms[i])));
         { then all categories }
         for i:=0 to catsyms.count-1 do
-          tcb.emit_tai(Tai_const.Create_sym(tasmsymbol(catsyms[i])),tdef(catrttidefs[i]));
-        symsdef:=tcb.end_anonymous_record;
-        sym := current_asmdata.DefineAsmSymbol(target_asm.labelprefix+'_OBJC_SYMBOLS_$',AB_LOCAL,AT_DATA,symsdef);
-        list.concatList(tcb.get_final_asmlist(sym,
-          symsdef,
-          sec_objc_symbols,'_OBJC_SYMBOLS',
-          sizeof(pint)));
+          list.Concat(Tai_const.Create_sym(tasmsymbol(catsyms[i])));
      end
     else
-      begin
-        sym:=nil;
-        symsdef:=nil;
-      end;
+      sym:=nil;
 
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-    tcb.begin_anonymous_record('',
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    new_section(list,sec_objc_module_info,'_OBJC_MODULE_INFO',4);
     { version number = 7 (always, both for gcc and clang) }
-    tcb.emit_ord_const(7,ptruinttype);
+    list.Concat(Tai_const.Create_pint(7));
     { sizeof(objc_module): 4 pointer-size entities }
-    tcb.emit_ord_const(sizeof(pint)*4,ptruinttype);
+    list.Concat(Tai_const.Create_pint(sizeof(pint)*4));
     { used to be file name, now unused (points to empty string) }
-    objcreatestringpoolentry('',sp_objcclassnames,sec_objc_class_names,lab,def);
-    tcb.emit_tai(Tai_const.Create_sym(lab),def);
+    list.Concat(Tai_const.Create_sym(objcreatestringpoolentry('',sp_objcclassnames,sec_objc_class_names)));
     { pointer to classes/categories list declared in this module }
     if assigned(sym) then
-      tcb.emit_tai(tai_const.Create_sym(sym),symsdef)
+      list.Concat(Tai_const.Create_sym(sym))
     else
-      tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
-    current_asmdata.getlabel(lab,alt_data);
-    list.concatList(tcb.get_final_asmlist(lab,
-      tcb.end_anonymous_record,sec_objc_module_info,'_OBJC_MODULE_INFO',4));
-
+      list.concat(tai_const.create_pint(0));
 
     { Add lazy references to parent classes of all classes defined in this unit }
     superclasses:=tfpobjectlist.create(false);
@@ -1147,11 +965,11 @@ procedure tobjcrttiwriter_fragile.gen_objc_info_sections(list: tasmlist);
     superclasses.free;
     { reference symbols for all classes and categories defined in this unit }
     for i:=0 to classdefs.count-1 do
-      list.concat(tai_symbol.Createname_global_value('.objc_class_name_'+tobjectdef(classdefs[i]).objextname^,AT_DATA,0,0,voidpointertype));
+      list.concat(tai_symbol.Createname_global_value('.objc_class_name_'+tobjectdef(classdefs[i]).objextname^,AT_DATA,0,0));
     for i:=0 to catdefs.count-1 do
       list.concat(tai_symbol.Createname_global_value('.objc_category_name_'+
         tobjectdef(catdefs[i]).childof.objextname^+'_'+
-        tobjectdef(catdefs[i]).objextname^,AT_DATA,0,0,voidpointertype));
+        tobjectdef(catdefs[i]).objextname^,AT_DATA,0,0));
   end;
 
 
@@ -1188,10 +1006,8 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_ivars(list: tasmlist; objccls: tob
   type
     ivar_data = record
       vf      : tfieldvarsym;
-      namesym : TAsmLabel;
-      namedef : tdef;
-      typesym : TAsmLabel;
-      typedef : tdef;
+      namesym : TAsmSymbol;
+      typesym : TAsmSymbol;
       offssym : TAsmSymbol;
     end;
   var
@@ -1204,18 +1020,12 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_ivars(list: tasmlist; objccls: tob
     encerr  : tdef;
     prefix  : shortstring;
     vis     : TAsmsymbind;
-    tcb     : ttai_typedconstbuilder;
-    pptruinttype : tdef;
   begin
     ivarslabel:=nil;
     prefix:='';
 
     vcnt:=0;
-    vars:=nil;
     setLength(vars,objccls.symtable.SymList.Count);
-
-    tcb:=nil;
-    prefix:='';
 
     for i:=0 to objccls.symtable.SymList.Count-1 do
       if tsym(objccls.symtable.SymList[i]).typ=fieldvarsym then
@@ -1224,15 +1034,13 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_ivars(list: tasmlist; objccls: tob
           if objctryencodetype(vf.vardef,enctype,encerr) then
             begin
               vars[vcnt].vf:=vf;
-              objcreatestringpoolentry(vf.RealName,sp_objcvarnames,sec_objc_meth_var_names,vars[vcnt].namesym,vars[vcnt].namedef);
-              objcreatestringpoolentry(enctype,sp_objcvartypes,sec_objc_meth_var_types,vars[vcnt].typesym,vars[vcnt].typedef);
+              vars[vcnt].namesym:=objcreatestringpoolentry(vf.RealName,sp_objcvarnames,sec_objc_meth_var_names);
+              vars[vcnt].typesym:=objcreatestringpoolentry(enctype,sp_objcvartypes,sec_objc_meth_var_types);
               if (vcnt=0) then
                 begin
-                  tcb:=ctai_typedconstbuilder.create([tcalo_new_section]);
+                  new_section(list,sec_objc_const,'_OBJC_IVAR_OFFSETS',sizeof(pint));
                   prefix:=target_info.cprefix+'OBJC_IVAR_$_'+objccls.objextname^+'.';
-                end
-              else
-                tcb:=ctai_typedconstbuilder.create([tcalo_new_section]);
+                end;
               { This matches gcc/Clang, but is strange: I would expect private
                 fields to be local symbols rather than private_extern (which
                 is "package-global") (JM)
@@ -1241,15 +1049,9 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_ivars(list: tasmlist; objccls: tob
                 vis:=AB_PRIVATE_EXTERN
               else
                 vis:=AB_GLOBAL;
-              vars[vcnt].offssym:=current_asmdata.DefineAsmSymbol(prefix+vf.RealName,vis,AT_DATA,ptruinttype);
-              tcb.emit_tai(tai_const.Create_int_dataptr(vf.fieldoffset),ptruinttype);
-              list.concatList(
-                tcb.get_final_asmlist(
-                  vars[vcnt].offssym,ptruinttype,
-                  sec_objc_const,'_OBJC_IVAR_OFFSETS',sizeof(pint)
-                )
-              );
-              tcb.free;
+              vars[vcnt].offssym:=current_asmdata.DefineAsmSymbol(prefix+vf.RealName,vis,AT_DATA);
+              list.concat(tai_symbol.Create_Global(vars[vcnt].offssym,0));
+              list.concat(tai_const.create_pint(vf.fieldoffset));
               inc(vcnt);
             end
           else
@@ -1259,47 +1061,30 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_ivars(list: tasmlist; objccls: tob
     if vcnt=0 then
       exit;
 
-    tcb:=ctai_typedconstbuilder.create([tcalo_is_lab,tcalo_new_section,tcalo_no_dead_strip]);
+    new_section(list,sec_objc_instance_vars,'_OBJC_INSTANCE_VARS',sizeof(pint));
 
     current_asmdata.getlabel(ivarslabel,alt_data);
-
-    tcb.begin_anonymous_record(
-      internaltypeprefixName[itb_objc_nf_ivars]+tostr(vcnt),
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    list.Concat(tai_label.Create(ivarslabel));
 
     { size of each entry -- always 32 bit value }
     ivtype:=search_named_unit_globaltype('OBJC','OBJC_IVAR',true).typedef;
-    tcb.emit_ord_const(ivtype.size,u32inttype);
+    list.concat(tai_const.Create_32bit(ivtype.size));
     { number of entries -- always 32 bit value }
-    tcb.emit_ord_const(vcnt,u32inttype);
+    list.Concat(tai_const.Create_32bit(vcnt));
 
-    { we use voidpointertype for all elements so that we can reuse the
-      recorddef for all ivar tables with the same number of elements }
-    pptruinttype:=cpointerdef.getreusable(ptruinttype);
     for i:=0 to vcnt-1 do
       begin
         { reference to the offset }
-        tcb.emit_tai(tai_const.Create_sym(vars[i].offssym),pptruinttype);
-        { reference to the instance variable name (}
-        tcb.queue_init(voidpointertype);
-        tcb.queue_emit_asmsym(vars[i].namesym,vars[i].namedef);
+        list.Concat(tai_const.Create_sym(vars[i].offssym));
+        { reference to the instance variable name }
+        list.Concat(tai_const.Create_sym(vars[i].namesym));
         { reference to the encoded type }
-        tcb.queue_init(voidpointertype);
-        tcb.queue_emit_asmsym(vars[i].typesym,vars[i].typedef);
+        list.Concat(tai_const.Create_sym(vars[i].typesym));
         { alignment -- always 32 bit value }
-        tcb.emit_ord_const(vars[i].vf.vardef.alignment,u32inttype);
+        list.Concat(tai_const.create_32bit(vars[i].vf.vardef.alignment));
         { size -- always 32 bit value }
-        tcb.emit_ord_const(vars[i].vf.vardef.size,u32inttype);
+        list.Concat(tai_const.Create_32bit(vars[i].vf.vardef.size));
       end;
-    list.concatList(
-      tcb.get_final_asmlist(
-        ivarslabel,tcb.end_anonymous_record,
-        sec_objc_instance_vars,'_OBJC_INSTANCE_VARS',sizeof(pint)
-      )
-    );
-    tcb.free;
   end;
 
 
@@ -1324,75 +1109,60 @@ From Clang:
 procedure tobjcrttiwriter_nonfragile.gen_objc_protocol(list: tasmlist; protocol: tobjectdef; out protocollabel: tasmsymbol);
   var
     lbl,
-    listsym       : TAsmSymbol;
-    namedef       : tdef;
     namesym,
+    listsym       : TAsmSymbol;
     protolist     : TAsmLabel;
     reqinstsym,
     reqclssym,
     optinstsym,
     optclssym     : TAsmLabel;
     prottype      : tdef;
-    tcb           : ttai_typedconstbuilder;
   begin
     gen_objc_protocol_list(list,protocol.ImplementedInterfaces,protolist);
     gen_objc_protocol_elements(list,protocol,reqinstsym,optinstsym,reqclssym,optclssym);
 
+    new_section(list, sec_data_coalesced,'_OBJC_PROTOCOL',sizeof(pint));
     { label for the protocol needs to be
         a) in a coalesced section (so multiple definitions of the same protocol
            can be merged by the linker)
         b) private_extern (should only be merged within the same module)
         c) weakly defined (so multiple definitions don't cause errors)
     }
-    prottype:=search_named_unit_globaltype('OBJC','OBJC_PROTOCOL',true).typedef;
-    lbl:=current_asmdata.DefineAsmSymbol(protocol.rtti_mangledname(objcclassrtti),AB_PRIVATE_EXTERN,AT_DATA,prottype);
+    lbl:=current_asmdata.DefineAsmSymbol(protocol.rtti_mangledname(objcclassrtti),AB_PRIVATE_EXTERN,AT_DATA);
+    list.Concat(tai_symbol.Create_Global(lbl,0));
+    list.Concat(tai_directive.Create(asd_weak_definition,lbl.name));
     protocollabel:=lbl;
 
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_weak]);
-    tcb.maybe_begin_aggregate(prottype);
     { protocol's isa - always nil }
-    tcb.emit_tai(Tai_const.Create_nil_dataptr,objc_idtype);
+    list.Concat(Tai_const.Create_pint(0));
     { name }
-    objcreatestringpoolentry(protocol.objextname^,sp_objcclassnames,sec_objc_class_names,namesym,namedef);
-    tcb.queue_init(charpointertype);
-    tcb.queue_emit_asmsym(namesym,namedef);
+    namesym:=objcreatestringpoolentry(protocol.objextname^,sp_objcclassnames,sec_objc_class_names);
+    list.Concat(Tai_const.Create_sym(namesym));
     { parent protocols list }
-    ConcatSymOrNil(tcb,protolist,voidpointertype);
+    ConcatSymOrNil(list,protolist);
     { required instance methods }
-    ConcatSymOrNil(tcb,reqinstsym,voidpointertype);
+    ConcatSymOrNil(list,reqinstsym);
     { required class methods }
-    ConcatSymOrNil(tcb,reqclssym,voidpointertype);
+    ConcatSymOrNil(list,reqclssym);
     { optional instance methods }
-    ConcatSymOrNil(tcb,optinstsym,voidpointertype);
+    ConcatSymOrNil(list,optinstsym);
     { optional class methods }
-    ConcatSymOrNil(tcb,optclssym,voidpointertype);
+    ConcatSymOrNil(list,optclssym);
     { TODO: properties }
-    tcb.emit_tai(Tai_const.Create_nil_dataptr,voidpointertype);
+    list.Concat(Tai_const.Create_pint(0));
     { size of this type }
-    tcb.emit_ord_const(prottype.size,u32inttype);
+    prottype:=search_named_unit_globaltype('OBJC','OBJC_PROTOCOL',true).typedef;
+    list.concat(tai_const.Create_32bit(prottype.size));
     { flags }
-    tcb.emit_ord_const(0,u32inttype);
-    tcb.maybe_end_aggregate(prottype);
-    list.concatList(
-      tcb.get_final_asmlist(
-        lbl,prottype,
-        sec_data_coalesced,'_OBJC_PROTOCOL',sizeof(pint)
-      )
-    );
-    tcb.free;
+    list.concat(tai_const.Create_32bit(0));
 
     { also add an entry to the __DATA, __objc_protolist section, required to
       register the protocol with the runtime }
-    listsym:=current_asmdata.DefineAsmSymbol(protocol.rtti_mangledname(objcmetartti),AB_PRIVATE_EXTERN,AT_DATA,cpointerdef.getreusable(prottype));
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_weak,tcalo_no_dead_strip]);
-    tcb.emit_tai(tai_const.Create_sym(lbl),cpointerdef.getreusable(prottype));
-    list.concatList(
-      tcb.get_final_asmlist(
-        listsym,cpointerdef.getreusable(prottype),
-        sec_objc_protolist,'_OBJC_PROTOLIST',sizeof(pint)
-      )
-    );
-    tcb.free;
+    new_section(list, sec_objc_protolist,'_OBJC_PROTOLIST',sizeof(pint));
+    listsym:=current_asmdata.DefineAsmSymbol(protocol.rtti_mangledname(objcmetartti),AB_PRIVATE_EXTERN,AT_DATA);
+    list.Concat(tai_symbol.Create_Global(listsym,0));
+    list.Concat(tai_const.Create_sym(lbl));
+    list.Concat(tai_directive.Create(asd_weak_definition,listsym.name));
   end;
 
 (*
@@ -1406,23 +1176,20 @@ From Clang:
 ///   const struct _prop_list_t * const properties;
 /// }
 *)
-procedure tobjcrttiwriter_nonfragile.gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol; out catlabeldef: tdef);
+procedure tobjcrttiwriter_nonfragile.gen_objc_category_sections(list:TAsmList; objccat: tobjectdef; out catlabel: TAsmSymbol);
   var
-    catstrsym,
     protolistsym  : TAsmLabel;
     instmthdlist,
     clsmthdlist,
+    catstrsym,
     clssym,
     catsym        : TAsmSymbol;
-    catstrdef,
-    catdef        : tdef;
-    tcb           : ttai_typedconstbuilder;
   begin
     { the category name }
-    objcreatestringpoolentry(objccat.objextname^,sp_objcclassnames,sec_objc_class_names,catstrsym,catstrdef);
+    catstrsym:=objcreatestringpoolentry(objccat.objextname^,sp_objcclassnames,sec_objc_class_names);
 
     { the class it extends }
-    clssym:=current_asmdata.RefAsmSymbol(objccat.childof.rtti_mangledname(objcclassrtti),AT_DATA);
+    clssym:=current_asmdata.RefAsmSymbol(objccat.childof.rtti_mangledname(objcclassrtti));
 
     { generate the methods lists }
     gen_objc_methods(list,objccat,instmthdlist,false,true);
@@ -1432,31 +1199,19 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_category_sections(list:TAsmList; o
     gen_objc_protocol_list(list,objccat.ImplementedInterfaces,protolistsym);
 
     { category declaration section }
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section]);
-    tcb.begin_anonymous_record(internaltypeprefixName[itb_objc_nf_category],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(catstrsym,catstrdef);
-    tcb.emit_tai(Tai_const.Create_sym(clssym),voidpointertype);
-    ConcatSymOrNil(tcb,instmthdlist,voidpointertype);
-    ConcatSymOrNil(tcb,clsmthdlist,voidpointertype);
-    ConcatSymOrNil(tcb,protolistsym,voidpointertype);
+    new_section(list,sec_objc_const,'_OBJC_CATEGORY',sizeof(pint));
+    catsym:=current_asmdata.DefineAsmSymbol(objccat.rtti_mangledname(objcclassrtti),AB_LOCAL,AT_DATA);
+    list.Concat(tai_symbol.Create(catsym,0));
+
+    list.Concat(Tai_const.Create_sym(catstrsym));
+    list.Concat(Tai_const.Create_sym(clssym));
+    ConcatSymOrNil(list,instmthdlist);
+    ConcatSymOrNil(list,clsmthdlist);
+    ConcatSymOrNil(list,protolistsym);
     { properties, not yet supported }
-    tcb.emit_tai(Tai_const.Create_nil_dataptr,voidpointertype);
-    catdef:=tcb.end_anonymous_record;
-    catsym:=current_asmdata.DefineAsmSymbol(objccat.rtti_mangledname(objcclassrtti),AB_LOCAL,AT_DATA,catdef);
-    list.concatList(
-      tcb.get_final_asmlist(
-        catsym,catdef,
-        sec_objc_const,'_OBJC_CATEGORY',sizeof(pint)
-      )
-    );
-    tcb.free;
+    list.Concat(Tai_const.Create_pint(0));
 
     catlabel:=catsym;
-    catlabeldef:=catdef;
   end;
 
 
@@ -1573,12 +1328,10 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_class_ro_part(list: tasmlist; objc
     OBJC2_CLS_HIDDEN = $10;
     CLS_EXCEPTION    = $20;
   var
+    classStrSym,
     methodssym,
     rosym        : TAsmSymbol;
-    classStrDef  : tdef;
-    classStrSym,
     ivarslab     : TAsmLabel;
-    rodef,
     class_type   : tdef;
     start,
     size,
@@ -1586,7 +1339,6 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_class_ro_part(list: tasmlist; objc
     rttitype     : trttitype;
     firstfield   : tfieldvarsym;
     i            : longint;
-    tcb          : ttai_typedconstbuilder;
   begin
     { consider every class declared in the implementation section of a unit
       as "hidden"
@@ -1627,7 +1379,7 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_class_ro_part(list: tasmlist; objc
     if not assigned(objclss.childof) then
       flags:=flags or CLS_ROOT;
 
-    objcreatestringpoolentry(objclss.objextname^,sp_objcclassnames,sec_objc_class_names,classStrSym,classStrDef);
+    classStrSym:=objcreatestringpoolentry(objclss.objextname^,sp_objcclassnames,sec_objc_class_names);
     { generate methods list }
     gen_objc_methods(list,objclss,methodssym,metaclass,false);
     { generate ivars (nil for metaclass) }
@@ -1637,37 +1389,28 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_class_ro_part(list: tasmlist; objc
       gen_objc_ivars(list,objclss,ivarslab);
 
     { class declaration section }
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section]);
-    tcb.begin_anonymous_record(
-      internaltypeprefixName[itb_objc_nf_class_ro_part],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
+    new_section(list,sec_objc_const,'_OBJC_META_CLASS',sizeof(pint));
 
-    tcb.emit_ord_const(flags,u32inttype);
-    tcb.emit_ord_const(start,u32inttype);
-    tcb.emit_ord_const(size,u32inttype);
-    { strong ivar layout for garbage collection (deprecated) }
-    tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
-    tcb.queue_init(voidpointertype);
-    tcb.queue_emit_asmsym(classStrSym,classStrDef);
-    ConcatSymOrNil(tcb,methodssym,voidpointertype);
-    ConcatSymOrNil(tcb,protolistsym,voidpointertype);
-    ConcatSymOrNil(tcb,ivarslab,voidpointertype);
-    { weak ivar layout for garbage collection (deprecated) }
-    tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
-    { TODO: properties }
-    tcb.emit_tai(tai_const.Create_nil_dataptr,voidpointertype);
-    rodef:=tcb.end_anonymous_record;
-    rosym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(rttitype),AB_LOCAL,AT_DATA,rodef);
-    list.concatList(
-      tcb.get_final_asmlist(
-        rosym,rodef,
-        sec_objc_const,'_OBJC_META_CLASS',sizeof(pint)
-      )
-    );
-    tcb.free;
+    rosym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(rttitype),AB_LOCAL,AT_DATA);
     classrolabel:=rosym;
+    list.Concat(tai_symbol.create(rosym,0));
+    list.Concat(tai_const.Create_32bit(longint(flags)));
+    list.Concat(tai_const.Create_32bit(longint(start)));
+    list.Concat(tai_const.Create_32bit(longint(size)));
+{$ifdef cpu64bitaddr}
+    { alignment }
+    list.Concat(tai_const.Create_32bit(0));
+{$endif}
+    { TODO: strong ivar layout for garbage collection }
+    list.concat(tai_const.Create_pint(0));
+    list.concat(tai_const.Create_sym(classStrSym));
+    ConcatSymOrNil(list,methodssym);
+    ConcatSymOrNil(list,protolistsym);
+    ConcatSymOrNil(list,ivarslab);
+    { TODO: weak ivar layout for garbage collection }
+    list.concat(tai_const.Create_pint(0));
+    { TODO: properties }
+    list.concat(tai_const.Create_pint(0));
   end;
 
 
@@ -1685,7 +1428,7 @@ From Clang:
 *)
 
 { Generate rtti for an Objective-C class and its meta-class. }
-procedure tobjcrttiwriter_nonfragile.gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol; out classlabeldef: tdef);
+procedure tobjcrttiwriter_nonfragile.gen_objc_classes_sections(list:TAsmList; objclss: tobjectdef; out classlabel: TAsmSymbol);
   var
     root          : tobjectdef;
     superSym,
@@ -1697,10 +1440,6 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_classes_sections(list:TAsmList; ob
     rosym         : TAsmSymbol;
     protolistsym  : TAsmLabel;
     vis           : TAsmsymbind;
-    isatcb,
-    metatcb       : ttai_typedconstbuilder;
-    metadef,
-    classdef      : tdef;
   begin
     { A) Register necessary names }
 
@@ -1709,30 +1448,13 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_classes_sections(list:TAsmList; ob
       vis:=AB_GLOBAL
     else
       vis:=AB_PRIVATE_EXTERN;
-
-    { create the typed const builders so we can get the (provisional) types
-      for the class and metaclass symbols }
-    isatcb:=ctai_typedconstbuilder.create([]);
-    classdef:=isatcb.begin_anonymous_record(
-      internaltypeprefixName[itb_objc_nf_class],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
-
-    metatcb:=ctai_typedconstbuilder.create([tcalo_new_section]);
-    metadef:=metatcb.begin_anonymous_record(
-      internaltypeprefixName[itb_objc_nf_meta_class],
-      C_alignment,1,
-      targetinfos[target_info.system]^.alignment.recordalignmin,
-      targetinfos[target_info.system]^.alignment.maxCrecordalign);
-
-    clssym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcclassrtti),vis,AT_DATA,classdef);
-    metasym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcmetartti),vis,AT_DATA,metadef);
+    clssym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcclassrtti),vis,AT_DATA);
+    metasym:=current_asmdata.DefineAsmSymbol(objclss.rtti_mangledname(objcmetartti),vis,AT_DATA);
     { 2) the superclass and meta superclass }
     if assigned(objclss.childof) then
       begin
-        superSym:=current_asmdata.RefAsmSymbol(objclss.childof.rtti_mangledname(objcclassrtti),AT_DATA);
-        superMetaSym:=current_asmdata.RefAsmSymbol(objclss.childof.rtti_mangledname(objcmetartti),AT_DATA);
+        superSym:=current_asmdata.RefAsmSymbol(objclss.childof.rtti_mangledname(objcclassrtti));
+        superMetaSym:=current_asmdata.RefAsmSymbol(objclss.childof.rtti_mangledname(objcmetartti));
       end
     else
       begin
@@ -1746,7 +1468,7 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_classes_sections(list:TAsmList; ob
     root:=objclss;
     while assigned(root.childof) do
       root:=root.childof;
-    metaisaSym:=current_asmdata.RefAsmSymbol(root.rtti_mangledname(objcmetartti),AT_DATA);
+    metaisaSym:=current_asmdata.RefAsmSymbol(root.rtti_mangledname(objcmetartti));
 
     { 4) the implemented protocols (same for metaclass and regular class) }
     gen_objc_protocol_list(list,objclss.ImplementedInterfaces,protolistsym);
@@ -1757,55 +1479,41 @@ procedure tobjcrttiwriter_nonfragile.gen_objc_classes_sections(list:TAsmList; ob
 
     { B) Class declaration section }
     { both class and metaclass are in the objc_data section for obj-c 2 }
+    new_section(list,sec_objc_data,'_OBJC_CLASS',sizeof(pint));
 
     { 1) meta-class declaration }
+    list.Concat(tai_symbol.Create_Global(metasym,0));
 
     { the isa }
-    metatcb.emit_tai(Tai_const.Create_sym(metaisaSym),voidpointertype);
+    list.Concat(Tai_const.Create_sym(metaisaSym));
     { the superclass }
-    metatcb.emit_tai(Tai_const.Create_sym(superMetaSym),voidpointertype);
+    list.Concat(Tai_const.Create_sym(superMetaSym));
     { pointer to cache }
     if not assigned(ObjCEmptyCacheVar) then
-      ObjCEmptyCacheVar:=current_asmdata.RefAsmSymbol(target_info.Cprefix+'_objc_empty_cache',AT_DATA);
-    metatcb.emit_tai(Tai_const.Create_sym(ObjCEmptyCacheVar),voidpointertype);
+      ObjCEmptyCacheVar:=current_asmdata.RefAsmSymbol(target_info.Cprefix+'_objc_empty_cache');
+    list.Concat(Tai_const.Create_sym(ObjCEmptyCacheVar));
     { pointer to vtable }
-    if not assigned(ObjCEmptyVtableVar) and
-       not(target_info.system in [system_arm_darwin,system_aarch64_darwin,system_i386_iphonesim,system_x86_64_iphonesim]) then
-      ObjCEmptyVtableVar:=current_asmdata.RefAsmSymbol(target_info.Cprefix+'_objc_empty_vtable',AT_DATA);
-    ConcatSymOrNil(metatcb,ObjCEmptyVtableVar,voidpointertype);
+    if not assigned(ObjCEmptyVtableVar) then
+      ObjCEmptyVtableVar:=current_asmdata.RefAsmSymbol(target_info.Cprefix+'_objc_empty_vtable');
+    list.Concat(Tai_const.Create_sym(ObjCEmptyVtableVar));
     { the read-only part }
-    metatcb.emit_tai(Tai_const.Create_sym(metarosym),voidpointertype);
-    metatcb.end_anonymous_record;
-    list.concatList(
-      metatcb.get_final_asmlist(
-        metasym,metadef,
-        sec_objc_data,'_OBJC_CLASS',sizeof(pint)
-      )
-    );
-    metatcb.free;
+    list.Concat(Tai_const.Create_sym(metarosym));
 
     { 2) regular class declaration }
+    list.Concat(tai_symbol.Create_Global(clssym,0));
+
     { the isa }
-    isatcb.emit_tai(Tai_const.Create_sym(metasym),cpointerdef.getreusable(metadef));
+    list.Concat(Tai_const.Create_sym(metasym));
     { the superclass }
-    ConcatSymOrNil(isatcb,supersym,voidpointertype);
+    list.Concat(Tai_const.Create_sym(superSym));
     { pointer to cache }
-    isatcb.emit_tai(Tai_const.Create_sym(ObjCEmptyCacheVar),voidpointertype);
+    list.Concat(Tai_const.Create_sym(ObjCEmptyCacheVar));
     { pointer to vtable }
-    ConcatSymOrNil(isatcb,ObjCEmptyVtableVar,voidpointertype);
+    list.Concat(Tai_const.Create_sym(ObjCEmptyVtableVar));
     { the read-only part }
-    isatcb.emit_tai(Tai_const.Create_sym(rosym),voidpointertype);
-    isatcb.end_anonymous_record;
-    list.concatList(
-      isatcb.get_final_asmlist(
-        clssym,classdef,
-        sec_objc_data,'_OBJC_CLASS',sizeof(pint)
-      )
-    );
-    isatcb.free;
+    list.Concat(Tai_const.Create_sym(rosym));
 
     classlabel:=clssym;
-    classlabeldef:=classdef;;
   end;
 
 
@@ -1813,27 +1521,14 @@ procedure tobjcrttiwriter_nonfragile.addclasslist(list: tasmlist; section: tasms
   var
     i: longint;
     sym: TAsmSymbol;
-    tcb: ttai_typedconstbuilder;
-    arrdef: tdef;
   begin
     if classes.count=0 then
       exit;
-    tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-    arrdef:=carraydef.getreusable(voidpointertype,classes.count);
-    sym:=current_asmdata.DefineAsmSymbol(symname,AB_LOCAL,AT_DATA,arrdef);
-    tcb.maybe_begin_aggregate(arrdef);
+    new_section(list,section,symname,sizeof(pint));
+    sym:=current_asmdata.DefineAsmSymbol(symname,AB_LOCAL,AT_DATA);
+    list.concat(tai_symbol.Create(sym,0));
     for i:=0 to classes.count-1 do
-      tcb.emit_tai(
-        tai_const.Create_sym(current_asmdata.RefAsmSymbol(tobjectdef(classes[i]).rtti_mangledname(objcclassrtti),AT_DATA)),
-        voidpointertype
-      );
-    tcb.maybe_end_aggregate(arrdef);
-    list.concatList(
-      tcb.get_final_asmlist(
-        sym,arrdef,
-        section,symname,sizeof(pint)
-      )
-    );
+      list.concat(tai_const.Create_sym(current_asmdata.RefAsmSymbol(tobjectdef(classes[i]).rtti_mangledname(objcclassrtti))));
   end;
 
 
@@ -1909,7 +1604,6 @@ constructor tobjcrttiwriter_nonfragile.create;
 procedure MaybeGenerateObjectiveCImageInfo(globalst, localst: tsymtable);
   var
     objcrttiwriter: tobjcrttiwriter;
-    tcb: ttai_typedconstbuilder;
   begin
     if (m_objectivec1 in current_settings.modeswitches) then
       begin
@@ -1917,15 +1611,9 @@ procedure MaybeGenerateObjectiveCImageInfo(globalst, localst: tsymtable);
           next 4 bytes contain flags (currently only regarding whether the code in the object
           file supports or requires garbage collection)
         }
-        tcb:=ctai_typedconstbuilder.create([tcalo_new_section,tcalo_no_dead_strip]);
-        tcb.emit_ord_const(0,u64inttype);
-        current_asmdata.asmlists[al_objc_data].concatList(
-          tcb.get_final_asmlist(
-            current_asmdata.DefineAsmSymbol(target_asm.labelprefix+'_OBJC_IMAGE_INFO',AB_LOCAL,AT_DATA,u64inttype),
-            u64inttype,sec_objc_image_info,'_OBJC_IMAGE_INFO',sizeof(pint)
-          )
-        );
-        tcb.free;
+        new_section(current_asmdata.asmlists[al_objc_data],sec_objc_image_info,'_OBJC_IMAGE_INFO',sizeof(pint));
+        current_asmdata.asmlists[al_objc_data].concat(Tai_symbol.Createname(target_asm.labelprefix+'_OBJC_IMAGE_INFO',AT_LABEL,sizeof(pint)));
+        current_asmdata.asmlists[al_objc_data].concat(Tai_const.Create_64bit(0));
 
         { generate rtti for all obj-c classes, protocols and categories
           defined in this module. }

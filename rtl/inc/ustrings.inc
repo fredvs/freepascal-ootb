@@ -21,12 +21,12 @@
   This file contains the implementation of the UnicodeString type,
   and all things that are needed for it.
   UnicodeString is defined as a 'silent' punicodechar :
-  a punicodechar that points to (S = SizeOf(SizeInt)) :
+  a punicodechar that points to :
 
-  @-2*S : SizeInt for reference count;
-  @-S   : SizeInt for size; size=number of chars. Multiply with
-          sizeof(UnicodeChar) to get the number of bytes. This is compatible with Delphi.
-  @      : String + Terminating #0;
+  @-8  : SizeInt for reference count;
+  @-4  : SizeInt for size; size=number of chars. Multiply with
+         sizeof(UnicodeChar) to get the number of bytes. This is compatible with Delphi.
+  @    : String + Terminating #0;
   Punicodechar(Unicodestring) is a valid typecast.
   So WS[i] is converted to the address @WS+i-1.
 
@@ -392,10 +392,7 @@ begin
     exit;
   Size := IndexWord(p^, -1, 0);
   if Size>0 then
-  begin
-    cp:=TranslatePlaceholderCP(cp);
     widestringmanager.Wide2AnsiMoveProc(P,result,cp,Size);
-  end;
 end;
 {$endif FPC_HAS_PWIDECHAR_TO_ANSISTR}
 
@@ -599,7 +596,11 @@ end;
 
 {$ifndef FPC_HAS_UCHAR_TO_SHORTSTR}
 {$define FPC_HAS_UCHAR_TO_SHORTSTR}
+{$ifdef VER2_6}
+procedure fpc_UChar_To_ShortStr(out result : shortstring;const c : WideChar); compilerproc;
+{$else}
 function fpc_UChar_To_ShortStr(const c : WideChar): shortstring; compilerproc;
+{$endif}
 {
   Converts a WideChar to a ShortString;
 }
@@ -638,7 +639,7 @@ var
 begin
 {$ifndef FPC_HAS_CPSTRING}
   cp:=DefaultSystemCodePage;
-{$endif FPC_HAS_CPSTRING}
+{$endif FPC_HAS_CPSTRING}     
   cp:=TranslatePlaceholderCP(cp);
   widestringmanager.Unicode2AnsiMoveProc(@c, fpc_UChar_To_AnsiStr, cp, 1);
 end;
@@ -758,13 +759,7 @@ begin
     end
   else
     i := high(arr)+1;
-  if i > 0 then
-  begin
-    cp:=TranslatePlaceholderCP(cp);
-    widestringmanager.Wide2AnsiMoveProc (pwidechar(@arr),RawByteString(fpc_WideCharArray_To_AnsiStr),cp,i);
-  end
-  else
-    fpc_WideCharArray_To_AnsiStr:='';
+  widestringmanager.Wide2AnsiMoveProc (pwidechar(@arr),RawByteString(fpc_WideCharArray_To_AnsiStr),cp,i);
 end;
 {$endif FPC_HAS_WIDECHARARRAY_TO_ANSISTR}
 
@@ -955,6 +950,9 @@ Var
   nl,lens, lena : SizeUInt;
 begin
   nl:=l;
+{$IFDEF VER2_6}
+  nl:=nl*2;
+{$ENDIF}
    if (l>0) then
     begin
       if Pointer(S)=nil then
@@ -1162,24 +1160,24 @@ end;
 
 {$ifndef FPC_HAS_POS_UNICODESTR_UNICODESTR}
 {$define FPC_HAS_POS_UNICODESTR_UNICODESTR}
-Function Pos (Const Substr : UnicodeString; Const Source : UnicodeString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (Const Substr : UnicodeString; Const Source : UnicodeString) : SizeInt;
 var
   i,MaxLen : SizeInt;
   pc : punicodechar;
 begin
   Pos:=0;
-  if (Length(SubStr)>0) and (Offset>0) and (Offset<=Length(Source)) then
+  if Length(SubStr)>0 then
    begin
-     MaxLen:=Length(source)-Length(SubStr)-(OffSet-1);
+     MaxLen:=Length(source)-Length(SubStr);
      i:=0;
-     pc:=@source[OffSet];
+     pc:=@source[1];
      while (i<=MaxLen) do
       begin
         inc(i);
         if (SubStr[1]=pc^) and
            (CompareWord(Substr[1],pc^,Length(SubStr))=0) then
          begin
-           Pos:=Offset+i-1;
+           Pos:=i;
            exit;
          end;
         inc(pc);
@@ -1192,23 +1190,20 @@ end;
 {$ifndef FPC_HAS_POS_UNICODECHAR_UNICODESTR}
 {$define FPC_HAS_POS_UNICODECHAR_UNICODESTR}
 { Faster version for a unicodechar alone }
-Function Pos (c : UnicodeChar; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (c : UnicodeChar; Const s : UnicodeString) : SizeInt;
 var
   i: SizeInt;
   pc : punicodechar;
 begin
-  if (Offset>0) and (Offset<=length(s)) then
+  pc:=@s[1];
+  for i:=1 to length(s) do
    begin
-     pc:=@s[OffSet];
-     for i:=OffSet to length(s) do
-       begin
-         if pc^=c then
-           begin
-             pos:=i;
-             exit;
-           end;
-         inc(pc);
-       end;
+     if pc^=c then
+      begin
+        pos:=i;
+        exit;
+      end;
+     inc(pc);
    end;
   pos:=0;
 end;
@@ -1217,21 +1212,21 @@ end;
 
 { DO NOT inline these! Inlining a managed typecast creates an implicit try..finally
   block, which is significant bloat without any sensible speed improvement. }
-Function Pos (const c : RawByteString; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (const c : RawByteString; Const s : UnicodeString) : SizeInt;
   begin
-    result:=Pos(UnicodeString(c),s,offset);
+    result:=Pos(UnicodeString(c),s);
   end;
 
 
-Function Pos (const c : ShortString; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (const c : ShortString; Const s : UnicodeString) : SizeInt;
   begin
-    result:=Pos(UnicodeString(c),s,OffSet);
+    result:=Pos(UnicodeString(c),s);
   end;
 
 
-Function Pos (const c : UnicodeString; Const s : RawByteString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (const c : UnicodeString; Const s : RawByteString) : SizeInt;
   begin
-    result:=Pos(c,UnicodeString(s),OffSet);
+    result:=Pos(c,UnicodeString(s));
   end;
 
 {$ifndef FPC_HAS_POS_CHAR_UNICODESTR}
@@ -1240,26 +1235,23 @@ Function Pos (const c : UnicodeString; Const s : RawByteString; Offset: Sizeint 
 { pos(c: char; const s: shortstring) also exists, so otherwise   }
 { using pos(char,pchar) will always call the shortstring version }
 { (exact match for first argument), also with $h+ (JM)           }
-Function Pos (c : Char; Const s : UnicodeString; Offset: Sizeint = 1) : SizeInt;
+Function Pos (c : Char; Const s : UnicodeString) : SizeInt;
 var
   i: SizeInt;
   wc : unicodechar;
   pc : punicodechar;
 begin
-  if (Offset>0) and (Offset<=Length(S)) then
-    begin
-      wc:=c;
-      pc:=@s[OffSet];
-      for i:=OffSet to length(s) do
-       begin
-         if pc^=wc then
-          begin
-            pos:=i;
-            exit;
-          end;
-         inc(pc);
-       end;
-    end;
+  wc:=c;
+  pc:=@s[1];
+  for i:=1 to length(s) do
+   begin
+     if pc^=wc then
+      begin
+        pos:=i;
+        exit;
+      end;
+     inc(pc);
+   end;
   pos:=0;
 end;
 {$endif FPC_HAS_POS_CHAR_UNICODESTR}
@@ -1267,7 +1259,7 @@ end;
 
 {$ifndef FPC_HAS_DELETE_UNICODESTR}
 {$define FPC_HAS_DELETE_UNICODESTR}
-Procedure {$ifdef VER3_0}Delete{$else}fpc_unicodestr_delete{$endif}(Var S : UnicodeString; Index,Size: SizeInt);
+Procedure Delete (Var S : UnicodeString; Index,Size: SizeInt);
 Var
   LS : SizeInt;
 begin
@@ -1291,7 +1283,7 @@ end;
 
 {$ifndef FPC_HAS_INSERT_UNICODESTR}
 {$define FPC_HAS_INSERT_UNICODESTR}
-Procedure {$ifdef VER3_0}Insert{$else}fpc_unicodestr_insert{$endif}(Const Source : UnicodeString; Var S : UnicodeString; Index : SizeInt);
+Procedure Insert (Const Source : UnicodeString; Var S : UnicodeString; Index : SizeInt);
 var
   Temp : UnicodeString;
   LS : SizeInt;
@@ -1318,14 +1310,11 @@ end;
 {$ifndef FPC_HAS_UPCASE_UNICODECHAR}
 {$define FPC_HAS_UPCASE_UNICODECHAR}
 Function  UpCase(c:UnicodeChar):UnicodeChar;
+var
+  s : UnicodeString;
 begin
-  if (word(c)>=Ord('a')) and (word(c)<=Ord('z')) then
-    Result:= UnicodeChar(word(c)-32)
-  else
-  if word(c)>=128 then
-    Result:= widestringmanager.UpperUnicodeStringProc(UnicodeString(c))[1]
-  else
-    Result:= c;
+  s:=c;
+  result:=widestringmanager.UpperUnicodeStringProc(s)[1];
 end;
 {$endif FPC_HAS_UPCASE_UNICODECHAR}
 
@@ -1342,14 +1331,11 @@ end;
 {$ifndef FPC_HAS_LOWERCASE_UNICODECHAR}
 {$define FPC_HAS_LOWERCASE_UNICODECHAR}
 Function  LowerCase(c:UnicodeChar):UnicodeChar;
+var
+  s : UnicodeString;
 begin
-  if (word(c)>=Ord('A')) and (word(c)<=Ord('Z')) then
-    Result:= UnicodeChar(word(c)+32)
-  else
-  if word(c)>=128 then
-    Result:= widestringmanager.LowerUnicodeStringProc(UnicodeString(c))[1]
-  else
-    Result:= c;
+  s:=c;
+  result:=widestringmanager.LowerUnicodeStringProc(s)[1];
 end;
 {$endif FPC_HAS_LOWERCASE_UNICODECHAR}
 
@@ -1591,6 +1577,7 @@ begin
   s:=UnicodeString(ss);
 end;
 
+{$ifdef FPC_HAS_STR_CURRENCY}
 procedure fpc_UnicodeStr_Currency(c : Currency;len,fr : SizeInt;out s : UnicodeString);compilerproc;
 var
   ss: shortstring;
@@ -1598,6 +1585,7 @@ begin
   str(c:len:fr,ss);
   s:=UnicodeString(ss);
 end;
+{$endif FPC_HAS_STR_CURRENCY}
 
 Procedure fpc_UnicodeStr_SInt(v : ValSint; Len : SizeInt; out S : UnicodeString);compilerproc;
 Var
@@ -1689,11 +1677,6 @@ function UnicodeToUtf8(Dest: PChar; Source: PUnicodeChar; MaxBytes: SizeInt): Si
 
 
 function UnicodeToUtf8(Dest: PChar; MaxDestBytes: SizeUInt; Source: PUnicodeChar; SourceChars: SizeUInt): SizeUInt;
-{$ifdef EXCLUDE_COMPLEX_PROCS}
-begin
-  runerror(217);
-end;
-{$else EXCLUDE_COMPLEX_PROCS}
   var
     i,j : SizeUInt;
     lw : longword;
@@ -1786,7 +1769,6 @@ end;
       end;
     result:=j+1;
   end;
-{$endif EXCLUDE_COMPLEX_PROCS}
 
 
 function Utf8ToUnicode(Dest: PUnicodeChar; Source: PChar; MaxChars: SizeInt): SizeInt;{$ifdef SYSTEMINLINE}inline;{$endif}
@@ -1799,11 +1781,6 @@ function Utf8ToUnicode(Dest: PUnicodeChar; Source: PChar; MaxChars: SizeInt): Si
 
 
 function UTF8ToUnicode(Dest: PUnicodeChar; MaxDestChars: SizeUInt; Source: PChar; SourceBytes: SizeUInt): SizeUInt;
-{$ifdef EXCLUDE_COMPLEX_PROCS}
-begin
-  runerror(217);
-end;
-{$else EXCLUDE_COMPLEX_PROCS}
   const
     UNICODE_INVALID=63;
   var
@@ -2082,7 +2059,6 @@ end;
         Result:=OutputUnicode+1;
       end;
   end;
-{$endif EXCLUDE_COMPLEX_PROCS}
 
 
 function UTF8Encode(const s : RawByteString) : RawByteString; inline;
@@ -2276,7 +2252,7 @@ procedure unimplementedunicodestring;
       Writeln(StdErr,SRecompileWithUnicodestrings);
       end;
 {$endif FPC_HAS_FEATURE_CONSOLEIO}
-    HandleErrorAddrFrameInd(234{RuntimeErrorExitCodes[reCodesetConversion]},get_pc_addr,get_frame);
+    HandleErrorAddrFrameInd(233,get_pc_addr,get_frame);
   end;
 
 
@@ -2381,58 +2357,3 @@ Begin
   Result:=Str;
   SetCodePage(Result,DefaultFileSystemCodePage,True);
 End;
-
-{ Delphi compatibility: always interpret the data in the string as UTF-8,
-  ignore any codepage }
-function UTF8ToString(const S: RawByteString): UnicodeString; inline;
-begin
-  Result := UTF8Decode(S);
-end;
-
-function UTF8ToString(const S: ShortString): UnicodeString;
-Var
-  rs: RawByteString;
-begin
-  rs:=S;
-  Result := UTF8Decode(rs);
-end;
-
-function UTF8ToString(const S: PAnsiChar): UnicodeString;
-var
-  rs: RawByteString;
-  Count: Integer;
-begin
-  Count := length(S);
-  SetLength(rs, Count);
-  if Count > 0 then
-    fpc_pchar_ansistr_intern_charmove(S,0,rs,0,Count);
-  Result := UTF8ToString(rs);
-end;
-
-{ byte and ansichar are the same on the JVM, and "array of" and "pointer to"
-  are as well }
-{$ifndef CPUJVM}
-function UTF8ToString(const S: array of AnsiChar): UnicodeString;
-var
-  rs: RawByteString;
-  Count: Integer;
-begin
-  Count := Length(S);
-  SetLength(rs, Count);
-  if Count > 0 then
-    fpc_pchar_ansistr_intern_charmove(@S,Low(S),rs,0,Count);
-  Result := UTF8ToString(rs);
-end;
-
-function UTF8ToString(const S: array of Byte): UnicodeString;
-var
-  rs: RawByteString;
-  Count: Integer;
-begin
-  Count := Length(S);
-  SetLength(rs, Count);
-  if Count > 0 then
-    fpc_pchar_ansistr_intern_charmove(pchar(@S),Low(S),rs,0,Count);
-  Result := UTF8ToString(rs);
-end;
-{$endif not CPUJVM}

@@ -34,6 +34,8 @@
          argc <--- esp
 }
 
+procedure PASCALMAIN; external name 'PASCALMAIN';
+
 {******************************************************************************
                           Process start/halt
  ******************************************************************************}
@@ -114,9 +116,10 @@ asm
 end;
 
 
-procedure _FPC_proc_haltproc(e:longint); cdecl; assembler; public name '_haltproc';
+procedure _FPC_proc_haltproc; assembler; nostackframe; public name '_haltproc';
 asm
-  //addl  $12, %esp  { align stack back to 16 bytes }
+  addl  $12, %esp  { align stack back to 16 bytes }
+.Lhaltproc:
   {$ifdef FPC_PIC}
         call  fpc_geteipasebxlocal
         addl  $_GLOBAL_OFFSET_TABLE_,%ebx
@@ -131,12 +134,44 @@ asm
 .Lnodlexitproc:
   movl    syscall_nr_exit_group,%eax
 
-  movl    e,%ebx
+{$ifdef FPC_PIC}
+  call    fpc_geteipasebxlocal
+  addl    $_GLOBAL_OFFSET_TABLE_,%ebx
+  movl    ExitCode@GOT(%ebx),%ebx
+ {$if sizeof(ExitCode)=2}
+  movzwl  (%ebx),%ebx
+ {$else}
+  mov     (%ebx),%ebx
+ {$endif}
+{$else FPC_PIC}
+ {$if sizeof(ExitCode)=2}
+  movzwl  ExitCode,%ebx
+ {$else}
+  mov     ExitCode,%ebx
+ {$endif}
+{$endif FPC_PIC}
+
   int     $0x80
   movl    syscall_nr_exit,%eax
 
-  movl    e,%ebx
+{$ifdef FPC_PIC}
+  call    fpc_geteipasebxlocal
+  addl    $_GLOBAL_OFFSET_TABLE_,%ebx
+  movl    ExitCode@GOT(%ebx),%ebx
+ {$if sizeof(ExitCode)=2}
+  movzwl  (%ebx),%ebx
+ {$else}
+  mov     (%ebx),%ebx
+ {$endif}
+{$else FPC_PIC}
+ {$if sizeof(ExitCode)=2}
+  movzwl  ExitCode,%ebx
+ {$else}
+  mov     ExitCode,%ebx
+ {$endif}
+{$endif FPC_PIC}
+
   int     $0x80
-  jmp     .Lnodlexitproc
+  jmp     .Lhaltproc
 end;
 

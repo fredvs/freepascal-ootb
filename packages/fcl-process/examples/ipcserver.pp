@@ -54,6 +54,7 @@ begin
     if Threaded then
       Srv.OnMessageQueued:=@MessageQueued;
     Srv.StartServer(Threaded);
+    
     Writeln('Server started. Listening for messages. Send "stop" message to stop server.');
     Repeat
       If Threaded then

@@ -57,7 +57,7 @@ interface
 
     uses
       cutils,globtype,systems,cclasses,
-      verbose,finput,fmodule,cscript,cpuinfo,
+      verbose,finput,fmodule,script,cpuinfo,
       cgbase,cgutils,
       itcpugas
       ;
@@ -82,8 +82,6 @@ interface
         'csect','csect','csect','csect','csect',
         'csect','csect','csect',
          '','','','','','','','','','','','','','',
-        '',
-        '',
         '',
         '',
         '',
@@ -266,18 +264,6 @@ interface
         top_ref:
           if o.ref^.refaddr=addr_no then
             getopstr:=getreferencestring(o.ref^)
-          else if o.ref^.refaddr=addr_pic_no_got then
-            begin
-              if (o.ref^.base<>NR_RTOC) or
-                 (o.ref^.index<>NR_NO) or
-                 (o.ref^.offset<>0) or
-                 not assigned(o.ref^.symbol) then
-                internalerror(2011122701);
-              hs:=o.ref^.symbol.name;
-              ReplaceForbiddenChars(hs);
-              hs:=hs+'[TC](RTOC)';
-              getopstr:=hs;
-            end
           else
             begin
               hs:=o.ref^.symbol.name;
@@ -406,7 +392,7 @@ interface
             begin
               { first write the current contents of s, because the symbol }
               { may be 255 characters                                     }
-              writer.AsmWrite(s);
+              asmwrite(s);
               s:=getopstr_jmp(taicpu(hp).oper[0]^);
             end;
         end
@@ -424,7 +410,7 @@ interface
                  end;
             end;
         end;
-      writer.AsmWriteLn(s);
+      AsmWriteLn(s);
     end;
 
     {*** Until here is copyed from agppcgas.pp. ***}
@@ -537,41 +523,41 @@ interface
 
         if not use_PR then
           begin
-            writer.AsmWrite(#9'export'#9'.');
-            writer.AsmWrite(s);
+            AsmWrite(#9'export'#9'.');
+            AsmWrite(s);
             if replaced then
               begin
-                writer.AsmWrite(' => ''.');
-                writer.AsmWrite(tai_symbol(hp).sym.name);
-                writer.AsmWrite('''');
+                AsmWrite(' => ''.');
+                AsmWrite(tai_symbol(hp).sym.name);
+                AsmWrite('''');
               end;
-            writer.AsmLn;
+            AsmLn;
           end;
 
-        writer.AsmWrite(#9'export'#9);
-        writer.AsmWrite(s);
-        writer.AsmWrite('[DS]');
+        AsmWrite(#9'export'#9);
+        AsmWrite(s);
+        AsmWrite('[DS]');
         if replaced then
           begin
-            writer.AsmWrite(' => ''');
-            writer.AsmWrite(tai_symbol(hp).sym.name);
-            writer.AsmWrite('[DS]''');
+            AsmWrite(' => ''');
+            AsmWrite(tai_symbol(hp).sym.name);
+            AsmWrite('[DS]''');
           end;
-        writer.AsmLn;
+        AsmLn;
 
         {Entry in transition vector: }
-        writer.AsmWrite(#9'csect'#9); writer.AsmWrite(s); writer.AsmWriteLn('[DS]');
+        AsmWrite(#9'csect'#9); AsmWrite(s); AsmWriteLn('[DS]');
 
-        writer.AsmWrite(#9'dc.l'#9'.'); writer.AsmWriteLn(s);
+        AsmWrite(#9'dc.l'#9'.'); AsmWriteLn(s);
 
-        writer.AsmWriteln(#9'dc.l'#9'TOC[tc0]');
+        AsmWriteln(#9'dc.l'#9'TOC[tc0]');
 
         {Entry in TOC: }
-        writer.AsmWriteLn(#9'toc');
+        AsmWriteLn(#9'toc');
 
-        writer.AsmWrite(#9'tc'#9);
-        writer.AsmWrite(s); writer.AsmWrite('[TC],');
-        writer.AsmWrite(s); writer.AsmWriteln('[DS]');
+        AsmWrite(#9'tc'#9);
+        AsmWrite(s); AsmWrite('[TC],');
+        AsmWrite(s); AsmWriteln('[DS]');
       end;
 
     function GetAdjacentTaiSymbol(var hp:tai):Boolean;
@@ -590,7 +576,7 @@ interface
             hp:=tai(hp.next);
           else
             begin
-              //writer.AsmWriteln('  ;#*#*# ' + tostr(Ord(tai(hp.next).typ)));
+              //AsmWriteln('  ;#*#*# ' + tostr(Ord(tai(hp.next).typ)));
               Break;
             end;
         end;
@@ -617,32 +603,32 @@ interface
 
       if use_PR then
         begin
-          writer.AsmWrite(#9'export'#9'.'); writer.AsmWrite(s); writer.AsmWrite('[PR]');
+          AsmWrite(#9'export'#9'.'); AsmWrite(s); AsmWrite('[PR]');
           if replaced then
             begin
-              writer.AsmWrite(' => ''.');
-              writer.AsmWrite(tai_symbol(last).sym.name);
-              writer.AsmWrite('[PR]''');
+              AsmWrite(' => ''.');
+              AsmWrite(tai_symbol(last).sym.name);
+              AsmWrite('[PR]''');
             end;
-          writer.AsmLn;
+          AsmLn;
         end;
 
       {Starts the section: }
-      writer.AsmWrite(#9'csect'#9'.');
-      writer.AsmWrite(s);
-      writer.AsmWriteLn('[PR]');
+      AsmWrite(#9'csect'#9'.');
+      AsmWrite(s);
+      AsmWriteLn('[PR]');
 
       {Info for the debugger: }
-      writer.AsmWrite(#9'function'#9'.');
-      writer.AsmWrite(s);
-      writer.AsmWriteLn('[PR]');
+      AsmWrite(#9'function'#9'.');
+      AsmWrite(s);
+      AsmWriteLn('[PR]');
 
       {Write all labels: }
       hp:= first;
       repeat
         s:= tai_symbol(hp).sym.name;
         ReplaceForbiddenChars(s);
-        writer.AsmWrite('.'); writer.AsmWrite(s); writer.AsmWriteLn(':');
+        AsmWrite('.'); AsmWrite(s); AsmWriteLn(':');
       until not GetAdjacentTaiSymbol(hp);
     end;
 
@@ -658,49 +644,49 @@ interface
 
       if isExported then
         begin
-          writer.AsmWrite(#9'export'#9);
-          writer.AsmWrite(s);
+          AsmWrite(#9'export'#9);
+          AsmWrite(s);
           if isConst then
-            writer.AsmWrite(const_storage_class)
+            AsmWrite(const_storage_class)
           else
-            writer.AsmWrite(var_storage_class);
+            AsmWrite(var_storage_class);
           if replaced then
               begin
-                writer.AsmWrite(' => ''');
-                writer.AsmWrite(sym);
-                writer.AsmWrite('''');
+                AsmWrite(' => ''');
+                AsmWrite(sym);
+                AsmWrite('''');
               end;
-          writer.AsmLn;
+          AsmLn;
         end;
 
       if not macos_direct_globals then
         begin
           {The actual section is here interrupted, by inserting a "tc" entry}
-          writer.AsmWriteLn(#9'toc');
+          AsmWriteLn(#9'toc');
 
-          writer.AsmWrite(#9'tc'#9);
-          writer.AsmWrite(s);
-          writer.AsmWrite('[TC], ');
-          writer.AsmWrite(s);
+          AsmWrite(#9'tc'#9);
+          AsmWrite(s);
+          AsmWrite('[TC], ');
+          AsmWrite(s);
           if isConst then
-            writer.AsmWrite(const_storage_class)
+            AsmWrite(const_storage_class)
           else
-            writer.AsmWrite(var_storage_class);
-          writer.AsmLn;
+            AsmWrite(var_storage_class);
+          AsmLn;
 
           {The interrupted section is here continued.}
-          writer.AsmWrite(#9'csect'#9);
-          writer.AsmWriteln(cur_CSECT_name+cur_CSECT_class);
-          writer.AsmWrite(PadTabs(s+':',#0));
+          AsmWrite(#9'csect'#9);
+          AsmWriteln(cur_CSECT_name+cur_CSECT_class);
+          AsmWrite(PadTabs(s+':',#0));
         end
       else
         begin
-          writer.AsmWrite(#9'csect'#9);
-          writer.AsmWrite(s);
-          writer.AsmWrite('[TC]');
+          AsmWrite(#9'csect'#9);
+          AsmWrite(s);
+          AsmWrite('[TC]');
         end;
 
-      writer.AsmLn;
+      AsmLn;
     end;
 
     const
@@ -748,9 +734,9 @@ interface
          case hp.typ of
             ait_comment:
               begin
-                 writer.AsmWrite(asminfo^.comment);
-                 writer.AsmWritePChar(tai_comment(hp).str);
-                 writer.AsmLn;
+                 AsmWrite(target_asm.comment);
+                 AsmWritePChar(tai_comment(hp).str);
+                 AsmLn;
               end;
             ait_regalloc,
             ait_tempalloc:
@@ -758,7 +744,7 @@ interface
             ait_section:
               begin
                  {if LastSecType<>sec_none then
-                  writer.AsmWriteLn('_'+asminfo^.secnames[LastSecType]+#9#9'ENDS');}
+                  AsmWriteLn('_'+target_asm.secnames[LastSecType]+#9#9'ENDS');}
 
                  if tai_section(hp).sectype<>sec_none then
                   begin
@@ -775,17 +761,17 @@ interface
                     ReplaceForbiddenChars(s);
                     cur_CSECT_name:= s;
 
-                    writer.AsmLn;
-                    writer.AsmWriteLn(#9+secnames[tai_section(hp).sectype]+' '+cur_CSECT_name+cur_CSECT_class);
+                    AsmLn;
+                    AsmWriteLn(#9+secnames[tai_section(hp).sectype]+' '+cur_CSECT_name+cur_CSECT_class);
                   end;
                  LastSecType:=tai_section(hp).sectype;
                end;
             ait_align:
               begin
                  case tai_align(hp).aligntype of
-                   1:writer.AsmWriteLn(#9'align 0');
-                   2:writer.AsmWriteLn(#9'align 1');
-                   4:writer.AsmWriteLn(#9'align 2');
+                   1:AsmWriteLn(#9'align 0');
+                   2:AsmWriteLn(#9'align 1');
+                   4:AsmWriteLn(#9'align 2');
                    otherwise internalerror(2002110302);
                  end;
               end;
@@ -796,11 +782,11 @@ interface
                  WriteDataHeader(s, tai_datablock(hp).is_global, false);
                  if not macos_direct_globals then
                    begin
-                     writer.AsmWriteLn(#9'ds.b '+tostr(tai_datablock(hp).size));
+                     AsmWriteLn(#9'ds.b '+tostr(tai_datablock(hp).size));
                    end
                  else
                    begin
-                     writer.AsmWriteLn(PadTabs(s+':',#0)+'ds.b '+tostr(tai_datablock(hp).size));
+                     AsmWriteLn(PadTabs(s+':',#0)+'ds.b '+tostr(tai_datablock(hp).size));
                      {TODO: ? PadTabs(s,#0) }
                    end;
               end;
@@ -817,20 +803,20 @@ interface
                       begin
                         if assigned(tai_const(hp).sym) then
                           internalerror(200404292);
-                        writer.AsmWrite(ait_const2str[aitconst_32bit]);
+                        AsmWrite(ait_const2str[aitconst_32bit]);
                         if target_info.endian = endian_little then
                           begin
-                            writer.AsmWrite(tostr(longint(lo(tai_const(hp).value))));
-                            writer.AsmWrite(',');
-                            writer.AsmWrite(tostr(longint(hi(tai_const(hp).value))));
+                            AsmWrite(tostr(longint(lo(tai_const(hp).value))));
+                            AsmWrite(',');
+                            AsmWrite(tostr(longint(hi(tai_const(hp).value))));
                           end
                         else
                           begin
-                            writer.AsmWrite(tostr(longint(hi(tai_const(hp).value))));
-                            writer.AsmWrite(',');
-                            writer.AsmWrite(tostr(longint(lo(tai_const(hp).value))));
+                            AsmWrite(tostr(longint(hi(tai_const(hp).value))));
+                            AsmWrite(',');
+                            AsmWrite(tostr(longint(lo(tai_const(hp).value))));
                           end;
-                        writer.AsmLn;
+                        AsmLn;
                       end;
 
                    aitconst_uleb128bit,
@@ -840,7 +826,7 @@ interface
                    aitconst_8bit,
                    aitconst_rva_symbol :
                      begin
-                       writer.AsmWrite(ait_const2str[consttype]);
+                       AsmWrite(ait_const2str[consttype]);
                        l:=0;
                        repeat
                          if assigned(tai_const(hp).sym) then
@@ -848,39 +834,39 @@ interface
                              if assigned(tai_const(hp).endsym) then
                                begin
                                  if (tai_const(hp).endsym.typ = AT_FUNCTION) and use_PR then
-                                   writer.AsmWrite('.');
+                                   AsmWrite('.');
 
                                  s:=tai_const(hp).endsym.name;
                                  ReplaceForbiddenChars(s);
-                                 writer.AsmWrite(s);
+                                 AsmWrite(s);
                                  inc(l,length(s));
 
                                  if tai_const(hp).endsym.typ = AT_FUNCTION then
                                    begin
                                      if use_PR then
-                                       writer.AsmWrite('[PR]')
+                                       AsmWrite('[PR]')
                                      else
-                                       writer.AsmWrite('[DS]');
+                                       AsmWrite('[DS]');
                                    end;
 
-                                 writer.AsmWrite('-');
+                                 AsmWrite('-');
                                  inc(l,5); {Approx 5 extra, no need to be exactly}
                                end;
 
                              if (tai_const(hp).sym.typ = AT_FUNCTION) and use_PR then
-                               writer.AsmWrite('.');
+                               AsmWrite('.');
 
                              s:= tai_const(hp).sym.name;
                              ReplaceForbiddenChars(s);
-                             writer.AsmWrite(s);
+                             AsmWrite(s);
                              inc(l,length(s));
 
                              if tai_const(hp).sym.typ = AT_FUNCTION then
                                begin
                                  if use_PR then
-                                   writer.AsmWrite('[PR]')
+                                   AsmWrite('[PR]')
                                  else
-                                   writer.AsmWrite('[DS]');
+                                   AsmWrite('[DS]');
                                end;
                              inc(l,5); {Approx 5 extra, no need to be exactly}
 
@@ -892,14 +878,14 @@ interface
                                s:= '';
                              if s<>'' then
                                begin
-                                 writer.AsmWrite(s);
+                                 AsmWrite(s);
                                  inc(l,length(s));
                                end;
                            end
                          else
                            begin
                              s:= tostr(tai_const(hp).value);
-                             writer.AsmWrite(s);
+                             AsmWrite(s);
                              inc(l,length(s));
                            end;
 
@@ -909,16 +895,47 @@ interface
                             (tai_const(hp.next).consttype<>consttype) then
                            break;
                          hp:=tai(hp.next);
-                         writer.AsmWrite(',');
+                         AsmWrite(',');
                        until false;
-                       writer.AsmLn;
+                       AsmLn;
                      end;
                 end;
               end;
 
-            ait_realconst:
+            ait_real_64bit :
               begin
-                WriteRealConstAsBytes(tai_realconst(hp),#9'dc.b'#9,do_line);
+                AsmWriteLn(target_asm.comment+'value: '+double2str(tai_real_64bit(hp).value));
+                d:=tai_real_64bit(hp).value;
+                { swap the values to correct endian if required }
+                if source_info.endian <> target_info.endian then
+                  swap64bitarray(t64bitarray(d));
+                AsmWrite(#9'dc.b'#9);
+                  begin
+                    for i:=0 to 7 do
+                      begin
+                        if i<>0 then
+                          AsmWrite(',');
+                        AsmWrite(tostr(t64bitarray(d)[i]));
+                      end;
+                  end;
+                AsmLn;
+              end;
+
+            ait_real_32bit :
+              begin
+                AsmWriteLn(target_asm.comment+'value: '+single2str(tai_real_32bit(hp).value));
+                sin:=tai_real_32bit(hp).value;
+                { swap the values to correct endian if required }
+                if source_info.endian <> target_info.endian then
+                  swap32bitarray(t32bitarray(sin));
+                AsmWrite(#9'dc.b'#9);
+                for i:=0 to 3 do
+                  begin
+                    if i<>0 then
+                      AsmWrite(',');
+                    AsmWrite(tostr(t32bitarray(sin)[i]));
+                  end;
+                AsmLn;
               end;
 
             ait_string:
@@ -935,7 +952,7 @@ interface
                   begin
                     for j := 0 to lines-1 do
                       begin
-                        writer.AsmWrite(#9'dc.b'#9);
+                        AsmWrite(#9'dc.b'#9);
                         quoted:=false;
                         for i:=counter to counter+line_length-1 do
                           begin
@@ -948,30 +965,30 @@ interface
                                 if not(quoted) then
                                     begin
                                       if i>counter then
-                                        writer.AsmWrite(',');
-                                      writer.AsmWrite('''');
+                                        AsmWrite(',');
+                                      AsmWrite('''');
                                     end;
-                                writer.AsmWrite(tai_string(hp).str[i]);
+                                AsmWrite(tai_string(hp).str[i]);
                                 quoted:=true;
                               end { if > 31 and < 128 and ord('"') }
                             else
                               begin
                                   if quoted then
-                                      writer.AsmWrite('''');
+                                      AsmWrite('''');
                                   if i>counter then
-                                      writer.AsmWrite(',');
+                                      AsmWrite(',');
                                   quoted:=false;
-                                  writer.AsmWrite(tostr(ord(tai_string(hp).str[i])));
+                                  AsmWrite(tostr(ord(tai_string(hp).str[i])));
                               end;
                           end; { end for i:=0 to... }
-                        if quoted then writer.AsmWrite('''');
-                        writer.AsmLn;
+                        if quoted then AsmWrite('''');
+                        AsmLn;
                         counter := counter+line_length;
                       end; { end for j:=0 ... }
 
                   { do last line of lines }
                   if counter < tai_string(hp).len then
-                    writer.AsmWrite(#9'dc.b'#9);
+                    AsmWrite(#9'dc.b'#9);
                   quoted:=false;
                   for i:=counter to tai_string(hp).len-1 do
                     begin
@@ -984,26 +1001,26 @@ interface
                           if not(quoted) then
                             begin
                               if i>counter then
-                                writer.AsmWrite(',');
-                              writer.AsmWrite('''');
+                                AsmWrite(',');
+                              AsmWrite('''');
                             end;
-                          writer.AsmWrite(tai_string(hp).str[i]);
+                          AsmWrite(tai_string(hp).str[i]);
                           quoted:=true;
                         end { if > 31 and < 128 and " }
                       else
                         begin
                           if quoted then
-                            writer.AsmWrite('''');
+                            AsmWrite('''');
                           if i>counter then
-                            writer.AsmWrite(',');
+                            AsmWrite(',');
                           quoted:=false;
-                          writer.AsmWrite(tostr(ord(tai_string(hp).str[i])));
+                          AsmWrite(tostr(ord(tai_string(hp).str[i])));
                         end;
                     end; { end for i:=0 to... }
                   if quoted then
-                    writer.AsmWrite('''');
+                    AsmWrite('''');
                 end;
-                writer.AsmLn;
+                AsmLn;
               end;
             ait_label:
               begin
@@ -1014,7 +1031,7 @@ interface
                       begin
                         ReplaceForbiddenChars(s);
                         //Local labels:
-                        writer.AsmWriteLn(s+':')
+                        AsmWriteLn(s+':')
                       end
                     else
                       begin
@@ -1026,10 +1043,10 @@ interface
                         else
                           begin
                             ReplaceForbiddenChars(s);
-                            writer.AsmWrite(#9'csect'#9); writer.AsmWrite(s);
-                            writer.AsmWriteLn('[TC]');
+                            AsmWrite(#9'csect'#9); AsmWrite(s);
+                            AsmWriteLn('[TC]');
 
-                            writer.AsmWriteLn(PadTabs(s+':',#0));
+                            AsmWriteLn(PadTabs(s+':',#0));
                           end;
                       end;
                   end;
@@ -1044,8 +1061,8 @@ interface
                        WriteDataHeader(s, tai_symbol(hp).is_global, true);
                        if macos_direct_globals then
                          begin
-                           writer.AsmWrite(s);
-                           writer.AsmWriteLn(':');
+                           AsmWrite(s);
+                           AsmWriteLn(':');
                          end;
                     end
                   else
@@ -1069,16 +1086,6 @@ interface
                    else if tai_marker(hp).kind=mark_NoLineInfoEnd then
                      dec(InlineLevel);
                  end;
-              ait_directive :
-                if tai_directive(hp).directive=asd_cpu then
-                  begin
-                    writer.AsmWrite(asminfo^.comment+' CPU ');
-                    if tai_directive(hp).name<>'' then
-                      writer.AsmWrite(tai_directive(hp).name);
-                    writer.AsmLn;
-                  end
-                else
-                  internalerror(2016022601);
          else
           internalerror(2002110303);
          end;
@@ -1096,9 +1103,9 @@ interface
         replaced: boolean;
 
       begin
-        if tasmsymbol(p).bind in [AB_EXTERNAL,AB_EXTERNAL_INDIRECT] then
+        if tasmsymbol(p).bind=AB_EXTERNAL then
           begin
-            //Writeln('ZZZ ',p.name,' ',p.typ);
+            //Writeln('ZZZ ',p.name,' ',p.classname,' ',Ord(tasmsymbol(p).typ));
             s:= p.name;
             replaced:= ReplaceForbiddenChars(s);
 
@@ -1106,60 +1113,60 @@ interface
               case tasmsymbol(p).typ of
                 AT_FUNCTION:
                   begin
-                    writer.AsmWrite(#9'import'#9'.');
-                    writer.AsmWrite(s);
+                    AsmWrite(#9'import'#9'.');
+                    AsmWrite(s);
                     if use_PR then
-                     writer.AsmWrite('[PR]');
+                     AsmWrite('[PR]');
 
                     if replaced then
                      begin
-                       writer.AsmWrite(' <= ''.');
-                       writer.AsmWrite(p.name);
+                       AsmWrite(' <= ''.');
+                       AsmWrite(p.name);
                        if use_PR then
-                         writer.AsmWrite('[PR]''')
+                         AsmWrite('[PR]''')
                        else
-                         writer.AsmWrite('''');
+                         AsmWrite('''');
                      end;
-                    writer.AsmLn;
+                    AsmLn;
 
-                    writer.AsmWrite(#9'import'#9);
-                    writer.AsmWrite(s);
-                    writer.AsmWrite('[DS]');
+                    AsmWrite(#9'import'#9);
+                    AsmWrite(s);
+                    AsmWrite('[DS]');
                     if replaced then
                      begin
-                       writer.AsmWrite(' <= ''');
-                       writer.AsmWrite(p.name);
-                       writer.AsmWrite('[DS]''');
+                       AsmWrite(' <= ''');
+                       AsmWrite(p.name);
+                       AsmWrite('[DS]''');
                      end;
-                    writer.AsmLn;
+                    AsmLn;
 
-                    writer.AsmWriteLn(#9'toc');
+                    AsmWriteLn(#9'toc');
 
-                    writer.AsmWrite(#9'tc'#9);
-                    writer.AsmWrite(s);
-                    writer.AsmWrite('[TC],');
-                    writer.AsmWrite(s);
-                    writer.AsmWriteLn('[DS]');
+                    AsmWrite(#9'tc'#9);
+                    AsmWrite(s);
+                    AsmWrite('[TC],');
+                    AsmWrite(s);
+                    AsmWriteLn('[DS]');
                   end;
                 AT_DATA:
                   begin
-                    writer.AsmWrite(#9'import'#9);
-                    writer.AsmWrite(s);
-                    writer.AsmWrite(var_storage_class);
+                    AsmWrite(#9'import'#9);
+                    AsmWrite(s);
+                    AsmWrite(var_storage_class);
                     if replaced then
                       begin
-                        writer.AsmWrite(' <= ''');
-                        writer.AsmWrite(p.name);
-                        writer.AsmWrite('''');
+                        AsmWrite(' <= ''');
+                        AsmWrite(p.name);
+                        AsmWrite('''');
                       end;
-                    writer.AsmLn;
+                    AsmLn;
 
-                    writer.AsmWriteLn(#9'toc');
-                    writer.AsmWrite(#9'tc'#9);
-                    writer.AsmWrite(s);
-                    writer.AsmWrite('[TC],');
-                    writer.AsmWrite(s);
-                    writer.AsmWriteLn(var_storage_class);
+                    AsmWriteLn(#9'toc');
+                    AsmWrite(#9'tc'#9);
+                    AsmWrite(s);
+                    AsmWrite('[TC],');
+                    AsmWrite(s);
+                    AsmWriteLn(var_storage_class);
                   end
                 else
                   InternalError(2003090901);
@@ -1188,9 +1195,9 @@ interface
     procedure TPPCMPWAssembler.WriteAsmFileHeader;
 
     begin
-      writer.AsmWriteLn(#9'string asis');  {Interpret strings just to be the content between the quotes.}
-      writer.AsmWriteLn(#9'aligning off'); {We do our own aligning.}
-      writer.AsmLn;
+      AsmWriteLn(#9'string asis');  {Interpret strings just to be the content between the quotes.}
+      AsmWriteLn(#9'aligning off'); {We do our own aligning.}
+      AsmLn;
     end;
 
     procedure TPPCMPWAssembler.WriteAsmList;
@@ -1198,8 +1205,8 @@ interface
       hal : tasmlisttype;
     begin
 {$ifdef EXTDEBUG}
-      if current_module.mainsource<>'' then
-       comment(v_info,'Start writing MPW-styled assembler output for '+current_module.mainsource);
+      if assigned(current_module.mainsource) then
+       comment(v_info,'Start writing MPW-styled assembler output for '+current_module.mainsource^);
 {$endif}
 
       WriteAsmFileHeader;
@@ -1207,17 +1214,17 @@ interface
 
       for hal:=low(TasmlistType) to high(TasmlistType) do
         begin
-          writer.AsmWriteLn(asminfo^.comment+'Begin asmlist '+AsmListTypeStr[hal]);
+          AsmWriteLn(target_asm.comment+'Begin asmlist '+AsmListTypeStr[hal]);
           writetree(current_asmdata.asmlists[hal]);
-          writer.AsmWriteLn(asminfo^.comment+'End asmlist '+AsmListTypeStr[hal]);
+          AsmWriteLn(target_asm.comment+'End asmlist '+AsmListTypeStr[hal]);
         end;
 
-      writer.AsmWriteLn(#9'end');
-      writer.AsmLn;
+      AsmWriteLn(#9'end');
+      AsmLn;
 
 {$ifdef EXTDEBUG}
-      if current_module.mainsource<>'' then
-       comment(v_info,'Done writing MPW-styled assembler output for '+current_module.mainsource);
+      if assigned(current_module.mainsource) then
+       comment(v_info,'Done writing MPW-styled assembler output for '+current_module.mainsource^);
 {$endif EXTDEBUG}
    end;
 

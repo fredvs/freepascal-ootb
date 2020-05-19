@@ -1,6 +1,3 @@
-{ This test explicity generates calculations which overflow.
-  Thus, we need an explicit $Q- }
-{$Q-}
 {$apptype console}
 {$mode objfpc}
 {$inline on}

@@ -1,4 +1,4 @@
-{ %target=linux,haiku}
+{ %target=linux}
 { %result=216 }
 
 program ExecStack;
@@ -7,9 +7,6 @@ program ExecStack;
     proc = procedure;
   var
 {$if defined(cpupowerpc) or defined(cpupowerpc64)}
-    ret: longint;
-{$endif}
-{$if defined(cpuaarch64)}
     ret: longint;
 {$endif}
 {$if defined(cpui386) or defined(cpux86_64)}
@@ -42,11 +39,6 @@ program ExecStack;
     DoNothing := proc(@ret);
     DoNothing;
 {$endif}
-{$endif}
-{$if defined(cpuaarch64)}
-    ret := $d65f03c0;
-    DoNothing := proc(@ret);
-    DoNothing;
 {$endif}
 {$if defined(cpui386) or defined(cpux86_64)}
     ret := $C3;

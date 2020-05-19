@@ -1,6 +1,4 @@
 { %CPU=m68k }
-{ %KNOWNCOMPILEERROR Obsolete test, kept for reference }
-{$error obsolete test, because we do support both HW and softFPU now on all systems }
 
 { This tests the $E+ compiler
   switch. It verifies if the

@@ -1,6 +1,6 @@
     {   Unicode implementation tables. 
  
-        Copyright (c) 2013 - 2017 by Inoussa OUEDRAOGO 
+        Copyright (c) 2013 by Inoussa OUEDRAOGO 
  
         Permission is hereby granted, free of charge, to any person 
         obtaining a copy of the Unicode data files and any associated 
@@ -24,14 +24,7 @@
         but WITHOUT ANY WARRANTY; without even the implied warranty of 
         MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. }
 
-{$IFDEF FPC}
-  {$mode DELPHI}{$H+}
-{$ENDIF FPC}
-
-{$IFNDEF FPC}
-  {$DEFINE ENDIAN_LITTLE}
-{$ENDIF !FPC}
-
+{$mode objfpc}{$H+}
 unit collation_sv;
 
 interface
@@ -44,6 +37,7 @@ const
   UPDATED_FIELDS = [  ];
   COLLATION_NAME = 'sv';
   BASE_COLLATION = '';
+  VERSION_STRING = '$Revision: 10632 $';
   VARIABLE_LOW_LIMIT = 65535;
   VARIABLE_HIGH_LIMIT = 0;
   VARIABLE_WEIGHT = 0;
@@ -51,9 +45,7 @@ const
   BACKWARDS_1 = False;
   BACKWARDS_2 = False;
   BACKWARDS_3 = False;
-  PROP_COUNT  = 1107;
-  NO_STRING_NORMALIZATION = False;
-  COMPARISON_STRENGTH = 3;
+  PROP_COUNT  = 1710;
 
 const
   UCA_TABLE_1 : array[0..255] of Byte = (
@@ -143,33 +135,16 @@ const
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
   );
 
-{$ifdef ENDIAN_LITTLE}
+{$ifdef FPC_LITTLE_ENDIAN}
   {$include collation_sv_le.inc}
-{$else ENDIAN_LITTLE}
+{$else FPC_LITTLE_ENDIAN}
   {$include collation_sv_be.inc}
-{$endif ENDIAN_LITTLE}
+{$endif FPC_LITTLE_ENDIAN}
 var
   CLDR_Collation : TUCA_DataBook = (
     Base               : nil;
-    Version            : 
-      (
-        Ord('$'),Ord('R'),Ord('e'),Ord('v'),Ord('i'),Ord('s'),Ord('i'),Ord('o'),
-        Ord('n'),Ord(':'),Ord(' '),Ord('1'),Ord('1'),Ord('9'),Ord('1'),Ord('4'),
-        Ord(' '),Ord('$'),
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-      );
-    CollationName      : 
-      (
-        Ord('s'),Ord('v'),
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0
-      );
+    Version            : VERSION_STRING;
+    CollationName      : COLLATION_NAME;
     VariableWeight     : TUCA_VariableKind(VARIABLE_WEIGHT);
     Backwards          : (BACKWARDS_0,BACKWARDS_1,BACKWARDS_2,BACKWARDS_3);
     BMP_Table1         : @UCA_TABLE_1[0];
@@ -177,12 +152,9 @@ var
     OBMP_Table1        : @UCAO_TABLE_1[0];
     OBMP_Table2        : @UCAO_TABLE_2[0];
     PropCount          : PROP_COUNT;
-    Props              : @UCA_PROPS[0];
+    Props              : PUCA_PropItemRec(@UCA_PROPS[0]);
     VariableLowLimit   : VARIABLE_LOW_LIMIT;
     VariableHighLimit  : VARIABLE_HIGH_LIMIT;
-    NoNormalization    : NO_STRING_NORMALIZATION;
-    ComparisonStrength : COMPARISON_STRENGTH;
-    Dynamic            : False;
   );
 
 procedure Register();

@@ -54,11 +54,7 @@ type
   TTestSuite = class;
 
   {$M+}
-
-  { TTest }
-
   TTest = class(TObject)
-  private
   protected
     FLastStep: TTestStep;
     function GetTestName: string; virtual;
@@ -68,10 +64,6 @@ type
     procedure SetEnableIgnores(Value: boolean); virtual; abstract;
   public
     function CountTestCases: integer; virtual;
-    Function GetChildTestCount : Integer; virtual;
-    Function GetChildTest(AIndex : Integer) : TTest; virtual;
-    function FindChildTest(const AName: String): TTest;
-    Function FindTest(Const AName : String) : TTest;
     procedure Run(AResult: TTestResult); virtual;
     procedure Ignore(const AMessage: string);
   published
@@ -100,14 +92,14 @@ type
     class procedure AssertFalse(ACondition: boolean); overload;
     class procedure AssertEquals(const AMessage: string; Expected, Actual: string); overload;
     class procedure AssertEquals(Expected, Actual: string); overload;
+    {$IFDEF UNICODE}
     class procedure AssertEquals(const AMessage: string; Expected, Actual: UnicodeString); overload;
     class procedure AssertEquals(Expected, Actual: UnicodeString); overload;
+    {$ENDIF}
     class procedure AssertEquals(const AMessage: string; Expected, Actual: integer); overload;
     class procedure AssertEquals(Expected, Actual: integer); overload;
     class procedure AssertEquals(const AMessage: string; Expected, Actual: int64); overload;
     class procedure AssertEquals(Expected, Actual: int64); overload;
-    class procedure AssertEquals(const AMessage: string; Expected, Actual: QWord); overload;
-    class procedure AssertEquals(Expected, Actual: QWord); overload;
     class procedure AssertEquals(const AMessage: string; Expected, Actual: currency); overload;
     class procedure AssertEquals(Expected, Actual: currency); overload;
     class procedure AssertEquals(const AMessage: string; Expected, Actual, Delta: double); overload;
@@ -244,14 +236,13 @@ type
 
   TTestSuite = class(TTest)
   private
-    FOwnsTests: Boolean;
     FTests: TFPList;
     FName: string;
     FTestSuiteName: string;
     FEnableIgnores: boolean;
-    procedure SetOwnsTests(AValue: Boolean);
+    function GetTest(Index: integer): TTest;
+    function GetTestCount: Integer;
   protected
-    Procedure SetOwnTestOnTests(AValue: Boolean);
     Function DoAddTest(ATest : TTest) : Integer;
     function GetTestName: string; override;
     function GetTestSuiteName: string; override;
@@ -259,7 +250,6 @@ type
     procedure SetTestSuiteName(const aName: string); override;
     procedure SetTestName(const Value: string); virtual;
     procedure SetEnableIgnores(Value: boolean); override;
-    property OwnsTests : Boolean Read FOwnsTests Write SetOwnsTests;
   public
     constructor Create(AClass: TClass; AName: string); reintroduce; overload; virtual;
     constructor Create(AClass: TClass); reintroduce; overload; virtual;
@@ -268,15 +258,13 @@ type
     constructor Create; reintroduce; overload; virtual;
     destructor Destroy; override;
     function CountTestCases: integer; override;
-    Function GetChildTestCount : Integer; override;
-    Function GetChildTest(AIndex : Integer) : TTest; override;
     procedure Run(AResult: TTestResult); override;
     procedure RunTest(ATest: TTest; AResult: TTestResult); virtual;
     procedure AddTest(ATest: TTest); overload; virtual;
     procedure AddTestSuiteFromClass(ATestClass: TClass); virtual;
     class function Warning(const aMessage: string): TTestCase;
-    property Test[Index: integer]: TTest read GetChildTest; default;
-    Property ChildTestCount : Integer Read GetChildTestCount;
+    property Test[Index: integer]: TTest read GetTest; default;
+    Property ChildTestCount : Integer Read GetTestCount;
     property TestSuiteName: string read GetTestSuiteName write SetTestSuiteName;
     property TestName: string read GetTestName write SetTestName;
     // Only for backwards compatibility. Use Test and ChildTestCount.
@@ -332,7 +320,9 @@ type
   end;
 
   function ComparisonMsg(const aExpected: string; const aActual: string; const aCheckEqual: boolean=true): string; overload;
-  function ComparisonMsg(const aExpected: UnicodeString; const aActual: UnicodeString; const aCheckEqual: boolean=true): Unicodestring; overload;
+  {$IFDEF UNICODE}
+  function ComparisonMsg(const aExpected: UnicodeString; const aActual: UnicodeString; const aCheckEqual: boolean=true): string; overload;
+  {$ENDIF}
   function ComparisonMsg(const aMsg: string; const aExpected: string; const aActual: string; const aCheckEqual: boolean=true): string; overload;
 
   // Made public for 3rd party developers extending TTestCase with new AssertXXX methods
@@ -436,15 +426,16 @@ begin
     Result := format(SCompareNotEqual, [aExpected, aActual]);
 end;
 
-function ComparisonMsg(const aExpected: Unicodestring; const aActual: Unicodestring; const aCheckEqual: boolean=true): Unicodestring;
+{$IFDEF UNICODE}
+function ComparisonMsg(const aExpected: UnicodeString; const aActual: UnicodeString; const aCheckEqual: boolean=true): string;
 // aCheckEqual=false gives the error message if the test does *not* expect the results to be the same.
 begin
   if aCheckEqual then
-    Result := unicodeformat(SCompare, [aExpected, aActual])
+    Result := format(UnicodeString(SCompare), [aExpected, aActual])
   else {check unequal requires opposite error message}
-    Result := unicodeformat(SCompareNotEqual, [aExpected, aActual]);
+    Result := format(UnicodeString(SCompareNotEqual), [aExpected, aActual]);
 end;
-
+{$ENDIF}
 
 function ComparisonMsg(const aMsg: string; const aExpected: string; const aActual: string; const aCheckEqual: boolean): string;
 begin
@@ -547,65 +538,6 @@ begin
   Result := 0;
 end;
 
-function TTest.GetChildTestCount: Integer;
-begin
-  Result:=0;
-end;
-
-function TTest.GetChildTest(AIndex: Integer): TTest;
-begin
-  Result:=Nil;
-end;
-
-function TTest.FindChildTest(const AName: String): TTest;
-
-Var
-  I : Integer;
-
-begin
-  Result:=Nil;
-  I:=GetChildTestCount-1;
-  While (Result=Nil) and (I>=0) do
-    begin
-    Result:=GetChildTest(I);
-    if CompareText(Result.TestName,AName)<>0 then
-      Result:=Nil;
-    Dec(I);
-    end;
-end;
-
-function TTest.FindTest(const AName: String): TTest;
-
-Var
-  S : String;
-  I,P : Integer;
-
-begin
-  Result:=Nil;
-  S:=AName;
-  if S='' then exit;
-  P:=Pos('.',S);
-  If (P=0) then
-    P:=Length(S)+1;
-  Result:=FindChildTest(Copy(S,1,P-1));
-  if (Result<>Nil) then
-    begin
-    Delete(S,1,P);
-    If (S<>'') then
-      Result:=Result.FindTest(S);
-    end
-  else
-    begin
-    P:=GetChildTestCount;
-    I:=0;
-    While (Result=Nil) and (I<P) do
-      begin
-      Result:=GetChildTest(I).FindTest(Aname);
-      Inc(I);
-      end;
-    end;
-end;
-
 function TTest.GetEnableIgnores: boolean;
 begin
   Result := True;
@@ -616,7 +548,7 @@ begin
   { do nothing }
 end;
 
-procedure TTest.Ignore(const AMessage: string);
+procedure TTest.Ignore(const AMessage: String);
 begin
   if EnableIgnores then raise EIgnoredTest.Create(AMessage);
 end;
@@ -695,18 +627,18 @@ begin
   AssertTrue(ComparisonMsg(Expected, Actual), Expected=Actual,CallerAddr);
 end;
 
-class procedure TAssert.AssertEquals(const AMessage: string; Expected, Actual: Unicodestring);
+{$IFDEF UNICODE}
+class procedure TAssert.AssertEquals(const AMessage: string; Expected, Actual: UnicodeString);
 begin
-  AssertTrue(ComparisonMsg(AMessage ,Expected, Actual), Expected=Actual,CallerAddr);
+  AssertTrue(ComparisonMsg(AMessage,Expected, Actual), (Expected=Actual),CallerAddr);
 end;
 
 
-class procedure TAssert.AssertEquals(Expected, Actual: Unicodestring);
+class procedure TAssert.AssertEquals(Expected, Actual: UnicodeString);
 begin
-  AssertTrue(ComparisonMsg(Expected, Actual), Expected=Actual,CallerAddr);
+  AssertTrue(ComparisonMsg(Expected, Actual), (Expected=Actual),CallerAddr);
 end;
-
-
+{$ENDIF}
 
 class procedure TAssert.AssertNotNull(const AString: string);
 begin
@@ -733,18 +665,6 @@ end;
 
 
 class procedure TAssert.AssertEquals(Expected, Actual: int64);
-begin
-  AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual,CallerAddr);
-end;
-
-
-class procedure TAssert.AssertEquals(const AMessage: string; Expected, Actual: QWord);
-begin
-  AssertTrue(ComparisonMsg(AMessage,IntToStr(Expected), IntToStr(Actual)), Expected = Actual,CallerAddr);
-end;
-
-
-class procedure TAssert.AssertEquals(Expected, Actual: QWord);
 begin
   AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual,CallerAddr);
 end;
@@ -970,7 +890,7 @@ begin
         FailMsg:=ComparisonMsg(SExceptionHelpContextCompare,IntToStr(AExceptionContext),IntToStr(E.HelpContext))
       end;
   end;
-  AssertTrue(AMessage + ': '+FailMsg, FailMsg='', AErrorAddr);
+  AssertTrue(AMessage + FailMsg, FailMsg='', AErrorAddr);
 end;
 
 
@@ -1265,7 +1185,6 @@ constructor TTestSuite.Create;
 begin
   inherited Create;
   FTests := TFPList.Create;
-  FOwnsTests:=True;
   FEnableIgnores := True;
 end;
 
@@ -1278,41 +1197,19 @@ begin
 end;
 
 
-function TTestSuite.GetChildTest(AIndex: integer): TTest;
+function TTestSuite.GetTest(Index: integer): TTest;
 begin
-  Result := TTestItem(FTests[AIndex]).Test;
+  Result := TTestItem(FTests[Index]).Test;
 end;
 
-function TTestSuite.GetChildTestCount: Integer;
+function TTestSuite.GetTestCount: Integer;
 begin
   Result:=FTests.Count;
 end;
 
-procedure TTestSuite.SetOwnsTests(AValue: Boolean);
-begin
-  if FOwnsTests=AValue then Exit;
-  FOwnsTests:=AValue;
-  SetOwnTestOnTests(AValue);
-end;
-
-procedure TTestSuite.SetOwnTestOnTests(AValue: Boolean);
-Var
-  I : Integer;
-
-begin
-  For I:=0 to FTests.Count-1 do
-    TTestItem(FTests[i]).OwnsTest:=AValue;
-end;
-
 function TTestSuite.DoAddTest(ATest: TTest): Integer;
-
-Var
-  I : TTestItem;
-
 begin
-  I:=TTestItem.Create(ATest);
-  I.OwnsTest:=OwnsTests;
-  Result:=FTests.Add(I);
+  Result:=FTests.Add(TTestItem.Create(ATest));
   if ATest.TestSuiteName = '' then
     ATest.TestSuiteName := Self.TestName;
   ATest.EnableIgnores := Self.EnableIgnores;

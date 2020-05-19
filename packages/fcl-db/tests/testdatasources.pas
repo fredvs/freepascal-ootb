@@ -94,7 +94,7 @@ begin
 end;}
 
 procedure TTestDatasources.TestDataEvent1;
-var
+var i,count     : integer;
     aDatasource : TDataSource;
     aDatalink1,
     aDatalink2  : TDataLink;

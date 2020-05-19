@@ -85,6 +85,8 @@ type
     procedure g_concatcopy_unaligned(list: tasmlist; const Source, dest: treference; len: tcgint); override;
     procedure g_concatcopy_move(list: tasmlist; const Source, dest: treference; len: tcgint);
     procedure g_adjust_self_value(list:TAsmList;procdef: tprocdef;ioffset: tcgint); override;
+    procedure g_intf_wrapper(list: tasmlist; procdef: tprocdef; const labelname: string; ioffset: longint); override;
+    procedure g_external_wrapper(list : TAsmList; procdef: tprocdef; const externalname: string);override;
     procedure g_profilecode(list: TAsmList);override;
   end;
 
@@ -162,7 +164,7 @@ begin
   if assigned(ref.symbol) then
     begin
       ref.base:=getintregister(list,OS_ADDR);
-      reference_reset_symbol(tmpref,ref.symbol,ref.offset,ref.alignment,ref.volatility);
+      reference_reset_symbol(tmpref,ref.symbol,ref.offset,ref.alignment);
       if (cs_create_pic in current_settings.moduleswitches) then
         begin
           if not (pi_needs_got in current_procinfo.flags) then
@@ -207,7 +209,6 @@ begin
     ref.base:=tmpreg1   { offset alone, weird but possible }
   else
     begin
-      tmpreg:=ref.base;
       if (not base_replaced) then
         ref.base:=getintregister(list,OS_ADDR);
       list.concat(taicpu.op_reg_reg_reg(A_ADDU,ref.base,tmpreg,tmpreg1))
@@ -320,7 +321,7 @@ begin
       LOC_REFERENCE:
         begin
           paraloc.check_simple_location;
-          reference_reset_base(href2,paraloc.location^.reference.index,paraloc.location^.reference.offset,ctempposinvalid,paraloc.alignment,[]);
+          reference_reset_base(href2,paraloc.location^.reference.index,paraloc.location^.reference.offset,paraloc.alignment);
           { concatcopy should choose the best way to copy the data }
           g_concatcopy(list,ref,href2,tcgsize2size[size]);
         end;
@@ -353,7 +354,7 @@ procedure TCGMIPS.a_call_sym_pic(list: tasmlist; sym: tasmsymbol);
 var
   href: treference;
 begin
-  reference_reset_symbol(href,sym,0,sizeof(aint),[]);
+  reference_reset_symbol(href,sym,0,sizeof(aint));
   if (sym.bind=AB_LOCAL) then
     href.refaddr:=addr_pic
   else
@@ -363,7 +364,6 @@ begin
   if (sym.bind=AB_LOCAL) then
     begin
       href.refaddr:=addr_low;
-      href.base:=NR_NO;
       list.concat(taicpu.op_reg_ref(A_ADDIU,NR_PIC_FUNC,href));
     end;
   list.concat(taicpu.op_reg(A_JALR,NR_PIC_FUNC));
@@ -372,9 +372,9 @@ begin
   { Restore GP if in PIC mode }
   if (cs_create_pic in current_settings.moduleswitches) then
     begin
-      if tcpuprocinfo(current_procinfo).save_gp_ref.offset=0 then
+      if TMIPSProcinfo(current_procinfo).save_gp_ref.offset=0 then
         InternalError(2013071001);
-      list.concat(taicpu.op_reg_ref(A_LW,NR_GP,tcpuprocinfo(current_procinfo).save_gp_ref));
+      list.concat(taicpu.op_reg_ref(A_LW,NR_GP,TMIPSProcinfo(current_procinfo).save_gp_ref));
     end;
 end;
 
@@ -388,9 +388,9 @@ begin
     InternalError(2013022101);
 
   if weak then
-    sym:=current_asmdata.WeakRefAsmSymbol(s,AT_FUNCTION)
+    sym:=current_asmdata.WeakRefAsmSymbol(s)
   else
-    sym:=current_asmdata.RefAsmSymbol(s,AT_FUNCTION);
+    sym:=current_asmdata.RefAsmSymbol(s);
 
   if (cs_create_pic in current_settings.moduleswitches) then
     a_call_sym_pic(list,sym)
@@ -417,9 +417,9 @@ begin
   { Restore GP if in PIC mode }
   if (cs_create_pic in current_settings.moduleswitches) then
     begin
-      if tcpuprocinfo(current_procinfo).save_gp_ref.offset=0 then
+      if TMIPSProcinfo(current_procinfo).save_gp_ref.offset=0 then
         InternalError(2013071002);
-      list.concat(taicpu.op_reg_ref(A_LW,NR_GP,tcpuprocinfo(current_procinfo).save_gp_ref));
+      list.concat(taicpu.op_reg_ref(A_LW,NR_GP,TMIPSProcinfo(current_procinfo).save_gp_ref));
     end;
 end;
 
@@ -608,7 +608,7 @@ begin
       exit;
     end;
 
-  reference_reset_symbol(href,ref.symbol,ref.offset,ref.alignment,ref.volatility);
+  reference_reset_symbol(href,ref.symbol,ref.offset,ref.alignment);
   if (cs_create_pic in current_settings.moduleswitches) then
     begin
       if not (pi_needs_got in current_procinfo.flags) then
@@ -1070,7 +1070,7 @@ end;
 
 procedure TCGMIPS.a_jmp_name(list: tasmlist; const s: string);
 begin
-  List.Concat(TAiCpu.op_sym(A_BA, current_asmdata.RefAsmSymbol(s,AT_FUNCTION)));
+  List.Concat(TAiCpu.op_sym(A_BA, current_asmdata.RefAsmSymbol(s)));
   { Delay slot }
   list.Concat(TAiCpu.Op_none(A_NOP));
 end;
@@ -1275,11 +1275,11 @@ begin
 
   helplist:=TAsmList.Create;
 
-  reference_reset(href,0,[]);
+  reference_reset(href,0);
   href.base:=NR_STACK_POINTER_REG;
 
   fmask:=0;
-  nextoffset:=tcpuprocinfo(current_procinfo).floatregstart;
+  nextoffset:=TMIPSProcInfo(current_procinfo).floatregstart;
   lastfpuoffset:=LocalSize;
   for reg := RS_F0 to RS_F31 do { to check: what if F30 is double? }
     begin
@@ -1301,7 +1301,7 @@ begin
     end;
 
   mask:=0;
-  nextoffset:=tcpuprocinfo(current_procinfo).intregstart;
+  nextoffset:=TMIPSProcInfo(current_procinfo).intregstart;
   saveregs:=rg[R_INTREGISTER].used_in_proc-paramanager.get_volatile_registers_int(pocall_stdcall);
   if (current_procinfo.flags*[pi_do_call,pi_is_assembler]<>[]) then
     include(saveregs,RS_R31);
@@ -1374,10 +1374,10 @@ begin
   if (cs_create_pic in current_settings.moduleswitches) and
      (pi_needs_got in current_procinfo.flags) then
     begin
-      largeoffs:=(tcpuprocinfo(current_procinfo).save_gp_ref.offset>simm16hi);
+      largeoffs:=(TMIPSProcinfo(current_procinfo).save_gp_ref.offset>simm16hi);
       if largeoffs then
         list.concat(Taicpu.op_none(A_P_SET_MACRO));
-      list.concat(Taicpu.op_const(A_P_CPRESTORE,tcpuprocinfo(current_procinfo).save_gp_ref.offset));
+      list.concat(Taicpu.op_const(A_P_CPRESTORE,TMIPSProcinfo(current_procinfo).save_gp_ref.offset));
       if largeoffs then
         list.concat(Taicpu.op_none(A_P_SET_NOMACRO));
     end;
@@ -1385,7 +1385,7 @@ begin
   href.base:=NR_STACK_POINTER_REG;
 
   for i:=0 to MIPS_MAX_REGISTERS_USED_IN_CALL-1 do
-    if tcpuprocinfo(current_procinfo).register_used[i] then
+    if TMIPSProcInfo(current_procinfo).register_used[i] then
       begin
         reg:=parasupregs[i];
         href.offset:=i*sizeof(aint)+LocalSize;
@@ -1417,12 +1417,12 @@ begin
      end
    else
      begin
-       if tcpuprocinfo(current_procinfo).save_gp_ref.offset<>0 then
-         tg.ungettemp(list,tcpuprocinfo(current_procinfo).save_gp_ref);
-       reference_reset(href,0,[]);
+       if TMIPSProcinfo(current_procinfo).save_gp_ref.offset<>0 then
+         tg.ungettemp(list,TMIPSProcinfo(current_procinfo).save_gp_ref);
+       reference_reset(href,0);
        href.base:=NR_STACK_POINTER_REG;
 
-       nextoffset:=tcpuprocinfo(current_procinfo).floatregstart;
+       nextoffset:=TMIPSProcInfo(current_procinfo).floatregstart;
        for reg := RS_F0 to RS_F31 do
          begin
            if reg in (rg[R_FPUREGISTER].used_in_proc-paramanager.get_volatile_registers_fpu(pocall_stdcall)) then
@@ -1433,7 +1433,7 @@ begin
              end;
          end;
 
-       nextoffset:=tcpuprocinfo(current_procinfo).intregstart;
+       nextoffset:=TMIPSProcInfo(current_procinfo).intregstart;
        saveregs:=rg[R_INTREGISTER].used_in_proc-paramanager.get_volatile_registers_int(pocall_stdcall);
        if (current_procinfo.flags*[pi_do_call,pi_is_assembler]<>[]) then
          include(saveregs,RS_R31);
@@ -1482,9 +1482,9 @@ begin
   paraloc1.init;
   paraloc2.init;
   paraloc3.init;
-  paramanager.getintparaloc(list, pd, 1, paraloc1);
-  paramanager.getintparaloc(list, pd, 2, paraloc2);
-  paramanager.getintparaloc(list, pd, 3, paraloc3);
+  paramanager.getintparaloc(pd, 1, paraloc1);
+  paramanager.getintparaloc(pd, 2, paraloc2);
+  paramanager.getintparaloc(pd, 3, paraloc3);
   a_load_const_cgpara(list, OS_SINT, len, paraloc3);
   a_loadaddr_ref_cgpara(list, dest, paraloc2);
   a_loadaddr_ref_cgpara(list, Source, paraloc1);
@@ -1520,7 +1520,7 @@ begin
   if len > high(longint) then
     internalerror(2002072704);
   { A call (to FPC_MOVE) requires the outgoing parameter area to be properly
-    allocated on stack. This can only be done before tcpuprocinfo.set_first_temp_offset,
+    allocated on stack. This can only be done before tmipsprocinfo.set_first_temp_offset,
     i.e. before secondpass. Other internal procedures request correct stack frame
     by setting pi_do_call during firstpass, but for this particular one it is impossible.
     Therefore, if the current procedure is a leaf one, we have to leave it that way. }
@@ -1537,7 +1537,7 @@ begin
       src:=source
     else
       begin
-        reference_reset(src,sizeof(aint),source.volatility);
+        reference_reset(src,sizeof(aint));
         { load the address of source into src.base }
         src.base := GetAddressRegister(list);
         a_loadaddr_ref_reg(list, Source, src.base);
@@ -1546,7 +1546,7 @@ begin
       dst:=dest
     else
       begin
-        reference_reset(dst,sizeof(aint),dest.volatility);
+        reference_reset(dst,sizeof(aint));
         { load the address of dest into dst.base }
         dst.base := GetAddressRegister(list);
         a_loadaddr_ref_reg(list, dest, dst.base);
@@ -1622,8 +1622,8 @@ begin
     g_concatcopy_move(list, Source, dest, len)
   else
   begin
-    reference_reset(src,sizeof(aint),source.volatility);
-    reference_reset(dst,sizeof(aint),dest.volatility);
+    reference_reset(src,sizeof(aint));
+    reference_reset(dst,sizeof(aint));
     { load the address of source into src.base }
     src.base := GetAddressRegister(list);
     a_loadaddr_ref_reg(list, Source, src.base);
@@ -1661,18 +1661,145 @@ begin
 end;
 
 
+procedure TCGMIPS.g_intf_wrapper(list: tasmlist; procdef: tprocdef; const labelname: string; ioffset: longint);
+var
+  make_global: boolean;
+  hsym: tsym;
+  href: treference;
+  paraloc: Pcgparalocation;
+  IsVirtual: boolean;
+begin
+  if not(procdef.proctypeoption in [potype_function,potype_procedure]) then
+    Internalerror(200006137);
+  if not assigned(procdef.struct) or
+    (procdef.procoptions * [po_classmethod, po_staticmethod,
+    po_methodpointer, po_interrupt, po_iocheck] <> []) then
+    Internalerror(200006138);
+  if procdef.owner.symtabletype <> objectsymtable then
+    Internalerror(200109191);
+
+  make_global := False;
+  if (not current_module.is_unit) or create_smartlink or
+    (procdef.owner.defowner.owner.symtabletype = globalsymtable) then
+    make_global := True;
+
+  if make_global then
+    List.concat(Tai_symbol.Createname_global(labelname, AT_FUNCTION, 0))
+  else
+    List.concat(Tai_symbol.Createname(labelname, AT_FUNCTION, 0));
+
+  IsVirtual:=(po_virtualmethod in procdef.procoptions) and
+      not is_objectpascal_helper(procdef.struct);
+
+  if (cs_create_pic in current_settings.moduleswitches) and
+    (not IsVirtual) then
+    begin
+      list.concat(Taicpu.op_none(A_P_SET_NOREORDER));
+      list.concat(Taicpu.op_reg(A_P_CPLOAD,NR_PIC_FUNC));
+      list.concat(Taicpu.op_none(A_P_SET_REORDER));
+    end;
+
+  { set param1 interface to self  }
+  procdef.init_paraloc_info(callerside);
+  hsym:=tsym(procdef.parast.Find('self'));
+  if not(assigned(hsym) and
+    (hsym.typ=paravarsym)) then
+    internalerror(2010103101);
+  paraloc:=tparavarsym(hsym).paraloc[callerside].location;
+  if assigned(paraloc^.next) then
+    InternalError(2013020101);
+
+  case paraloc^.loc of
+    LOC_REGISTER:
+      begin
+        if ((ioffset>=simm16lo) and (ioffset<=simm16hi)) then
+          a_op_const_reg(list,OP_SUB, paraloc^.size,ioffset,paraloc^.register)
+        else
+          begin
+            a_load_const_reg(list, paraloc^.size, ioffset, NR_R1);
+            a_op_reg_reg(list, OP_SUB, paraloc^.size, NR_R1, paraloc^.register);
+          end;
+      end;
+  else
+    internalerror(2010103102);
+  end;
+
+  if IsVirtual then
+  begin
+    { load VMT pointer }
+    reference_reset_base(href,paraloc^.register,0,sizeof(aint));
+    list.concat(taicpu.op_reg_ref(A_LW,NR_VMT,href));
+
+    if (procdef.extnumber=$ffff) then
+      Internalerror(200006139);
+
+    { TODO: case of large VMT is not handled }
+    { We have no reason not to use $t9 even in non-PIC mode. }
+    reference_reset_base(href, NR_VMT, tobjectdef(procdef.struct).vmtmethodoffset(procdef.extnumber), sizeof(aint));
+    list.concat(taicpu.op_reg_ref(A_LW,NR_PIC_FUNC,href));
+    list.concat(taicpu.op_reg(A_JR, NR_PIC_FUNC));
+  end
+  else if not (cs_create_pic in current_settings.moduleswitches) then
+    list.concat(taicpu.op_sym(A_J,current_asmdata.RefAsmSymbol(procdef.mangledname)))
+  else
+    begin
+      { GAS does not expand "J symbol" into PIC sequence }
+      reference_reset_symbol(href,current_asmdata.RefAsmSymbol(procdef.mangledname),0,sizeof(pint));
+      href.base:=NR_GP;
+      href.refaddr:=addr_pic_call16;
+      list.concat(taicpu.op_reg_ref(A_LW,NR_PIC_FUNC,href));
+      list.concat(taicpu.op_reg(A_JR,NR_PIC_FUNC));
+    end;
+  { Delay slot }
+  list.Concat(TAiCpu.Op_none(A_NOP));
+
+  List.concat(Tai_symbol_end.Createname(labelname));
+end;
+
+
+procedure TCGMIPS.g_external_wrapper(list: TAsmList; procdef: tprocdef; const externalname: string);
+  var
+    href: treference;
+  begin
+    reference_reset_symbol(href,current_asmdata.RefAsmSymbol(externalname),0,sizeof(aint));
+    { Always do indirect jump using $t9, it won't harm in non-PIC mode }
+    if (cs_create_pic in current_settings.moduleswitches) then
+      begin
+        list.concat(taicpu.op_none(A_P_SET_NOREORDER));
+        list.concat(taicpu.op_reg(A_P_CPLOAD,NR_PIC_FUNC));
+        href.base:=NR_GP;
+        href.refaddr:=addr_pic_call16;
+        list.concat(taicpu.op_reg_ref(A_LW,NR_PIC_FUNC,href));
+        list.concat(taicpu.op_reg(A_JR,NR_PIC_FUNC));
+        { Delay slot }
+        list.Concat(taicpu.op_none(A_NOP));
+        list.Concat(taicpu.op_none(A_P_SET_REORDER));
+      end
+    else
+      begin
+        href.refaddr:=addr_high;
+        list.concat(taicpu.op_reg_ref(A_LUI,NR_PIC_FUNC,href));
+        href.refaddr:=addr_low;
+        list.concat(taicpu.op_reg_ref(A_ADDIU,NR_PIC_FUNC,href));
+        list.concat(taicpu.op_reg(A_JR,NR_PIC_FUNC));
+        { Delay slot }
+        list.Concat(taicpu.op_none(A_NOP));
+      end;
+  end;
+
+
 procedure TCGMIPS.g_profilecode(list:TAsmList);
   var
     href: treference;
   begin
     if not (cs_create_pic in current_settings.moduleswitches) then
       begin
-        reference_reset_symbol(href,current_asmdata.RefAsmSymbol('_gp',AT_DATA),0,sizeof(pint),[]);
+        reference_reset_symbol(href,current_asmdata.RefAsmSymbol('_gp'),0,sizeof(pint));
         a_loadaddr_ref_reg(list,href,NR_GP);
       end;
     list.concat(taicpu.op_reg_reg(A_MOVE,NR_R1,NR_RA));
     list.concat(taicpu.op_reg_reg_const(A_ADDIU,NR_SP,NR_SP,-8));
-    a_call_sym_pic(list,current_asmdata.RefAsmSymbol('_mcount',AT_FUNCTION));
+    a_call_sym_pic(list,current_asmdata.RefAsmSymbol('_mcount'));
   end;
 
 

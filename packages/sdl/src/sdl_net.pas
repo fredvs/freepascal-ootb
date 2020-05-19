@@ -148,7 +148,7 @@ const
   SDLNetLibName = 'SDL_net';
 {$ENDIF}
 
-{$IFDEF MORPHOS}
+{$IFDEF MACOS}
   SDLNetLibName = 'powersdl_net.library';
 {$ENDIF}
 

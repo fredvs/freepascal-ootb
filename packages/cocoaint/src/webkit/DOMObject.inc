@@ -1,34 +1,64 @@
-{ Parsed from WebKit.framework DOMObject.h }
-
+{ Parsed from Webkit.framework DOMObject.h }
 
 {$ifdef TYPES}
+{$ifndef DOMOBJECT_PAS_T}
+{$define DOMOBJECT_PAS_T}
+
+{ Types }
 type
-  DOMObjectPtr = ^DOMObject;
+  DOMObjectInternal = record end;
+  DOMObjectInternalPtr = ^DOMObjectInternal;
+
+{$endif}
 {$endif}
 
-{$ifdef TYPES}
-type
-  DOMTimeStamp = culonglong;
-  DOMTimeStampPtr = ^DOMTimeStamp;
-  DOMObjectInternal = OpaqueType { available in 10_4 };
-  DOMObjectInternalPtr = ^DOMObjectInternal { available in 10_4 };
+{$ifdef RECORDS}
+{$ifndef DOMOBJECT_PAS_R}
+{$define DOMOBJECT_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef DOMOBJECT_PAS_F}
+{$define DOMOBJECT_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef DOMOBJECT_PAS_S}
+{$define DOMOBJECT_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  DOMObject = objcclass;
+  DOMObjectPointer = ^DOMObject;
+  DOMObjectPtr = DOMObjectPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef DOMOBJECT_PAS_C}
+{$define DOMOBJECT_PAS_C}
 
-type
+{ DOMObject }
   DOMObject = objcclass external (WebScriptObject, NSCopyingProtocol)
   private
     _internal: DOMObjectInternalPtr;
+    
+  public
 
-    { Adopted protocols }
-    function copyWithZone (zone: NSZonePtr): id; message 'copyWithZone:';
+    { Adopted Protocols }
+    function copyWithZone(zone_: NSZonePtr): id;
   end;
 
-
-type
-  DOMLinkStyle = objccategory external (DOMObject)
+{ DOMLinkStyleCategory }
+  DOMLinkStyleCategory = objccategory external (DOMObject)
     function sheet: DOMStyleSheet; message 'sheet';
   end;
-{$endif}
 
+{$endif}
+{$endif}

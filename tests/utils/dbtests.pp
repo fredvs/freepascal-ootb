@@ -23,7 +23,7 @@ Function AddTest(Name : String; AddSource : Boolean) : Integer;
 Function UpdateTest(ID : Integer; Info : TConfig; Source : String) : Boolean;
 Function AddTestResult(TestID,RunID,TestRes : Integer;
                        OK, Skipped : Boolean;
-                       Log : String;var count_it : boolean) : Integer;
+                       Log : String;var is_new : boolean) : Integer;
 Function RequireTestID(Name : String): Integer;
 Function CleanTestRun(ID : Integer) : Boolean;
 function GetTestPreviousRunHistoryID(TestRunID : Integer) : Integer;
@@ -450,7 +450,7 @@ end;
 
 Function AddTestResult(TestID,RunID,TestRes : Integer;
                        OK, Skipped : Boolean;
-                       Log : String;var count_it : boolean) : Integer;
+                       Log : String;var is_new : boolean) : Integer;
 
 Const
   SInsertRes='Insert into TESTRESULTS '+
@@ -459,31 +459,24 @@ Const
              '(%d,%d,''%s'',''%s'',%d) RETURNING TR_ID';
   SSelectId='SELECT TR_ID FROM TESTRESULTS WHERE (TR_TEST_FK=%d) '+
             ' AND (TR_TESTRUN_FK=%d)';
-  SSelectTestResult='SELECT TR_RESULT FROM TESTRESULTS WHERE (TR_TEST_FK=%d) '+
-            ' AND (TR_TESTRUN_FK=%d)';
   SInsertLog='Update TESTRESULTS SET TR_LOG=''%s'''+
              ',TR_OK=''%s'',TR_SKIP=''%s'',TR_RESULT=%d WHERE (TR_ID=%d)';
 Var
   Qry : String;
   updateValues : boolean;
-  prevTestResult : integer;
+
 begin
   updateValues:=false;
   Result:=-1;
-  prevTestResult:=-1;
   Qry:=Format(SInsertRes,
-              [TestID,RunID,B[OK],B[Skipped],TestRes]);
+              [TestID,RunID,B[OK],B[Skipped],TestRes,EscapeSQL(Log)]);
   Result:=IDQuery(Qry);
   if (Result=-1) then
     begin
     Qry:=format(SSelectId,[TestId,RunId]);
     Result:=IDQuery(Qry);
     if Result<>-1 then
-      begin
       UpdateValues:=true;
-      Qry:=format(SSelectTestResult,[TestId,RunId]);
-      prevTestResult:=IDQuery(Qry);
-      end;
     end;
   if (Result<>-1) and ((Log<>'') or updateValues) then
     begin
@@ -491,8 +484,8 @@ begin
     if Not ExecuteQuery(Qry,False) then
        Verbose(V_Warning,'Insert Log failed');
     end;
-  { If test already existed, return false for count_it to avoid double counting }
-  count_it:=not updateValues or (prevTestResult<>TestRes);
+  { If test already existed, return false for is_new to avoid double counting }
+  is_new:=not updateValues;
 end;
 
 Function RequireTestID(Name : String): Integer;

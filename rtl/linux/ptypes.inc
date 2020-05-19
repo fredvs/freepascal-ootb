@@ -30,21 +30,12 @@ and all three 32-bit systems returned completely identical types too
 introduction)
 }
 
-{$if defined(CPUMIPS) or defined(cpuaarch64) or defined(cpusparc64)}
+{$ifdef CPUMIPS}
 {$define USE_PTHREAD_SIZEOF}
-{$if defined(cpuaarch64)}
-const
-  __SIZEOF_PTHREAD_ATTR_T = 64;
-  __SIZEOF_PTHREAD_MUTEXATTR_T = 8;
-  __SIZEOF_PTHREAD_COND_T = 48;
-  __SIZEOF_PTHREAD_CONDATTR_T = 8;
-  __SIZEOF_PTHREAD_RWLOCK_T = 56;
-  __SIZEOF_PTHREAD_RWLOCKATTR_T = 8;
-  __SIZEOF_PTHREAD_BARRIER_T = 32;
-  __SIZEOF_PTHREAD_BARRIERATTR_T = 8;
-{$elseif defined(CPU64)}
+{$ifdef CPU64}
 const
   __SIZEOF_PTHREAD_ATTR_T = 56;
+  __SIZEOF_PTHREAD_MUTEX_T = 40;
   __SIZEOF_PTHREAD_MUTEXATTR_T = 4;
   __SIZEOF_PTHREAD_COND_T = 48;
   __SIZEOF_PTHREAD_CONDATTR_T = 4;
@@ -55,6 +46,7 @@ const
 {$else : not CPU64, i.e. CPU32}
 const
   __SIZEOF_PTHREAD_ATTR_T = 36;
+  __SIZEOF_PTHREAD_MUTEX_T = 24;
   __SIZEOF_PTHREAD_MUTEXATTR_T = 4;
   __SIZEOF_PTHREAD_COND_T = 48;
   __SIZEOF_PTHREAD_CONDATTR_T = 4;
@@ -63,7 +55,7 @@ const
   __SIZEOF_PTHREAD_BARRIER_T = 20;
   __SIZEOF_PTHREAD_BARRIERATTR_T = 4;
 {$endif CPU32}
-{$endif}
+{$endif MIPS}
 
 {$I ctypes.inc}
 {$packrecords c}
@@ -155,11 +147,8 @@ Type
     TGid     = gid_t;
     pGid     = ^gid_t;
 
-{$ifdef cpusparc64}
-    TIOCtlRequest = culong;
-{$else cpusparc64}
     TIOCtlRequest = cInt;
-{$endif cpusparc64}
+
 
     socklen_t= cuint32;
     TSockLen = socklen_t;
@@ -167,11 +156,7 @@ Type
 
   timeval     = record
                  tv_sec:time_t;
-{$ifdef CPUSPARC64}
-                 tv_usec:cint;
-{$else CPUSPARC64}
                  tv_usec:clong;
-{$endif CPUSPARC64}
                 end;
   ptimeval    = ^timeval;
   TTimeVal    = timeval;
@@ -232,6 +217,17 @@ Type
     __sched_priority: cint;
   end;
 
+  { MIPS32 size of unions
+  __SIZEOF_PTHREAD_ATTR_T = 36;
+  __SIZEOF_PTHREAD_MUTEX_T = 24;
+  __SIZEOF_PTHREAD_MUTEXATTR_T = 4;
+  __SIZEOF_PTHREAD_COND_T = 48;
+  __SIZEOF_PTHREAD_CONDATTR_T = 4;
+  __SIZEOF_PTHREAD_RWLOCK_T = 32;
+  __SIZEOF_PTHREAD_RWLOCKATTR_T = 8;
+  __SIZEOF_PTHREAD_BARRIER_T = 20;
+  __SIZEOF_PTHREAD_BARRIERATTR_T = 4; }
+
   pthread_attr_t = record
   {$ifdef USE_PTHREAD_SIZEOF}
   case byte of
@@ -260,11 +256,24 @@ Type
     __spinlock: cint;
   end;
 
-{$macro on}
-{$define MUTEXTYPENAME := pthread_mutex_t}
-{$i pmutext.inc}
-{$undef MUTEXTYPENAME}
-{$macro off}
+  pthread_mutex_t = record
+  {$ifdef USE_PTHREAD_SIZEOF}
+  case byte of
+   0 : (
+    	 __size : array[0..__SIZEOF_PTHREAD_MUTEX_T-1] of char;
+    	 __align : clong;
+       );
+  1 : (
+  {$endif}    	
+    __m_reserved: cint;
+    __m_count: cint;
+    __m_owner: pointer;
+    __m_kind:  cint;
+    __m_lock: _pthread_fastlock;
+  {$ifdef USE_PTHREAD_SIZEOF}
+       );
+  {$endif}    	
+  end;
 
   pthread_mutexattr_t = record
   {$ifdef USE_PTHREAD_SIZEOF}

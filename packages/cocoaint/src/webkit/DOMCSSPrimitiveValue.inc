@@ -1,12 +1,11 @@
-{ Parsed from WebKit.framework DOMCSSPrimitiveValue.h }
-
-
-{$ifdef TYPES}
-type
-  DOMCSSPrimitiveValuePtr = ^DOMCSSPrimitiveValue;
-{$endif}
+{ Parsed from Webkit.framework DOMCSSPrimitiveValue.h }
 
 {$ifdef TYPES}
+{$ifndef DOMCSSPRIMITIVEVALUE_PAS_T}
+{$define DOMCSSPRIMITIVEVALUE_PAS_T}
+
+{ Constants }
+
 const
   DOM_CSS_UNKNOWN = 0;
   DOM_CSS_NUMBER = 1;
@@ -34,32 +33,61 @@ const
   DOM_CSS_COUNTER = 23;
   DOM_CSS_RECT = 24;
   DOM_CSS_RGBCOLOR = 25;
-  DOM_CSS_VW = 26;
-  DOM_CSS_VH = 27;
-  DOM_CSS_VMIN = 28;
-  DOM_CSS_VMAX = 29;
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef DOMCSSPRIMITIVEVALUE_PAS_R}
+{$define DOMCSSPRIMITIVEVALUE_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef DOMCSSPRIMITIVEVALUE_PAS_F}
+{$define DOMCSSPRIMITIVEVALUE_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef DOMCSSPRIMITIVEVALUE_PAS_S}
+{$define DOMCSSPRIMITIVEVALUE_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  DOMCSSPrimitiveValue = objcclass;
+  DOMCSSPrimitiveValuePointer = ^DOMCSSPrimitiveValue;
+  DOMCSSPrimitiveValuePtr = DOMCSSPrimitiveValuePointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef DOMCSSPRIMITIVEVALUE_PAS_C}
+{$define DOMCSSPRIMITIVEVALUE_PAS_C}
 
-type
+{ DOMCSSPrimitiveValue }
   DOMCSSPrimitiveValue = objcclass external (DOMCSSValue)
+    
   public
-    function primitiveType: cushort; message 'primitiveType';
-    procedure setFloatValue_floatValue (unitType: cushort; floatValue: single); message 'setFloatValue:floatValue:'; { available in 10_5 }
-    function getFloatValue (unitType: cushort): single; message 'getFloatValue:';
-    procedure setStringValue_stringValue (stringType: cushort; stringValue: NSString); message 'setStringValue:stringValue:'; { available in 10_5 }
+    function primitiveType: cuint; message 'primitiveType';
+    procedure setFloatValue_floatValue(unitType: cushort; floatValue: single); message 'setFloatValue:floatValue:';
+    function getFloatValue(unitType: cushort): single; message 'getFloatValue:';
+    procedure setStringValue_stringValue(stringType: cushort; stringValue: NSString); message 'setStringValue:stringValue:';
     function getStringValue: NSString; message 'getStringValue';
     function getCounterValue: DOMCounter; message 'getCounterValue';
     function getRectValue: DOMRect; message 'getRectValue';
     function getRGBColorValue: DOMRGBColor; message 'getRGBColorValue';
   end;
 
-
-type
-  DOMCSSPrimitiveValueDeprecated = objccategory external (DOMCSSPrimitiveValue)
-    procedure setFloatValue (unitType: cushort); message 'setFloatValue:'; deprecated 'in 10_4, 10_5';
-    procedure setStringValue (stringType: cushort); message 'setStringValue:'; deprecated 'in 10_4, 10_5';
+{ DOMCSSPrimitiveValueDeprecatedCategory }
+  DOMCSSPrimitiveValueDeprecatedCategory = objccategory external (DOMCSSPrimitiveValue)
+    procedure setFloatValue(unitType: cushort; floatValue: single); message 'setFloatValue:unitType:'; deprecated 'in_webkit_version_3 and later';
+    procedure setStringValue(stringType: cushort; stringValue: NSString); message 'setStringValue:stringType:'; deprecated 'in_webkit_version_3 and later';
   end;
-{$endif}
 
+{$endif}
+{$endif}

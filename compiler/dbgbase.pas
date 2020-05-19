@@ -29,7 +29,7 @@ interface
       cclasses,
       systems,
       parabase,
-      symconst,symbase,symdef,symtype,symsym,
+      symconst,symbase,symdef,symtype,symsym,symtable,
       fmodule,
       aasmtai,aasmdata;
 
@@ -326,11 +326,7 @@ implementation
                          (tobjectdef(def).childof.dbg_state=dbg_state_written) then
                         appenddef(list,def)
                       else if tobjectdef(def).childof.dbg_state=dbg_state_queued then
-                        begin
-                          { ensure that the parent is indeed queued }
-                          deftowritelist.add(tobjectdef(def).childof);
-                          deftowritelist.add(def);
-                        end
+                        deftowritelist.add(def)
                       else if tobjectdef(def).childof.dbg_state=dbg_state_used then
                         { comes somewhere after the current def in the looplist
                           and will be written at that point, so we will have to
@@ -593,7 +589,7 @@ implementation
         pu:=tused_unit(hp.used_units.first);
         while assigned(pu) do
           begin
-            if not pu.u.is_dbginfo_written and not assigned(pu.u.package) then
+            if not pu.u.is_dbginfo_written then
               begin
                 { prevent infinte loop for circular dependencies }
                 pu.u.is_dbginfo_written:=true;

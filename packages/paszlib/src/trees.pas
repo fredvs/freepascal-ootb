@@ -1,4 +1,4 @@
-unit Trees;
+unit trees;
 
 {$T-}
 {$define ORG_DEBUG}

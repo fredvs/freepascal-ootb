@@ -61,7 +61,7 @@ uses
 {$PACKRECORDS c}
 
 const
-  libXv='libXv.so.1';
+  libXv='Xv';
 
 type
   PXvRational = ^TXvRational;

@@ -8,7 +8,7 @@ uses
   {$ENDIF}{$ENDIF}
   Classes
   { you can add units after this }, fpddpopcode, fpcgcreatedbf, fpcgdbcoll,
-  fpcgsqlconst, fpcgtiopf, fpddcodegen, fpcgfieldmap, fpcgtypesafedataset;
+  fpcgsqlconst, fpcgtiopf, fpddcodegen;
 
 begin
 end.

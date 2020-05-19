@@ -29,6 +29,7 @@ unit optdead;
     uses
       globtype,
       cclasses,
+      symtype,
       wpobase;
 
     type
@@ -241,7 +242,7 @@ const
               exit;
             end;
           if (line[fsymtypepos] in ['T','t']) and
-             (not use_dotted_functions or
+             (not(target_info.system in systems_dotted_function_names) or
               (line[fsymnamepos-1]='.')) then
             fsymbols.add(copy(line,fsymnamepos,length(line)),pointer(1));
         end;
@@ -339,7 +340,7 @@ const
         { on Linux/ppc64, there is an extra '.' at the start
           of public function names
         }
-        if use_dotted_functions then
+        if (target_info.system=system_powerpc64_linux) then
           inc(fsymnamepos);
         if failiferror(fsymtypepos<=0) then
           exit;

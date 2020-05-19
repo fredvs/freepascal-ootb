@@ -39,8 +39,7 @@ implementation
     ncpuadd,ncpucall,ncpumat,ncpuinln,
     ncpuld,ncpucnv,ncpuset,
     { symtable }
-    symcpu,
-    aasmdef
+    symcpu
     ;
 
 end.

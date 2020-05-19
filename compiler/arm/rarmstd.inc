@@ -70,7 +70,7 @@
 's29',
 'd14',
 's30',
-'s31',
+'s21',
 'd15',
 'd16',
 'd17',
@@ -122,11 +122,4 @@
 'basepri',
 'basepri_max',
 'faultmask',
-'control',
-'fpsid',
-'mvfr1',
-'mvfr0',
-'fpexc',
-'apsr_nzcvq',
-'apsr_g',
-'apsr_nzcvqg'
+'control'

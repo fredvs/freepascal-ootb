@@ -53,13 +53,14 @@ unit optdfa;
   implementation
 
     uses
-      globtype,
+      globtype,globals,
       verbose,
+      cpuinfo,
       symconst,symdef,symsym,
       defutil,
       procinfo,
       nutils,htypechk,
-      nbas,nflw,ncal,nset,nld,nadd,
+      nbas,nflw,ncon,ninl,ncal,nset,nld,nadd,
       optbase;
 
 
@@ -325,11 +326,8 @@ unit optdfa;
                 counteruse_after_loop:=assigned(tfornode(node).left.optinfo) and assigned(node.successor) and
                   DFASetIn(node.successor.optinfo^.life,tfornode(node).left.optinfo^.index);
 
-                if counteruse_after_loop then
-                  begin
-                    { if yes, then we should warn }
-                    { !!!!!! }
-                  end;
+                { if yes, then we should warn }
+                { !!!!!! }
 
                 { first update the dummy node }
 
@@ -383,7 +381,6 @@ unit optdfa;
             temprefn,
             loadn,
             typeconvn,
-            derefn,
             assignn:
               begin
                 if not(assigned(node.optinfo^.def)) and
@@ -678,27 +675,6 @@ unit optdfa;
           PSearchNodeInfo(arg)^.warnedfilelocs[high(PSearchNodeInfo(arg)^.warnedfilelocs)]:=f;
         end;
 
-
-      { Checks if the symbol is a candidate for a warning.
-        Emit warning/note for living locals, result and parameters, but only about the current
-        symtables }
-      function SymbolCandidateForWarningOrHint(sym : tabstractnormalvarsym) : Boolean;
-        begin
-          Result:=(((sym.owner=current_procinfo.procdef.localst) and
-                    (current_procinfo.procdef.localst.symtablelevel=sym.owner.symtablelevel)
-                   ) or
-                   ((sym.owner=current_procinfo.procdef.parast) and
-                    (sym.typ=paravarsym) and
-                    (current_procinfo.procdef.parast.symtablelevel=sym.owner.symtablelevel) and
-                    { all parameters except out parameters are initialized by the caller }
-                    (tparavarsym(sym).varspez=vs_out)
-                   ) or
-                   ((vo_is_funcret in sym.varoptions) and
-                    (current_procinfo.procdef.parast.symtablelevel=sym.owner.symtablelevel)
-                   )
-                  ) and not(vo_is_external in sym.varoptions)
-        end;
-
       var
         varsym : tabstractnormalvarsym;
         methodpointer,
@@ -716,7 +692,14 @@ unit optdfa;
                   while assigned(hpt) and (hpt.nodetype in [subscriptn,vecn,typeconvn]) do
                     hpt:=tunarynode(hpt).left;
                   if assigned(hpt) and (hpt.nodetype=loadn) and not(WarnedForLocation(hpt.fileinfo)) and
-                    SymbolCandidateForWarningOrHint(tabstractnormalvarsym(tloadnode(hpt).symtableentry)) and
+                    { warn only on the current symtable level }
+                    (((tabstractnormalvarsym(tloadnode(hpt).symtableentry).owner=current_procinfo.procdef.localst) and
+                      (current_procinfo.procdef.localst.symtablelevel=tabstractnormalvarsym(tloadnode(hpt).symtableentry).owner.symtablelevel)
+                     ) or
+                     ((tabstractnormalvarsym(tloadnode(hpt).symtableentry).owner=current_procinfo.procdef.parast) and
+                      (current_procinfo.procdef.parast.symtablelevel=tabstractnormalvarsym(tloadnode(hpt).symtableentry).owner.symtablelevel)
+                     )
+                    ) and
                     PSearchNodeInfo(arg)^.nodetosearch.isequal(hpt) then
                     begin
                       { issue only a hint for var, when encountering the node passed as out, we need only to stop searching }
@@ -782,7 +765,23 @@ unit optdfa;
                 begin
                   varsym:=tabstractnormalvarsym(tloadnode(n).symtableentry);
 
-                  if assigned(varsym.owner) and SymbolCandidateForWarningOrHint(varsym) then
+                  { Give warning/note for living locals, result and parameters, but only about the current
+                    symtables }
+                  if assigned(varsym.owner) and
+                    (((varsym.owner=current_procinfo.procdef.localst) and
+                      (current_procinfo.procdef.localst.symtablelevel=varsym.owner.symtablelevel)
+                     ) or
+                     ((varsym.owner=current_procinfo.procdef.parast) and
+                      (varsym.typ=paravarsym) and
+                      (current_procinfo.procdef.parast.symtablelevel=varsym.owner.symtablelevel) and
+                      { all parameters except out parameters are initialized by the caller }
+                      (tparavarsym(varsym).varspez=vs_out)
+                     ) or
+                     ((vo_is_funcret in varsym.varoptions) and
+                      (current_procinfo.procdef.parast.symtablelevel=varsym.owner.symtablelevel)
+                     )
+                    ) and
+                    not(vo_is_external in varsym.varoptions) then
                     begin
                       if (vo_is_funcret in varsym.varoptions) and not(WarnedForLocation(n.fileinfo)) then
                         begin

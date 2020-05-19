@@ -7,7 +7,7 @@ unit TestBasics;
 interface
 
 uses
-  fpcunit, testregistry,
+  fpcunit, testutils, testregistry, testdecorator,
   Classes, SysUtils, db;
 
 type
@@ -34,49 +34,7 @@ implementation
 
 uses toolsunit;
 
-Type
-  HackedDataset = class(TDataset);
-  
-  { TMyDataset }
-
-  TMyDataset = Class(TDataset)
-
-  protected
-    function GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean): TGetResult; override;
-    procedure InternalClose; override;
-    procedure InternalInitFieldDefs; override;
-    procedure InternalOpen; override;
-    function IsCursorOpen: Boolean; override;
-  end;
-
-{ TMyDataset }
-
-function TMyDataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode; DoCheck: Boolean): TGetResult;
-begin
-  Result:=grOK;
-  Raise ENotImplemented.Create('GetRecord not implemented');
-end;
-
-procedure TMyDataset.InternalClose;
-begin
-  Raise ENotImplemented.Create('Internalclose not implemented');
-end;
-
-procedure TMyDataset.InternalInitFieldDefs;
-begin
-  Raise ENotImplemented.Create('InternalInitFieldDefs not implemented');
-end;
-
-procedure TMyDataset.InternalOpen;
-begin
-  Raise ENotImplemented.Create('InternalOpen not implemented');
-end;
-
-function TMyDataset.IsCursorOpen: Boolean;
-begin
-  Result:=False;
-  Raise ENotImplemented.Create('IsCursorOpen not implemented');
-end;
+Type HackedDataset = class(TDataset);
 
 { TTestBasics }
 
@@ -84,7 +42,7 @@ function TTestBasics.CreateDatasetWith3Fields: TDataset;
 var
   F: TField;
 begin
-  Result := TMyDataset.Create(nil);
+  Result := TDataSet.Create(nil);
   F := TIntegerField.Create(Result);
   F.FieldName := 'Field1';
   F.DataSet := Result;
@@ -211,7 +169,7 @@ var ds       : TDataset;
   end;
     
 begin
-  ds := TMyDataset.Create(nil);
+  ds := TDataset.Create(nil);
   try
 
   F1:=TStringField.Create(ds);
@@ -253,7 +211,7 @@ var ds : TDataset;
 begin
   // If a second field with the same name is added to a TFieldDefs, an exception
   // should occur
-  ds := TMyDataset.Create(nil);
+  ds := TDataset.create(nil);
   try
     ds.FieldDefs.Add('Field1',ftInteger);
     PassException:=False;

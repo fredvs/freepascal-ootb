@@ -1,4 +1,3 @@
-{ %skiptarget=msdos,go32v2 }
 program Project1;
 
 {$mode objfpc}{$H+}

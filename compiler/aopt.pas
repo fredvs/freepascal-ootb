@@ -26,7 +26,6 @@ Unit aopt;
 {$i fpcdefs.inc}
 
 { $define DEBUG_OPTALLOC}
-{ $define DEBUG_INSTRUCTIONREGISTERDEPENDENCIES}
 
   Interface
 
@@ -41,17 +40,13 @@ Unit aopt;
         Constructor create(_AsmL: TAsmList); virtual; reintroduce;
 
         { call the necessary optimizer procedures }
-        Procedure Optimize;virtual;
+        Procedure Optimize;
         Destructor destroy;override;
 
       private
         procedure FindLoHiLabels;
-
-        { Builds a table with the locations of the labels in the TAsmList.
-          Also fixes some RegDeallocs like "# %eax released; push (%eax)"  }
         Procedure BuildLabelTableAndFixRegAlloc;
         procedure clear;
-      protected
         procedure pass_1;
       End;
       TAsmOptimizerClass = class of TAsmOptimizer;
@@ -80,7 +75,7 @@ Unit aopt;
       verbose,
       cpubase,
       cgbase,
-      aoptcpu;
+      aoptda,aoptcpu,aoptcpud;
 
     Constructor TAsmOptimizer.create(_AsmL: TAsmList);
       Begin
@@ -126,8 +121,9 @@ Unit aopt;
           End
       End;
 
-
     Procedure TAsmOptimizer.BuildLabelTableAndFixRegAlloc;
+    { Builds a table with the locations of the labels in the TAsmList.       }
+    { Also fixes some RegDeallocs like "# %eax released; push (%eax)"           }
     Var p,hp1, hp2: tai;
         Regs: TAllUsedRegs;
         LabelIdx : longint;
@@ -191,7 +187,7 @@ Unit aopt;
                         hp2 := nil;
                         While Not(assigned(FindRegAlloc(tai_regalloc(p).Reg, tai(hp1.Next)))) And
                               GetNextInstruction(hp1, hp1) And
-                              InstructionLoadsFromReg(tai_regalloc(p).Reg, hp1) Do
+                              RegInInstruction(tai_regalloc(p).Reg, hp1) Do
                           hp2 := hp1;
                         { move deallocations }
                         If hp2 <> nil Then
@@ -281,6 +277,14 @@ Unit aopt;
                 if pass = 0 then
                   PeepHoleOptPass1;
               end;
+            If (cs_opt_asmcse in current_settings.optimizerswitches) Then
+              Begin
+//                DFA:=TAOptDFACpu.Create(AsmL,BlockStart,BlockEnd,LabelInfo);
+                { data flow analyzer }
+//                DFA.DoDFA;
+                { common subexpression elimination }
+      {          CSE;}
+              End;
             { more peephole optimizations }
             if (cs_opt_peephole in current_settings.optimizerswitches) then
               begin
@@ -333,7 +337,7 @@ Unit aopt;
 
     procedure TAsmScheduler.SchedulerPass1;
       var
-        p : tai;
+        p,hp1,hp2 : tai;
       begin
         p:=BlockStart;
         while p<>BlockEnd Do
@@ -348,7 +352,9 @@ Unit aopt;
     procedure TAsmScheduler.Optimize;
       Var
         HP: tai;
+        pass: longint;
       Begin
+        pass:=0;
         BlockStart := tai(AsmL.First);
         While Assigned(BlockStart) Do
           Begin
@@ -382,9 +388,6 @@ Unit aopt;
       begin
         p:=casmoptimizer.Create(AsmL);
         p.Optimize;
-{$ifdef DEBUG_INSTRUCTIONREGISTERDEPENDENCIES}
-        p.Debug_InsertInstrRegisterDependencyInfo;
-{$endif DEBUG_INSTRUCTIONREGISTERDEPENDENCIES}
         p.free
       end;
 

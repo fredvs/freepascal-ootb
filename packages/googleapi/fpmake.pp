@@ -30,9 +30,11 @@ begin
     P.Email := '';
     P.Description := 'Google API client libraries.';
     P.NeedLibC:= false;
-    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,win32,win64,wince,aix,amiga,aros,morphos,dragonfly];
+    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,win32,win64,wince,aix,amiga,aros,dragonfly];
+    if Defaults.CPU = powerpc then
+      P.OSes := P.OSes - [amiga];
     P.Directory:=ADirectory;
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('rtl-extra');
     P.Dependencies.Add('rtl-objpas');

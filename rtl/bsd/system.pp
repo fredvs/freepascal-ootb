@@ -32,6 +32,7 @@ Interface
 {$define FPC_USE_SYSCALL}
 {$endif}
 
+
 {$define FPC_IS_SYSTEM}
 
 {$I sysunixh.inc}
@@ -44,13 +45,13 @@ var argc:longint;
 
 CONST SIGSTKSZ = 40960;
 
-{$if defined(CPUARM) or defined(CPUM68K)}
+{$if defined(CPUARM)}
 
 {$define fpc_softfpu_interface}
 {$i softfpu.pp}
 {$undef fpc_softfpu_interface}
 
-{$endif defined(CPUARM) or defined(CPUM68K)}
+{$endif defined(CPUARM)}
 
 
 Implementation
@@ -76,22 +77,7 @@ Implementation
 {$endif defined(CPUARM) or defined(CPUM68K)}
 
 
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-{$define FPC_SYSTEM_HAS_OSSETUPENTRYINFORMATION}
-procedure OsSetupEntryInformation(constref info: TEntryInformation); forward;
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-
 {$I system.inc}
-
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-procedure OsSetupEntryInformation(constref info: TEntryInformation);
-begin
-  argc := info.OS.argc;
-  argv := info.OS.argv;
-  envp := info.OS.envp;
-  initialstklen := info.OS.stklen;
-end;
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
 
 {$ifdef FPC_HAS_SETSYSNR_INC}
 {$I setsysnr.inc}
@@ -105,25 +91,17 @@ end;
 procedure normalexit(status: cint); cdecl; external 'c' name 'exit';
 {$endif}
 
-{$if defined(openbsd)}
-procedure haltproc; cdecl; external name '_haltproc';
-{$endif}
-
 procedure System_exit;
-{$if defined(darwin)}
+{$ifndef darwin}
+begin
+   Fpexit(cint(ExitCode));
+end;
+{$else darwin}
 begin
    { make sure the libc atexit handlers are called, needed for e.g. profiling }
    normalexit(cint(ExitCode));
 end;
-{$elseif defined(openbsd)}
-begin
-   haltproc;
-end;
-{$else}
-begin
-   Fpexit(cint(ExitCode));
-end;
-{$endif}
+{$endif darwin}
 
 
 Function ParamCount: Longint;
@@ -318,17 +296,7 @@ end;
 
 {$ifdef Darwin}
 
-{$ifdef FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-
-procedure SysEntry(constref info: TEntryInformation);[public,alias:'FPC_SysEntry'];
-begin
-  SetupEntryInformation(info);
-  info.PascalMain();
-end;
-
-{$else FPC_HAS_INDIRECT_ENTRY_INFORMATION}
-
-procedure pascalmain;external name '_PASCALMAIN';
+procedure pascalmain;cdecl;external name 'PASCALMAIN';
 
 procedure FPC_SYSTEMMAIN(argcparam: Longint; argvparam: ppchar; envpparam: ppchar); cdecl; [public];
 
@@ -341,7 +309,6 @@ begin
 {$endif cpui386}
   pascalmain;  {run the pascal main program}
 end;
-{$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
 {$endif Darwin}
 {$endif FPC_USE_LIBC}
 
@@ -387,7 +354,6 @@ Begin
   SetupCmdLine;
   { threading }
   InitSystemThreads;
-  InitSystemDynLibs;
   { restore original signal handlers in case this is a library }
   if IsLibrary then
     RestoreOldSignalHandlers;

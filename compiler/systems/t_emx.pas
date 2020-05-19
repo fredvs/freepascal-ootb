@@ -40,7 +40,7 @@ implementation
      SysUtils,
      cutils,cfileutl,cclasses,
      globtype,comphook,systems,symconst,symsym,symdef,
-     globals,verbose,fmodule,cscript,ogbase,
+     globals,verbose,fmodule,script,ogbase,
      comprsrc,import,link,i_emx,ppu;
 
   type
@@ -438,7 +438,7 @@ begin
      S:=SharedLibFiles.GetFirst;
      i:=Pos(target_info.sharedlibext,S);
      if i>0 then
-      Insert(':',s,1);   // needed for the linker
+      Delete(S,i,255);
      LinkRes.Add('-l'+s);
    end;
 

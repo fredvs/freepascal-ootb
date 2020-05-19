@@ -13,7 +13,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
  **********************************************************************}
-unit FPDDCodeGen;
+unit fpddcodegen;
 
 {$mode objfpc}{$H+}
 
@@ -29,7 +29,7 @@ Type
                ptSmallInt, ptWord,
                ptLongint, ptCardinal,
                ptInt64, ptQWord,
-               ptShortString, ptAnsiString, ptWideString, ptUnicodeString, ptUtf8String,
+               ptShortString, ptAnsiString, ptWideString,
                ptSingle, ptDouble, ptExtended, ptComp, ptCurrency,
                ptDateTime,
                ptEnumerated, ptSet, ptStream, ptTStrings,
@@ -61,11 +61,10 @@ Type
     function GetPropName: String;
     function GetPropType: TPropType;
     function GetPropTypeStored: boolean;
+    procedure SetPropName(const AValue: String);
   Protected
     Procedure InitFromField(F : TField); virtual;
     Procedure InitFromDDFieldDef(F : TDDFieldDef);virtual;
-    procedure SetFieldType(AValue: TFieldType); virtual;
-    procedure SetPropName(const AValue: String); virtual;
   Public
     Constructor Create(ACollection : TCollection) ; override;
     Procedure Assign(ASource : TPersistent); override;
@@ -78,7 +77,7 @@ Type
   Published
     Property Enabled : Boolean Read FEnabled Write FEnabled;
     Property FieldName : String Read FFieldName Write FFieldName;
-    Property FieldType : TFieldType Read FFieldType Write SetFieldType;
+    Property FieldType : TFieldType Read FFieldType Write FFieldType;
     Property PropertyName : String Read GetPropName Write SetPropName;
     Property PropertyType : TPropType Read GetPropType Write FPropType Stored GetPropTypeStored;
     Property PropertySize : Integer Read FPRopSize Write FPropSize;
@@ -142,7 +141,6 @@ Type
   TCodeGeneratorOptionsClass = Class of TCodeGeneratorOptions;
 
   { TDDCustomCodeGenerator }
-  TCodeEvent = Procedure(Sender : TObject; Strings : TStrings) of object;
 
   TDDCustomCodeGenerator = Class(TComponent)
     FCodeOptions: TCodeGeneratorOptions;
@@ -154,8 +152,6 @@ Type
     procedure AddLn(Strings: TStrings); overload;
     procedure AddLn(Strings: TStrings; Line: String); overload;
     procedure AddLn(Strings: TStrings; Fmt: String; Args: array of const); overload;
-    // Create a pascal code string. Surround by quotes or not
-    Function CreatePascalString(S : String; Quote : Boolean = True) : String;
     // Increase indent by defined amount
     procedure IncIndent;
     // Decrease indent by defined amount
@@ -209,29 +205,21 @@ Type
     Property AncestorClass : String Read FAncestorClass Write SetAncestorClass;
   Public
     Procedure Assign(ASource : TPersistent); override;
-    // Classname without T prepended
-    Function CleanObjectClassName : String;
   Published
     Property ObjectClassName : String Read FClassName Write SetClassName;
   end;
 
   { TDDClassCodeGenerator }
+
   TDDClassCodeGenerator = Class(TDDCustomCodeGenerator)
   private
-    FAfterClassDeclaration: TCodeEvent;
-    FAfterClassImplementation: TCodeEvent;
-    FAfterDestructOrImplementation: TCodeEvent;
-    FAfterTypeSection: TCodeEvent;
     FAncestorClass : String;
-    FBeforeClassDeclaration: TCodeEvent;
-    FBeforeClassImplementation: TCodeEvent;
-    FBeforeConstructOrImplementation: TCodeEvent;
-    FBeforeTypeSection: TCodeEvent;
+    FClassName: String;
     FFieldDefs: TFieldPropDefs;
+    FOptions: TCodeOptions;
     FStreamClass: String;
     FStringsClass: String;
     FUnitName: String;
-    procedure DoBeforeGetter(Strings: TStrings);
     function GetOpts: TClassCodeGeneratorOptions;
     procedure SetAncestorClass(const AValue: String);
     procedure SetClassName(const AValue: String);
@@ -241,18 +229,8 @@ Type
     Function GetFieldDefs: TFieldPropDefs; override;
     procedure SetFieldDefs(const AValue: TFieldPropDefs); override;
     Function CreateOptions : TCodeGeneratorOptions; override;
-    Procedure DoBeforeTypeSection(Strings: TStrings); virtual;
-    Procedure DoAfterTypeSection(Strings: TStrings); virtual;
-    Procedure DoBeforeClassDeclaration(Strings: TStrings); virtual;
-    Procedure DoAfterClassDeclaration(Strings: TStrings); virtual;
-    Procedure DoBeforeConstructor(Strings: TStrings); virtual;
-    Procedure DoAfterDestructor(Strings: TStrings); virtual;
-    Procedure DoBeforeClassImplementation(Strings : TStrings); virtual;
-    Procedure DoAfterClassImplementation(Strings: TStrings); virtual;
     Procedure DoGenerateInterface(Strings: TStrings); override;
     Procedure DoGenerateImplementation(Strings: TStrings); override;
-    // Override this if you want to add interfaces to the class.
-    Function GetClassInterfaces : String; virtual;
     // General code things.
     // Override to create TFieldpropdefs descendent instance.
     Function CreateFieldPropDefs : TFieldPropDefs; virtual;
@@ -272,12 +250,8 @@ Type
     procedure CreateClassEnd(Strings : TStrings); virtual;
     // Called right after section start is written.
     procedure WriteVisibilityStart(V: TVisibility; Strings: TStrings); virtual;
-    // Called at the end of section.
-    procedure WriteVisibilityEnd(V: TVisibility; Strings: TStrings); virtual;
-    // Should a property declaration be written ? Checks enabled and visibility
+    // Should a property declaration be written ?
     function AllowPropertyDeclaration(F: TFieldPropDef; AVisibility: TVisibilities): Boolean; virtual;
-    // Writes a property declaration. Only called if AllowPropertyDeclaration returned true
-    procedure WritePropertyDeclaration(Strings: TStrings; F: TFieldPropDef); virtual;
     // Creates a property declaration.
     Function PropertyDeclaration(Strings: TStrings; Def: TFieldPropDef) : String; virtual;
     // Writes private fields for class.
@@ -327,14 +301,6 @@ Type
     Procedure GenerateClass(Stream : TStream);
   Published
     Property Fields;
-    Property AfterTypeSection : TCodeEvent Read FAfterTypeSection Write FAfterTypeSection;
-    Property BeforeTypeSection : TCodeEvent Read FBeforeTypeSection Write FBeforeTypeSection;
-    Property AfterClassDeclaration : TCodeEvent Read FAfterClassDeclaration Write FAfterClassDeclaration;
-    Property BeforeClassDeclaration : TCodeEvent Read FBeforeClassDeclaration Write FBeforeClassDeclaration;
-    Property AfterClassImplementation : TCodeEvent Read FAfterClassImplementation Write FAfterClassImplementation;
-    Property BeforeClassImplementation : TCodeEvent Read FBeforeClassImplementation Write FBeforeClassImplementation;
-    Property AfterDestructorImplementation : TCodeEvent Read FAfterDestructOrImplementation Write FAfterDestructOrImplementation;
-    Property BeforeConstructorImplementation : TCodeEvent Read FBeforeConstructOrImplementation Write FBeforeConstructOrImplementation;
   end;
 
   ECodeGenerator = Class(Exception);
@@ -413,7 +379,7 @@ Var
     vPublished, vPublished,
     vPublished, vPublished,
     vPublished, vPublished,
-    vPublished, vPublished, vPublished, vPublished, vPublished,
+    vPublished, vPublished, vPublished,
     vPublished, vPublished, vPublished, vPublished, vPublished,
     vPublished,
     vPublished, vPublished, vPublic, vPublished,
@@ -430,7 +396,7 @@ Const
         'SmallInt', 'Word',
         'Longint', 'Cardinal',
         'Int64', 'QWord',
-        'String', 'AnsiString', 'WideString',  'UnicodeString', 'Utf8String',
+        'String', 'AnsiString', 'WideString',
         'Single', 'Double' , 'Extended', 'Comp', 'Currency',
         'TDateTime',
         '','', 'TStream', 'TStrings',
@@ -525,12 +491,6 @@ end;
 function TFieldPropDef.GetPropTypeStored: boolean;
 begin
   Result:=(FPropType<>ptAuto)
-end;
-
-procedure TFieldPropDef.SetFieldType(AValue: TFieldType);
-begin
-  if FFieldType=AValue then Exit;
-  FFieldType:=AValue;
 end;
 
 
@@ -776,42 +736,28 @@ end;
 procedure TDDClassCodeGenerator.GenerateClass(Strings: TStrings);
 
 begin
-  IncIndent;
-  Try
-    DoBeforeTypeSection(Strings);
-    AddLn(Strings,'// Declaration');
-    AddLn(Strings,'Type');
-    AddLn(Strings);
-    DoBeforeClassDeclaration(Strings);
-    CreateDeclaration(Strings);
-    DoAfterClassDeclaration(Strings);
-    AddLn(Strings);
-    DoAfterTypeSection(Strings);
-    AddLn(Strings,'// Implementation');
-    AddLn(Strings);
-    DoBeforeClassImplementation(Strings);
-    CreateImplementation(Strings);
-    DoAfterClassImplementation(Strings);
+ IncIndent;
+ Try
+  AddLn(Strings,'// Declaration');
+  AddLn(Strings,'Type');
+  AddLn(Strings);
+  CreateDeclaration(Strings);
+  AddLn(Strings);
+  AddLn(Strings,'// Implementation');
+  AddLn(Strings);
+  CreateDeclaration(Strings);
   Finally
     DecIndent;
   end;
 end;
 
-function TDDClassCodeGenerator.AllowPropertyDeclaration(F: TFieldPropDef;
-  AVisibility: TVisibilities): Boolean;
+Function TDDClassCodeGenerator.AllowPropertyDeclaration(F : TFieldPropDef; AVisibility : TVisibilities) : Boolean;
 
 begin
   Result:=Assigned(f) and F.Enabled and ((AVisibility=[]) or (F.PropertyVisibility in AVisibility));
 end;
 
-procedure TDDClassCodeGenerator.WritePropertyDeclaration(Strings: TStrings;
-  F: TFieldPropDef);
-
-begin
-  AddLn(Strings,PropertyDeclaration(Strings,F)+';');
-end;
-
-procedure TDDClassCodeGenerator.CreateDeclaration(Strings: TStrings);
+Procedure TDDClassCodeGenerator.CreateDeclaration(Strings : TStrings);
 
 Const
   VisibilityNames : Array [TVisibility] of string
@@ -836,9 +782,8 @@ begin
         begin
         F:=Fields[i];
         if AllowPropertyDeclaration(F,[V]) then
-          WritePropertyDeclaration(Strings,F);
+          AddLn(Strings,PropertyDeclaration(Strings,F)+';');
         end;
-      WriteVisibilityEnd(V,Strings);
     Finally
       Decindent;
     end;
@@ -846,7 +791,7 @@ begin
   CreateClassEnd(Strings);
 end;
 
-procedure TDDClassCodeGenerator.WritePrivateFields(Strings: TStrings);
+Procedure TDDClassCodeGenerator.WritePrivateFields(Strings : TStrings);
 
 Var
   I : Integer;
@@ -866,13 +811,7 @@ begin
   end;
 end;
 
-procedure TDDClassCodeGenerator.DoBeforeGetter(Strings: TStrings);
-
-begin
-
-end;
-
-procedure TDDClassCodeGenerator.CreateImplementation(Strings: TStrings);
+Procedure TDDClassCodeGenerator.CreateImplementation(Strings : TStrings);
 
 Var
   B : Boolean;
@@ -882,20 +821,13 @@ Var
 begin
   AddLn(Strings,' { %s } ',[ClassOptions.ObjectClassName]);
   AddLn(Strings);
-  DoBeforeConstructor(Strings);
-  If NeedsConstructor or NeedsDestructor then
-    Addln(Strings,' { Constructor and destructor }');
   If NeedsConstructor then
     begin
+    Addln(Strings,' { Constructor and destructor }');
     Addln(Strings);
     WriteConstructorImplementation(Strings);
-    end;
-  If NeedsDestructor then
-    begin
-    Addln(Strings);
     WriteDestructorImplementation(Strings);
     end;
-  DoAfterDestructor(Strings);
   B:=False;
   For I:=0 to Fields.Count-1 do
     begin
@@ -928,8 +860,7 @@ begin
     end;
 end;
 
-procedure TDDClassCodeGenerator.WritePropertyGetterImpl(Strings: TStrings;
-  F: TFieldPropDef);
+Procedure TDDClassCodeGenerator.WritePropertyGetterImpl(Strings : TStrings; F : TFieldPropDef);
 
 Var
   S : String;
@@ -947,8 +878,7 @@ begin
   EndMethod(Strings,S);
 end;
 
-procedure TDDClassCodeGenerator.WritePropertySetterImpl(Strings: TStrings;
-  F: TFieldPropDef);
+Procedure TDDClassCodeGenerator.WritePropertySetterImpl(Strings : TStrings; F : TFieldPropDef);
 
 Var
   S : String;
@@ -996,85 +926,25 @@ begin
   Result:=TClassCodeGeneratorOptions.Create;
 end;
 
-procedure TDDClassCodeGenerator.DoBeforeTypeSection(Strings: TStrings);
-begin
-  If Assigned(BeforeTypeSection) then
-    BeforeTypeSection(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoAfterTypeSection(Strings: TStrings);
-begin
-  If Assigned(AfterTypeSection) then
-    AfterTypeSection(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoBeforeClassDeclaration(Strings: TStrings);
-begin
-  if Assigned(BeforeClassDeclaration) then
-    BeforeClassDeclaration(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoAfterClassDeclaration(Strings: TStrings);
-begin
-  if Assigned(AfterClassDeclaration) then
-    AfterClassDeclaration(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoBeforeConstructor(Strings: TStrings);
-begin
-  If Assigned(BeforeConstructorImplementation) then
-    BeforeConstructorImplementation(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoAfterDestructor(Strings: TStrings);
-begin
-  If Assigned(AfterDestructorImplementation) then
-    AfterDestructorImplementation(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoBeforeClassImplementation(Strings: TStrings);
-begin
-  If Assigned(BeforeClassImplementation) then
-    BeforeClassImplementation(Self,Strings);
-end;
-
-procedure TDDClassCodeGenerator.DoAfterClassImplementation(Strings: TStrings);
-begin
-  If Assigned(AfterClassImplementation) then
-    AfterClassImplementation(Self,Strings);
-end;
-
 procedure TDDClassCodeGenerator.DoGenerateInterface(Strings: TStrings);
 begin
-  DoBeforeTypeSection(Strings);
   AddLn(Strings,'Type');
   AddLn(Strings);
   IncIndent;
   Try
-    DoBeforeClassDeclaration(Strings);
     CreateDeclaration(Strings);
-    DoAfterClassDeclaration(Strings);
   Finally
     DecIndent;
   end;
-  DoAfterTypeSection(Strings);
 end;
 
 procedure TDDClassCodeGenerator.DoGenerateImplementation(Strings: TStrings);
 begin
-  DoBeforeClassImplementation(Strings);
   CreateImplementation(Strings);
-  DoAfterClassImplementation(Strings);
-end;
-
-function TDDClassCodeGenerator.GetClassInterfaces: String;
-begin
-  Result:='';
 end;
 
 
-procedure TDDClassCodeGenerator.WriteConstructorImplementation(Strings: TStrings
-  );
+Procedure TDDClassCodeGenerator.WriteConstructorImplementation(Strings : TStrings);
 
 Var
   I : Integer;
@@ -1100,8 +970,7 @@ begin
   EndMethod(Strings,S);
 end;
 
-procedure TDDClassCodeGenerator.WriteDestructorImplementation(Strings: TStrings
-  );
+Procedure TDDClassCodeGenerator.WriteDestructorImplementation(Strings : TStrings);
 
 Var
   I : Integer;
@@ -1129,8 +998,7 @@ end;
 
 
 
-procedure TDDClassCodeGenerator.WriteFieldCreate(Strings: TStrings;
-  F: TFieldPropDef);
+Procedure TDDClassCodeGenerator.WriteFieldCreate(Strings : TStrings;F : TFieldPropDef);
 
 Var
   S : String;
@@ -1154,8 +1022,7 @@ begin
   end;
 end;
 
-procedure TDDClassCodeGenerator.WriteFieldDestroy(Strings: TStrings;
-  F: TFieldPropDef);
+Procedure TDDClassCodeGenerator.WriteFieldDestroy(Strings : TStrings;F : TFieldPropDef);
 
 Var
   S : String;
@@ -1176,21 +1043,15 @@ begin
 end;
 
 
-procedure TDDClassCodeGenerator.CreateClassHead(Strings: TStrings);
-
-Var
-  S : String;
+Procedure TDDClassCodeGenerator.CreateClassHead(Strings : TStrings);
 
 begin
   Addln(Strings,'{ %s }',[ClassOptions.ObjectClassName]);
   AddLn(Strings);
-  S:=GetClassInterfaces;
-  if (S<>'') then
-    S:=','+S;
-  AddLn(Strings,'%s = Class(%s%s)',[ClassOptions.ObjectClassName,ClassOptions.AncestorClass,S])
+  AddLn(Strings,'%s = Class(%s)',[ClassOptions.ObjectClassName,ClassOptions.AncestorClass]);
 end;
 
-procedure TDDClassCodeGenerator.CreateClassEnd(Strings: TStrings);
+Procedure TDDClassCodeGenerator.CreateClassEnd(Strings : TStrings);
 
 begin
   AddLn(Strings,'end;');
@@ -1198,8 +1059,7 @@ begin
 end;
 
 
-procedure TDDClassCodeGenerator.WriteVisibilityStart(V: TVisibility;
-  Strings: TStrings);
+Procedure TDDClassCodeGenerator.WriteVisibilityStart(V : TVisibility; Strings : TStrings);
 
 Var
   I : Integer;
@@ -1223,22 +1083,16 @@ begin
   else if v=vPublic then
     begin
     If NeedsConstructor then
+      begin
       AddLn(Strings,ConstructorDeclaration(False));
-    If NeedsDestructor then
       Addln(Strings,DestructorDeclaration(False));
+      end;
     end
   // Do nothing
 end;
 
-procedure TDDClassCodeGenerator.WriteVisibilityEnd(V: TVisibility;
-  Strings: TStrings);
-begin
-  // Do nothing
-end;
 
-
-function TDDClassCodeGenerator.PropertyDeclaration(Strings: TStrings;
-  Def: TFieldPropDef): String;
+Function TDDClassCodeGenerator.PropertyDeclaration(Strings : TStrings; Def : TFieldPropDef) : String;
 
 begin
   Result:='Property '+Def.PropertyName+' ';
@@ -1249,19 +1103,18 @@ begin
     Result:=Result+' Write '+Def.ObjPasWriteDef;
 end;
 
-function TDDClassCodeGenerator.PropertyGetterDeclaration(Def: TFieldPropDef;
-  Impl: Boolean): String;
+Function TDDClassCodeGenerator.PropertyGetterDeclaration(Def : TFieldPropDef; Impl : Boolean) : String;
 
 
 begin
   Result:='Function ';
   If Impl then
     Result:=Result+Classoptions.ObjectClassName+'.';
-  Result:=Result+Def.ObjPasReadDef+' : '+Def.ObjPasTypeDef+';';
+  If Impl then
+    Result:=Result+Def.ObjPasReadDef+' : '+Def.ObjPasTypeDef+';';
 end;
 
-function TDDClassCodeGenerator.PropertySetterDeclaration(Def: TFieldPropDef;
-  Impl: Boolean): String;
+Function TDDClassCodeGenerator.PropertySetterDeclaration(Def : TFieldPropDef; Impl : Boolean) : String;
 
 
 begin
@@ -1293,7 +1146,7 @@ begin
   Result:=NeedsConstructor;
 end;
 
-function TDDClassCodeGenerator.ConstructorDeclaration(Impl: Boolean): String;
+Function TDDClassCodeGenerator.ConstructorDeclaration(Impl : Boolean) : String;
 begin
   Result:='Constructor ';
   If Impl then
@@ -1301,7 +1154,7 @@ begin
   Result:=Result+'Create;';
 end;
 
-function TDDClassCodeGenerator.DestructorDeclaration(Impl: Boolean): String;
+Function TDDClassCodeGenerator.DestructorDeclaration(Impl : Boolean) : String;
 begin
   Result:='Destructor ';
   If Impl then
@@ -1394,26 +1247,10 @@ begin
   Strings.Add(FCurrentIndent+Line);
 end;
 
-procedure TDDCustomCodeGenerator.AddLn(Strings: TStrings; Fmt: String;
-  Args: array of const);
+procedure TDDCustomCodeGenerator.AddLn(Strings : TStrings; Fmt : String; Args : Array Of Const);
 
 begin
   Strings.Add(FCurrentIndent+Format(Fmt,Args));
-end;
-
-function TDDCustomCodeGenerator.CreatePascalString(S: String; Quote: Boolean): String;
-
-Var
-  SW : String;
-
-begin
-  SW:=StringReplace(S,'''','''''',[rfReplaceAll]);
-  SW:=StringReplace(SW,#13#10,'''#13#10''',[rfReplaceAll]);
-  SW:=StringReplace(SW,#10,'''#10''',[rfReplaceAll]);
-  SW:=StringReplace(SW,#13,'''#13''',[rfReplaceAll]);
-  If Quote then
-    SW:=''''+SW+'''';
-  Result:=SW;
 end;
 
 
@@ -1519,16 +1356,14 @@ begin
 
 end;
 
-procedure TDDCustomCodeGenerator.BeginMethod(STrings: TStrings;
-  const Decl: String);
+Procedure TDDCustomCodeGenerator.BeginMethod(STrings : TStrings; Const Decl : String);
 
 begin
   AddLn(Strings,Decl);
   AddLn(Strings);
 end;
 
-procedure TDDCustomCodeGenerator.EndMethod(STrings: TStrings; const Decl: String
-  );
+Procedure TDDCustomCodeGenerator.EndMethod(STrings : TStrings; Const Decl : String);
 
 begin
   AddLn(Strings,'end;');
@@ -1726,18 +1561,6 @@ begin
     FAncestorClass:=CO.FAncestorClass;
     end;
   inherited Assign(ASource);
-end;
-
-function TClassCodeGeneratorOptions.CleanObjectClassName: String;
-
-Var
-  S : String;
-
-begin
-  S:=ObjectClassName;
-  if (Length(S)>1) and (S[1]='T') then
-    Delete(S,1,1);
-  Result:=S;
 end;
 
 procedure TClassCodeGeneratorOptions.SetAncestorClass(const AValue: String);

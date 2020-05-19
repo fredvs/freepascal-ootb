@@ -61,7 +61,7 @@ unit aoptbase;
         { gets the next tai object after current that contains info relevant }
         { to the optimizer in p1. If there is none, it returns false and     }
         { sets p1 to nil                                                     }
-        class Function GetNextInstruction(Current: tai; Var Next: tai): Boolean;
+        Function GetNextInstruction(Current: tai; Var Next: tai): Boolean;
         { gets the previous tai object after current that contains info  }
         { relevant to the optimizer in last. If there is none, it retuns }
         { false and sets last to nil                                     }
@@ -95,16 +95,6 @@ unit aoptbase;
 
         { returns true if reg is modified by any instruction between p1 and p2 }
         function RegModifiedBetween(reg: TRegister; p1, p2: tai): Boolean;
-
-        { returns true if reg is loaded with a new value by hp }
-        function RegLoadedWithNewValue(reg: tregister; hp: tai): boolean; Virtual;
-
-        { returns true if hp loads a value from reg }
-        function InstructionLoadsFromReg(const reg : TRegister; const hp : tai) : boolean; Virtual;
-
-        { compares reg1 and reg2 having the same type and being the same super registers
-          so the register size is neglected }
-        function SuperRegistersEqual(reg1,reg2 : TRegister) : Boolean;
     end;
 
     function labelCanBeSkipped(p: tai_label): boolean;
@@ -112,7 +102,7 @@ unit aoptbase;
   implementation
 
     uses
-      verbose,globals,aoptcpub;
+      globtype,globals,aoptcpub;
 
   constructor taoptbase.create;
     begin
@@ -143,7 +133,7 @@ unit aoptbase;
   Function TAOptBase.RegInOp(Reg: TRegister; const op: toper): Boolean;
     Begin
       Case op.typ Of
-        Top_Reg: RegInOp := SuperRegistersEqual(Reg,op.reg);
+        Top_Reg: RegInOp := Reg = op.reg;
         Top_Ref: RegInOp := RegInRef(Reg, op.ref^);
         {$ifdef arm}
         Top_Shifterop: RegInOp := op.shifterop^.rs = Reg;
@@ -156,18 +146,11 @@ unit aoptbase;
 
   Function TAOptBase.RegInRef(Reg: TRegister; Const Ref: TReference): Boolean;
   Begin
-    RegInRef := SuperRegistersEqual(Ref.Base,Reg)
-{$ifdef cpurefshaveindexreg}
-    Or SuperRegistersEqual(Ref.Index,Reg)
-{$endif cpurefshaveindexreg}
-{$ifdef x86}
-    or (Reg=Ref.segment)
-    { if Ref.segment isn't set, the cpu uses implicitly ss or ds, depending on the base register }
-    or ((Ref.segment=NR_NO) and (
-      ((Reg=NR_SS) and (SuperRegistersEqual(Ref.base,NR_EBP) or SuperRegistersEqual(Ref.base,NR_ESP))) or
-      ((Reg=NR_DS) and not(SuperRegistersEqual(Ref.base,NR_EBP) or SuperRegistersEqual(Ref.base,NR_ESP)))
-    ))
-{$endif x86}
+    Reg := RegMaxSize(Reg);
+    RegInRef := (Ref.Base = Reg)
+  {$ifdef cpurefshaveindexreg}
+    Or (Ref.Index = Reg)
+  {$endif cpurefshaveindexreg}
   End;
 
   Function TAOptBase.RegModifiedByInstruction(Reg: TRegister; p1: tai): Boolean;
@@ -182,17 +165,17 @@ unit aoptbase;
   end;
 
 
-  class Function TAOptBase.GetNextInstruction(Current: tai; Var Next: tai): Boolean;
+  Function TAOptBase.GetNextInstruction(Current: tai; Var Next: tai): Boolean;
   Begin
     Repeat
       Current := tai(Current.Next);
       While Assigned(Current) And
             ((Current.typ In SkipInstr) or
-{$ifdef cpudelayslot}
+{$if defined(SPARC) or defined(MIPS)}
              ((Current.typ=ait_instruction) and
               (taicpu(Current).opcode=A_NOP)
              ) or
-{$endif cpudelayslot}
+{$endif SPARC or MIPS}
              ((Current.typ = ait_label) And
               labelCanBeSkipped(Tai_Label(Current)))) Do
         Current := tai(Current.Next);
@@ -301,26 +284,6 @@ unit aoptbase;
         end;
   end;
 
-
-  function TAoptBase.RegLoadedWithNewValue(reg : tregister; hp : tai) : boolean;
-    begin
-      result:=false;
-      internalerror(2016012401);
-    end;
-
-
-  function TAoptBase.InstructionLoadsFromReg(const reg : TRegister; const hp : tai) : boolean;
-    begin
-      { save approximation }
-      Result:=true;
-    end;
-
-
-  function TAOptBase.SuperRegistersEqual(reg1,reg2 : TRegister) : Boolean;
-  Begin
-    Result:=(getregtype(reg1) = getregtype(reg2)) and
-            (getsupreg(reg1) = getsupreg(Reg2));
-  end;
 
   { ******************* Processor dependent stuff *************************** }
 

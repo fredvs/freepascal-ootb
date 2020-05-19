@@ -89,8 +89,7 @@ interface
     function consume_sym(var srsym:tsym;var srsymtable:TSymtable):boolean;
     function consume_sym_orgid(var srsym:tsym;var srsymtable:TSymtable;var s : string):boolean;
 
-    function try_consume_unitsym(var srsym:tsym;var srsymtable:TSymtable;var tokentoconsume:ttoken;consume_id,allow_specialize:boolean;out is_specialize:boolean;sympattern:TSymStr):boolean;
-    function try_consume_unitsym_no_specialize(var srsym:tsym;var srsymtable:TSymtable;var tokentoconsume:ttoken;consume_id:boolean;sympattern:TSymStr):boolean;
+    function try_consume_unitsym(var srsym:tsym;var srsymtable:TSymtable;var tokentoconsume:ttoken;consume_id:boolean):boolean;
 
     function try_consume_hintdirective(var symopt:tsymoptions; var deprecatedmsg:pshortstring):boolean;
 
@@ -102,7 +101,7 @@ interface
 implementation
 
     uses
-       globals,scanner,verbose,fmodule;
+       globals,htypechk,scanner,systems,verbose,fmodule;
 
 {****************************************************************************
                                Token Parsing
@@ -205,7 +204,7 @@ implementation
           end;
         searchsym(pattern,srsym,srsymtable);
         { handle unit specification like System.Writeln }
-        try_consume_unitsym_no_specialize(srsym,srsymtable,t,true,pattern);
+        try_consume_unitsym(srsym,srsymtable,t,true);
         { if nothing found give error and return errorsym }
         if assigned(srsym) then
           check_hints(srsym,srsym.symoptions,srsym.deprecatedmsg)
@@ -238,7 +237,7 @@ implementation
           end;
         searchsym(pattern,srsym,srsymtable);
         { handle unit specification like System.Writeln }
-        try_consume_unitsym_no_specialize(srsym,srsymtable,t,true,pattern);
+        try_consume_unitsym(srsym,srsymtable,t,true);
         { if nothing found give error and return errorsym }
         if assigned(srsym) then
           check_hints(srsym,srsym.symoptions,srsym.deprecatedmsg)
@@ -254,56 +253,14 @@ implementation
       end;
 
 
-    function try_consume_unitsym(var srsym:tsym;var srsymtable:TSymtable;var tokentoconsume:ttoken;consume_id,allow_specialize:boolean;out is_specialize:boolean;sympattern:TSymStr):boolean;
+    function try_consume_unitsym(var srsym:tsym;var srsymtable:TSymtable;var tokentoconsume:ttoken;consume_id:boolean):boolean;
       var
         hmodule: tmodule;
         ns:ansistring;
         nssym:tsym;
-        nsitem : TCmdStrListItem;
-
-        procedure consume_namespace;
-          begin
-            while assigned(srsym) and (srsym.typ=namespacesym) do
-              begin
-                { we have a namespace. the next identifier should be either a namespace or a unit }
-                searchsym_in_module(hmodule,ns+'.'+pattern,srsym,srsymtable);
-                if assigned(srsym) and (srsym.typ in [namespacesym,unitsym]) then
-                  begin
-                    ns:=ns+'.'+pattern;
-                    nssym:=srsym;
-                    consume(_ID);
-                    consume(_POINT);
-                  end;
-              end;
-            { check if there is a hidden unit with this pattern in the namespace }
-            if not assigned(srsym) and
-               assigned(nssym) and (nssym.typ=namespacesym) and assigned(tnamespacesym(nssym).unitsym) then
-              srsym:=tnamespacesym(nssym).unitsym;
-          end;
-
       begin
         result:=false;
         tokentoconsume:=_ID;
-        is_specialize:=false;
-
-        if not assigned(srsym) and (pattern<>'') and (namespacelist.count>0) then
-          begin
-            hmodule:=get_module(current_filepos.moduleindex);
-            if not assigned(hmodule) then
-              internalerror(2018050301);
-
-            nsitem:=TCmdStrListItem(namespacelist.first);
-            while assigned(nsitem) do
-              begin
-                ns:=upper(nsitem.str)+'.'+sympattern;
-
-                if searchsym_in_module(hmodule,ns,srsym,srsymtable) and
-                    (srsym.typ in [unitsym,namespacesym]) then
-                  break;
-
-                nsitem:=TCmdStrListItem(nsitem.next);
-              end;
-          end;
 
         if assigned(srsym) and (srsym.typ in [unitsym,namespacesym]) then
           begin
@@ -325,24 +282,22 @@ implementation
                   begin
                     ns:=srsym.name;
                     nssym:=srsym;
-                    consume_namespace;
-                    if not assigned(srsym) and (namespacelist.count>0) then
+                    while assigned(srsym) and (srsym.typ=namespacesym) do
                       begin
-                        nsitem:=TCmdStrListItem(namespacelist.first);
-                        while assigned(nsitem) do
+                        { we have a namespace. the next identifier should be either a namespace or a unit }
+                        searchsym_in_module(hmodule,ns+'.'+pattern,srsym,srsymtable);
+                        if assigned(srsym) and (srsym.typ in [namespacesym,unitsym]) then
                           begin
-                            ns:=upper(nsitem.str)+'.'+nssym.name;
-
-                            if searchsym_in_module(hmodule,ns,srsym,srsymtable) and
-                                (srsym.typ in [unitsym,namespacesym]) then
-                              begin
-                                consume_namespace;
-                                break;
-                              end;
-
-                            nsitem:=TCmdStrListItem(nsitem.next);
+                            ns:=ns+'.'+pattern;
+                            nssym:=srsym;
+                            consume(_ID);
+                            consume(_POINT);
                           end;
                       end;
+                    { check if there is a hidden unit with this pattern in the namespace }
+                    if not assigned(srsym) and
+                       assigned(nssym) and (nssym.typ=namespacesym) and assigned(tnamespacesym(nssym).unitsym) then
+                      srsym:=tnamespacesym(nssym).unitsym;
                     if assigned(srsym) and (srsym.typ<>unitsym) then
                       internalerror(201108260);
                     if not assigned(srsym) then
@@ -365,15 +320,7 @@ implementation
                           searchsym_in_module(tunitsym(srsym).module,'ANSICHAR',srsym,srsymtable)
                       end
                     else
-                      if allow_specialize and (idtoken=_SPECIALIZE) then
-                        begin
-                          consume(_ID);
-                          is_specialize:=true;
-                          if token=_ID then
-                            searchsym_in_module(tunitsym(srsym).module,pattern,srsym,srsymtable);
-                        end
-                      else
-                        searchsym_in_module(tunitsym(srsym).module,pattern,srsym,srsymtable);
+                      searchsym_in_module(tunitsym(srsym).module,pattern,srsym,srsymtable);
                   _STRING:
                     begin
                       { system.string? }
@@ -402,13 +349,6 @@ implementation
           end;
       end;
 
-
-    function try_consume_unitsym_no_specialize(var srsym:tsym;var srsymtable:TSymtable;var tokentoconsume:ttoken;consume_id:boolean;sympattern:TSymStr):boolean;
-      var
-        dummy: Boolean;
-      begin
-        result:=try_consume_unitsym(srsym,srsymtable,tokentoconsume,consume_id,false,dummy,sympattern);
-      end;
 
     function try_consume_hintdirective(var symopt:tsymoptions; var deprecatedmsg:pshortstring):boolean;
       var

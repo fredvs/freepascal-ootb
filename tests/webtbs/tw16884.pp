@@ -1,4 +1,3 @@
-{%skiptarget=$nothread }
 {$mode objfpc}
 
 uses
@@ -14,7 +13,7 @@ type
   public
     constructor CreateRace(const ForceFail: Boolean);
     procedure Execute; override;
-  end;
+  end; 
 
 constructor TThreadChild.CreateRace(const ForceFail: Boolean);
 begin

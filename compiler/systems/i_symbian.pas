@@ -91,7 +91,6 @@ unit i_symbian;
             stacksize    : 262144;
             stackalign   : 4;
             abi          : abi_default;
-            llvmdatalayout : 'todo';
           );
 
        system_arm_symbian_info : tsysteminfo =
@@ -155,7 +154,6 @@ unit i_symbian;
             stacksize    : 262144;
             stackalign   : 4;
             abi          : abi_default;
-            llvmdatalayout : 'todo';
           );
 
 

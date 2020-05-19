@@ -1,8 +1,8 @@
 {
     Copyright (c) 2001-2002 by Peter Vreman
 
-    This unit implements support import, export, link routines
-    for the PalmOS target
+    This unit implements support import,export,link routines
+    for the (i386) Amiga target
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,10 +34,9 @@ interface
     private
        Function  WriteResponseFile : Boolean;
     public
-       constructor Create; override;
-       procedure SetDefaultInfo; override;
-       procedure InitSysInitUnitName; override;
-       function  MakeExecutable:boolean; override;
+       constructor Create;override;
+       procedure SetDefaultInfo;override;
+       function  MakeExecutable:boolean;override;
     end;
 
 
@@ -46,7 +45,7 @@ implementation
     uses
        SysUtils,
        cutils,cfileutl,cclasses,
-       globtype,globals,systems,verbose,cscript,fmodule,i_palmos,
+       globtype,globals,systems,verbose,script,fmodule,i_palmos,
        comprsrc;
 
 {****************************************************************************
@@ -66,19 +65,9 @@ procedure TLinkerPalmOS.SetDefaultInfo;
 begin
   with Info do
    begin
-     //ExeCmd[1]:='ldpalm $OPT $STRIP -N -dy -T $SCRIPT -o $EXE @$RES';
-
-     { This is based on my successful experiment with prc-tools remix.
-       Anyone who has more insight into this Palm magic, feel free to fix. (KB) }
-     ExeCmd[1]:='ld $OPT $STRIP --embedded-relocs --no-check-sections -N -dy -o $EXE $RES';
-     ExeCmd[2]:='build-prc $EXE.prc "$APPNAME" $APPID $EXE';
+     ExeCmd[1]:='ldpalm $OPT $STRIP -N -dy -T $SCRIPT -o $EXE @$RES';
+     ExeCmd[2]:='build-prc $EXE.prc "$APPNAME" $APPID $EXE *.bin';
    end;
-end;
-
-
-procedure TLinkerPalmOS.InitSysInitUnitName;
-begin
-  sysinitunit:='si_prc';
 end;
 
 
@@ -105,18 +94,13 @@ begin
   HPath:=TCmdStrListItem(LibrarySearchPath.First);
   while assigned(HPath) do
    begin
-     LinkRes.Add('SEARCH_DIR('+HPath.Str+')');
+     LinkRes.Add('-L'+HPath.Str);
      HPath:=TCmdStrListItem(HPath.Next);
    end;
 
-  LinkRes.Add('INPUT (');
-  { add objectfiles, start with prt0 always }
-  if not (target_info.system in systems_internal_sysinit) then
-    begin
-      { add objectfiles, start with crt0 always  }
-      { using crt0, we should stick C compatible }
-      LinkRes.AddFileName(FindObjectFile('crt0','',false));
-    end;
+  { add objectfiles, start with crt0 always  }
+  { using crt0, we should stick C compatible }
+  LinkRes.AddFileName(FindObjectFile('crt0','',false));
 
   { main objectfiles }
   while not ObjectFiles.Empty do
@@ -125,22 +109,21 @@ begin
      if s<>'' then
       LinkRes.AddFileName(s);
    end;
-  LinkRes.Add(')');
 
   { Write staticlibraries }
   if not StaticLibFiles.Empty then
    begin
-     LinkRes.Add('GROUP(');
+     LinkRes.Add('-(');
      While not StaticLibFiles.Empty do
       begin
         S:=StaticLibFiles.GetFirst;
         LinkRes.AddFileName(s)
       end;
-     LinkRes.Add(')');
+     LinkRes.Add('-)');
    end;
 
   { currently the PalmOS target must be linked always against the C lib }
-  {LinkRes.Add('-lcrt');}
+  LinkRes.Add('-lcrt');
 
   { Write sharedlibraries like -l<lib>, also add the needed dynamic linker
     here to be sure that it gets linked this is needed for glibc2 systems (PFV) }
@@ -152,7 +135,7 @@ begin
       begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-         Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
       end
      else
@@ -197,18 +180,16 @@ begin
   for i:=1 to 2 do
    begin
      SplitBinCmd(Info.ExeCmd[i],binstr,cmdstr);
-     binstr:=FindUtil(utilsprefix+BinStr);
      if binstr<>'' then
       begin
         Replace(cmdstr,'$EXE',MaybeQuoted(current_module.exefilename));
         Replace(cmdstr,'$OPT',Info.ExtraOptions);
         Replace(cmdstr,'$RES',MaybeQuoted(outputexedir+Info.ResName));
         Replace(cmdstr,'$STRIP',StripStr);
-//        Replace(cmdstr,'$SCRIPT',FindUtil('palm.ld'));
+        Replace(cmdstr,'$SCRIPT',FindUtil('palm.ld'));
         Replace(cmdstr,'$APPNAME',palmos_applicationname);
         Replace(cmdstr,'$APPID',palmos_applicationid);
-
-        success:=DoExec(binstr,cmdstr,(i=1),false);
+        success:=DoExec(FindUtil(binstr),cmdstr,(i=1),false);
         if not success then
          break;
       end;
@@ -228,12 +209,10 @@ end;
 initialization
 {$ifdef m68k}
   RegisterTarget(system_m68k_palmos_info);
-  RegisterLinker(ld_palmos,TLinkerPalmOS);
   RegisterRes(res_m68k_palmos_info,TResourceFile);
 {$endif m68k}
 {$ifdef arm}
   RegisterTarget(system_arm_palmos_info);
-  RegisterLinker(ld_palmos,TLinkerPalmOS);
   RegisterRes(res_arm_palmos_info,TResourceFile);
 {$endif arm}
 end.

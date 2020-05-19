@@ -234,7 +234,6 @@ Procedure TAmigaServerComm.ReadMessage;
 var
   Temp: PByte;
   MsgType: TMessageType;
-  Msg: TIPCServerMsg;
 begin
   if Assigned(MsgBody) then
   begin
@@ -242,18 +241,11 @@ begin
     Inc(Temp, SizeOf(Exec.TMessage));
     MsgType := 0;
     Move(Temp^, MsgType, SizeOf(TMessageType));
-    Inc(Temp, SizeOf(TMessageType));
-
-    Msg := TIPCServerMsg.Create;
-    try
-      Msg.MsgType := MsgType;
-      Msg.Stream.WriteBuffer(Temp^, MsgBody^.mn_Length);
-    except
-      FreeAndNil(Msg);
-      raise;
-    end;
-    PushMessage(Msg);
-
+    Inc(Temp, SizeOf(TMessageType));    
+    Owner.FMsgType := MsgType;
+    Owner.FMsgData.Size := 0;
+    Owner.FMsgData.Seek(0, soFrombeginning);
+    Owner.FMsgData.WriteBuffer(temp^, MsgBody^.mn_Length);
     System.FreeMem(MsgBody);
     MsgBody := nil;
   end;

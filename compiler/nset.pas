@@ -28,7 +28,7 @@ interface
     uses
        cclasses,constexp,
        node,globtype,globals,
-       aasmbase,ncon,nflw,symtype;
+       aasmbase,aasmtai,aasmdata,ncon,nflw,symtype;
 
     type
        TLabelType = (ltOrdinal, ltConstString);
@@ -40,8 +40,6 @@ interface
           { left and right tree node }
           less,
           greater : pcaselabel;
-
-          labellabel : TAsmLabel;
 
           { range type }
           case label_type : TLabelType of
@@ -106,7 +104,7 @@ interface
           function pass_1 : tnode;override;
           function simplify(forinline:boolean):tnode;override;
           function docompare(p: tnode): boolean; override;
-          procedure addlabel(blockid:longint;const l,h : TConstExprInt); overload;
+          procedure addlabel(blockid:longint;l,h : TConstExprInt); overload;
           procedure addlabel(blockid:longint;l,h : tstringconstnode); overload;
           procedure addblock(blockid:longint;instr:tnode);
           procedure addelseblock(instr:tnode);
@@ -130,10 +128,12 @@ interface
 implementation
 
     uses
+      systems,
       verbose,
       symconst,symdef,symsym,symtable,defutil,defcmp,
       htypechk,pass_1,
-      nadd,nbas,ncnv,nld,cgbase;
+      nadd,nbas,ncnv,nld,cgobj,cgbase,
+      widestr;
 
 
 {*****************************************************************************
@@ -215,7 +215,7 @@ implementation
 
       begin
          result:=nil;
-         resultdef:=pasbool1type;
+         resultdef:=pasbool8type;
          typecheckpass(right);
          set_varstate(right,vs_read,[vsf_must_be_valid]);
          if codegenerror then
@@ -239,7 +239,7 @@ implementation
            internalerror(20021126);
 
          t:=self;
-         if isbinaryoverloaded(t,[]) then
+         if isbinaryoverloaded(t) then
            begin
              result:=t;
              exit;
@@ -258,7 +258,7 @@ implementation
              }
              if  (
                    (left.resultdef.typ = orddef) and not
-                   (torddef(left.resultdef).ordtype in [s8bit,u8bit,uchar,pasbool1,pasbool8,bool8bit])
+                   (torddef(left.resultdef).ordtype in [s8bit,u8bit,uchar,pasbool8,bool8bit])
                  )
                 or
                  (
@@ -296,7 +296,7 @@ implementation
             ((right.nodetype = setconstn) and
              (tnormalset(tsetconstnode(right).value_set^) = [])) then
           begin
-            t:=cordconstnode.create(0,pasbool1type,false);
+            t:=cordconstnode.create(0,pasbool8type,false);
             typecheckpass(t);
             result:=t;
             exit;
@@ -323,10 +323,10 @@ implementation
                  { into account                                             }
                  if Tordconstnode(left).value.signed then
                    t:=cordconstnode.create(byte(tordconstnode(left).value.svalue in Tsetconstnode(right).value_set^),
-                     pasbool1type,true)
+                     pasbool8type,true)
                  else
                    t:=cordconstnode.create(byte(tordconstnode(left).value.uvalue in Tsetconstnode(right).value_set^),
-                     pasbool1type,true);
+                     pasbool8type,true);
                  typecheckpass(t);
                  result:=t;
                  exit;
@@ -336,7 +336,7 @@ implementation
                  if (Tordconstnode(left).value<int64(tsetdef(right.resultdef).setbase)) or
                     (Tordconstnode(left).value>int64(Tsetdef(right.resultdef).setmax)) then
                    begin
-                     t:=cordconstnode.create(0, pasbool1type, true);
+                     t:=cordconstnode.create(0, pasbool8type, true);
                      typecheckpass(t);
                      result:=t;
                      exit;
@@ -500,7 +500,7 @@ implementation
       var
         b : byte;
       begin
-        ppufile.putboolean(p^.label_type = ltConstString);
+        ppufile.putbyte(byte(p^.label_type = ltConstString));
         if (p^.label_type = ltConstString) then
           begin
             p^._low_str.ppuwrite(ppufile);
@@ -528,7 +528,7 @@ implementation
         p : pcaselabel;
       begin
         new(p);
-        if ppufile.getboolean then
+        if boolean(ppufile.getbyte) then
           begin
             p^.label_type := ltConstString;
             p^._low_str := cstringconstnode.ppuload(stringconstn,ppufile);
@@ -656,87 +656,41 @@ implementation
       end;
 
 
-    type
-      TLinkedListCaseLabelItem = class(TLinkedListItem)
-        casenode: pcaselabel;
-        constructor create(c: pcaselabel);
-      end;
-
-    constructor TLinkedListCaseLabelItem.create(c: pcaselabel);
-      begin
-        inherited create;
-        casenode:=c;
-      end;
-
-
     function tcasenode.pass_1 : tnode;
       var
-         i: integer;
-         node_thenblock, node_elseblock, if_node,temp_cleanup : tnode;
+         i  : integer;
+         node_thenblock,node_elseblock,if_node,temp_cleanup : tnode;
          tempcaseexpr : ttempcreatenode;
-         if_block, init_block: tblocknode;
-         stmt: tstatementnode;
+         if_block, init_block, stmt_block : tblocknode;
+         stmt : tstatementnode;
+         endlabel : tlabelnode;
 
-      procedure add_label_to_blockid_list(list: tfpobjectlist; lab: pcaselabel);
-        begin
-          if not assigned(lab) then
-            exit;
-          if not assigned(list[lab^.blockid]) then
-            list[lab^.blockid]:=tfpobjectlist.create(true);
-          tfpobjectlist(list[lab^.blockid]).add(TLinkedListCaseLabelItem.create(lab));
-          add_label_to_blockid_list(list,lab^.less);
-          add_label_to_blockid_list(list,lab^.greater);
-        end;
-
-      function order_labels_by_blockid: tfpobjectlist;
-        begin
-          result:=tfpobjectlist.create(true);
-          result.count:=blocks.count;
-          add_label_to_blockid_list(result,labels);
-        end;
-
-      function makeifblock(elseblock : tnode): tnode;
+      function makeifblock(const labtree : pcaselabel; prevconditblock : tnode): tnode;
         var
-          i, j: longint;
-          check: taddnode;
-          newcheck: ^taddnode;
-          blocklist, lablist: tfpobjectlist;
-          labitem: pcaselabel;
+          condit : tnode;
         begin
-          result:=elseblock;
-          blocklist:=order_labels_by_blockid;
-          { in reverse order so that the case options at the start of the case
-            statement are evaluated first, as they presumably are the most
-            common }
-          for i:=blocklist.count-1 downto 0 do
+          if assigned(labtree^.less) then
+            result := makeifblock(labtree^.less, prevconditblock)
+          else
+            result := prevconditblock;
+
+          condit := caddnode.create(equaln, left.getcopy, labtree^._low_str.getcopy);
+
+          if (labtree^._low_str.fullcompare(labtree^._high_str)<>0) then
             begin
-              lablist:=tfpobjectlist(blocklist[i]);
-              check:=nil;
-              for j:=0 to lablist.count-1 do
-                begin
-                  if assigned(check) then
-                    begin
-                      check:=caddnode.create(orn,check,nil);
-                      newcheck:=@check.right
-                    end
-                  else
-                    newcheck:=@check;
-                  labitem:=TLinkedListCaseLabelItem(lablist[j]).casenode;
-                  newcheck^:=caddnode.create(equaln,left.getcopy,labitem^._low_str.getcopy);
-                  if (labitem^._low_str.fullcompare(labitem^._high_str)<>0) then
-                    begin
-                      newcheck^.nodetype:=gten;
-                      newcheck^:=caddnode.create(
-                        andn,newcheck^,caddnode.create(
-                          lten,left.getcopy,labitem^._high_str.getcopy));
-                    end;
-                end;
-              result:=cifnode.create(check,
-                pcaseblock(blocks[i])^.statement,result);
-              pcaseblock(blocks[i])^.statement:=nil;
+              condit.nodetype := gten;
+              condit := caddnode.create(
+                andn, condit, caddnode.create(
+                  lten, left.getcopy, labtree^._high_str.getcopy));
             end;
-          { will free its elements too because of create(true) }
-          blocklist.free;
+
+          result :=
+            cifnode.create(
+              condit, cgotonode.create(pcaseblock(blocks[labtree^.blockid])^.statementlabel.labsym), result);
+
+          if assigned(labtree^.greater) then
+            result := makeifblock(labtree^.greater, result);
+
           typecheckpass(result);
         end;
 
@@ -800,20 +754,37 @@ implementation
 
          if (labels^.label_type = ltConstString) then
            begin
-             if_node:=makeifblock(elseblock);
+             endlabel:=clabelnode.create(cnothingnode.create,clabelsym.create('$casestrofend'));
+             stmt_block:=internalstatements(stmt);
+             for i:=0 to blocks.count-1 do
+               begin
+                 pcaseblock(blocks[i])^.statementlabel:=clabelnode.create(cnothingnode.create,clabelsym.create('$casestrof'));
+                 addstatement(stmt,pcaseblock(blocks[i])^.statementlabel);
+                 addstatement(stmt,pcaseblock(blocks[i])^.statement);
+                 pcaseblock(blocks[i])^.statement:=nil;
+                 addstatement(stmt,cgotonode.create(endlabel.labsym));
+               end;
+
+             firstpass(tnode(stmt_block));
+
+             if_node := makeifblock(labels, elseblock);
 
              if assigned(init_block) then
                firstpass(tnode(init_block));
 
-             if_block:=internalstatements(stmt);
+             if_block := internalstatements(stmt);
 
              if assigned(init_block) then
                addstatement(stmt, init_block);
-             addstatement(stmt,if_node);
+
+             addstatement(stmt, if_node);
+             addstatement(stmt,cgotonode.create(endlabel.labsym));
+             addstatement(stmt, stmt_block);
+             addstatement(stmt, endlabel);
              if assigned(temp_cleanup) then
-               addstatement(stmt,temp_cleanup);
-             result:=if_block;
-             elseblock:= nil;
+               addstatement(stmt, temp_cleanup);
+             result := if_block;
+             elseblock := nil;
              exit;
            end;
 
@@ -873,12 +844,14 @@ implementation
     function tcasenode.simplify(forinline:boolean):tnode;
       var
         tmp: pcaselabel;
+        walkup: boolean;
       begin
         result:=nil;
         if left.nodetype=ordconstn then
           begin
             tmp:=labels;
             { check all case labels until we find one that fits }
+            walkup:=assigned(tmp^.greater);
             while assigned(tmp) do
               begin
                 if (tmp^._low<=tordconstnode(left).value) and
@@ -893,7 +866,7 @@ implementation
                     exit;
                   end;
 
-                if tmp^._high<tordconstnode(left).value then
+                if walkup then
                   tmp:=tmp^.greater
                 else
                   tmp:=tmp^.less;
@@ -947,7 +920,6 @@ implementation
         printnodeinfo(t);
         writeln(t);
         printnode(t,left);
-        i:=0;
         for i:=0 to blocks.count-1 do
           begin
             writeln(t,printnodeindention,'(caseblock blockid: ',i);
@@ -1032,7 +1004,7 @@ implementation
       end;
 
 
-    procedure tcasenode.addlabel(blockid:longint;const l,h : TConstExprInt);
+    procedure tcasenode.addlabel(blockid:longint;l,h : TConstExprInt);
       var
         hcaselabel : pcaselabel;
 

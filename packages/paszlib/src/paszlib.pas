@@ -1,4 +1,4 @@
-unit PasZLib;
+unit paszlib;
 
 {$inline on}
 

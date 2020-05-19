@@ -227,9 +227,9 @@ begin
   Temp:=0;
   Ancestor:=TComponent(Filer.Ancestor);
   If Assigned(Ancestor) then Temp:=Ancestor.FDesignInfo;
-  Filer.Defineproperty('Left',@readleft,@writeleft,
+  Filer.Defineproperty('left',@readleft,@writeleft,
                        (longrec(FDesignInfo).Lo<>Longrec(temp).Lo));
-  Filer.Defineproperty('Top',@readtop,@writetop,
+  Filer.Defineproperty('top',@readtop,@writetop,
                        (longrec(FDesignInfo).Hi<>Longrec(temp).Hi));
 end;
 

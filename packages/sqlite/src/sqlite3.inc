@@ -1164,6 +1164,7 @@ Const
 function InitializeSqliteANSI(const LibraryName: AnsiString = ''): Integer; //needed as TLibraryLoadFunction
 function InitializeSqlite(const LibraryName: UnicodeString = ''): Integer;
 function TryInitializeSqlite(const LibraryName: Unicodestring = ''): Integer;
+function ReleaseSqlite: Integer;
 procedure ReleaseSqlite; //needed as TLibraryUnLoadFunction
 
 function InitialiseSQLite: Integer; deprecated;
@@ -1449,7 +1450,7 @@ begin
   result:=InitializeSqlite(LibraryName);
 end;
 
-procedure ReleaseSQLite;
+function  ReleaseSQLite:integer;
 begin
   if InterlockedDecrement(RefCount) <= 0 then
   begin
@@ -1459,6 +1460,11 @@ begin
     SQLiteLoadedLibrary := '';
     RefCount := 0;
   end;
+end;
+
+procedure ReleaseSQLite;
+begin
+  ReleaseSQLite;
 end;
 
 {$ENDIF}

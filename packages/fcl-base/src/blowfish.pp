@@ -59,8 +59,8 @@ Type
     function GetPosition: Int64; override;
     procedure InvalidSeek; override;
   Public
-    Constructor Create(AKey : TBlowFishKey; AKeySize : Byte; Dest: TStream); overload; virtual;
-    Constructor Create(Const KeyPhrase : String; Dest: TStream); overload;
+    Constructor Create(AKey : TBlowFishKey; AKeySize : Byte; Dest: TStream);
+    Constructor Create(Const KeyPhrase : String; Dest: TStream);
     Destructor Destroy; override;
     Property BlowFish : TBlowFish Read FBF;
   end;
@@ -74,11 +74,7 @@ Type
   end;
 
   TBlowFishDeCryptStream = Class(TBlowFishStream)
-  private
-    FSourcePos0: Int64;
   public
-    Constructor Create(AKey : TBlowFishKey; AKeySize : Byte; Dest: TStream); override;
-
     function Read(var Buffer; Count: Longint): Longint; override;
     function Seek(const Offset: Int64; Origin: TSeekOrigin): Int64; override;
   end;
@@ -656,13 +652,6 @@ end;
     TBlowFishDecryptStream
   ---------------------------------------------------------------------}
 
-constructor TBlowFishDeCryptStream.Create(AKey: TBlowFishKey; AKeySize: Byte;
-  Dest: TStream);
-begin
-  inherited Create(AKey, AKeySize, Dest);
-
-  FSourcePos0 := Source.Position;
-end;
 
 function TBlowFishDeCryptStream.Read(var Buffer; Count: Longint): Longint;
 
@@ -708,13 +697,7 @@ end;
 function TBlowFishDeCryptStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 
 begin
-  if (Offset=0) and (Origin=soBeginning) then
-  begin // support seek to beginning
-    FBufPos:=0;
-    FPos:=0;
-    Source.Position := FSourcePos0;
-  end else
-    FakeSeekForward(Offset,TSeekOrigin(Origin),FPos);
+  FakeSeekForward(Offset,TSeekOrigin(Origin),FPos);
   Result:=FPos;
 end;
 

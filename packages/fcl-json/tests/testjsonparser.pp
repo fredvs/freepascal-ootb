@@ -37,7 +37,6 @@ type
     procedure DoTestFloat(F: TJSONFloat); overload;
     procedure DoTestFloat(F: TJSONFloat; S: String); overload;
     procedure DoTestObject(S: String; const ElNames: array of String; DoJSONTest : Boolean = True);
-    procedure DoTestString(S : String; AResult : String);
     procedure DoTestString(S : String);
     procedure DoTestArray(S: String; ACount: Integer; IgnoreJSON: Boolean=False);
     Procedure DoTestClass(S : String; AClass : TJSONDataClass);
@@ -69,7 +68,6 @@ type
     Procedure TestNoHandlerError;
     Procedure TestHandlerResult;
     Procedure TestHandlerResultStream;
-    Procedure TestEmptyLine;
   end;
 
 implementation
@@ -81,7 +79,7 @@ Var
   J : TJSONData;
   
 begin
-  P:=TJSONParser.Create('',[joUTF8]);
+  P:=TJSONParser.Create('');
   Try
     J:=P.Parse;
     If (J<>Nil) then
@@ -99,7 +97,7 @@ Var
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create('1',[joUTF8]);
+  P:=TJSONParser.Create('1');
   Try
     J:=P.Parse;
     If (J=Nil) then
@@ -119,7 +117,7 @@ Var
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create('123456789012345',[joUTF8]);
+  P:=TJSONParser.Create('123456789012345');
   Try
     J:=P.Parse;
     If (J=Nil) then
@@ -139,7 +137,7 @@ Var
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create('null',[joUTF8]);
+  P:=TJSONParser.Create('null');
   Try
     J:=P.Parse;
     If (J=Nil) then
@@ -158,7 +156,7 @@ Var
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create('true',[joUTF8]);
+  P:=TJSONParser.Create('true');
   Try
     J:=P.Parse;
     If (J=Nil) then
@@ -178,7 +176,7 @@ Var
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create('false',[joUTF8]);
+  P:=TJSONParser.Create('false');
   Try
     J:=P.Parse;
     If (J=Nil) then
@@ -208,18 +206,10 @@ end;
 
 procedure TTestParser.TestString;
 
-Const
-  // Glowing star in UTF8
-  GlowingStar = #$F0#$9F#$8C#$9F;
-
 begin
   DoTestString('A string');
   DoTestString('');
   DoTestString('\"');
-  DoTestString('\u00f8','ø'); // this is ø
-  DoTestString('\u00f8\"','ø"'); // this is ø"
-//  Writeln(GlowingStar);
-  DoTestString('\ud83c\udf1f',GlowingStar);
 end;
 
 
@@ -342,6 +332,7 @@ end;
 
 procedure TTestParser.TestObjectError;
 begin
+
   DoTestError('{ "name" : value }',[joUTF8]);
 end;
 
@@ -357,7 +348,7 @@ Var
 
 begin
   J:=Nil;
-  P:=TJSONParser.Create(S,[joUTF8]);
+  P:=TJSONParser.Create(S);
   Try
     P.Options:=FOptions;
     J:=P.Parse;
@@ -409,7 +400,7 @@ Var
   D : TJSONData;
 
 begin
-  P:=TJSONParser.Create(S,[joUTF8]);
+  P:=TJSONParser.Create(S);
   try
     D:=P.Parse;
     try
@@ -426,9 +417,9 @@ procedure TTestParser.TestErrors;
 
 begin
 
-  DoTestError('1Tru');
   DoTestError('a');
   DoTestError('"b');
+  DoTestError('1Tru');
 
   DoTestError('b"');
   DoTestError('{"a" : }');
@@ -490,19 +481,15 @@ procedure TTestParser.TestNoHandlerError;
 
 Var
   H : TJSONParserHandler;
-  HS : TJSONStringParserHandler;
 
 begin
   H:=GetJSONParserHandler;
-  HS:=GetJSONStringParserHandler;
   try
     AssertSame('SetJSONParserHandler returns previous handler',H,SetJSONParserHandler(Nil));
-    AssertSame('SetJSONStringParserHandler returns previous handler',HS,SetJSONStringParserHandler(Nil));
     AssertException('No handler raises exception',EJSON,@CallNoHandler);
     AssertException('No handler raises exception',EJSON,@CallNoHandlerStream);
   finally
     SetJSONParserHandler(H);
-    SetJSONStringParserHandler(HS);
   end;
 end;
 
@@ -539,31 +526,6 @@ begin
   end;
 end;
 
-procedure TTestParser.TestEmptyLine;
-// Bug report 36037
-Const MyJSON =
-'  {'+sLineBreak+
-'  "pylib__linux" : "libpython3.7m.so.1.0",'+sLineBreak+
-'  "ui_toolbar_theme": "default_24x24",'+sLineBreak+
-'  "ui_toolbar_show" : true,'+sLineBreak+
-'  "font_name__linux" : "DejaVu Sans Mono",'+sLineBreak+
-'  "font_size__linux" : 10,'+sLineBreak+
-'    "ui_listbox_fuzzy": false,'+sLineBreak+
-'    "ui_max_size_lexer": 5,'+sLineBreak+
-'    "find_separate_form": false,'+sLineBreak+sLineBreak+
-'}';
-  var
-    J : TJSONData;
-begin
-  With TJSONParser.Create(MyJSON,[joUTF8,joIgnoreTrailingComma]) do
-  Try
-    J:=Parse;
-    J.Free;
-  Finally
-    Free;
-  end;
-end;
-
 procedure TTestParser.DoTestError(S : String; Options : TJSONOptions = DefaultOpts);
 
 Var
@@ -574,7 +536,7 @@ Var
 
 begin
   ParseOK:=False;
-  P:=TJSONParser.Create(S,[joUTF8]);
+  P:=TJSONParser.Create(S);
   P.OPtions:=Options;
   J:=Nil;
   Try
@@ -599,30 +561,24 @@ end;
 
 procedure TTestParser.DoTestString(S: String);
 
-begin
-  DoTestString(S,JSONStringToString(S));
-end;
-
-procedure TTestParser.DoTestString(S: String; AResult : String);
-
 Var
   P : TJSONParser;
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create('"'+S+'"',[joUTF8]);
+  P:=TJSONParser.Create('"'+S+'"');
   Try
     J:=P.Parse;
     If (J=Nil) then
       Fail('Parse of string "'+S+'" fails');
     TestJSONType(J,jtString);
-    TestAsString(J,aResult);
-    if Pos('\u',S)=0 then
-      TestJSON(J,'"'+S+'"');
+    TestAsString(J,JSONStringToString(S));
+    TestJSON(J,'"'+S+'"');
   Finally
     FreeAndNil(J);
     FreeAndNil(P);
   end;
+
 end;
 
 procedure TTestParser.DoTestFloat(F : TJSONFloat);
@@ -642,7 +598,7 @@ Var
   J : TJSONData;
 
 begin
-  P:=TJSONParser.Create(S,[joUTF8]);
+  P:=TJSONParser.Create(S);
   Try
     J:=P.Parse;
     If (J=Nil) then

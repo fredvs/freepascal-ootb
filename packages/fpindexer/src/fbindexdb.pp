@@ -26,17 +26,26 @@ type
 
   TFBIndexDB = class(TSQLDBIndexDB)
   private
+    FIB: TIBConnection;
     FGenQuery: Array[TIndexTable] of TSQLQuery;
     Function GetGenQuery(ATable : TIndexTable) : TSQLQuery;
+    function GetS(AIndex: integer): string;
+    procedure SetS(AIndex: integer; const AValue: string);
   protected
     procedure InsertMatch(AWordID, aFileID, aLanguageID: int64; const ASearchData: TSearchWordData); override;
-    function InsertWord(const AWord: UTF8string): int64; override;
-    function InsertURL(const URL: UTF8string; ATimeStamp: TDateTime; ALanguageID: int64): int64; override;
-    function InsertLanguage(const ALanguage: UTF8string): int64; override;
-    function CreateConnection: TSQLConnection; override;
+    function InsertWord(const AWord: string): int64; override;
+    function InsertURL(const URL: string; ATimeStamp: TDateTime; ALanguageID: int64): int64; override;
+    function InsertLanguage(const ALanguage: string): int64; override;
+    function GetConnection: TSQLConnection; override;
     function GetID(TableType: TIndexTable): int64;
     procedure FinishCreateTable(const TableType: TIndexTable); override;
-    procedure FinishDropTable(const TableType: TIndexTable);override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+  published
+    property DatabasePath: string Index 0 read GetS write SetS;
+    property UserName: string Index 1 read GetS write SetS;
+    property Password: string Index 2 read GetS write SetS;
   end;
 
 implementation
@@ -47,6 +56,7 @@ function TFBIndexDB.GetID(TableType: TIndexTable): int64;
 
 var
   Q: TSQLQuery;
+  S: string;
 
 begin
   Q := GetGenQuery(TableType);
@@ -60,7 +70,7 @@ begin
   end;
 end;
 
-function TFBIndexDB.InsertLanguage(const ALanguage: UTF8string): int64;
+function TFBIndexDB.InsertLanguage(const ALanguage: string): int64;
 var
   Q: TSQLQuery;
 begin
@@ -71,7 +81,7 @@ begin
   Q.ExecSQL;
 end;
 
-function TFBIndexDB.InsertWord(const AWord: UTF8string): int64;
+function TFBIndexDB.InsertWord(const AWord: string): int64;
 var
   Q: TSQLQuery;
 begin
@@ -82,7 +92,7 @@ begin
   Q.ExecSQL;
 end;
 
-function TFBIndexDB.InsertURL(const URL: UTF8string; ATimeStamp: TDateTime; ALanguageID: int64): int64;
+function TFBIndexDB.InsertURL(const URL: string; ATimeStamp: TDateTime; ALanguageID: int64): int64;
 var
   Q: TSQLQuery;
 begin
@@ -107,19 +117,13 @@ begin
   Q.ParamByName(GetFieldName(ifMatchesWordID)).AsLargeInt := aWordID;
   Q.ParamByName(GetFieldName(ifMatchesFileID)).AsLargeInt := aFileID;
   Q.ParamByName(GetFieldName(ifMatchesPosition)).AsLargeInt := ASearchData.Position;
-  Q.ParamByName(GetFieldName(ifMatchesContext)).AsString := Copy(ASearchData.Context,1,MaxContextLen);
+  Q.ParamByName(GetFieldName(ifMatchesContext)).AsString := ASearchData.Context;
   Q.ExecSQL;
 end;
 
-function TFBIndexDB.CreateConnection: TSQLConnection;
-Var
-  T : TIndexTable;
-
+function TFBIndexDB.GetConnection: TSQLConnection;
 begin
-  // So they are recreated
-  for T in TIndexTable do
-    FreeAndNil(FGenQuery[T]);
-  Result := TIBConnection.Create(Self);
+  Result := FiB;
 end;
 
 procedure TFBIndexDB.FinishCreateTable(const TableType: TIndexTable);
@@ -127,9 +131,16 @@ begin
   Execute('CREATE GENERATOR ' + DefaultGeneratorNames[TableType], True);
 end;
 
-procedure TFBIndexDB.FinishDropTable(const TableType: TIndexTable);
+constructor TFBIndexDB.Create(AOwner: TComponent);
 begin
-  Execute('DROP GENERATOR ' + DefaultGeneratorNames[TableType], True);
+  inherited Create(AOwner);
+  FIB := TIBConnection.Create(nil);
+end;
+
+destructor TFBIndexDB.Destroy;
+begin
+  // Parent destroys FIB.
+  inherited Destroy;
 end;
 
 function TFBIndexDB.GetGenQuery(ATable: TIndexTable): TSQLQuery;
@@ -140,6 +151,26 @@ begin
     FGenQuery[ATable].Prepare;
     end;
   Result:=FGenQuery[ATable];
+end;
+
+function TFBIndexDB.GetS(AIndex: integer): string;
+begin
+  case Aindex of
+    0: Result := FIB.DatabaseName;
+    1: Result := FIB.UserName;
+    2: Result := FIB.Password;
+    3: Result := FIB.HostName;
+  end;
+end;
+
+procedure TFBIndexDB.SetS(AIndex: integer; const AValue: string);
+begin
+  case Aindex of
+    0: FIB.DatabaseName := AValue;
+    1: FIB.UserName := AValue;
+    2: FIB.Password := AValue;
+    3: FIB.HostName := AValue;
+  end;
 end;
 
 end.

@@ -16,14 +16,7 @@
 {****************************************************************************}
 
 const
-{$ifdef CPU16}
-  { Avoid too big local stack use for 
-    MSDOS tiny memory model that uses less than 4096
-    bytes for total stack by default. }
-  ParseBufSize     = 512;
-{$else not CPU16}
   ParseBufSize     = 4096;
-{$endif not CPU16}
   LastSpecialToken = 5;
 
   TokNames : array[0..LastSpecialToken] of string =
@@ -361,16 +354,8 @@ begin
 end;
 
 destructor TParser.Destroy;
-
-Var
-  aCount : Integer;
-
 begin
-  if fToken=toWString then
-    aCount:=Length(fLastTokenWStr)*2
-  else
-    aCount:=Length(fLastTokenStr);
-  fStream.Position:=SourcePos-aCount;
+  fStream.Position:=SourcePos;
   FreeMem(fBuf);
 end;
 

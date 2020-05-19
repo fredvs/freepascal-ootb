@@ -3,10 +3,8 @@
 
 { %skiptarget=wince }
 
-{$ifdef usecrt}
   uses
      crt;
-{$endif usecrt}
 
   const
      { ... parameters }
@@ -46,8 +44,7 @@
        i,j : longint;
 
     begin
-{$ifdef usecrt}
-      for i:=0 to w do
+       for i:=0 to w do
          for j:=0 to h do
            begin
               textcolor(white);
@@ -57,7 +54,6 @@
               gotoxy(i*7+1,j*2+2);
               writeln(phi[i,j]:6:3);
            end;
-{$endif usecrt}
     end;
 
   procedure calc_phi;
@@ -150,9 +146,7 @@
      habs,sigma_phi : double;
 
   begin
-{$ifdef usecrt}
      clrscr;
-{$endif usecrt}
      iter:=0;
      { setup boundary conditions }
      for i:=0 to w do
@@ -190,17 +184,13 @@
               sigma_phi:=sigma_phi+abs(phi[i,j]);
            end;
        adapt(mi,mj);
-{$ifdef usecrt}
        gotoxy(1,23);
        textcolor(white);
        writeln(iter,' iterations, sigma_phi=',sigma_phi);
-{$endif usecrt}
      until {keypressed or }(sigma_phi<0.5);
      draw;
-{$ifdef usecrt}
      gotoxy(1,23);
      textcolor(white);
-{$endif usecrt}
      writeln(iter,' iterations, sigma_phi=',sigma_phi);
      {writeln('press a key');
      if readkey=#0 then

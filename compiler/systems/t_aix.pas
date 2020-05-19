@@ -58,7 +58,7 @@ implementation
     SysUtils,
     cutils,cfileutl,cclasses,
     verbose,systems,globtype,globals,
-    symconst,cscript,
+    symconst,script,
     fmodule,
     aasmbase,aasmtai,aasmcpu,cpubase,
     cgbase,cgobj,cgutils,ogbase,ncgutil,
@@ -101,9 +101,9 @@ begin
   Inherited Create;
   if not Dontlinkstdlibpath then
     if not(cs_profile in current_settings.moduleswitches) then
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib;=/usr/X11R6/lib;=/opt/freeware/lib',true)
+      LibrarySearchPath.AddPath(sysrootpath,'/usr/lib;/usr/X11R6/lib;/opt/freeware/lib',true)
     else
-      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/profiled;=/usr/X11R6/lib;=/opt/freeware/lib',true)
+      LibrarySearchPath.AddPath(sysrootpath,'/usr/lib/profiled;/usr/X11R6/lib;/opt/freeware/lib',true)
 end;
 
 
@@ -216,7 +216,7 @@ begin
           S:=SharedLibFiles.GetFirst;
           i:=Pos(target_info.sharedlibext,S);
           if i>0 then
-            Insert(':',s,1);   // needed for the linker
+            Delete(S,i,255);
           Add('-l'+s);
         end;
        { when we have -static for the linker the we also need libgcc }

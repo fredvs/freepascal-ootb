@@ -38,6 +38,5 @@ implementation
     ,rgcpu,tgcpu,njvmutil,njvmtcon,
     { symtable }
     symcpu;
-    { no aasmdef, the jvm uses the base TAsmData class (set in init code of aasmcpu) }
 
 end.

@@ -394,7 +394,7 @@ begin
   else
     begin // short options have form '-o value'
     If (AIndex<ParamCount) then
-      if (Copy(Params[AIndex+1],1,1)<>OptionChar) then
+      if (Copy(Params[AIndex+1],1,1)<>'-') then
         Result:=Params[AIndex+1];
     end;
   end;
@@ -430,7 +430,6 @@ Var
 begin
   SetLength(Result,ParamCount);
   Cnt:=0;
-  I:=-1;
   Repeat
     I:=FindOptionIndex(C,B,I);
     If I<>-1 then

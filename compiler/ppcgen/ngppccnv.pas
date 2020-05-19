@@ -59,7 +59,7 @@ implementation
    uses
       verbose,globtype,globals,systems,
       symconst,symdef,aasmbase,aasmtai,aasmdata,
-      defutil,cutils,
+      defutil,
       cgbase,cgutils,pass_1,pass_2,
       ncgutil,procinfo,
       cpubase,aasmcpu,
@@ -72,13 +72,16 @@ implementation
         hreg2    : tregister;
 {$ifndef cpu64bitalu}
         href     : treference;
-        oldloc   : tlocation;
 {$endif not cpu64bitalu}
         resflags : tresflags;
         opsize   : tcgsize;
-        hlabel   : tasmlabel;
-        newsize  : tcgsize;
+        hlabel, oldTrueLabel, oldFalseLabel : tasmlabel;
+        newsize   : tcgsize;
       begin
+         oldTrueLabel:=current_procinfo.CurrTrueLabel;
+         oldFalseLabel:=current_procinfo.CurrFalseLabel;
+         current_asmdata.getjumplabel(current_procinfo.CurrTrueLabel);
+         current_asmdata.getjumplabel(current_procinfo.CurrFalseLabel);
          secondpass(left);
          if codegenerror then
           exit;
@@ -91,19 +94,13 @@ implementation
               location_copy(location,left.location);
               newsize:=def_cgsize(resultdef);
               { change of size? change sign only if location is LOC_(C)REGISTER? Then we have to sign/zero-extend }
-              if (tcgsize2size[newsize]>tcgsize2size[left.location.size]) or
+              if (tcgsize2size[newsize]<>tcgsize2size[left.location.size]) or
                  ((newsize<>left.location.size) and (location.loc in [LOC_REGISTER,LOC_CREGISTER])) then
                 hlcg.location_force_reg(current_asmdata.CurrAsmList,location,left.resultdef,resultdef,true)
               else
-                begin
-                  location.size:=newsize;
-                  if (target_info.endian = ENDIAN_BIG) and
-                     (location.loc in [LOC_REFERENCE,LOC_CREFERENCE]) then
-                    begin
-                      inc(location.reference.offset,TCGSize2Size[left.location.size]-TCGSize2Size[location.size]);
-                      location.reference.alignment:=newalignment(location.reference.alignment,TCGSize2Size[left.location.size]-TCGSize2Size[location.size]);
-                    end;
-                end;
+                location.size:=newsize;
+              current_procinfo.CurrTrueLabel:=oldTrueLabel;
+              current_procinfo.CurrFalseLabel:=oldFalseLabel;
               exit;
            end;
 
@@ -179,13 +176,13 @@ implementation
               begin
                 hreg1:=cg.getintregister(current_asmdata.CurrAsmList,OS_INT);
                 current_asmdata.getjumplabel(hlabel);
-                cg.a_label(current_asmdata.CurrAsmList,left.location.truelabel);
+                cg.a_label(current_asmdata.CurrAsmList,current_procinfo.CurrTrueLabel);
                 if not(is_cbool(resultdef)) then
                   cg.a_load_const_reg(current_asmdata.CurrAsmList,OS_INT,1,hreg1)
                 else
                   cg.a_load_const_reg(current_asmdata.CurrAsmList,OS_INT,-1,hreg1);
                 cg.a_jmp_always(current_asmdata.CurrAsmList,hlabel);
-                cg.a_label(current_asmdata.CurrAsmList,left.location.falselabel);
+                cg.a_label(current_asmdata.CurrAsmList,current_procinfo.CurrFalseLabel);
                 cg.a_load_const_reg(current_asmdata.CurrAsmList,OS_INT,0,hreg1);
                 cg.a_label(current_asmdata.CurrAsmList,hlabel);
               end;
@@ -207,6 +204,9 @@ implementation
          else
 {$endif cpu64bitalu}
            location.register:=hreg1;
+
+         current_procinfo.CurrTrueLabel:=oldTrueLabel;
+         current_procinfo.CurrFalseLabel:=oldFalseLabel;
       end;
 
 end.

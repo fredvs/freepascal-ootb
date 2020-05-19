@@ -26,19 +26,19 @@ unit symi86;
 interface
 
 uses
-  symtype,symdef,symsym,symx86;
+  symtype,symdef,symsym;
 
 type
 
   { ti86procvardef }
 
-  ti86procvardef = class(tx86procvardef)
+  ti86procvardef = class(tprocvardef)
     function is_pushleftright: boolean; override;
   end;
 
   { ti86procdef }
 
-  ti86procdef = class(tx86procdef)
+  ti86procdef = class(tprocdef)
     function is_pushleftright: boolean; override;
   end;
 
@@ -77,7 +77,7 @@ procedure ti86absolutevarsym.ppuload_platform(ppufile: tcompilerppufile);
   begin
     inherited;
     if abstyp=toaddr then
-      absseg:=ppufile.getboolean
+      absseg:=boolean(ppufile.getbyte)
     else
       absseg:=false;
   end;
@@ -87,7 +87,7 @@ procedure ti86absolutevarsym.ppuwrite_platform(ppufile: tcompilerppufile);
   begin
     inherited;
     if abstyp=toaddr then
-      ppufile.putboolean(absseg);
+      ppufile.putbyte(byte(absseg));
   end;
 
 end.

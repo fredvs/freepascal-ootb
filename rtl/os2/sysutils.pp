@@ -31,8 +31,6 @@ interface
 {$define SYSUTILS_HAS_ANSISTR_FILEUTIL_IMPL}
 { OS has an ansistring/single byte environment variable API }
 {$define SYSUTILS_HAS_ANSISTR_ENVVAR_IMPL}
-{ OS has an ansistring/single byte API for executing other processes }
-{$DEFINE EXECUTEPROCUNI}
 
 { Include platform independent interface part }
 {$i sysutilh.inc}
@@ -228,13 +226,7 @@ begin
 end;
 
 
-function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
-begin
-  Result := False;
-end;
-
-
-function FileExists (const FileName: RawByteString; FollowLink : Boolean): boolean;
+function FileExists (const FileName: RawByteString): boolean;
 var
   L: longint;
 begin
@@ -354,7 +346,6 @@ begin
   if RC <> 0 then
    OSErrorWatch (RC);
 end;
-
 
 function FileGetDate (Handle: THandle): longint;
 var
@@ -522,7 +513,7 @@ begin
 end;
 
 
-function DirectoryExists (const Directory: RawByteString; FollowLink : Boolean): boolean;
+function DirectoryExists (const Directory: RawByteString): boolean;
 var
   L: longint;
 begin
@@ -765,11 +756,11 @@ begin
   SysTimerTick := L;
 end;
 
-function ExecuteProcess (const Path: RawByteString;
-                 const ComLine: RawByteString;Flags:TExecuteFlags=[]): integer;
+function ExecuteProcess (const Path: AnsiString; const ComLine: AnsiString;Flags:TExecuteFlags=[]):
+                                                                       integer;
 var
  E: EOSError;
- CommandLine: RawByteString;
+ CommandLine: ansistring;
  Args0, Args: DosCalls.PByteArray;
  ObjNameBuf: PChar;
  ArgSize: word;
@@ -941,8 +932,8 @@ begin
 end;
 
 
-function ExecuteProcess (const Path: RawByteString;
-        const ComLine: array of RawByteString;Flags:TExecuteFlags=[]): integer;
+function ExecuteProcess (const Path: AnsiString;
+                                  const ComLine: array of AnsiString;Flags:TExecuteFlags=[]): integer;
 
 var
   CommandLine: AnsiString;
@@ -1003,6 +994,5 @@ Initialization
   LastOSError := 0;
   OrigOSErrorWatch := TOSErrorWatch (SetOSErrorTracking (@TrackLastOSError));
 Finalization
-  FreeTerminateProcs;
   DoneExceptions;
 end.

@@ -491,26 +491,6 @@ Type
     Procedure MyMethod2;
   end;
 
-  // Interface as published property
-
-  ITestInterface = interface
-  end;
-
-  TTestIntfComponent = class(TComponent, ITestInterface)
-  end;
-
-  { TOwnedInterface }
-
-  TOwnedInterface = class(TComponent)
-  Private
-    F : ITestInterface;
-  Public
-    Constructor Create(AOwner : TComponent); override;
-    Destructor Destroy; override;
-  Published
-    Property IntfProp: ITestInterface Read F Write F;
-  end;
-
 Implementation
 
 procedure TChildrenComponent.GetChildren(Proc: TGetChildProc; Root: TComponent);
@@ -970,22 +950,5 @@ begin
  // Do nothng
 end;
 
-{ TOwnedInterface }
-
-constructor TOwnedInterface.Create(AOwner: TComponent);
-var
-  C : TTestIntfComponent;
-begin
-  inherited Create(AOwner);
-  C := TTestIntfComponent.Create(Self);
-  C.Name:='InterfacedComponent';
-  IntfProp:=C;
-end;
-
-Destructor TOwnedInterface.Destroy;
-begin
-  F := nil; // prevent memory leak
-  inherited;
-end;
 
 end.

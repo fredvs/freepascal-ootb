@@ -1,4 +1,3 @@
-{ %skiptarget=msdos,go32v2 }
 program TTestDBBasics_TestSetFieldValues;
 
 {$mode objfpc}{$H+}

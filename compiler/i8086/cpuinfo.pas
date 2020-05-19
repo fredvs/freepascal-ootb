@@ -48,7 +48,6 @@ Type
        cpu_186,
        cpu_286,
        cpu_386,
-       cpu_486,
        cpu_Pentium,
        cpu_Pentium2,
        cpu_Pentium3,
@@ -74,12 +73,6 @@ Type
      (ct_none
      );
 
-   tcontrollerdatatype = record
-      controllertypestr, controllerunitstr: string[20];
-      cputype: tcputype; fputype: tfputype;
-      flashbase, flashsize, srambase, sramsize, eeprombase, eepromsize, bootbase, bootsize: dword;
-   end;
-
 
 Const
    { Is there support for dealing with multiple microcontrollers available }
@@ -92,7 +85,7 @@ Const
     {$WARN 3177 OFF}
    embedded_controllers : array [tcontrollertype] of tcontrollerdatatype =
    (
-      (controllertypestr:''; controllerunitstr:''; cputype:cpu_none; fputype:fpu_none; flashbase:0; flashsize:0; srambase:0; sramsize:0));
+      (controllertypestr:''; controllerunitstr:''; flashbase:0; flashsize:0; srambase:0; sramsize:0));
    {$POP}
 
    { calling conventions supported by the code generator }
@@ -103,7 +96,10 @@ Const
      pocall_stdcall,
      pocall_cdecl,
      pocall_cppdecl,
-     pocall_pascal
+     pocall_far16,
+     pocall_pascal,
+     pocall_oldfpccall,
+     pocall_mwpascal
    ];
 
    cputypestr : array[tcputype] of string[10] = ('',
@@ -111,7 +107,6 @@ Const
      '80186',
      '80286',
      '80386',
-     '80486',
      'PENTIUM',
      'PENTIUM2',
      'PENTIUM3',
@@ -144,7 +139,7 @@ Const
                                  { no need to write info about those }
                                  [cs_opt_level1,cs_opt_level2,cs_opt_level3]+
                                  [cs_opt_peephole,cs_opt_regvar,cs_opt_stackframe,
-                                  cs_opt_loopunroll,cs_opt_uncertain,
+                                  cs_opt_asmcse,cs_opt_loopunroll,cs_opt_uncertain,
                                   cs_opt_tailrecursion,cs_opt_nodecse,cs_useebp,
 				  cs_opt_reorder_fields,cs_opt_fastmath];
 
@@ -153,28 +148,6 @@ Const
      [{cs_opt_regvar,}cs_opt_stackframe,cs_opt_tailrecursion{,cs_opt_nodecse}];
    level3optimizerswitches = genericlevel3optimizerswitches + level2optimizerswitches + [{,cs_opt_loopunroll}];
    level4optimizerswitches = genericlevel4optimizerswitches + level3optimizerswitches + [cs_useebp];
-
-type
-   tcpuflags =
-      (CPUX86_HAS_CMOV,
-       CPUX86_HAS_SSEUNIT,
-       CPUX86_HAS_SSE2
-      );
-
- const
-   cpu_capabilities : array[tcputype] of set of tcpuflags = (
-     { cpu_none      } [],
-     { cpu_8086      } [],
-     { cpu_186       } [],
-     { cpu_286       } [],
-     { cpu_386       } [],
-     { cpu_486       } [],
-     { cpu_Pentium   } [],
-     { cpu_Pentium2  } [CPUX86_HAS_CMOV],
-     { cpu_Pentium3  } [CPUX86_HAS_CMOV,CPUX86_HAS_SSEUNIT],
-     { cpu_Pentium4  } [CPUX86_HAS_CMOV,CPUX86_HAS_SSEUNIT,CPUX86_HAS_SSE2],
-     { cpu_PentiumM  } [CPUX86_HAS_CMOV,CPUX86_HAS_SSEUNIT,CPUX86_HAS_SSE2]
-   );
 
    x86_near_code_models = [mm_tiny,mm_small,mm_compact];
    x86_far_code_models = [mm_medium,mm_large,mm_huge];

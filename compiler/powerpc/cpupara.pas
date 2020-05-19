@@ -32,13 +32,12 @@ unit cpupara;
        paramgr,parabase,cgbase,cgutils;
 
     type
-       tcpuparamanager = class(tparamanager)
+       tppcparamanager = class(tparamanager)
           function get_volatile_registers_int(calloption : tproccalloption):tcpuregisterset;override;
           function get_volatile_registers_fpu(calloption : tproccalloption):tcpuregisterset;override;
-          function get_saved_registers_int(calloption : tproccalloption):tcpuregisterarray;override;
           function push_addr_param(varspez:tvarspez;def : tdef;calloption : tproccalloption) : boolean;override;
 
-          procedure getintparaloc(list: TAsmList; pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);override;
+          procedure getintparaloc(pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);override;
           function create_paraloc_info(p : tabstractprocdef; side: tcallercallee):longint;override;
           function create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;override;
           function get_funcretloc(p : tabstractprocdef; side: tcallercallee; forcetempdef: tdef): tcgpara;override;
@@ -57,7 +56,7 @@ unit cpupara;
        procinfo,cpupi;
 
 
-    function tcpuparamanager.get_volatile_registers_int(calloption : tproccalloption):tcpuregisterset;
+    function tppcparamanager.get_volatile_registers_int(calloption : tproccalloption):tcpuregisterset;
       begin
         if (target_info.system = system_powerpc_darwin) then
           result := [RS_R0,RS_R2..RS_R12]
@@ -66,11 +65,10 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.get_volatile_registers_fpu(calloption : tproccalloption):tcpuregisterset;
+    function tppcparamanager.get_volatile_registers_fpu(calloption : tproccalloption):tcpuregisterset;
       begin
         case target_info.abi of
           abi_powerpc_aix,
-          abi_powerpc_darwin,
           abi_powerpc_sysv:
             result := [RS_F0..RS_F13];
           else
@@ -79,19 +77,7 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.get_saved_registers_int(calloption : tproccalloption):tcpuregisterarray;
-      const
-        saved_regs : array[0..18] of tsuperregister = (
-          RS_R13,RS_R14,RS_R15,RS_R16,RS_R17,RS_R18,RS_R19,
-          RS_R20,RS_R21,RS_R22,RS_R23,RS_R24,RS_R25,RS_R26,RS_R27,RS_R28,RS_R29,
-          RS_R30,RS_R31
-        );
-      begin
-        result:=saved_regs;
-      end;
-
-
-    procedure tcpuparamanager.getintparaloc(list: TAsmList; pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);
+    procedure tppcparamanager.getintparaloc(pd : tabstractprocdef; nr : longint; var cgpara : tcgpara);
       var
         paraloc : pcgparalocation;
         psym : tparavarsym;
@@ -100,7 +86,7 @@ unit cpupara;
         psym:=tparavarsym(pd.paras[nr-1]);
         pdef:=psym.vardef;
         if push_addr_param(psym.varspez,pdef,pd.proccalloption) then
-          pdef:=cpointerdef.getreusable_no_free(pdef);
+          pdef:=getpointerdef(pdef);
         cgpara.reset;
         cgpara.size:=def_cgsize(pdef);
         cgpara.intsize:=tcgsize2size[cgpara.size];
@@ -122,7 +108,7 @@ unit cpupara;
              begin
                loc:=LOC_REFERENCE;
                paraloc^.reference.index:=NR_STACK_POINTER_REG;
-               if not(target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) then
+               if (target_info.abi <> abi_powerpc_aix) then
                  reference.offset:=sizeof(pint)*(nr-8)
                else
                  reference.offset:=sizeof(pint)*(nr);
@@ -152,14 +138,14 @@ unit cpupara;
             classrefdef:
               result:=LOC_REGISTER;
             procvardef:
-              if (target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) or
+              if (target_info.abi = abi_powerpc_aix) or
                  (p.size = sizeof(pint)) then
                 result:=LOC_REGISTER
               else
                 result:=LOC_REFERENCE;
             recorddef:
               if not(target_info.system in systems_aix) and
-                 (not(target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) or
+                 ((target_info.abi<>abi_powerpc_aix) or
                   ((p.size >= 3) and
                    ((p.size mod 4) <> 0))) then
                 result:=LOC_REFERENCE
@@ -178,10 +164,7 @@ unit cpupara;
             filedef:
               result:=LOC_REGISTER;
             arraydef:
-              if is_dynamic_array(p) then
-                getparaloc:=LOC_REGISTER
-              else
-                result:=LOC_REFERENCE;
+              result:=LOC_REFERENCE;
             setdef:
               if is_smallset(p) then
                 result:=LOC_REGISTER
@@ -198,7 +181,7 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.push_addr_param(varspez:tvarspez;def : tdef;calloption : tproccalloption) : boolean;
+    function tppcparamanager.push_addr_param(varspez:tvarspez;def : tdef;calloption : tproccalloption) : boolean;
       begin
         result:=false;
         { var,out,constref always require address }
@@ -226,14 +209,14 @@ unit cpupara;
           }
           procvardef :
             result:=
-              not(target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) and
+              (target_info.abi <> abi_powerpc_aix) and
               (def.size <> sizeof(pint));
           recorddef :
             result :=
-              not(target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) or
+              (target_info.abi<>abi_powerpc_aix) or
               ((varspez = vs_const) and
                ((calloption = pocall_mwpascal) or
-                (not (calloption in cdecl_pocalls) and
+                (not (calloption in [pocall_cdecl,pocall_cppdecl]) and
                  (def.size > 8)
                 )
                )
@@ -253,11 +236,10 @@ unit cpupara;
       end;
 
 
-    procedure tcpuparamanager.init_values(var curintreg, curfloatreg, curmmreg: tsuperregister; var cur_stack_offset: aword);
+    procedure tppcparamanager.init_values(var curintreg, curfloatreg, curmmreg: tsuperregister; var cur_stack_offset: aword);
       begin
         case target_info.abi of
-          abi_powerpc_aix,
-          abi_powerpc_darwin:
+          abi_powerpc_aix:
             cur_stack_offset:=24;
           abi_powerpc_sysv:
             cur_stack_offset:=8;
@@ -270,7 +252,7 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.get_funcretloc(p : tabstractprocdef; side: tcallercallee; forcetempdef: tdef): tcgpara;
+    function tppcparamanager.get_funcretloc(p : tabstractprocdef; side: tcallercallee; forcetempdef: tdef): tcgpara;
       var
         paraloc : pcgparalocation;
         retcgsize  : tcgsize;
@@ -324,7 +306,7 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.create_paraloc_info(p : tabstractprocdef; side: tcallercallee):longint;
+    function tppcparamanager.create_paraloc_info(p : tabstractprocdef; side: tcallercallee):longint;
 
       var
         cur_stack_offset: aword;
@@ -339,20 +321,20 @@ unit cpupara;
 
 
 
-    function tcpuparamanager.create_paraloc_info_intern(p : tabstractprocdef; side: tcallercallee; paras:tparalist;
+    function tppcparamanager.create_paraloc_info_intern(p : tabstractprocdef; side: tcallercallee; paras:tparalist;
                var curintreg, curfloatreg, curmmreg: tsuperregister; var cur_stack_offset: aword; varargsparas: boolean):longint;
       var
          stack_offset: longint;
          paralen: aint;
          nextintreg,nextfloatreg,nextmmreg, maxfpureg : tsuperregister;
          locdef,
-         fdef,
          paradef : tdef;
          paraloc : pcgparalocation;
          i  : integer;
          hp : tparavarsym;
          loc : tcgloc;
          paracgsize: tcgsize;
+         sym: tfieldvarsym;
          firstparaloc: boolean;
 
       begin
@@ -367,8 +349,7 @@ unit cpupara;
          nextmmreg := curmmreg;
          stack_offset := cur_stack_offset;
          case target_info.abi of
-           abi_powerpc_aix,
-           abi_powerpc_darwin:
+           abi_powerpc_aix:
              maxfpureg := RS_F13;
            abi_powerpc_sysv:
              maxfpureg := RS_F8;
@@ -402,7 +383,7 @@ unit cpupara;
 
               if push_addr_param(hp.varspez,paradef,p.proccalloption) then
                 begin
-                  paradef:=cpointerdef.getreusable_no_free(paradef);
+                  paradef:=getpointerdef(paradef);
                   loc:=LOC_REGISTER;
                   paracgsize := OS_ADDR;
                   paralen := tcgsize2size[OS_ADDR];
@@ -413,19 +394,20 @@ unit cpupara;
                     paralen := paradef.size
                   else
                     paralen := tcgsize2size[def_cgsize(paradef)];
-                  if (target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) and
+                  if (target_info.abi = abi_powerpc_aix) and
                      (paradef.typ = recorddef) and
                      (hp.varspez in [vs_value,vs_const]) then
                     begin
                       { if a record has only one field and that field is }
                       { non-composite (not array or record), it must be  }
                       { passed according to the rules of that type.      }
-                      if tabstractrecordsymtable(tabstractrecorddef(paradef).symtable).has_single_field(fdef) and
-                         ((fdef.typ=floatdef) or
+                      sym:=nil;
+                      if tabstractrecordsymtable(tabstractrecorddef(paradef).symtable).has_single_field(sym) and
+                         ((sym.vardef.typ=floatdef) or
                           ((target_info.system=system_powerpc_darwin) and
-                           (fdef.typ in [orddef,enumdef]))) then
+                           (sym.vardef.typ in [orddef,enumdef]))) then
                         begin
-                          paradef:=fdef;
+                          paradef:=sym.vardef;
                           paracgsize:=def_cgsize(paradef);
                         end
                       else
@@ -447,7 +429,7 @@ unit cpupara;
 
               loc := getparaloc(paradef);
               if varargsparas and
-                 (target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) and
+                 (target_info.abi = abi_powerpc_aix) and
                  (paradef.typ = floatdef) then
                 begin
                   loc := LOC_REGISTER;
@@ -524,7 +506,7 @@ unit cpupara;
                       paraloc^.register:=newreg(R_INTREGISTER,nextintreg,R_SUBNONE);
                       inc(nextintreg);
                       dec(paralen,tcgsize2size[paraloc^.size]);
-                      if target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin] then
+                      if target_info.abi=abi_powerpc_aix then
                         inc(stack_offset,align(tcgsize2size[paraloc^.size],4));
                     end
                   else if (loc = LOC_FPUREGISTER) and
@@ -538,7 +520,7 @@ unit cpupara;
                       dec(paralen,tcgsize2size[paraloc^.size]);
                       { if nextfpureg > maxfpureg, all intregs are already used, since there }
                       { are less of those available for parameter passing in the AIX abi     }
-                      if target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin] then
+                      if target_info.abi=abi_powerpc_aix then
 {$ifndef cpu64bitaddr}
                         if (paracgsize = OS_F32) then
                           begin
@@ -583,7 +565,7 @@ unit cpupara;
                              if paraloc^.size<>OS_NO then
                                paraloc^.def:=cgsize_orddef(paraloc^.size)
                              else
-                               paraloc^.def:=carraydef.getreusable_no_free(u8inttype,paralen);
+                               paraloc^.def:=getarraydef(u8inttype,paralen);
                            end;
                          else
                            internalerror(2006011101);
@@ -597,12 +579,12 @@ unit cpupara;
                            { create_paraloc_info_intern might be also called when being outside of
                              code generation so current_procinfo might be not set }
                            if assigned(current_procinfo) then
-                             tcpuprocinfo(current_procinfo).needs_frame_pointer := true;
+                             tppcprocinfo(current_procinfo).needs_frame_pointer := true;
                          end;
 
                        if not((target_info.system in systems_aix) and
                               (paradef.typ=recorddef)) and
-                          (target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) and
+                          (target_info.abi = abi_powerpc_aix) and
                           (hp.paraloc[side].intsize < 3) then
                          paraloc^.reference.offset:=stack_offset+(4-paralen)
                        else
@@ -628,7 +610,7 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;
+    function tppcparamanager.create_varargs_paraloc_info(p : tabstractprocdef; varargspara:tvarargsparalist):longint;
       var
         cur_stack_offset: aword;
         parasize, l: longint;
@@ -646,7 +628,7 @@ unit cpupara;
           begin
             result:=create_paraloc_info_intern(p,callerside,varargspara,curintreg,curfloatreg,curmmreg,cur_stack_offset,true);
             { varargs routines have to reserve at least 32 bytes for the AIX abi }
-            if (target_info.abi in [abi_powerpc_aix,abi_powerpc_darwin]) and
+            if (target_info.abi = abi_powerpc_aix) and
                (result < 32) then
               result := 32;
            end
@@ -673,14 +655,12 @@ unit cpupara;
       end;
 
 
-    function tcpuparamanager.parseparaloc(p : tparavarsym;const s : string) : boolean;
+    function tppcparamanager.parseparaloc(p : tparavarsym;const s : string) : boolean;
       var
         paraloc : pcgparalocation;
         paracgsize : tcgsize;
-        offset : aint;
       begin
         result:=false;
-        offset:=-1;
         case target_info.system of
           system_powerpc_morphos:
             begin
@@ -689,34 +669,58 @@ unit cpupara;
               p.paraloc[callerside].size:=paracgsize;
               p.paraloc[callerside].intsize:=tcgsize2size[paracgsize];
               paraloc:=p.paraloc[callerside].add_location;
-
+              paraloc^.loc:=LOC_REFERENCE;
               { The OS side should be zero extended and the entire "virtual"
                 68k register should be overwritten. This is what the C ppcinline
                 macros do as well, by casting all arguments to ULONG. A call
                 which breaks w/o this is for example exec/RawPutChar (KB) }
               paraloc^.size:=OS_ADDR;
               paraloc^.def:=p.vardef;
-
-              { convert d0-d7/a0-a6 virtual 68k reg patterns into offsets }
-              if length(s) = 2 then
-                begin
-                  if (lowercase(s[1]) = 'd') and (s[2] in ['0'..'7']) then
-                    offset:=(ord(s[2]) - ord('0')) * sizeof(pint)
-                  else if (lowercase(s[1]) = 'a') and (s[2] in ['0'..'6']) then
-                    offset:=(ord(s[2]) - ord('0') + 8) * sizeof(pint);
-
-                  if offset < 0 then
-                    exit;
-
-                  paraloc^.loc:=LOC_REFERENCE;
-                  paraloc^.reference.index:=newreg(R_INTREGISTER,RS_R2,R_SUBWHOLE);
-                  paraloc^.reference.offset:=offset;
-                end
-              { 'R12' is special, used internally to support regbase and nobase
+              paraloc^.reference.index:=newreg(R_INTREGISTER,RS_R2,R_SUBWHOLE);
+              { pattern is always uppercase'd }
+              if s='D0' then
+                paraloc^.reference.offset:=0
+              else if s='D1' then
+                paraloc^.reference.offset:=4
+              else if s='D2' then
+                paraloc^.reference.offset:=8
+              else if s='D3' then
+                paraloc^.reference.offset:=12
+              else if s='D4' then
+                paraloc^.reference.offset:=16
+              else if s='D5' then
+                paraloc^.reference.offset:=20
+              else if s='D6' then
+                paraloc^.reference.offset:=24
+              else if s='D7' then
+                paraloc^.reference.offset:=28
+              else if s='A0' then
+                paraloc^.reference.offset:=32
+              else if s='A1' then
+                paraloc^.reference.offset:=36
+              else if s='A2' then
+                paraloc^.reference.offset:=40
+              else if s='A3' then
+                paraloc^.reference.offset:=44
+              else if s='A4' then
+                paraloc^.reference.offset:=48
+              else if s='A5' then
+                paraloc^.reference.offset:=52
+              { 'A6' (offset 56) is used by mossyscall as libbase, so API
+                never passes parameters in it,
+                Indeed, but this allows to declare libbase either explicitly
+                or let the compiler insert it }
+              else if s='A6' then
+                paraloc^.reference.offset:=56
+              { 'A7' is the stack pointer on 68k, can't be overwritten
+                by API calls, so it has no offset }
+              { 'R12' is special, used internally to support r12base sysv
                 calling convention }
-              else if lowercase(s)='r12' then
+              else if s='R12' then
                 begin
                   paraloc^.loc:=LOC_REGISTER;
+                  paraloc^.size:=OS_ADDR;
+                  paraloc^.def:=voidpointertype;
                   paraloc^.register:=NR_R12;
                 end
               else
@@ -732,5 +736,5 @@ unit cpupara;
       end;
 
 begin
-   paramanager:=tcpuparamanager.create;
+   paramanager:=tppcparamanager.create;
 end.

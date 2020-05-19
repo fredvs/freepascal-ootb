@@ -2,7 +2,6 @@
     This file is assembled from all the Interface files.
 }
 {$mode macpas}
-{$modeswitch cblocks}
 {$packenum 1}
 {$macro on}
 {$inline on}
@@ -57,11 +56,6 @@ interface
 {$elsec}
 	{$setc __arm__ := 0}
 {$endc}
-{$ifc not defined __arm64__ and defined CPUAARCH64}
-  {$setc __arm64__ := 1}
-{$elsec}
-  {$setc __arm64__ := 0}
-{$endc}
 
 {$ifc defined cpu64}
   {$setc __LP64__ := 1}
@@ -80,7 +74,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -91,7 +84,6 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
@@ -102,7 +94,6 @@ interface
 	{$setc TARGET_CPU_X86 := TRUE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
 {$ifc defined(iphonesim)}
  	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
@@ -119,16 +110,9 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := TRUE}
 	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-{$ifc defined(iphonesim)}
- 	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := TRUE}
-{$elsec}
 	{$setc TARGET_OS_MAC := TRUE}
 	{$setc TARGET_OS_IPHONE := FALSE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-{$endc}
 	{$setc TARGET_OS_EMBEDDED := FALSE}
 {$elifc defined __arm__ and __arm__}
 	{$setc TARGET_CPU_PPC := FALSE}
@@ -136,26 +120,13 @@ interface
 	{$setc TARGET_CPU_X86 := FALSE}
 	{$setc TARGET_CPU_X86_64 := FALSE}
 	{$setc TARGET_CPU_ARM := TRUE}
-	{$setc TARGET_CPU_ARM64 := FALSE}
-	{ will require compiler define when/if other Apple devices with ARM cpus ship }
-	{$setc TARGET_OS_MAC := FALSE}
-	{$setc TARGET_OS_IPHONE := TRUE}
-	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
-	{$setc TARGET_OS_EMBEDDED := TRUE}
-{$elifc defined __arm64__ and __arm64__}
-	{$setc TARGET_CPU_PPC := FALSE}
-	{$setc TARGET_CPU_PPC64 := FALSE}
-	{$setc TARGET_CPU_X86 := FALSE}
-	{$setc TARGET_CPU_X86_64 := FALSE}
-	{$setc TARGET_CPU_ARM := FALSE}
-	{$setc TARGET_CPU_ARM64 := TRUE}
 	{ will require compiler define when/if other Apple devices with ARM cpus ship }
 	{$setc TARGET_OS_MAC := FALSE}
 	{$setc TARGET_OS_IPHONE := TRUE}
 	{$setc TARGET_IPHONE_SIMULATOR := FALSE}
 	{$setc TARGET_OS_EMBEDDED := TRUE}
 {$elsec}
-	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ nor __arm64__ is defined.}
+	{$error __ppc__ nor __ppc64__ nor __i386__ nor __x86_64__ nor __arm__ is defined.}
 {$endc}
 
 {$ifc defined __LP64__ and __LP64__ }
@@ -202,8 +173,6 @@ interface
 {$i AXConstants.pas}
 {unit Accessibility}
 {$i Accessibility.pas}
-{unit AudioFormat}
-{$i AudioFormat.pas}
 {unit ConditionalMacros}
 {$i ConditionalMacros.pas}
 {unit MacTypes}
@@ -284,6 +253,8 @@ interface
 {$i x509defs.pas}
 {unit xattr}
 {$i xattr.pas}
+{unit ABTypedefs}
+{$i ABTypedefs.pas}
 {unit AEDataModel}
 {$i AEDataModel.pas}
 {unit AEUserTermTypes}
@@ -500,8 +471,6 @@ interface
 {$i Video.pas}
 {unit WSTypes}
 {$i WSTypes.pas}
-{unit acl}
-{$i acl.pas}
 {unit certextensions}
 {$i certextensions.pas}
 {unit cssmapple}
@@ -514,16 +483,12 @@ interface
 {$i gluContext.pas}
 {unit ABGlobals}
 {$i ABGlobals.pas}
-{unit ABTypedefs}
-{$i ABTypedefs.pas}
 {unit AEMach}
 {$i AEMach.pas}
 {unit AXTextAttributedString}
 {$i AXTextAttributedString.pas}
 {unit AXValue}
 {$i AXValue.pas}
-{unit AudioConverter}
-{$i AudioConverter.pas}
 {unit AudioHardwareBase}
 {$i AudioHardwareBase.pas}
 {unit AuthSession}
@@ -608,10 +573,6 @@ interface
 {$i PictUtils.pas}
 {unit QDOffscreen}
 {$i QDOffscreen.pas}
-{unit SKAnalysis}
-{$i SKAnalysis.pas}
-{unit SKSummary}
-{$i SKSummary.pas}
 {unit Scrap}
 {$i Scrap.pas}
 {unit SecTrust}
@@ -626,8 +587,6 @@ interface
 {$i CFCalendar.pas}
 {unit CFDateFormatter}
 {$i CFDateFormatter.pas}
-{unit CFFileSecurity}
-{$i CFFileSecurity.pas}
 {unit CFRunLoop}
 {$i CFRunLoop.pas}
 {unit CFSocket}
@@ -654,10 +613,6 @@ interface
 {$i AudioHardware.pas}
 {unit AudioHardwareDeprecated}
 {$i AudioHardwareDeprecated.pas}
-{unit AudioHardwareService}
-{$i AudioHardwareService.pas}
-{unit CFFileDescriptor}
-{$i CFFileDescriptor.pas}
 {unit CFMachPort}
 {$i CFMachPort.pas}
 {unit CFMessagePort}
@@ -696,8 +651,6 @@ interface
 {$i CFURL.pas}
 {unit CFURLAccess}
 {$i CFURLAccess.pas}
-{unit CFURLEnumerator}
-{$i CFURLEnumerator.pas}
 {unit CFUserNotification}
 {$i CFUserNotification.pas}
 {unit CFXMLNode}
@@ -744,12 +697,6 @@ interface
 {$i PMCoreDeprecated.pas}
 {unit Pasteboard}
 {$i Pasteboard.pas}
-{unit SKDocument}
-{$i SKDocument.pas}
-{unit SKIndex}
-{$i SKIndex.pas}
-{unit SKSearch}
-{$i SKSearch.pas}
 {unit SpeechSynthesis}
 {$i SpeechSynthesis.pas}
 {unit TextInputSources}
@@ -870,8 +817,8 @@ interface
 {$i AudioCodecs.pas}
 {unit AudioOutputUnit}
 {$i AudioOutputUnit.pas}
-{unit AudioUnitUtilities}
-{$i AudioUnitUtilities.pas}
+{unit AudioUnitProperties}
+{$i AudioUnitProperties.pas}
 {unit AuthorizationDB}
 {$i AuthorizationDB.pas}
 {unit CFFTPStream}
@@ -1026,18 +973,6 @@ interface
 {$i SCNetworkConfiguration.pas}
 {unit AppleScript}
 {$i AppleScript.pas}
-{unit AudioFile}
-{$i AudioFile.pas}
-{unit AudioFileComponents}
-{$i AudioFileComponents.pas}
-{unit AudioFileStream}
-{$i AudioFileStream.pas}
-{unit AudioQueue}
-{$i AudioQueue.pas}
-{unit AudioServices}
-{$i AudioServices.pas}
-{unit AudioUnitProperties}
-{$i AudioUnitProperties.pas}
 {unit CarbonEvents}
 {$i CarbonEvents.pas}
 {unit FinderRegistry}
@@ -1473,13 +1408,6 @@ function CGSizeMake(width: CGFloat; height: CGFloat): CGSize; inline;
 begin
   CGSizeMake.width := width;
   CGSizeMake.height := height;
-end;
-
-
-function CGVectorMake(dx: CGFloat; dy: CGFloat): CGVector; inline;
-begin
-  CGVectorMake.dx := dx;
-  CGVectorMake.dy := dy;
 end;
 
 
@@ -2165,6 +2093,49 @@ begin
 	kMIDIDriverInterface2ID := CFUUIDGetConstantUUIDWithBytes(nil, $43, $C9, $8C, $3C, $30, $6C, $11, $D5, $AF, $73, $00, $30, $65, $A8, $30, $1E)
 end;
 {$endc}
+{implementation of unit AudioUnitProperties}
+
+
+function GetAudioUnitParameterDisplayType(flags : UInt32) : UInt32; inline;
+begin
+	GetAudioUnitParameterDisplayType := flags and kAudioUnitParameterFlag_DisplayMask
+end;
+
+function AudioUnitDisplayTypeIsLogarithmic(flags : UInt32) : Boolean; inline;
+begin
+	AudioUnitDisplayTypeIsLogarithmic := GetAudioUnitParameterDisplayType(flags) = 	kAudioUnitParameterFlag_DisplayLogarithmic
+end;
+
+function AudioUnitDisplayTypeIsSquareRoot(flags : UInt32) : Boolean; inline;
+begin
+	AudioUnitDisplayTypeIsSquareRoot := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplaySquareRoot
+end;
+
+function AudioUnitDisplayTypeIsSquared(flags : UInt32) : Boolean; inline;
+begin
+	AudioUnitDisplayTypeIsSquared := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplaySquared
+end;
+
+function AudioUnitDisplayTypeIsCubed(flags : UInt32) : Boolean; inline;
+begin
+	AudioUnitDisplayTypeIsCubed := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplayCubed
+end;
+
+function AudioUnitDisplayTypeIsCubeRoot(flags : UInt32) : Boolean; inline;
+begin
+	AudioUnitDisplayTypeIsCubeRoot := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplayCubeRoot
+end;
+
+function AudioUnitDisplayTypeIsExponential(flags : UInt32) : Boolean; inline;
+begin
+	AudioUnitDisplayTypeIsExponential := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplayExponential
+end;
+
+procedure SetAudioUnitParameterDisplayType(var flags : UInt32; displayType : UInt32); inline;
+begin
+	flags := (flags and (not kAudioUnitParameterFlag_DisplayMask)) or displayType
+end;
+
 {implementation of unit QLGenerator}
 
 {$ifc TARGET_OS_MAC}
@@ -2209,75 +2180,6 @@ end;
 {$endc} {not TARGET_CPU_64}
 
 {$endc} {TARGET_OS_MAC}
-
-{implementation of unit AudioFile}
-
-function NumBytesToNumAudioFileMarkers(inNumBytes: size_t): size_t;
-begin
-  if inNumBytes < size_t(@AudioFileMarkerListPtr(nil)^.mMarkers[0]) then
-    NumBytesToNumAudioFileMarkers := 0
-  else
-    NumBytesToNumAudioFileMarkers := inNumBytes - size_t(@AudioFileMarkerListPtr(nil)^.mMarkers[0])
-end;
-
-
-function NumAudioFileMarkersToNumBytes(inNumMarkers: size_t): size_t;
-begin
-	NumAudioFileMarkersToNumBytes := size_t(@AudioFileMarkerListPtr(nil)^.mMarkers[0]) + (inNumMarkers) * sizeof(AudioFileMarker);
-end;
-
-
-function NextAudioFileRegion(const {var} inAFRegionPtr: AudioFileRegion): AudioFileRegionPtr;
-begin
-  NextAudioFileRegion := AudioFileRegionPtr(
-    Pointer(@inAFRegionPtr) +
-    MacPtrUInt(@AudioFileRegionPtr(nil)^.mMarkers) +
-    (inAFRegionPtr.mNumberMarkers*sizeof(AudioFileMarker))
-    );
-  end;
-
-{implementation of unit AudioUnitProperties}
-
-
-function GetAudioUnitParameterDisplayType(flags : UInt32) : UInt32; inline;
-begin
-	GetAudioUnitParameterDisplayType := flags and kAudioUnitParameterFlag_DisplayMask
-end;
-
-function AudioUnitDisplayTypeIsLogarithmic(flags : UInt32) : Boolean; inline;
-begin
-	AudioUnitDisplayTypeIsLogarithmic := GetAudioUnitParameterDisplayType(flags) = 	kAudioUnitParameterFlag_DisplayLogarithmic
-end;
-
-function AudioUnitDisplayTypeIsSquareRoot(flags : UInt32) : Boolean; inline;
-begin
-	AudioUnitDisplayTypeIsSquareRoot := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplaySquareRoot
-end;
-
-function AudioUnitDisplayTypeIsSquared(flags : UInt32) : Boolean; inline;
-begin
-	AudioUnitDisplayTypeIsSquared := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplaySquared
-end;
-
-function AudioUnitDisplayTypeIsCubed(flags : UInt32) : Boolean; inline;
-begin
-	AudioUnitDisplayTypeIsCubed := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplayCubed
-end;
-
-function AudioUnitDisplayTypeIsCubeRoot(flags : UInt32) : Boolean; inline;
-begin
-	AudioUnitDisplayTypeIsCubeRoot := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplayCubeRoot
-end;
-
-function AudioUnitDisplayTypeIsExponential(flags : UInt32) : Boolean; inline;
-begin
-	AudioUnitDisplayTypeIsExponential := GetAudioUnitParameterDisplayType(flags) = kAudioUnitParameterFlag_DisplayExponential
-end;
-
-procedure SetAudioUnitParameterDisplayType(var flags : UInt32; displayType : UInt32); inline;
-begin
-	flags := (flags and (not kAudioUnitParameterFlag_DisplayMask)) or displayType
-end;
 
 
 end.

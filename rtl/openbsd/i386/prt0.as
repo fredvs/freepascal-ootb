@@ -42,16 +42,15 @@ ___fpc_brk_addr:
 	.globl  _start
 _start:
 __start:
-	movl    %esp,%ebp
-	andl    $~15,%esp
-	pushl   %edx
-	movl    0(%ebp),%eax
-	leal    8(%ebp,%eax,4),%ecx
-	leal    4(%ebp),%edx
+	pushl	%ebx			#ps_strings
+	pushl   %ecx                    # obj
+	pushl   %edx                    # cleanup
+	movl    12(%esp),%eax
+	leal    20(%esp,%eax,4),%ecx
+	leal    16(%esp),%edx
 	pushl   %ecx
 	pushl   %edx
 	pushl   %eax
-	xorl    %ebp,%ebp
 	call    ___start
 
 #NO_APP
@@ -65,15 +64,10 @@ ___start:
 	subl $16,%esp
 	pushl %esi
 	pushl %ebx
-	call fpc_geteipasecx
-	addl $_GLOBAL_OFFSET_TABLE_,%ecx
-	movl %ecx,%edi
 	movl 12(%ebp),%esi
 	movl 16(%ebp),%eax
-	movl environ@GOT(%edi),%ecx
-	movl %eax,(%ecx)
-	movl operatingsystem_parameter_envp@GOT(%edi),%ecx
-	movl %eax,(%ecx)
+	movl %eax,environ
+	movl %eax,operatingsystem_parameter_envp
 	movl (%esi),%ebx
 	testl %ebx,%ebx
 	je .L3
@@ -81,60 +75,48 @@ ___start:
 	pushl $47
 	pushl %ebx
 	call _strrchr
-	movl __progname@GOT(%edi),%ecx
-	movl %eax,(%ecx)
+	movl %eax,__progname
 	addl $16,%esp
 	testl %eax,%eax
 	jne .L4
-	movl %ebx,(%ecx)
+	movl %ebx,__progname
 	jmp .L5
 	.p2align 4,,7
 .L4:
 	incl %eax
-	movl %eax,(%ecx)
+	movl %eax,__progname
 .L5:
-	movl __progname_storage@GOT(%edi),%edx
+	movl $__progname_storage,%edx
 	jmp .L12
 	.p2align 4,,7
 .L9:
 	movb (%eax),%al
 	movb %al,(%edx)
-	movl __progname@GOT(%edi),%ecx
-	incl (%ecx)
+	incl __progname
 	incl %edx
 .L12:
-	movl __progname@GOT(%edi),%ecx
-	movl (%ecx),%eax
+	movl __progname,%eax
 	cmpb $0,(%eax)
 	je .L7
-	movl __progname_storage@GOT(%edi),%ecx
-	addl $255,%ecx
-	cmpl %ecx,%edx
+	cmpl $__progname_storage+255,%edx
 	jb .L9
 .L7:
 	movb $0,(%edx)
-	pushl %eax
-	movl __progname_storage@GOT(%edi),%eax
-	movl __progname@GOT(%edi),%ecx
-	movl %eax,(%ecx)
-	popl %eax
+	movl $__progname_storage,__progname
 .L3:
 #	call __init
 	subl $16,%esp
 	pushl %eax
 	movl 8(%ebp),%eax
-	movl operatingsystem_parameter_argc@GOT(%edi),%ecx
-	movl %eax,(%ecx)
-	movl operatingsystem_parameter_argv@GOT(%edi),%ecx
-	movl %esi,(%ecx)
+	movl %eax,operatingsystem_parameter_argc
+	movl %esi,operatingsystem_parameter_argv
 	popl %eax
 #	pushl environ
 #	pushl %esi
 #	pushl 8(%ebp)
-	movl ___fpucw@GOT(%edi),%ecx
 	finit
 	fwait
-	fldcw (%ecx)
+	fldcw ___fpucw
 	xorl  %ebp,%ebp
 	call main
 #	pushl %eax
@@ -146,12 +128,9 @@ ___start:
 .type _haltproc,@function
 
 _haltproc:
-           call fpc_geteipasebx
-           addl $_GLOBAL_OFFSET_TABLE_,%ebx
-           movl operatingsystem_result@GOT(%ebx),%ebx
-           movzwl (%ebx),%ebx
-           pushl %ebx
            mov $1,%eax
+           movzwl operatingsystem_result,%ebx
+           pushl %ebx
            call .Lactualsyscall
            addl  $4,%esp
            jmp   _haltproc

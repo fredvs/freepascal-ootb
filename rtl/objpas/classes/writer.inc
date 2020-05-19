@@ -505,11 +505,6 @@ begin
   inherited Destroy;
 end;
 
-procedure TWriter.FlushBuffer;
-begin
-  Driver.FlushBuffer;
-end;
-
 function TWriter.CreateDriver(Stream: TStream; BufSize: Integer): TAbstractObjectWriter;
 begin
   Result := TBinaryObjectWriter.Create(Stream, BufSize);
@@ -702,7 +697,8 @@ procedure TWriter.WriteChildren(Component : TComponent);
 Var
   SRoot, SRootA : TComponent;
   SList : TStringList;
-  SPos, I , SAncestorPos: Integer;
+  SPos : Integer;
+  I : Integer;
   
 begin
   // Write children list. 
@@ -712,7 +708,6 @@ begin
   SRootA:=FRootAncestor;
   SList:=FAncestors;
   SPos:=FCurrentPos;
-  SAncestorPos:=FAncestorPos;
   try
     FAncestors:=Nil;
     FCurrentPos:=0;
@@ -740,7 +735,7 @@ begin
     FRoot:=SRoot;
     FRootAncestor:=SRootA;
     FCurrentPos:=SPos;
-    FAncestorPos:=SAncestorPos;
+    FAncestorPos:=Spos;
   end;
 end;
 
@@ -879,8 +874,6 @@ var
   VarValue, DefVarValue : tvardata;
   BoolValue, DefBoolValue: boolean;
   Handled: Boolean;
-  IntfValue: IInterface;
-  CompRef: IInterfaceComponentReference;
 
 begin
   // do not stream properties without getter
@@ -949,7 +942,7 @@ begin
           DefValue :=PPropInfo(PropInfo)^.Default;
           DefFloatValue:=PSingle(@PPropInfo(PropInfo)^.Default)^;
           end;
-        if (FloatValue<>DefFloatValue) or (not HasAncestor and (DefValue=longint($80000000))) then
+        if (FloatValue<>DefFloatValue) or (DefValue=longint($80000000)) then
         begin
           Driver.BeginProperty(FPropPath + PPropInfo(PropInfo)^.Name);
           WriteFloat(FloatValue);
@@ -990,12 +983,9 @@ begin
         if HasAncestor then
           DefStrValue := GetStrProp(Ancestor, PropInfo)
         else
-        begin
-          DefValue :=PPropInfo(PropInfo)^.Default;
           SetLength(DefStrValue, 0);
-        end;
 
-        if (StrValue<>DefStrValue) or (not HasAncestor and (DefValue=longint($80000000))) then
+        if StrValue <> DefStrValue then
         begin
           Driver.BeginProperty(FPropPath + PPropInfo(PropInfo)^.Name);
           if Assigned(FOnWriteStringProperty) then
@@ -1010,12 +1000,9 @@ begin
         if HasAncestor then
           WDefStrValue := GetWideStrProp(Ancestor, PropInfo)
         else
-        begin
-          DefValue :=PPropInfo(PropInfo)^.Default;
           SetLength(WDefStrValue, 0);
-        end;
 
-        if (WStrValue<>WDefStrValue) or (not HasAncestor and (DefValue=longint($80000000))) then
+        if WStrValue <> WDefStrValue then
         begin
           Driver.BeginProperty(FPropPath + PPropInfo(PropInfo)^.Name);
           WriteWideString(WStrValue);
@@ -1028,12 +1015,9 @@ begin
         if HasAncestor then
           UDefStrValue := GetUnicodeStrProp(Ancestor, PropInfo)
         else
-        begin
-          DefValue :=PPropInfo(PropInfo)^.Default;
           SetLength(UDefStrValue, 0);
-        end;
 
-        if (UStrValue<>UDefStrValue) or (not HasAncestor and (DefValue=longint($80000000))) then
+        if UStrValue <> UDefStrValue then
         begin
           Driver.BeginProperty(FPropPath + PPropInfo(PropInfo)^.Name);
           WriteUnicodeString(UStrValue);
@@ -1197,79 +1181,6 @@ begin
           Driver.EndProperty;
           end;
       end;
-    tkInterface:
-      begin
-        IntfValue := GetInterfaceProp(Instance, PropInfo);
-        if Assigned(IntfValue) and Supports(IntfValue, IInterfaceComponentReference, CompRef) then
-          begin
-          Component := CompRef.GetComponent;
-          if HasAncestor then
-          begin
-            AncestorObj := TObject(GetObjectProp(Ancestor, PropInfo));
-            if (AncestorObj is TComponent) then
-            begin
-              //writeln('TWriter.WriteProperty AncestorObj=',TComponent(AncestorObj).Name,' OwnerFit=',TComponent(AncestorObj).Owner = FRootAncestor,' ',TComponent(ObjValue).Name,' OwnerFit=',TComponent(ObjValue).Owner = Root);
-              if (AncestorObj<> Component) and
-               (TComponent(AncestorObj).Owner = FRootAncestor) and
-               (Component.Owner = Root) and
-               (UpperCase(TComponent(AncestorObj).Name) = UpperCase(Component.Name)) then
-              begin
-                // different components, but with the same name
-                // treat it like an override
-                AncestorObj := Component;
-              end;
-            end;
-          end else
-            AncestorObj := nil;
-
-          if not Assigned(Component) then
-            begin
-            if Component <> AncestorObj then
-              begin
-              Driver.BeginProperty(FPropPath + PPropInfo(PropInfo)^.Name);
-              Driver.WriteIdent('NIL');
-              Driver.EndProperty;
-              end
-            end
-          else if ((not (csSubComponent in Component.ComponentStyle))
-                 or ((Component.Owner<>Instance) and (Component.Owner<>Nil))) then
-            begin
-            if (Component <> AncestorObj)
-                and not (csTransient in Component.ComponentStyle) then
-              begin
-              Name:= '';
-              C:= Component;
-              While (C<>Nil) and (C.Name<>'') do
-                begin
-                If (Name<>'') Then
-                  Name:='.'+Name;
-                if C.Owner = LookupRoot then
-                  begin
-                  Name := C.Name+Name;
-                  break;
-                  end
-                else if C = LookupRoot then
-                  begin
-                  Name := 'Owner' + Name;
-                  break;
-                  end;
-                Name:=C.Name + Name;
-                C:= C.Owner;
-                end;
-              if (C=nil) and (Component.Owner=nil) then
-                if (Name<>'') then              //foreign root
-                  Name:=Name+'.Owner';
-              if Length(Name) > 0 then
-                begin
-                Driver.BeginProperty(FPropPath + PPropInfo(PropInfo)^.Name);
-                WriteIdent(Name);
-                Driver.EndProperty;
-                end;  // length Name>0
-              end; //(Component <> AncestorObj)
-            end;
-          end; //Assigned(IntfValue) and Supports(IntfValue,..
-               //else write NIL ?
-      end;
   end;
 end;
 
@@ -1291,12 +1202,5 @@ end;
 procedure TWriter.WriteUnicodeString(const Value: UnicodeString);
 begin
   Driver.WriteUnicodeString(Value);
-end;
-
-{ TAbstractObjectWriter }
-
-procedure TAbstractObjectWriter.FlushBuffer;
-begin
-  // Do nothing
 end;
 

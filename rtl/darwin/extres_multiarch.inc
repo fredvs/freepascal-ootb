@@ -30,21 +30,27 @@ const
   {$ENDIF}
   FPCRES_EXT = '.fpcres';
   FPCRES_ARCH =
-    {$if defined(cpui386)}
+    {$IFDEF CPUI386}
     '.i386';
-    {$elseif defined(cpux86_64)}
-    '.x86_64';
-    {$elseif defined(cpupowerpc32)}
-    '.powerpc';
-    {$elseif defined(cpupowerpc64)}
-    '.powerpc64';
-    {$elseif defined(cpuarm)}
-    '.arm';
-    {$elseif defined(cpuaarch64)}
-    '.aarch64';
-    {$else}
-    {$error add support for cpu architecture}
-    {$endif}
+    {$ELSE}
+      {$IFDEF CPUX86_64}
+      '.x86_64';
+      {$ELSE}
+        {$IFDEF CPUPOWERPC32}
+        '.powerpc';
+        {$ELSE}
+          {$IFDEF CPUPOWERPC64}
+          '.powerpc64';
+          {$ELSE}
+            {$IFDEF CPUARM}
+            '.arm';
+            {$ELSE}
+              '';
+            {$ENDIF}
+          {$ENDIF}
+        {$ENDIF}
+      {$ENDIF}
+    {$ENDIF}
 
 type
   TExtHeader = packed record

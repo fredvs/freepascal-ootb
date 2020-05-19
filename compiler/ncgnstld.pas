@@ -59,7 +59,7 @@ implementation
       defutil,defcmp,
       htypechk,pass_1,procinfo,paramgr,
       cpuinfo,
-      symconst,symbase,symsym,symdef,symtable,pparautl,symcreat,
+      symconst,symbase,symsym,symdef,symtable,symcreat,
       ncon,ninl,ncnv,nmem,ncal,nutils,nbas,
       pass_2,cgbase
       ;
@@ -106,8 +106,8 @@ implementation
                      the parentfpstruct inside the routine in which they were
                      originally declared, except in the initialisation code for
                      the parentfpstruct (nf_internal flag) }
-                  tabstractnormalvarsym(symtableentry).inparentfpstruct) and
-                   not(nf_internal in flags) then
+                  (tabstractnormalvarsym(symtableentry).inparentfpstruct and
+                   not(nf_internal in flags))) then
                 begin
                   { get struct holding all locals accessed by nested routines }
                   nestedvars:=tprocdef(symtable.defowner).parentfpstruct;
@@ -129,7 +129,7 @@ implementation
                   if not assigned(left) then
                     begin
                       left:=caddrnode.create_internal(cloadnode.create(tprocdef(symtableentry.owner.defowner).parentfpstruct,tprocdef(symtableentry.owner.defowner).parentfpstruct.owner));
-                      include(taddrnode(left).addrnodeflags,anf_typedaddr);
+                      include(left.flags,nf_typedaddr);
                     end;
                   typecheckpass(left);
                 end;
@@ -142,6 +142,7 @@ implementation
       var
         thissym,
         nestedvars: tsym;
+        nestedvarsdef: tdef;
       begin
         result:=inherited;
         if assigned(result) then
@@ -152,8 +153,11 @@ implementation
             begin
               { Nested variable? Then we have to move it to a structure that
                 can be passed by reference to nested routines }
-              if assigned(left) and
-                 not(nf_internal in flags) then
+              if assigned(current_procinfo) and
+                 (symtable.symtabletype in [localsymtable,parasymtable]) and
+                 ((symtable.symtablelevel<>current_procinfo.procdef.parast.symtablelevel) or
+                  (tabstractnormalvarsym(symtableentry).inparentfpstruct and
+                   not(nf_internal in flags))) then
                 begin
                   { get struct holding all locals accessed by nested routines }
                   nestedvars:=tprocdef(symtable.defowner).parentfpstruct;
@@ -163,6 +167,7 @@ implementation
                       build_parentfpstruct(tprocdef(symtable.defowner));
                       nestedvars:=tprocdef(symtable.defowner).parentfpstruct;
                     end;
+                  nestedvarsdef:=tlocalvarsym(nestedvars).vardef;
                   if nestedvars<>symtableentry then
                     thissym:=nestsym
                   else
@@ -174,13 +179,10 @@ implementation
                   if not assigned(left) then
                     internalerror(2011060104);
                   firstpass(left);
-                  if left.resultdef.typ<>pointerdef then
-                    internalerror(2015122801);
                   { subscript it to get the variable }
                   left:=csubscriptnode.create(thissym,cderefnode.create(left));
                   firstpass(left);
-                  include(flags,nf_internal);
-                end;
+                 end;
             end;
         end;
       end;

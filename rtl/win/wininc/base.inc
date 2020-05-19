@@ -228,7 +228,6 @@
      PSHORT = ^SHORT;
 
      PSTR = Pchar;
-     PWSTR = LPWSTR;
 
      PSZ = Pchar;
 {$ifdef UNICODE}
@@ -543,7 +542,7 @@
    }
   { was #define dname(params) def_expr }
   { argument types are unknown }
-  function MAKEROP4(fore,back : DWord ) : DWORD; inline;
+  function MAKEROP4(fore,back : longint) : DWORD; inline;
 
   { was #define dname(params) def_expr }
   { argument types are unknown }
@@ -748,8 +747,6 @@
      PFNPROCESSPOLICIESA = function (_para1:HWND; _para2:LPCSTR; _para3:LPCSTR; _para4:LPCSTR; _para5:DWORD):WINBOOL;stdcall;
      PFNPROCESSPOLICIESW = function (_para1:HWND; _para2:LPCWSTR; _para3:LPCWSTR; _para4:LPCWSTR; _para5:DWORD):WINBOOL;stdcall;
      PFNPROCESSPOLICIES  = function (_para1:HWND; _para2:LPCTSTR; _para3:LPCTSTR; _para4:LPCTSTR; _para5:DWORD):WINBOOL;stdcall;
-     TIMEFMT_ENUMPROCEX  = function (TimeFormat : LPWSTR; AppData : LPARAM) : BOOL; stdcall;
-
   (*  Not convertable by H2PAS
   #define SECURITY_NULL_SID_AUTHORITY     {0,0,0,0,0,0}
   #define SECURITY_WORLD_SID_AUTHORITY    {0,0,0,0,0,1}
@@ -1027,9 +1024,9 @@ type
 
   { was #define dname(params) def_expr }
   { argument types are unknown }
-  function MAKEROP4(fore,back : DWOrd ) : DWORD;
+  function MAKEROP4(fore,back : longint) : DWORD;
     begin
-       MAKEROP4:=((back shl 8) and $FF000000) or fore;
+       MAKEROP4:=DWORD((DWORD(back shl 8) and $FF000000) or DWORD(fore));
     end;
 
   { was #define dname(params) def_expr }

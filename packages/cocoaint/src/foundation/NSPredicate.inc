@@ -1,76 +1,84 @@
 { Parsed from Foundation.framework NSPredicate.h }
 
-
 {$ifdef TYPES}
-type
-  NSPredicatePtr = ^NSPredicate;
+{$ifndef NSPREDICATE_PAS_T}
+{$define NSPREDICATE_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSPREDICATE_PAS_R}
+{$define NSPREDICATE_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSPREDICATE_PAS_F}
+{$define NSPREDICATE_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSPREDICATE_PAS_S}
+{$define NSPREDICATE_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSPredicate = objcclass;
+  NSPredicatePointer = ^NSPredicate;
+  NSPredicatePtr = NSPredicatePointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSPREDICATE_PAS_C}
+{$define NSPREDICATE_PAS_C}
 
-type
-  NSPredicate = objcclass external (NSObject, NSSecureCodingProtocol, NSCopyingProtocol)
+{ NSPredicate }
+  NSPredicate = objcclass external (NSObject, NSCodingProtocol, NSCopyingProtocol)
   private
-    _predicateFlags: bitpacked record
-      case byte of
-        0: (_anonBitField__predicateFlags0: cuint);
-        1: (
-          _evaluationBlocked: 0..1;
-          _reservedPredicateFlags: 0..((1 shl 31)-1);
-        );
-      end;
-    {$ifdef __LP64__}
-    reserved: cuint32;
-    {$endif}
+    _reserved: Pointer;
+    
   public
-    class function predicateWithFormat_argumentArray (predicateFormat: NSString; arguments: NSArray): NSPredicate; message 'predicateWithFormat:argumentArray:';
-    class function predicateWithFormat (predicateFormat: NSString): NSPredicate; varargs; message 'predicateWithFormat:';
-    class function predicateWithFormat_arguments (predicateFormat: NSString; argList: va_list): NSPredicate; message 'predicateWithFormat:arguments:';
-    class function predicateFromMetadataQueryString (queryString: NSString): NSPredicate; message 'predicateFromMetadataQueryString:'; { available in 10_9 }
-    class function predicateWithValue (value: ObjCBOOL): NSPredicate; message 'predicateWithValue:';
-    class function predicateWithBlock (block: OpaqueCBlock): NSPredicate; message 'predicateWithBlock:'; { available in 10_6, 4_0 }
+    class function predicateWithFormat_argumentArray(predicateFormat_: NSString; arguments: NSArray): NSPredicate; message 'predicateWithFormat:argumentArray:';
+    class function predicateWithFormat(firstKey: id): NSPredicate; varargs; message 'predicateWithFormat:';
+    class function predicateWithFormat_arguments(predicateFormat_: NSString; argList: va_list): NSPredicate; message 'predicateWithFormat:arguments:';
+    class function predicateWithValue(value: Boolean): NSPredicate; message 'predicateWithValue:';
     function predicateFormat: NSString; message 'predicateFormat';
-    function predicateWithSubstitutionVariables (variables: NSDictionary): instancetype; message 'predicateWithSubstitutionVariables:';
-    function evaluateWithObject (object_: id): ObjCBOOL; message 'evaluateWithObject:';
-    function evaluateWithObject_substitutionVariables (object_: id; bindings: NSDictionary): ObjCBOOL; message 'evaluateWithObject:substitutionVariables:'; { available in 10_5, 3_0 }
-    procedure allowEvaluation; message 'allowEvaluation'; { available in 10_9, 7_0 }
+    function predicateWithSubstitutionVariables(variables: NSDictionary): NSPredicate; message 'predicateWithSubstitutionVariables:';
+    function evaluateWithObject(object_: id): Boolean; message 'evaluateWithObject:';
+    function evaluateWithObject_substitutionVariables(object_: id; bindings: NSDictionary): Boolean; message 'evaluateWithObject:substitutionVariables:';
 
-    { Adopted protocols }
-    function copyWithZone (zone: NSZonePtr): id; message 'copyWithZone:';
-    procedure encodeWithCoder (aCoder: NSCoder); message 'encodeWithCoder:';
-    function initWithCoder (aDecoder: NSCoder): id; message 'initWithCoder:';
-    class function supportsSecureCoding: ObjCBOOL; message 'supportsSecureCoding';
+    { Adopted Protocols }
+    procedure encodeWithCoder(aCoder: NSCoder);
+    function initWithCoder(aDecoder: NSCoder): id;
+    function copyWithZone(zone_: NSZonePtr): id;
   end;
 
-
-type
-  NSArray_NSPredicateSupport = objccategory external name 'NSPredicateSupport' (NSArray)
-    function filteredArrayUsingPredicate (predicate: NSPredicate): NSArray; message 'filteredArrayUsingPredicate:';
+{ NSPredicateSupportCategory }
+  NSPredicateSupportCategory = objccategory external (NSArray)
+    function filteredArrayUsingPredicate(predicate: NSPredicate): NSArray; message 'filteredArrayUsingPredicate:';
   end;
 
-type
-  NSMutableArray_NSPredicateSupport = objccategory external name 'NSPredicateSupport' (NSMutableArray)
-    procedure filterUsingPredicate (predicate: NSPredicate); message 'filterUsingPredicate:';
+{ NSPredicateSupport_NSMutableArrayCategory }
+  NSPredicateSupport_NSMutableArrayCategory = objccategory external name 'NSPredicateSupport' (NSMutableArray)
+    procedure filterUsingPredicate(predicate: NSPredicate); message 'filterUsingPredicate:';
   end;
 
-type
-  NSSet_NSPredicateSupport = objccategory external name 'NSPredicateSupport' (NSSet)
-    function filteredSetUsingPredicate (predicate: NSPredicate): NSSet; message 'filteredSetUsingPredicate:'; { available in 10_5, 3_0 }
+{ NSPredicateSupport_NSSetCategory }
+  NSPredicateSupport_NSSetCategory = objccategory external name 'NSPredicateSupport' (NSSet)
+    function filteredSetUsingPredicate(predicate: NSPredicate): NSSet; message 'filteredSetUsingPredicate:';
   end;
 
-type
-  NSMutableSet_NSPredicateSupport = objccategory external name 'NSPredicateSupport' (NSMutableSet)
-    procedure filterUsingPredicate (predicate: NSPredicate); message 'filterUsingPredicate:'; { available in 10_5, 3_0 }
+{ NSPredicateSupport_NSMutableSetCategory }
+  NSPredicateSupport_NSMutableSetCategory = objccategory external name 'NSPredicateSupport' (NSMutableSet)
+    procedure filterUsingPredicate(predicate: NSPredicate); message 'filterUsingPredicate:';
   end;
 
-type
-  NSOrderedSet_NSPredicateSupport = objccategory external name 'NSPredicateSupport' (NSOrderedSet)
-    function filteredOrderedSetUsingPredicate (p: NSPredicate): NSOrderedSet; message 'filteredOrderedSetUsingPredicate:'; { available in 10_7, 5_0 }
-  end;
-
-type
-  NSPredicateSupport = objccategory external (NSMutableOrderedSet)
-    procedure filterUsingPredicate (p: NSPredicate); message 'filterUsingPredicate:'; { available in 10_7, 5_0 }
-  end;
 {$endif}
-
+{$endif}

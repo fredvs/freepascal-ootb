@@ -4,10 +4,10 @@
 
 [package]
 name=pastojs
-version=3.2.0-beta
+version=3.0.5
 
 [require]
-packages=rtl fpmkunit paszlib
+packages=rtl fpmkunit
 
 [install]
 fpcpackage=y

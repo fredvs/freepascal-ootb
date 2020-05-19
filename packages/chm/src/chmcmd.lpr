@@ -23,10 +23,10 @@ program chmcmd;
 {$mode objfpc}{$H+}
 
 uses
-  {$ifdef Unix}cthreads, cwstring, {$endif} Classes, Sysutils, chmfilewriter, GetOpts;
+  {$ifdef Unix}cthreads,{$endif} Classes, Sysutils, chmfilewriter, GetOpts;
 
 Const
-  CHMCMDVersion = {$I %FPCVERSION%};
+  CHMCMDVersion = '3.0.5';
 
 Procedure Usage;
 
@@ -145,7 +145,7 @@ begin
   else
     begin
      try
-      project.ScanHtmlContents:=htmlscan in [scanforce, scandefault];  // .hhp default SCAN
+      project.ScanHtmlContents:=htmlscan=scanforce;  // .hhp default SCAN
       Project.LoadFromFile(name);
      except
        on e:exception do
@@ -166,6 +166,7 @@ begin
     end;
   OutStream.Free;
   Project.Free;
+
 end;
 
 var
@@ -177,7 +178,7 @@ var
 
 begin
   InitOptions;
-  Writeln(stderr,'chmcmd, a CHM compiler. (c) 2010-2019 Free Pascal core.');
+  Writeln(stderr,'chmcmd, a CHM compiler. (c) 2010 Free Pascal core.');
   Writeln(Stderr);
   repeat
     c:=getlongopts('h',@theopts[1],optionindex);

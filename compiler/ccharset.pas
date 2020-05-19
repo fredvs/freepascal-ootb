@@ -16,8 +16,6 @@
 {$mode objfpc}
 unit ccharset;
 
-{$i fpcdefs.inc}
-
   interface
 
     type

@@ -47,16 +47,6 @@ implementation
     {$ifndef NOTARGETPALMOS}
       ,t_palmos
     {$endif}
-    {$ifndef NOTARGETBSD}
-      ,t_bsd
-    {$endif}
-    {$ifndef NOTARGETMACOS}
-      ,t_macos
-    {$endif}
-    {$ifndef NOTARGETEMBEDDED}
-      ,t_embed
-    {$endif}
-
 
 {**************************************
           Assembler Readers
@@ -69,7 +59,6 @@ implementation
 **************************************}
 
       ,ag68kgas
-      ,ag68kvasm
 
 {**************************************
              Debuginfo

@@ -219,8 +219,7 @@ begin
     CPU_TYPE_X86_64    : fMachineType:=mmtx86_64;
     CPU_TYPE_POWERPC   : fMachineType:=mmtpowerpc;
     CPU_TYPE_POWERPC64 : fMachineType:=mmtpowerpc64;
-    CPU_TYPE_ARM       : fMachineType:=mmtarm;
-    CPU_TYPE_ARM64     : fMachineType:=mmtarm64
+    CPU_TYPE_ARM       : fMachineType:=mmtarm
     else exit;
   end;
   

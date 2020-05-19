@@ -369,25 +369,25 @@ type
 
 
 {$ifndef SYSTEM_HAS_FREXP}
-    procedure frexp(X: Real; out Mantissa: Real; out Exponent: longint);
+    function frexp(x:Real; out e:Integer ):Real;
     {*  frexp() extracts the exponent from x.  It returns an integer     *}
     {*  power of two to expnt and the significand between 0.5 and 1      *}
     {*  to y.  Thus  x = y * 2**expn.                                    *}
     begin
-      exponent:=0;
+      e :=0;
       if (abs(x)<0.5) then
        While (abs(x)<0.5) do
        begin
          x := x*2;
-         Dec(exponent);
+         Dec(e);
        end
       else
        While (abs(x)>1) do
        begin
          x := x/2;
-         Inc(exponent);
+         Inc(e);
        end;
-      Mantissa := x;
+      frexp := x;
     end;
 {$endif not SYSTEM_HAS_FREXP}
 
@@ -1004,7 +1004,7 @@ type
     { a rough value for the square root.  Then Heron's iteration      }
     { is used three times to converge to an accurate value.           }
     {*****************************************************************}
-    var e   : Longint;
+    var e   : Integer;
         w,z : Real;
     begin
        if( d <= 0.0 ) then
@@ -1018,7 +1018,7 @@ type
        begin
           w := d;
           { separate exponent and significand }
-          frexp( d, z, e );
+           z := frexp( d, e );
 
           {  approximate square root of number between 0.5 and 1  }
           {  relative error of approximation = 7.47e-3            }
@@ -1922,35 +1922,22 @@ function FPower10(val: Extended; Power: Longint): Extended;
   end;
 {$endif SUPPORT_EXTENDED}
 
-{$if defined(SUPPORT_EXTENDED) or defined(FPC_SOFT_FPUX80)}
-function TExtended80Rec.Mantissa(IncludeHiddenBit: Boolean = False) : QWord;
+{$ifdef SUPPORT_EXTENDED}
+function TExtended80Rec.Mantissa : QWord;
   begin
-    if IncludeHiddenbit then
-      Result:=Frac
-    else
-      Result:=Frac and $7fffffffffffffff;
+    Result:=Frac and $7fffffffffffffff;
   end;
+
 
 function TExtended80Rec.Fraction : Extended;
   begin
-{$ifdef SUPPORT_EXTENDED}
     Result:=system.frac(Value);
-{$else}
-    Result:=Frac / Double (1 shl 63) / 2.0;
-{$endif}
   end;
 
 
 function TExtended80Rec.Exponent : Longint;
-  var
-    E: QWord;
   begin
-    Result := 0;
-    E := GetExp;
-    if (0<E) and (E<2*Bias+1) then
-      Result:=Exp-Bias
-    else if (Exp=0) and (Frac<>0) then
-      Result:=-(Bias-1);
+    Result:=Exp-16383;
   end;
 
 
@@ -2031,29 +2018,18 @@ function TExtended80Rec.SpecialType : TFloatSpecial;
       end;
   end;
 
-procedure TExtended80Rec.BuildUp(const _Sign: Boolean; const _Mantissa: QWord; const _Exponent: Longint);
-begin
-{$ifdef SUPPORT_EXTENDED}
-  Value := 0.0;
-{$else SUPPORT_EXTENDED}
-  FillChar(Value, SizeOf(Value),0);
+{
+procedure TExtended80Rec.BuildUp(const _Sign : Boolean; const _Mantissa : QWord; const Exponent : Longint);
+  begin
+  end;
+}
 {$endif SUPPORT_EXTENDED}
-  if (_Mantissa=0) and (_Exponent=0) then
-    SetExp(0)
-  else
-    SetExp(_Exponent + Bias);
-  SetSign(_Sign);
-  Frac := _Mantissa;
-end;
-{$endif SUPPORT_EXTENDED or FPC_SOFT_FPUX80}
 
 
 {$ifdef SUPPORT_DOUBLE}
-function TDoubleRec.Mantissa(IncludeHiddenBit: Boolean = False) : QWord;
+function TDoubleRec.Mantissa : QWord;
   begin
-    Result:=(Data and $fffffffffffff);
-    if (Result=0) and (GetExp=0) then Exit;
-    if IncludeHiddenBit then Result := Result or $10000000000000; //add the hidden bit
+    Result:=Data and $fffffffffffff;
   end;
 
 
@@ -2064,15 +2040,8 @@ function TDoubleRec.Fraction : ValReal;
 
 
 function TDoubleRec.Exponent : Longint;
-  var
-    E: QWord;
   begin
-    Result := 0;
-    E := GetExp;
-    if (0<E) and (E<2*Bias+1) then
-      Result:=Exp-Bias
-    else if (Exp=0) and (Frac<>0) then
-      Result:=-(Bias-1);
+    Result:=Exp-1023;
   end;
 
 
@@ -2102,7 +2071,7 @@ procedure TDoubleRec.SetSign(s : Boolean);
 
 function TDoubleRec.GetFrac : QWord;
   begin
-    Result := Data and $fffffffffffff;
+    Result:=$10000000000000 or Mantissa;
   end;
 
 
@@ -2151,25 +2120,18 @@ function TDoubleRec.SpecialType : TFloatSpecial;
       end;
   end;
 
-procedure TDoubleRec.BuildUp(const _Sign: Boolean; const _Mantissa: QWord; const _Exponent: Longint);
+{
+procedure TDoubleRec.BuildUp(const _Sign : Boolean; const _Mantissa : QWord; const Exponent : Longint);
   begin
-    Value := 0.0;
-    SetSign(_Sign);
-    if (_Mantissa=0) and (_Exponent=0) then
-      Exit //SetExp(0)
-    else
-      SetExp(_Exponent + Bias);
-    SetFrac(_Mantissa and $fffffffffffff); //clear top bit
   end;
+}
 {$endif SUPPORT_DOUBLE}
 
 
 {$ifdef SUPPORT_SINGLE}
-function TSingleRec.Mantissa(IncludeHiddenBit: Boolean = False) : QWord;
+function TSingleRec.Mantissa : QWord;
   begin
-    Result:=(Data and $7fffff);
-    if (Result=0) and (GetExp=0) then Exit;
-    if IncludeHiddenBit then Result:=Result or $800000; //add the hidden bit
+    Result:=Data and $7fffff;
   end;
 
 
@@ -2180,15 +2142,8 @@ function TSingleRec.Fraction : ValReal;
 
 
 function TSingleRec.Exponent : Longint;
-  var
-    E: QWord;
   begin
-    Result := 0;
-    E := GetExp;
-    if (0<E) and (E<2*Bias+1) then
-      Result:=Exp-Bias
-    else if (Exp=0) and (Frac<>0) then
-      Result:=-(Bias-1);
+    Result:=Exp-127;
   end;
 
 
@@ -2218,7 +2173,7 @@ procedure TSingleRec.SetSign(s : Boolean);
 
 function TSingleRec.GetFrac : QWord;
   begin
-    Result:=Data and $7fffff;
+    Result:=$8000000 or Mantissa;
   end;
 
 
@@ -2267,14 +2222,9 @@ function TSingleRec.SpecialType : TFloatSpecial;
       end;
   end;
 
-procedure TSingleRec.BuildUp(const _Sign: Boolean; const _Mantissa: QWord; const _Exponent: Longint);
+{
+procedure TSingleRec.BuildUp(const _Sign : Boolean; const _Mantissa : QWord; const Exponent : Longint);
   begin
-    Value := 0.0;
-    SetSign(_Sign);
-    if (_Mantissa=0) and (_Exponent=0) then
-      Exit //SetExp(0)
-    else
-      SetExp(_Exponent + Bias);
-    SetFrac(_Mantissa and $7fffff); //clear top bit
   end;
+}
 {$endif SUPPORT_SINGLE}

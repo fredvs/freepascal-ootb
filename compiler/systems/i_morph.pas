@@ -34,10 +34,9 @@ unit i_morph;
             system       : system_powerpc_MorphOS;
             name         : 'MorphOS';
             shortname    : 'MorphOS';
-            flags        : [tf_files_case_aware,tf_requires_proper_alignment,tf_smartlink_sections,
-                            tf_has_winlike_resources,tf_needs_symbol_type,tf_needs_symbol_size];
+            flags        : [tf_files_case_aware,tf_smartlink_library,tf_has_winlike_resources];
             cpu          : cpu_powerpc;
-            unit_env     : 'MORPHOSUNITS';
+            unit_env     : '';
             extradefines : 'HASAMIGA';
             exeext       : '';
             defext       : '.def';
@@ -62,8 +61,8 @@ unit i_morph;
             Cprefix      : '';
             newline      : #10;
             dirsep       : '/';
-            assem        : as_powerpc_gas_legacy;
-            assemextern  : as_powerpc_gas_legacy;
+            assem        : as_gas;
+            assemextern  : as_gas;
             link         : ld_none;
             linkextern   : ld_morphos;
             ar           : ar_gnu_ar;
@@ -90,7 +89,6 @@ unit i_morph;
             stacksize    : 262144;
             stackalign   : 16;
             abi : abi_powerpc_sysv;
-            llvmdatalayout : 'E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32';
           );
 
   implementation

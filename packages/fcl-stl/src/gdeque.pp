@@ -34,7 +34,6 @@ type
   public
     function Size():SizeUInt;inline;
     constructor Create();
-    Procedure  Clear;
     procedure PushBack(value:T);inline;
     procedure PushFront(value:T);inline;
     procedure PopBack();inline;
@@ -59,12 +58,6 @@ begin
   FStart:=0;
 end;
 
-procedure TDeque.Clear;
-begin
- FDataSize:=0;
- FStart:=0;
-end;
-
 function TDeque.Size():SizeUInt;inline;
 begin
   Size:=FDataSize;
@@ -72,7 +65,10 @@ end;
 
 function TDeque.IsEmpty():boolean;inline;
 begin
-  IsEmpty:=Size()=0;
+  if Size()=0 then 
+    IsEmpty:=true
+  else 
+    IsEmpty:=false;
 end;
 
 procedure TDeque.PushBack(value:T);inline;
@@ -143,29 +139,13 @@ begin
 end;
 
 procedure TDeque.IncreaseCapacity;inline;
-const
-  // if size is small, multiply by 2;
-  // if size bigger but <256M, inc by 1/8*size;
-  // otherwise inc by 1/16*size
-  cSizeSmall = 1*1024*1024;
-  cSizeBig = 256*1024*1024;
-var
-  i,OldEnd,
-  DataSize:SizeUInt;
+var i,OldEnd:SizeUInt;
 begin
   OldEnd:=FCapacity;
-  DataSize:=FCapacity*SizeOf(T);
-  if FCapacity=0 then
-    FCapacity:=4
+  if(FCapacity=0) then
+    FCapacity:=1
   else
-  if DataSize<cSizeSmall then
-    FCapacity:=FCapacity*2
-  else
-  if DataSize<cSizeBig then
-    FCapacity:=FCapacity+FCapacity div 8
-  else
-    FCapacity:=FCapacity+FCapacity div 16;
-
+    FCapacity:=FCapacity*2;
   SetLength(FData, FCapacity);
   if (FStart>0) then 
     for i:=0 to FStart-1 do

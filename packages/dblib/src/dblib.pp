@@ -25,7 +25,7 @@
                     7.4 - MS SQL Server 2012/2014
       tds version can be set using env.var. TDSVER or in freetds.conf or .freetds.conf
 }
-unit DBLib;
+unit dblib;
 
 {$IFDEF FPC}{$mode objfpc}{$ENDIF}{$H+}
 

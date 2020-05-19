@@ -32,8 +32,8 @@ Type
     procedure OnFTPSuccess(aSocket: TLSocket; const aStatus: TLFTPStatus);
     procedure OnFTPFailure(aSocket: TLSocket; const aStatus: TLFTPStatus);
     // overrides
-    function FTPDownload(Const URL : String; Dest : TStream): Boolean; override;
-    function HTTPDownload(Const URL: String; Dest: TStream): Boolean; override;
+    procedure FTPDownload(Const URL : String; Dest : TStream); override;
+    procedure HTTPDownload(Const URL : String; Dest : TStream); override;
    public
     constructor Create(AOwner : TComponent); override;
   end;
@@ -100,9 +100,8 @@ begin
   FQuit:=True;
 end;
 
-function TLNetDownloader.FTPDownload(Const URL: String; Dest: TStream): Boolean;
+procedure TLNetDownloader.FTPDownload(const URL: String; Dest: TStream);
 begin
-  Result := False;
   FOutStream:=Dest;
   Try
     { parse URL }
@@ -116,11 +115,9 @@ begin
       FFTP.CallAction;
 
     if not FQuit then begin
-      Result := FFTP.Authenticate(URI.Username, URI.Password);
-      if Result then
-        Result := FFTP.ChangeDirectory(URI.Path);
-      if Result then
-        Result := FFTP.Retrieve(URI.Document);
+      FFTP.Authenticate(URI.Username, URI.Password);
+      FFTP.ChangeDirectory(URI.Path);
+      FFTP.Retrieve(URI.Document);
       while not FQuit do
         FFTP.CallAction;
     end;
@@ -129,9 +126,8 @@ begin
   end;
 end;
 
-function TLNetDownloader.HTTPDownload(Const URL: String; Dest: TStream): Boolean;
+procedure TLNetDownloader.HTTPDownload(const URL: String; Dest: TStream);
 begin
-  Result := False;
   FOutStream:=Dest;
   Try
     { parse aURL }
@@ -150,9 +146,7 @@ begin
     while not FQuit do
       FHTTP.CallAction;
     if FHTTP.Response.Status<>HSOK then
-      Error(SErrDownloadFailed,['HTTP',EncodeURI(URI),FHTTP.Response.Reason])
-    else
-      Result := True;
+      Error(SErrDownloadFailed,['HTTP',EncodeURI(URI),FHTTP.Response.Reason]);
   Finally
     FOutStream:=nil; // to be sure
   end;

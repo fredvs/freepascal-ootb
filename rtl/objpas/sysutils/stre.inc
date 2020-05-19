@@ -74,4 +74,3 @@ Const
    SVarArrayCreate = 'Variant array cannot be created';
    SVarNotArray = 'Variant doesn''t contain an array';
    SiconvError = 'iconv error';
-   SThreadError = 'Thread error';

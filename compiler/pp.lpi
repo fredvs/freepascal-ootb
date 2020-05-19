@@ -27,15 +27,22 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <Units Count="2">
+    <Units Count="3">
       <Unit0>
         <Filename Value="pp.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="pp"/>
       </Unit0>
       <Unit1>
+        <Filename Value="x86\symold86.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="symold86"/>
+      </Unit1>
+      <Unit2>
         <Filename Value="i8086\symcpu.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit1>
+        <UnitName Value="symcpu"/>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -66,7 +73,11 @@
       <ConfigFile>
         <StopAfterErrCount Value="50"/>
       </ConfigFile>
-      <CustomOptions Value="-di386 -dEXTDEBUG"/>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
+      <CustomOptions Value="-di386"/>
+      <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>
 </CONFIG>

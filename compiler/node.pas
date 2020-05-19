@@ -86,6 +86,7 @@ interface
           whilerepeatn,     {A while or repeat statement}
           forn,             {A for loop}
           exitn,            {An exit statement}
+          withn,            {A with statement}
           casen,            {A case statement}
           labeln,           {A label}
           goton,            {A goto statement}
@@ -107,9 +108,9 @@ interface
           guidconstn,       { A GUID COM Interface constant }
           rttin,            { Rtti information so they can be accessed in result/firstpass}
           loadparentfpn,    { Load the framepointer of the parent for nested procedures }
+          dataconstn,       { node storing some binary data }
           objcselectorn,    { node for an Objective-C message selector }
-          objcprotocoln,    { node for an Objective-C @protocol() expression (returns metaclass associated with protocol) }
-          specializen       { parser-only node to handle Delphi-mode inline specializations }
+          objcprotocoln     { node for an Objective-C @protocol() expression (returns metaclass associated with protocol) }
        );
 
        tnodetypeset = set of tnodetype;
@@ -169,6 +170,7 @@ interface
           'whilerepeatn',
           'forn',
           'exitn',
+          'withn',
           'casen',
           'labeln',
           'goton',
@@ -190,14 +192,15 @@ interface
           'guidconstn',
           'rttin',
           'loadparentfpn',
+          'dataconstn',
           'objcselectorn',
-          'objcprotocoln',
-          'specializen');
+          'objcprotocoln');
 
       { a set containing all const nodes }
       nodetype_const = [ordconstn,
                         pointerconstn,
                         stringconstn,
+                        dataconstn,
                         guidconstn,
                         realconstn];
 
@@ -227,6 +230,9 @@ interface
            during simplify, the flag must be moved to another node }
          nf_usercode_entry,
 
+         { taddrnode }
+         nf_typedaddr,
+
          { tderefnode }
          nf_no_checkpointer,
 
@@ -239,10 +245,8 @@ interface
          nf_absolute,
 
          { taddnode }
-         { if the result type of a node is currency, then this flag denotes, that the value is already mulitplied by 10000 }
          nf_is_currency,
          nf_has_pointerdiv,
-         { the node shall be short boolean evaluated, this flag has priority over localswitches }
          nf_short_bool,
 
          { tmoddivnode }
@@ -274,7 +278,7 @@ interface
          { tloadvmtaddrnode }
          nf_ignore_for_wpo  { we know that this loadvmtaddrnode cannot be used to construct a class instance }
 
-         { WARNING: there are now 31 elements in this type, and a set of this
+         { WARNING: there are now 32 elements in this type, and a set of this
              type is written to the PPU. So before adding more than 32 elements,
              either move some flags to specific nodes, or stream a normalset
              to the ppu
@@ -491,7 +495,7 @@ interface
 implementation
 
     uses
-       verbose,entfile,comphook,
+       verbose,ppu,comphook,
        symconst,
        nutils,nflw,
        defutil;
@@ -705,18 +709,13 @@ implementation
     function is_conststringnode(p : tnode) : boolean;
       begin
          is_conststringnode :=
-           (p.nodetype = stringconstn) and
-           (is_chararray(p.resultdef) or
-            is_shortstring(p.resultdef) or
-            is_ansistring(p.resultdef));
+           (p.nodetype = stringconstn) and is_chararray(p.resultdef);
       end;
 
     function is_constwidestringnode(p : tnode) : boolean;
       begin
          is_constwidestringnode :=
-           (p.nodetype = stringconstn) and
-           (is_widechararray(p.resultdef) or
-            is_wide_or_unicode_string(p.resultdef));
+           (p.nodetype = stringconstn) and is_widechararray(p.resultdef);
       end;
 
     function is_conststring_or_constcharnode(p : tnode) : boolean;
@@ -876,7 +875,7 @@ implementation
                 first:=false;
               write(t, i);
             end;
-        write(t,'], cmplx = ',node_complexity(self));
+        write(t,']');
       end;
 
 

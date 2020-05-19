@@ -19,7 +19,7 @@
 {$endif}
 {$mode fpc}
 
-unit WinSock;
+unit winsock;
 
   interface
 

@@ -1,35 +1,65 @@
-{ Parsed from AppKit.framework NSLevelIndicator.h }
-
+{ Parsed from Appkit.framework NSLevelIndicator.h }
 
 {$ifdef TYPES}
-type
-  NSLevelIndicatorPtr = ^NSLevelIndicator;
+{$ifndef NSLEVELINDICATOR_PAS_T}
+{$define NSLEVELINDICATOR_PAS_T}
+
+{$endif}
+{$endif}
+
+{$ifdef RECORDS}
+{$ifndef NSLEVELINDICATOR_PAS_R}
+{$define NSLEVELINDICATOR_PAS_R}
+
+{$endif}
+{$endif}
+
+{$ifdef FUNCTIONS}
+{$ifndef NSLEVELINDICATOR_PAS_F}
+{$define NSLEVELINDICATOR_PAS_F}
+
+{$endif}
+{$endif}
+
+{$ifdef EXTERNAL_SYMBOLS}
+{$ifndef NSLEVELINDICATOR_PAS_S}
+{$define NSLEVELINDICATOR_PAS_S}
+
+{$endif}
+{$endif}
+
+{$ifdef FORWARD}
+  NSLevelIndicator = objcclass;
+  NSLevelIndicatorPointer = ^NSLevelIndicator;
+  NSLevelIndicatorPtr = NSLevelIndicatorPointer;
+
 {$endif}
 
 {$ifdef CLASSES}
+{$ifndef NSLEVELINDICATOR_PAS_C}
+{$define NSLEVELINDICATOR_PAS_C}
 
-type
+{ NSLevelIndicator }
   NSLevelIndicator = objcclass external (NSControl)
-  private
+    
   public
-    procedure setLevelIndicatorStyle(newValue: NSLevelIndicatorStyle); message 'setLevelIndicatorStyle:';
-    function levelIndicatorStyle: NSLevelIndicatorStyle; message 'levelIndicatorStyle';
-    procedure setMinValue(newValue: double); message 'setMinValue:';
     function minValue: double; message 'minValue';
-    procedure setMaxValue(newValue: double); message 'setMaxValue:';
+    procedure setMinValue(minValue_: double); message 'setMinValue:';
     function maxValue: double; message 'maxValue';
-    procedure setWarningValue(newValue: double); message 'setWarningValue:';
+    procedure setMaxValue(maxValue_: double); message 'setMaxValue:';
     function warningValue: double; message 'warningValue';
-    procedure setCriticalValue(newValue: double); message 'setCriticalValue:';
+    procedure setWarningValue(warningValue_: double); message 'setWarningValue:';
     function criticalValue: double; message 'criticalValue';
-    procedure setTickMarkPosition(newValue: NSTickMarkPosition); message 'setTickMarkPosition:';
+    procedure setCriticalValue(criticalValue_: double); message 'setCriticalValue:';
     function tickMarkPosition: NSTickMarkPosition; message 'tickMarkPosition';
-    procedure setNumberOfTickMarks(newValue: NSInteger); message 'setNumberOfTickMarks:';
+    procedure setTickMarkPosition(position: NSTickMarkPosition); message 'setTickMarkPosition:';
     function numberOfTickMarks: NSInteger; message 'numberOfTickMarks';
-    procedure setNumberOfMajorTickMarks(newValue: NSInteger); message 'setNumberOfMajorTickMarks:';
+    procedure setNumberOfTickMarks(count: NSInteger); message 'setNumberOfTickMarks:';
     function numberOfMajorTickMarks: NSInteger; message 'numberOfMajorTickMarks';
-    function tickMarkValueAtIndex (index: NSInteger): double; message 'tickMarkValueAtIndex:';
-    function rectOfTickMarkAtIndex (index: NSInteger): NSRect; message 'rectOfTickMarkAtIndex:';
+    procedure setNumberOfMajorTickMarks(count: NSInteger); message 'setNumberOfMajorTickMarks:';
+    function tickMarkValueAtIndex(index: NSInteger): double; message 'tickMarkValueAtIndex:';
+    function rectOfTickMarkAtIndex(index: NSInteger): NSRect; message 'rectOfTickMarkAtIndex:';
   end;
-{$endif}
 
+{$endif}
+{$endif}

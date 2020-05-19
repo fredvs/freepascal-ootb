@@ -26,9 +26,8 @@ unit njvmutil;
 interface
 
   uses
-    cclasses,
     node,nbas,
-    fmodule,ngenutil,
+    ngenutil,
     symtype,symconst,symsym,symdef;
 
 
@@ -36,7 +35,6 @@ interface
     tjvmnodeutils = class(tnodeutils)
       class function initialize_data_node(p:tnode; force: boolean):tnode; override;
       class function finalize_data_node(p:tnode):tnode; override;
-      class procedure append_struct_initfinis(u: tmodule; initfini: tstructinifinipotype; var stat: tstatementnode); override;
       class function force_init: boolean; override;
       class procedure insertbssdata(sym: tstaticvarsym); override;
       class function create_main_procdef(const name: string; potype: tproctypeoption; ps: tprocsym): tdef; override;
@@ -45,17 +43,14 @@ interface
       class function  trashable_sym(p: tsym): boolean; override;
       class procedure maybe_trash_variable(var stat: tstatementnode; p: tabstractnormalvarsym; trashn: tnode); override;
 
+      class procedure InsertInitFinalTable; override;
       class procedure InsertThreadvarTablesTable; override;
       class procedure InsertThreadvars; override;
       class procedure InsertWideInitsTablesTable; override;
       class procedure InsertWideInits; override;
       class procedure InsertResourceTablesTable; override;
       class procedure InsertResourceInfo(ResourcesUsed : boolean); override;
-      class procedure InsertResStrTablesTable; override;
-      class procedure InsertResStrInits; override;
       class procedure InsertMemorySizes; override;
-     protected
-       class procedure insert_init_final_table(entries:tfplist); override;
      strict protected
        class procedure add_main_procdef_paras(pd: tdef); override;
     end;
@@ -64,8 +59,8 @@ interface
 implementation
 
     uses
-      verbose,cutils,globtype,globals,constexp,compinnr,
-      aasmdata,aasmtai,cpubase,aasmbase,aasmcpu,
+      verbose,cutils,globtype,globals,constexp,fmodule,
+      aasmdata,aasmtai,cpubase,aasmcpu,
       symbase,symcpu,symtable,defutil,jvmdef,
       ncnv,ncon,ninl,ncal,nld,nmem,
       ppu,
@@ -126,7 +121,7 @@ implementation
               if jvmimplicitpointertype(p.resultdef) then
                 begin
                   p:=caddrnode.create(p);
-                  include(taddrnode(p).addrnodeflags,anf_typedaddr);
+                  include(p.flags,nf_typedaddr);
                 end;
               paras:=ccallparanode.create(ctypeconvnode.create_explicit(p,
                 search_system_type('TJOBJECTARRAY').typedef),nil);
@@ -170,12 +165,6 @@ implementation
       // do nothing
       p.free;
       result:=cnothingnode.create;
-    end;
-
-
-  class procedure tjvmnodeutils.append_struct_initfinis(u: tmodule; initfini: tstructinifinipotype; var stat: tstatementnode);
-    begin
-      { class constructors are implicitly called by the JVM runtime and cannot be called explicitly }
     end;
 
 
@@ -387,7 +376,7 @@ implementation
         inherited;
     end;
 
-  class procedure tjvmnodeutils.insert_init_final_table(entries:tfplist);
+  class procedure tjvmnodeutils.InsertInitFinalTable;
     var
       hp : tused_unit;
       unitinits : TAsmList;
@@ -395,8 +384,6 @@ implementation
       mainpsym: tsym;
       mainpd: tprocdef;
     begin
-      { JVM does not use the entries list }
-
       unitinits:=TAsmList.Create;
       hp:=tused_unit(usedunits.first);
       while assigned(hp) do
@@ -416,7 +403,7 @@ implementation
                   replace(unitclassname,'.','/');
                 end;
               unitclassname:=unitclassname+hp.u.realmodulename^;
-              unitinits.concat(taicpu.op_sym(a_new,current_asmdata.RefAsmSymbol(unitclassname,AT_METADATA)));
+              unitinits.concat(taicpu.op_sym(a_new,current_asmdata.RefAsmSymbol(unitclassname)));
               unitinits.concat(taicpu.op_none(a_pop));
             end;
           hp:=tused_unit(hp.next);
@@ -465,18 +452,6 @@ implementation
 
 
   class procedure tjvmnodeutils.InsertResourceInfo(ResourcesUsed: boolean);
-    begin
-      { not supported }
-    end;
-
-
-  class procedure tjvmnodeutils.InsertResStrTablesTable;
-    begin
-      { not supported }
-    end;
-
-
-  class procedure tjvmnodeutils.InsertResStrInits;
     begin
       { not supported }
     end;

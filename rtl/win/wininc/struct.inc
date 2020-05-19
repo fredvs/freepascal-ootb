@@ -821,16 +821,6 @@ Const
      TDCB = DCB;
      PDCB = ^DCB;
 
-     FLASHWINFO = record
-         cbSize    : UINT;
-         hwnd      : HWND;
-         dwFlags   : DWORD;
-         uCount    : UINT;
-         dwTimeOut : DWORD;
-     end;
-    TFLASHWINFO  = FLASHWINFO;
-    PFLASHWINFO  = ^FLASHWINFO;
-
   const
      bm_DCB_fBinary = $1;
      bp_DCB_fBinary = 0;
@@ -2709,7 +2699,7 @@ Const
        end;
      tagEMRCREATEDIBPATTERNBRUSHPT = EMRCREATEDIBPATTERNBRUSHPT;
      TEMRCREATEDIBPATTERNBRUSHPT = EMRCREATEDIBPATTERNBRUSHPT;
-     PEMRCREATEDIBPATTERNBRUSHPT = ^EMRCREATEDIBPATTERNBRUSHPT;
+     PEMRCREATEDIBPATTERNBRUSHPT = EMRCREATEDIBPATTERNBRUSHPT;
 
      EMRCREATEMONOBRUSH = record
           emr : EMR;
@@ -2874,7 +2864,7 @@ Const
      EMREXTCREATEFONTINDIRECTW = record
           emr : EMR;
           ihFont : DWORD;
-          elfw : EXTLOGFONTW;
+          elfw : EXTLOGFONT;
        end;
      tagEMREXTCREATEFONTINDIRECTW = EMREXTCREATEFONTINDIRECTW;
      TEMREXTCREATEFONTINDIRECTW = EMREXTCREATEFONTINDIRECTW;
@@ -3083,7 +3073,7 @@ Const
        end;
      tagEMRMODIFYWORLDTRANSFORM = EMRMODIFYWORLDTRANSFORM;
      TEMRMODIFYWORLDTRANSFORM = EMRMODIFYWORLDTRANSFORM;
-     PEMRMODIFYWORLDTRANSFORM = ^EMRMODIFYWORLDTRANSFORM;
+     PEMRMODIFYWORLDTRANSFORM = EMRMODIFYWORLDTRANSFORM;
 
      EMROFFSETCLIPRGN = record
           emr : EMR;
@@ -3172,7 +3162,7 @@ Const
           emr : EMR;
           rclBounds : RECTL;
           cpts : DWORD;
-          apts : array[0..0] of POINTS;
+          apts : array[0..0] of POINTL;
        end;
      tagEMRPOLYLINE16 = EMRPOLYLINE16;
      TEMRPOLYLINE16 = EMRPOLYLINE16;
@@ -5257,7 +5247,7 @@ Const
           dwSize : DWORD;
           dwFlags : DWORD;
           dwHelpContext : DWORD;
-          lData : LONG_PTR;
+          lpData : LONG_PTR;
           hIcon : HICON;
           szName : array[0..31] of AnsiCHAR;
           szInfo : array[0..63] of AnsiCHAR;
@@ -6068,7 +6058,7 @@ Const
      PPREVENTMEDIAREMOVAL = ^PREVENT_MEDIA_REMOVAL;
 
      {PRINTDLG = record conflicts with PrintDlg function }
-     TPRINTDLG = {$ifndef win64}packed {$endif}record
+     TPRINTDLG = packed record
           lStructSize : DWORD;
           hwndOwner : HWND;
           hDevMode : HGLOBAL;
@@ -7363,7 +7353,7 @@ Const
           idCommand : longint;
           fsState : BYTE;
           fsStyle : BYTE;
-{$ifdef WIN64}
+{$ifdef _WIN64}
           bReserved : array[0..5] of BYTE;
 {$else}
           bReserved : array[0..1] of BYTE;
@@ -8075,23 +8065,20 @@ Const
      TNETCONNECTINFOSTRUCT = NETCONNECTINFOSTRUCT;
      PNETCONNECTINFOSTRUCT = ^NETCONNECTINFOSTRUCT;
 
-     ENUMMETAFILEPROC = function (_para1:HDC; _para2:LPHANDLETABLE; _para3:LPMETARECORD; _para4:longint; _para5:LPARAM):longint;stdcall;
+     ENUMMETAFILEPROC = function (_para1:HDC; _para2:HANDLETABLE; _para3:METARECORD; _para4:longint; _para5:LPARAM):longint;stdcall;
 
-     ENHMETAFILEPROC = function (_para1:HDC; _para2:LPHANDLETABLE; _para3:LPENHMETARECORD; _para4:longint; _para5:LPARAM):longint;stdcall;
+     ENHMETAFILEPROC = function (_para1:HDC; _para2:HANDLETABLE; _para3:ENHMETARECORD; _para4:longint; _para5:LPARAM):longint;stdcall;
 
      ENUMFONTSPROC = function (_para1:LPLOGFONT; _para2:LPTEXTMETRIC; _para3:DWORD; _para4:LPARAM):longint;stdcall;
      ENUMFONTSPROCA= function (_para1:LPLOGFONTA; _para2:LPTEXTMETRICA; _para3:DWORD; _para4:LPARAM):longint;stdcall;
      ENUMFONTSPROCW= function (_para1:LPLOGFONTW; _para2:LPTEXTMETRICW; _para3:DWORD; _para4:LPARAM):longint;stdcall;
-     ENUMFONTSEXPROC = function (_para1:PENUMLOGFONTEX;  _para2:LPNEWTEXTMETRICEX; _para3:DWORD; _para4:LPARAM):longint;stdcall;
-     ENUMFONTSEXPROCA= function (_para1:PENUMLOGFONTEXA; _para2:LPNEWTEXTMETRICEXA; _para3:DWORD; _para4:LPARAM):longint;stdcall;
-     ENUMFONTSEXPROCW= function (_para1:PENUMLOGFONTEXW; _para2:LPNEWTEXTMETRICEXW; _para3:DWORD; _para4:LPARAM):longint;stdcall;
 
      FONTENUMPROC   = function (var _para1:ENUMLOGFONT; var _para2:NEWTEXTMETRIC; _para3:longint; _para4:LPARAM):longint;stdcall;
      FONTENUMPROCA  = function (var _para1:ENUMLOGFONTA; var _para2:NEWTEXTMETRICA; _para3:longint; _para4:LPARAM):longint;stdcall;
      FONTENUMPROCW  = function (var _para1:ENUMLOGFONTW; var _para2:NEWTEXTMETRICW; _para3:longint; _para4:LPARAM):longint;stdcall;
      FONTENUMEXPROC = function (var _para1:ENUMLOGFONTEX;var _para2:NEWTEXTMETRICEX; _para3:longint; _para4:LPARAM):longint;stdcall;
-     FONTENUMEXPROCA= function (var _para1:ENUMLOGFONTEXA;var _para2:NEWTEXTMETRICEXA; _para3:longint; _para4:LPARAM):longint;stdcall;
-     FONTENUMEXPROCW= function (var _para1:ENUMLOGFONTEXW;var _para2:NEWTEXTMETRICEXW; _para3:longint; _para4:LPARAM):longint;stdcall;
+     FONTENUMEXPROCA= function (var _para1:ENUMLOGFONTEXA;var _para2:NEWTEXTMETRICEX; _para3:longint; _para4:LPARAM):longint;stdcall;
+     FONTENUMEXPROCW= function (var _para1:ENUMLOGFONTEXW;var _para2:NEWTEXTMETRICEX; _para3:longint; _para4:LPARAM):longint;stdcall;
 
      LPOVERLAPPED_COMPLETION_ROUTINE = procedure (_para1:DWORD; _para2:DWORD; _para3:LPOVERLAPPED);stdcall;
 
@@ -8592,7 +8579,7 @@ const
   IMAGE_ROM_OPTIONAL_HDR_MAGIC  = $107;
 
 type
-{$ifdef WIN64}
+{$ifdef _WIN64}
   IMAGE_OPTIONAL_HEADER = IMAGE_OPTIONAL_HEADER64;
   PIMAGE_OPTIONAL_HEADER = PIMAGE_OPTIONAL_HEADER64;
 {$else}
@@ -8636,7 +8623,7 @@ type
   TImageRomHeaders = IMAGE_ROM_HEADERS;
   PImageRomHeaders = PIMAGE_ROM_HEADERS;
 
-{$ifdef WIN64}
+{$ifdef _WIN64}
   IMAGE_NT_HEADERS = IMAGE_NT_HEADERS64;
   PIMAGE_NT_HEADERS = PIMAGE_NT_HEADERS64;
 {$else}
@@ -8804,7 +8791,7 @@ type
        end;
      PIMAGE_LOAD_CONFIG_DIRECTORY64 = ^IMAGE_LOAD_CONFIG_DIRECTORY64;
      TIMAGE_LOAD_CONFIG_DIRECTORY64 = IMAGE_LOAD_CONFIG_DIRECTORY64;
-{$ifdef WIN64}
+{$ifdef _WIN64}
      IMAGE_LOAD_CONFIG_DIRECTORY = IMAGE_LOAD_CONFIG_DIRECTORY64;
      TIMAGE_LOAD_CONFIG_DIRECTORY = TIMAGE_LOAD_CONFIG_DIRECTORY64;
      PIMAGE_LOAD_CONFIG_DIRECTORY = PIMAGE_LOAD_CONFIG_DIRECTORY64;
@@ -8813,48 +8800,6 @@ type
      TIMAGE_LOAD_CONFIG_DIRECTORY = TIMAGE_LOAD_CONFIG_DIRECTORY32;
      PIMAGE_LOAD_CONFIG_DIRECTORY = PIMAGE_LOAD_CONFIG_DIRECTORY32;
 {$endif}
-
-     MOUSEINPUT = record
-       dx        : LONG;
-       dy        : LONG;
-       MouseData : DWORD;
-       dwFlags   : DWORD;
-       Time      : DWORD;
-       ExtraInfo : ULONG_PTR;
-     end;
-     TMOUSEINPUT  = MOUSEINPUT;
-     PMOUSEINPUT  = ^MOUSEINPUT;
-     LPMOUSEINPUT = PMOUSEINPUT;
-
-     KEYBDINPUT = record
-       wVk       : WORD;
-       wScan     : WORD;
-       dwFlags   : DWORD;
-       Time      : DWORD;
-       ExtraInfo : ULONG_PTR;
-     end;
-     TKEYBDINPUT  = KEYBDINPUT;
-     PKEYBDINPUT  = ^KEYBDINPUT;
-     LPKEYBDINPUT = PKEYBDINPUT;
-
-     HARDWAREINPUT = record
-       uMsg     : DWORD;
-       wParamL  : WORD;
-       wParamH  : WORD;
-     end;
-     THARDWAREINPUT  = HARDWAREINPUT;
-     PHARDWAREINPUT  = ^HARDWAREINPUT;
-     LPHARDWAREINPUT = PHARDWAREINPUT;
-
-     TINPUT = record
-       _Type : DWORD;
-       case integer of
-         1 : (mi : MOUSEINPUT);
-         2 : (ki : KEYBDINPUT);
-         3 : (hi : HARDWAREINPUT);
-     end;
-     PINPUT = ^TINPUT;
-     LPINPUT = PINPUT;
 
 {$push}
 {$packrecords 4}
@@ -9427,18 +9372,6 @@ type
     CONSOLE_READCONSOLE_CONTROL = _CONSOLE_READCONSOLE_CONTROL;
     PCONSOLE_READCONSOLE_CONTROL = ^_CONSOLE_READCONSOLE_CONTROL;
 
-
-    COMPUTER_NAME_FORMAT =  (
-          ComputerNameNetBIOS=0,
-          ComputerNameDnsHostname,
-          ComputerNameDnsDomain,
-          ComputerNameDnsFullyQualified,
-          ComputerNamePhysicalNetBIOS,
-          ComputerNamePhysicalDnsHostname,
-          ComputerNamePhysicalDnsDomain,
-          ComputerNamePhysicalDnsFullyQualified,
-          ComputerNameMax=31);
-    TCOMPUTER_NAME_FORMAT = COMPUTER_NAME_FORMAT;
 {$pop}
 {$endif read_interface}
 

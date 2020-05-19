@@ -17,7 +17,6 @@
    - Removed FBytesPerPixel, BytesPerPixel property is now deprecated, use BitsPerPixel instead.
    - Rewritten a large part of the file, so we can handle all bmp color depths
    - Support for RLE4 and RLE8 encoding
-  03/2015 MvdV finally removed bytesperpixel. 10 years should be enough.
 }
 
 {$mode objfpc}{$h+}
@@ -59,6 +58,7 @@ type
     property XPelsPerMeter : integer read fXPelsPerMeter write fXPelsPerMeter;
     property YPelsPerMeter : integer read fYPelsPerMeter write fYPelsPerMeter;
     property RLECompress : boolean read FRleCompress write FRleCompress;
+    Property BytesPerPixel : Byte Read GetColorSize Write SetColorSize; deprecated;
   end;
 
 
@@ -414,7 +414,6 @@ var i, j, k, couples, singles, lastsingle : integer;
     nibline : pbyte; { temporary array of nibbles }
     even : boolean;
 begin
-  even:=false;
   getmem(nibline,width);
   try
     k:=(Width div 2) + (Width mod 2);

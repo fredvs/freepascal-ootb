@@ -1,5 +1,4 @@
 { %target=win32,win64,wince}
-{ %skiptarget=$nosharedlib }
 library LibTest;
 
 uses

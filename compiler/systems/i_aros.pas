@@ -33,11 +33,11 @@ unit i_aros;
           (
             system       : system_i386_aros;
             name         : 'AROS for i386';
-            shortname    : 'AROS';
-            flags        : [tf_files_case_aware, tf_smartlink_sections, tf_has_winlike_resources];
+            shortname    : 'aros';
+            flags        : [tf_files_case_aware, tf_smartlink_library, tf_has_winlike_resources];
             cpu          : cpu_i386;
-            unit_env     : 'AROSUNITS';
-            extradefines : 'HASAMIGA;AROS_ABIv0';
+            unit_env     : '';
+            extradefines : 'HASAMIGA';
             exeext       : '';
             defext       : '.def';
             scriptext    : '.sh';
@@ -76,7 +76,7 @@ unit i_aros;
                 loopalign       : 4;
                 jumpalign       : 0;
                 constalignmin   : 0;
-                constalignmax   : 16;
+                constalignmax   : 8;
                 varalignmin     : 0;
                 varalignmax     : 16;
                 localalignmin   : 0;
@@ -89,18 +89,17 @@ unit i_aros;
             stacksize    : 262144;
             stackalign   : 4;
             abi : abi_default;
-            llvmdatalayout : 'todo';
           );
 
        system_x86_64_aros_info : tsysteminfo =
           (
             system       : system_x86_64_aros;
             name         : 'AROS for x86_64';
-            shortname    : 'AROS';
-            flags        : [tf_files_case_aware, tf_smartlink_sections, tf_has_winlike_resources];
+            shortname    : 'aros';
+            flags        : [tf_files_case_aware];
             cpu          : cpu_x86_64;
-            unit_env     : 'AROSUNITS';
-            extradefines : 'HASAMIGA;AROS_BINCOMPAT;AROS_ABIv1';
+            unit_env     : '';
+            extradefines : 'HASAMIGA';
             exeext       : '';
             defext       : '.def';
             scriptext    : '.sh';
@@ -129,7 +128,7 @@ unit i_aros;
             link         : ld_none;
             linkextern   : ld_aros;
             ar           : ar_gnu_ar;
-            res          : res_elf;
+            res          : res_none;
             dbg          : dbg_stabs;
             script       : script_amiga;
             endian       : endian_little;
@@ -139,7 +138,7 @@ unit i_aros;
                 loopalign       : 4;
                 jumpalign       : 0;
                 constalignmin   : 0;
-                constalignmax   : 16;
+                constalignmax   : 8;
                 varalignmin     : 0;
                 varalignmax     : 16;
                 localalignmin   : 4;
@@ -149,72 +148,9 @@ unit i_aros;
                 maxCrecordalign : 16
               );
             first_parm_offset : 16;
-            stacksize    : 1*1024*1024;
+            stacksize    : 8*1024*1024;
             stackalign   : 16; { fix me: this is a wild guess for now (KB) }
             abi : abi_default;
-            llvmdatalayout : 'todo';
-          );
-       system_arm_aros_info : tsysteminfo =
-          (
-            system       : system_arm_aros;
-            name         : 'AROS for ARM';
-            shortname    : 'AROS';
-            flags        : [tf_files_case_aware, tf_smartlink_sections, tf_has_winlike_resources];
-            cpu          : cpu_arm;
-            unit_env     : 'AROSUNITS';
-            extradefines : 'HASAMIGA;AROS_BINCOMPAT;AROS_ABIv0';
-            exeext       : '';
-            defext       : '.def';
-            scriptext    : '.sh';
-            smartext     : '.sl';
-            unitext      : '.ppu';
-            unitlibext   : '.ppl';
-            asmext       : '.s';
-            objext       : '.o';
-            resext       : '.res';
-            resobjext    : '.or';
-            sharedlibext : '.library';
-            staticlibext : '.a';
-            staticlibprefix : 'libp';
-            sharedlibprefix : '';
-            sharedClibext : '.library';
-            staticClibext : '.a';
-            staticClibprefix : 'lib';
-            sharedClibprefix : '';
-            importlibprefix : 'libimp';
-            importlibext : '.a';
-            Cprefix      : '';
-            newline      : #10;
-            dirsep       : '/';
-            assem        : as_arm_elf32;
-            assemextern  : as_gas;
-            link         : ld_none;
-            linkextern   : ld_aros;
-            ar           : ar_gnu_ar;
-            res          : res_elf;
-            dbg          : dbg_stabs;
-            script       : script_amiga;
-            endian       : endian_little;
-            alignment    :
-              (
-                procalign       : 16;
-                loopalign       : 4;
-                jumpalign       : 0;
-                constalignmin   : 0;
-                constalignmax   : 16;
-                varalignmin     : 0;
-                varalignmax     : 16;
-                localalignmin   : 0;
-                localalignmax   : 4;
-                recordalignmin  : 0;
-                recordalignmax  : 16;
-                maxCrecordalign : 4
-              );
-            first_parm_offset : 8;
-            stacksize    : 262144;
-            stackalign   : 4;
-            abi : abi_default;
-            llvmdatalayout : 'todo';
           );
 
   implementation
@@ -230,10 +166,4 @@ initialization
     set_source_info(system_x86_64_aros_info);
   {$endif AROS}
 {$endif CPUX86_64}
-{$ifdef CPUARM}
-  {$ifdef AROS}
-    set_source_info(system_arm_aros_info);
-  {$endif AROS}
-{$endif CPUX86_64}
-
 end.

@@ -33,7 +33,7 @@ implementation
 {$endif}
 
 {$ifdef netbsd}
-  {$ifndef DISABLE_ICONV_LIBC}
+  {$ifdef TEST_ICONV_LIBC}
     {$define iconv_is_in_libc}
   {$endif}
 {$endif}
@@ -230,12 +230,12 @@ procedure InitThread;
 var
   transliterate: cint;
   iconvindex: longint;
-{$if not(defined(darwin) and (defined(cpuarm) or defined(cpuaarch64))) and not defined(iphonesim)}
+{$if not(defined(darwin) and defined(cpuarm)) and not defined(iphonesim)}
   iconvname: rawbytestring;
 {$endif}
 begin
   current_DefaultSystemCodePage:=DefaultSystemCodePage;
-{$if not(defined(darwin) and (defined(cpuarm) or defined(cpuaarch64))) and not defined(iphonesim)}
+{$if not(defined(darwin) and defined(cpuarm)) and not defined(iphonesim)}
   iconvindex:=GetCodepageData(DefaultSystemCodePage);
   if iconvindex<>-1 then
     iconvname:=UnixCpMap[iconvindex].name

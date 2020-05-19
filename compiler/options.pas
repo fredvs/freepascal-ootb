@@ -26,7 +26,7 @@ unit options;
 interface
 
 uses
-  cfileutl,cclasses,
+  cfileutl, 
   globtype,globals,verbose,systems,cpuinfo,comprsrc;
 
 Type
@@ -36,7 +36,6 @@ Type
     NoPressEnter,
     FPCHelpLines,
     LogoWritten,
-    ABISetExplicitly,
     FPUSetExplicitly,
     CPUSetExplicitly,
     OptCPUSetExplicitly: boolean;
@@ -48,16 +47,8 @@ Type
     ParaUnitPath,
     ParaObjectPath,
     ParaLibraryPath,
-    ParaFrameworkPath,
-    parapackagepath : TSearchPathList;
-    paranamespaces : TCmdStrList;
+    ParaFrameworkPath : TSearchPathList;
     ParaAlignment   : TAlignmentInfo;
-    parapackages : tfphashobjectlist;
-    paratarget        : tsystem;
-    paratargetasm     : tasm;
-    paratargetdbg     : tdbg;
-    LinkTypeSetExplicitly : boolean;
-    LinkerSetExplicitly : boolean;
     Constructor Create;
     Destructor Destroy;override;
     procedure WriteLogo;
@@ -78,10 +69,8 @@ Type
     procedure ForceStaticLinking;
    protected
     MacVersionSet: boolean;
-    processorstr: TCmdStr;
     function ParseMacVersionMin(out minstr, emptystr: string; const compvarname, value: string; ios: boolean): boolean;
     procedure MaybeSetDefaultMacVersionMacro;
-    procedure VerifyTargetProcessor;
   end;
 
   TOptionClass=class of toption;
@@ -102,17 +91,11 @@ uses
   comphook,
   symtable,scanner,rabase,
   symconst,
-{$ifdef llvm}
-  { override supported optimizer transformations at the compiler level }
-  llvminfo,
-{$endif llvm}
   dirparse,
-  pkgutil,
   i_bsd;
 
 const
   page_size = 24;
-  page_width = 80;
 
 var
   option     : toption;
@@ -137,8 +120,8 @@ const
                         + [system_i386_netbsd]
                         + [system_i386_wdosx];
 
-  suppported_targets_x_smallr = systems_linux + systems_solaris + systems_android
-                             + [system_i386_haiku,system_x86_64_haiku]
+  suppported_targets_x_smallr = systems_linux + systems_solaris
+                             + [system_i386_haiku]
                              + [system_i386_beos]
                              + [system_m68k_amiga];
 
@@ -190,13 +173,11 @@ end;
 
 procedure Toption.WriteLogo;
 var
-  msg : TMsgStr;
   p : pchar;
 begin
   if not LogoWritten then
     begin
-      msg:=MessageStr(option_logo);
-      p:=pchar(msg);
+      p:=MessagePchar(option_logo);
       while assigned(p) do
         Comment(V_Normal,GetMsgLine(p));
       LogoWritten:= true;
@@ -206,7 +187,6 @@ end;
 
 procedure Toption.WriteInfo (More: string);
 var
-  msg_str: TMsgStr;
   p : pchar;
   hs,hs1,hs3,s : TCmdStr;
   J: longint;
@@ -225,7 +205,7 @@ const
   procedure SplitLine (var OrigString: TCmdStr; const Placeholder: TCmdStr;
                                                  var RemainderString: TCmdStr);
   var
-    I: longint;
+    I, L: longint;
     HS2: TCmdStr;
   begin
     RemainderString := '';
@@ -553,8 +533,7 @@ const
 begin
   if More = '' then
    begin
-    msg_str:=MessageStr(option_info);
-    p:=pchar(msg_str);
+    p:=MessagePchar(option_info);
     while assigned(p) do
      begin
       s:=GetMsgLine(p);
@@ -624,15 +603,12 @@ var
   lastident,
   j,outline,
   ident,
-  HelpLineHeight,
   lines : longint;
   show  : boolean;
   opt   : string[32];
   input,
-  HelpLine,
   s     : string;
   p     : pchar;
-  msg_str: TMsgStr;
 begin
   WriteLogo;
   Lines:=4;
@@ -641,8 +617,7 @@ begin
   else
    Message1(option_usage,FixFileName(system.paramstr(0)));
   lastident:=0;
-  msg_str:=MessageStr(option_help_pages);
-  p:=pchar(msg_str);
+  p:=MessagePChar(option_help_pages);
   while assigned(p) do
    begin
    { get a line and reset }
@@ -671,9 +646,6 @@ begin
 {$ifdef i8086}
       '8',
 {$endif}
-{$ifdef aarch64}
-      'a',
-{$endif}
 {$ifdef arm}
       'A',
 {$endif}
@@ -692,8 +664,8 @@ begin
 {$ifdef sparc}
       'S',
 {$endif}
-{$ifdef sparc64}
-      's',
+{$ifdef vis}
+      'I',
 {$endif}
 {$ifdef avr}
       'V',
@@ -755,13 +727,8 @@ begin
            Comment(V_Normal,'');
            inc(Lines);
          end;
-        HelpLine := PadEnd('',ident)+opt+Copy(s,j+1,255);
-        if HelpLine = '' then
-         HelpLineHeight := 1
-        else
-         HelpLineHeight := Succ (CharLength (HelpLine) div Page_Width);
       { page full ? }
-        if (lines + HelpLineHeight >= page_size - 1) then
+        if (lines >= page_size - 1) then
          begin
            if not NoPressEnter then
             begin
@@ -772,9 +739,9 @@ begin
             end;
            lines:=0;
          end;
-        Comment(V_Normal,HelpLine);
+        Comment(V_Normal,PadEnd('',ident)+opt+Copy(s,j+1,255));
         LastIdent:=Ident;
-        Inc (Lines, HelpLineHeight);
+        inc(Lines);
       end;
    end;
   StopOptions(0);
@@ -928,21 +895,14 @@ begin
   if MacVersionSet then
     exit;
   { check for deployment target set via environment variable }
-  if not(target_info.system in [system_i386_iphonesim,system_arm_darwin,system_aarch64_darwin,system_x86_64_iphonesim]) then
+  if not(target_info.system in [system_i386_iphonesim,system_arm_darwin]) then
     begin
       envstr:=GetEnvironmentVariable('MACOSX_DEPLOYMENT_TARGET');
       if envstr<>'' then
         if not ParseMacVersionMin(MacOSXVersionMin,iPhoneOSVersionMin,'MAC_OS_X_VERSION_MIN_REQUIRED',envstr,false) then
           Message1(option_invalid_macosx_deployment_target,envstr)
         else
-          begin
-{$ifdef llvm}
-             { We only support libunwind as part of libsystem, which happened in Mac OS X 10.6 }
-            if CompareVersionStrings(MacOSXVersionMin,'10.6')<=0 then
-              Message1(option_invalid_macosx_deployment_target,envstr);
-{$endif}
-            exit;
-          end;
+          exit;
     end
   else
     begin
@@ -960,16 +920,18 @@ begin
         set_system_compvar('MAC_OS_X_VERSION_MIN_REQUIRED','1030');
         MacOSXVersionMin:='10.3';
       end;
-    system_powerpc64_darwin:
+    system_powerpc64_darwin,
+    system_i386_darwin:
       begin
         set_system_compvar('MAC_OS_X_VERSION_MIN_REQUIRED','1040');
         MacOSXVersionMin:='10.4';
       end;
-    system_i386_darwin,
     system_x86_64_darwin:
       begin
-        set_system_compvar('MAC_OS_X_VERSION_MIN_REQUIRED','1080');
-        MacOSXVersionMin:='10.8';
+        { actually already works on 10.4, but it's unlikely any 10.4 system
+          with an x86-64 is still in use, so don't default to it }
+        set_system_compvar('MAC_OS_X_VERSION_MIN_REQUIRED','1050');
+        MacOSXVersionMin:='10.5';
       end;
     system_arm_darwin,
     system_i386_iphonesim:
@@ -977,26 +939,10 @@ begin
         set_system_compvar('IPHONE_OS_VERSION_MIN_REQUIRED','30000');
         iPhoneOSVersionMin:='3.0';
       end;
-    system_aarch64_darwin,
-    system_x86_64_iphonesim:
-      begin
-        set_system_compvar('IPHONE_OS_VERSION_MIN_REQUIRED','70000');
-        iPhoneOSVersionMin:='7.0';
-      end
     else
       internalerror(2012031001);
   end;
 end;
-
-procedure TOption.VerifyTargetProcessor;
-  begin
-    { no custom target processor specified -> ok }
-    if processorstr='' then
-      exit;
-    { custom target processor specified -> verify it's the one we support }
-    if upcase(processorstr)<>upcase(target_cpu_string) then
-      Message1(option_invalid_target_architecture,processorstr);
-  end;
 
 
 function Toption.Unsetbool(var Opts:TCmdStr; Pos: Longint; const FullPara: TCmdStr; RequireBoolPara: boolean):boolean;
@@ -1030,17 +976,15 @@ begin
   if opt='' then
    exit;
 
-  { only parse define,undef,target,verbosity,link etc options the firsttime
-    -Us must now also be first-passed to avoid rejection of -Sf options
-    earlier in command line }
+  { only parse define,undef,target,verbosity,link etc options the firsttime }
   if firstpass and
      not(
          (opt[1]='-') and
          (
-          ((length(opt)>1) and (opt[2] in ['i','d','v','T','u','n','X','l','U'])) or
+          ((length(opt)>1) and (opt[2] in ['i','d','v','T','u','n','X','l'])) or
           ((length(opt)>3) and (opt[2]='F') and (opt[3]='e')) or
           ((length(opt)>3) and (opt[2]='C') and (opt[3]='p')) or
-          ((length(opt)>3) and (opt[2]='W') and (opt[3] in ['m','p']))
+          ((length(opt)>3) and (opt[2]='W') and (opt[3]='m'))
          )
         ) then
     exit;
@@ -1073,16 +1017,6 @@ begin
                while j<=length(more) do
                 begin
                   case more[j] of
-                    '5' :
-                      if target_info.system in systems_all_windows+systems_nativent-[system_i8086_win16] then
-                        begin
-                          if UnsetBool(More, j, opt, false) then
-                            exclude(init_settings.globalswitches,cs_asm_pre_binutils_2_25)
-                          else
-                            include(init_settings.globalswitches,cs_asm_pre_binutils_2_25);
-                        end
-                      else
-                        IllegalPara(opt);
                     'l' :
                       include(init_settings.globalswitches,cs_asm_source);
                     'r' :
@@ -1164,7 +1098,6 @@ begin
                         s:=upper(copy(more,j+1,length(more)-j));
                         if not(SetAbiType(s,target_info.abi)) then
                           IllegalPara(opt);
-                        ABISetExplicitly:=true;
                         break;
                       end;
 
@@ -1220,29 +1153,9 @@ begin
                       end;
                     'h' :
                       begin
-                         l:=pos(',',copy(more,j+1,length(more)-j));
-                         if l=0 then
-                           l:=length(more)-j+1;
-                         val(copy(more,j+1,l-1),heapsize,code);
-                         if (code<>0)
-{$ifdef AVR}
-                         or (heapsize<32)
-{$else AVR}
-                         or (heapsize<1024)
-{$endif AVR}
-                         then
-                           IllegalPara(opt)
-                         else if l<=length(more)-j then
-                           begin
-                             val(copy(more,j+l+1,length(more)),maxheapsize,code);
-                             if code<>0 then
-                               IllegalPara(opt)
-                             else if (maxheapsize<heapsize) then
-                               begin
-                                 message(scan_w_heapmax_lessthan_heapmin);
-                                 maxheapsize:=heapsize;
-                               end;
-                           end;
+                         val(copy(more,j+1,length(more)-j),heapsize,code);
+                         if (code<>0) or (heapsize<1024) then
+                           IllegalPara(opt);
                          break;
                       end;
                     'i' :
@@ -1417,12 +1330,7 @@ begin
                    StopOptions(1);
                  end;
                if l>0 then
-                 begin
-                   if cs_support_macro in init_settings.moduleswitches then
-                     set_system_macro(hs,Copy(more,l+2,255))
-                   else
-                     set_system_compvar(hs,Copy(more,l+2,255));
-                 end
+                 set_system_compvar(hs,Copy(more,l+2,255))
                else
                  def_system_macro(hs);
              end;
@@ -1580,9 +1488,9 @@ begin
                  'l' :
                    begin
                      if ispara then
-                       ParaLibraryPath.AddLibraryPath(sysrootpath,More,false)
+                       ParaLibraryPath.AddPath(sysrootpath,More,false)
                      else
-                       LibrarySearchPath.AddLibraryPath(sysrootpath,More,true)
+                       LibrarySearchPath.AddPath(sysrootpath,More,true);
                    end;
                  'L' :
                    begin
@@ -1591,33 +1499,12 @@ begin
                      else
                        IllegalPara(opt);
                    end;
-                 'N' :
-                   begin
-                     if more<>'' then
-                       paranamespaces.insert(more)
-                     else
-                       illegalpara(opt);
-                   end;
                  'o' :
                    begin
                      if ispara then
                        ParaObjectPath.AddPath(More,false)
                      else
                        ObjectSearchPath.AddPath(More,true);
-                   end;
-                 'P' :
-                   begin
-                     if ispara then
-                       parapackages.add(more,nil)
-                     else
-                       add_package(more,true,true);
-                   end;
-                 'p' :
-                   begin
-                     if ispara then
-                       parapackagepath.AddPath(More,false)
-                     else
-                       packagesearchpath.AddPath(More,true);
                    end;
                  'r' :
                    Msgfilename:=More;
@@ -1682,12 +1569,7 @@ begin
                          if UnsetBool(More, j, opt, false) then
                            exclude(init_settings.localswitches,cs_checkpointer)
                          else if (target_info.system in systems_support_checkpointer) then
-                           begin
-                             if do_release then
-                               Message(option_gc_incompatible_with_release_flag)
-                             else
-                               include(init_settings.localswitches,cs_checkpointer);
-                           end
+                           include(init_settings.localswitches,cs_checkpointer)
                          else
                            UnsupportedPara('-gc');
                        end;
@@ -1704,10 +1586,6 @@ begin
                            exclude(init_settings.globalswitches,cs_use_lineinfo)
                          else
                            include(init_settings.globalswitches,cs_use_lineinfo);
-                       end;
-                     'm' :
-                       begin
-                         paratargetdbg:=dbg_codeview;
                        end;
                      'o' :
                        begin
@@ -1940,14 +1818,7 @@ begin
                  end;
              end;
 
-           'P' :
-             begin
-               { used to select the target processor with the "fpc" binary;
-                 give an error if it's not the target architecture supported by
-                 this compiler binary (will be verified after the target_info
-                 is set) }
-               processorstr:=More;
-             end;
+           'P' : ; { Ignore used by fpc.pp }
 
            'R' :
              begin
@@ -2020,19 +1891,16 @@ begin
                          end;
                        'f' :
                          begin
-                           if not(cs_compilesystem in init_settings.moduleswitches) then
-                             Message(option_features_only_for_system_unit);
                            inc(j);
                            if more[j]='-' then
                              begin
+                               features:=[];
                                if length(more)>j then
-                                 IllegalPara(opt)
-                               else
-                                 features:=[];
+                                 IllegalPara(opt);
                              end
                            else
                              begin
-                               if (HandleFeature(upper(copy(more,j,length(more)-j+1)))) then
+                               if (IncludeFeature(upper(copy(more,j,length(more)-j+1)))) then
                                  j:=length(more)
                                else
                                  IllegalPara(opt);
@@ -2053,11 +1921,6 @@ begin
                            exclude(init_settings.localswitches,cs_do_inline)
                          else
                            include(init_settings.localswitches,cs_do_inline);
-                       'j' :
-                         If UnsetBool(More, j, opt, false) then
-                           exclude(init_settings.localswitches,cs_typed_const_writable)
-                         else
-                           include(init_settings.localswitches,cs_typed_const_writable);
                        'k' :
                          If UnsetBool(More, j, opt, false) then
                            exclude(init_settings.globalswitches,cs_load_fpcylix_unit)
@@ -2070,11 +1933,6 @@ begin
                            include(init_settings.moduleswitches,cs_support_macro);
                        'o' : //an alternative to -Mtp
                          SetCompileMode('TP',true);
-                       'r' :
-                         If UnsetBool(More, j, opt, false) then
-                           exclude(init_settings.globalswitches,cs_transparent_file_names)
-                         else
-                           include(init_settings.globalswitches,cs_transparent_file_names);
 {$ifdef gpc_mode}
                        'p' : //an alternative to -Mgpc
                          SetCompileMode('GPC',true);
@@ -2173,14 +2031,7 @@ begin
                          break;
                        end;
                     'r' :
-                      begin
-                        do_release:=true;
-                        if (cs_checkpointer in init_settings.localswitches) then
-                          begin
-                            Message(option_gc_incompatible_with_release_flag);
-                            exclude(init_settings.localswitches,cs_checkpointer);
-                          end;
-                      end;
+                      do_release:=true;
                     's' :
                       include(init_settings.moduleswitches,cs_compilesystem);
                     '-' :
@@ -2315,15 +2166,6 @@ begin
                         else
                           IllegalPara(opt);
                       end;
-{$if defined(i8086)}
-                    'h':
-                      begin
-                        if UnsetBool(More, j, opt, false) then
-                          exclude(init_settings.moduleswitches,cs_huge_code)
-                         else
-                          include(init_settings.moduleswitches,cs_huge_code);
-                      end;
-{$endif defined(i8086)}
                     'I':
                       begin
                         if target_info.system in systems_all_windows then
@@ -2348,7 +2190,7 @@ begin
                     'm':
                       begin
 {$if defined(i8086)}
-                        if (target_info.system in [system_i8086_msdos,system_i8086_win16,system_i8086_embedded]) then
+                        if (target_info.system in [system_i8086_msdos]) then
                           begin
                             case Upper(Copy(More,j+1,255)) of
                               'TINY':    init_settings.x86memorymodel:=mm_tiny;
@@ -2356,7 +2198,7 @@ begin
                               'MEDIUM':  init_settings.x86memorymodel:=mm_medium;
                               'COMPACT': init_settings.x86memorymodel:=mm_compact;
                               'LARGE':   init_settings.x86memorymodel:=mm_large;
-                              'HUGE':    init_settings.x86memorymodel:=mm_huge;
+                              'HUGE': IllegalPara(opt); { these are not implemented yet }
                               else
                                 IllegalPara(opt);
                             end;
@@ -2368,7 +2210,7 @@ begin
                       end;
                     'M':
                       begin
-                        if (target_info.system in (systems_darwin-[system_i386_iphonesim,system_arm_darwin,system_aarch64_darwin,system_x86_64_iphonesim])) and
+                        if (target_info.system in (systems_darwin-[system_i386_iphonesim])) and
                            ParseMacVersionMin(MacOSXVersionMin,iPhoneOSVersionMin,'MAC_OS_X_VERSION_MIN_REQUIRED',copy(More,2,255),false) then
                           begin
                             break;
@@ -2388,31 +2230,20 @@ begin
                       end;
                     'p':
                       begin
-{$push}
-{$warn 6018 off} { Unreachable code due to compile time evaluation }
                         if (target_info.system in systems_embedded) and
                                                          ControllerSupport then
                           begin
                             s:=upper(copy(more,j+1,length(more)-j));
                             if not(SetControllerType(s,init_settings.controllertype)) then
-                              IllegalPara(opt)
-                            else
-                              begin
-                                if init_settings.cputype<>embedded_controllers[init_settings.controllertype].cputype then
-                                begin
-                                  Message(scan_n_changecputype);
-                                  init_settings.cputype:=embedded_controllers[init_settings.controllertype].cputype;
-                                end;
-                              end;
+                              IllegalPara(opt);
                             break;
                           end
                         else
                           IllegalPara(opt);
-{$pop}
                       end;
                     'P':
                       begin
-                        if (target_info.system in [system_i386_iphonesim,system_arm_darwin,system_aarch64_darwin,system_x86_64_iphonesim]) and
+                        if (target_info.system in [system_i386_iphonesim,system_arm_darwin]) and
                            ParseMacVersionMin(iPhoneOSVersionMin,MacOSXVersionMin,'IPHONE_OS_VERSION_MIN_REQUIRED',copy(More,2,255),true) then
                           begin
                             break;
@@ -2434,7 +2265,7 @@ begin
                     't':
                       begin
 {$if defined(i8086)}
-                        if (target_info.system in [system_i8086_msdos,system_i8086_embedded]) then
+                        if (target_info.system in [system_i8086_msdos]) then
                           begin
                             case Upper(Copy(More,j+1,255)) of
                               'EXE': SetAppType(app_cui);
@@ -2485,18 +2316,6 @@ begin
                while j<=length(more) do
                 begin
                   case More[j] of
-                    '9' :
-                      begin
-                        if target_info.system in systems_linux then
-                          begin
-                            if UnsetBool(More, j, opt, false) then
-                              exclude(init_settings.globalswitches,cs_link_pre_binutils_2_19)
-                            else
-                              include(init_settings.globalswitches,cs_link_pre_binutils_2_19);
-                          end
-                        else
-                          IllegalPara(opt);
-                      end;
                     'c' : Cshared:=TRUE;
                     'd' : Dontlinkstdlibpath:=TRUE;
                     'e' :
@@ -2619,17 +2438,6 @@ begin
                     'S' :
                       begin
                         ForceStaticLinking;
-                      end;
-                    'V' :
-                      begin
-                        if UnsetBool(More, j, opt, false) then
-                          exclude(init_settings.globalswitches,cs_link_vlink)
-                        else
-                          begin
-                            include(init_settings.globalswitches,cs_link_vlink);
-                            include(init_settings.globalswitches,cs_link_extern);
-                          end;
-                        LinkerSetExplicitly:=true;
                       end;
                     'X' :
                       begin
@@ -2894,7 +2702,6 @@ begin
   Message1(option_using_env,envname);
   env:=GetEnvPChar(envname);
   pc:=env;
-  hs:='';
   if assigned(pc) then
    begin
      repeat
@@ -3167,25 +2974,11 @@ begin
     system_i386_nativent:
       // until these features are implemented, they are disabled in the compiler
       target_unsup_features:=[f_stackcheck];
-    system_i8086_msdos:
-      target_unsup_features:=[f_threading,f_dynlibs];
-    system_i8086_win16:
-      target_unsup_features:=[f_threading];
     system_jvm_java32,
     system_jvm_android32:
       target_unsup_features:=[f_heap,f_textio,f_consoleio,f_fileio,
          f_variants,f_objects,f_commandargs,
          f_processes,f_stackcheck,f_dynlibs,f_softfpu,f_objectivec1,f_resources];
-    system_arm_palmos,
-    system_m68k_palmos:
-      target_unsup_features:=[f_threading];
-    system_m68k_atari:
-      target_unsup_features:=[f_threading];
-    { classic amiga has dynamic libraries, but they cannot be integrated in the
-      normal dynlibs infrastructure due to architectural differences, so therefore
-      lets disable the feature. }
-    system_m68k_amiga:
-      target_unsup_features:=[f_dynlibs];
     else
       target_unsup_features:=[];
   end;
@@ -3193,14 +2986,6 @@ begin
     features:=features-target_unsup_features
   else
     features:=features+target_unsup_features;
-
-{$if defined(atari) or defined(hasamiga)}
-   { enable vlink as default linker on Atari, Amiga, and MorphOS, but not for cross compilers (for now) }
-   if (target_info.system in [system_m68k_amiga,system_m68k_atari,
-                              system_powerpc_amiga,system_powerpc_morphos]) and
-      not LinkerSetExplicitly then
-     include(init_settings.globalswitches,cs_link_vlink);
-{$endif}
 end;
 
 procedure TOption.checkoptionscompatibility;
@@ -3213,18 +2998,8 @@ begin
     end;
 {$endif i8086}
 
-{$ifndef i8086_link_intern_debuginfo}
-  if (cs_debuginfo in init_settings.moduleswitches) and
-     (target_info.system in [system_i8086_msdos,system_i8086_win16,system_i8086_embedded]) and
-     not (cs_link_extern in init_settings.globalswitches) then
-    begin
-      Message(option_debug_info_requires_external_linker);
-      include(init_settings.globalswitches,cs_link_extern);
-    end;
-{$endif i8086_link_intern_debuginfo}
-
   if (paratargetdbg in [dbg_dwarf2,dbg_dwarf3]) and
-     not(target_info.system in (systems_darwin+[system_i8086_msdos,system_i8086_embedded])) then
+     not(target_info.system in (systems_darwin+[system_i8086_msdos])) then
     begin
       { smartlink creation does not yet work with DWARF
         debug info on most targets, but it works in internal assembler }
@@ -3273,7 +3048,6 @@ begin
   LogoWritten:=false;
   NoPressEnter:=false;
   FirstPass:=false;
-  ABISetExplicitly:=false;
   FPUSetExplicitly:=false;
   CPUSetExplicitly:=false;
   OptCPUSetExplicitly:=false;
@@ -3285,16 +3059,8 @@ begin
   ParaUnitPath:=TSearchPathList.Create;
   ParaLibraryPath:=TSearchPathList.Create;
   ParaFrameworkPath:=TSearchPathList.Create;
-  parapackagepath:=TSearchPathList.Create;
-  parapackages:=TFPHashObjectList.Create;
-  paranamespaces:=TCmdStrList.Create;
   FillChar(ParaAlignment,sizeof(ParaAlignment),0);
   MacVersionSet:=false;
-  paratarget:=system_none;
-  paratargetasm:=as_none;
-  paratargetdbg:=dbg_none;
-  LinkTypeSetExplicitly:=false;
-  LinkerSetExplicitly:=false;
 end;
 
 
@@ -3306,9 +3072,6 @@ begin
   ParaUnitPath.Free;
   ParaLibraryPath.Free;
   ParaFrameworkPath.Free;
-  parapackagepath.Free;
-  ParaPackages.Free;
-  paranamespaces.free;
 end;
 
 
@@ -3346,18 +3109,19 @@ begin
      3 - configpath
      4 - system path
   }
-  if not FileExists(fn) then // current dir
+
+  if not FileExists(fn) then
     if CfgFileExists(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn) then
        foundfn:=IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn // dir of compiler
     else 
    begin
 {$ifdef Unix}
      hs:=GetEnvironmentVariable('HOME');
-     if (hs<>'') and CfgFileExists(FixPath(hs,false)+'.'+fn) then //
+     if (hs<>'') and CfgFileExists(FixPath(hs,false)+'.'+fn) then
       foundfn:=FixPath(hs,false)+'.'+fn
      else
 {$endif}
-      if CfgFileExists(configpath+fn) then // configpath
+      if CfgFileExists(configpath+fn) then
        foundfn:=configpath+fn
      else
 {$ifdef WINDOWS}
@@ -3377,279 +3141,16 @@ begin
        foundfn:='/etc/'+fn
      else
 {$endif}
-     check_configfile:=false;
+      check_configfile:=false;
    end;
 end;
 
+
 procedure read_arguments(cmd:TCmdStr);
-
-  procedure def_cpu_macros;
-    var
-      abi : tabi;
-      fputype : tfputype;
-      cputype : tcputype;
-      controller: tcontrollertype;
-      s: string;
-    begin
-      for cputype:=low(tcputype) to high(tcputype) do
-        undef_system_macro('CPU'+Cputypestr[cputype]);
-      def_system_macro('CPU'+Cputypestr[init_settings.cputype]);
-
-      for fputype:=low(tfputype) to high(tfputype) do
-        undef_system_macro('FPU'+fputypestr[fputype]);
-      def_system_macro('FPU'+fputypestr[init_settings.fputype]);
-
-{$PUSH}
-{$WARN 6018 OFF} { Unreachable code due to compile time evaluation }
-      if ControllerSupport then
-        begin
-          for controller:=low(tcontrollertype) to high(tcontrollertype) do
-            begin
-              s:=embedded_controllers[controller].controllertypestr;
-              if s<>'' then
-                undef_system_macro('FPC_MCU_'+s);
-            end;
-          s:=embedded_controllers[init_settings.controllertype].controllertypestr;
-          if s<>'' then
-            def_system_macro('FPC_MCU_'+s);
-        end;
-{$POP}
-
-      { define abi }
-      for abi:=low(tabi) to high(tabi) do
-        undef_system_macro('FPC_ABI_'+abiinfo[abi].name);
-      def_system_macro('FPC_ABI_'+abiinfo[target_info.abi].name);
-
-
-      { Define FPC_ABI_EABI in addition to FPC_ABI_EABIHF on EABI VFP hardfloat
-        systems since most code needs to behave the same on both}
-      if target_info.abi = abi_eabihf then
-        def_system_macro('FPC_ABI_EABI');
-
-      { using a case is pretty useless here (FK) }
-      { some stuff for TP compatibility }
-      {$ifdef i386}
-        def_system_macro('CPU86');
-        def_system_macro('CPU87');
-        def_system_macro('CPU386');
-      {$endif}
-
-      { new processor stuff }
-      {$ifdef i386}
-        def_system_macro('CPUI386');
-        def_system_macro('CPU32');
-        def_system_macro('CPUX86');
-        def_system_macro('FPC_HAS_TYPE_EXTENDED');
-        def_system_macro('FPC_HAS_TYPE_DOUBLE');
-        def_system_macro('FPC_HAS_TYPE_SINGLE');
-      {$endif}
-
-      {$ifdef m68k}
-        def_system_macro('CPU68');
-        def_system_macro('CPU68K');
-        def_system_macro('CPUM68K');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif}
-
-      {$ifdef powerpc}
-        def_system_macro('CPUPOWERPC');
-        def_system_macro('CPUPOWERPC32');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif}
-
-      {$ifdef POWERPC64}
-        def_system_macro('CPUPOWERPC');
-        def_system_macro('CPUPOWERPC64');
-        def_system_macro('CPU64');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif}
-
-      {$ifdef x86_64}
-        def_system_macro('CPUX86_64');
-        def_system_macro('CPUAMD64');
-        def_system_macro('CPU64');
-        def_system_macro('CPUX64');
-        { not supported for now, afaik (FK)
-         def_system_macro('FPC_HAS_TYPE_FLOAT128'); }
-      {$ifndef FPC_SUPPORT_X87_TYPES_ON_WIN64}
-        { normally, win64 doesn't support the legacy fpu }
-        if target_info.system=system_x86_64_win64 then
-          begin
-            def_system_macro('FPC_CURRENCY_IS_INT64');
-            def_system_macro('FPC_COMP_IS_INT64');
-          end;
-      {$endif FPC_SUPPORT_X87_TYPES_ON_WIN64}
-      {$endif}
-
-      {$ifdef sparc}
-        def_system_macro('CPUSPARCGEN');
-        def_system_macro('CPUSPARC');
-        def_system_macro('CPUSPARC32');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif}
-
-      {$ifdef sparc64}
-        def_system_macro('CPUSPARCGEN');
-        def_system_macro('CPUSPARC64');
-        def_system_macro('CPU64');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif}
-
-      {$ifdef arm}
-        def_system_macro('CPUARM');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif arm}
-
-      {$ifdef avr}
-        def_system_macro('CPUAVR');
-        def_system_macro('CPU16');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif avr}
-
-      {$ifdef jvm}
-        def_system_macro('CPUJVM');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif jvm}
-
-      {$ifdef mipsel}
-        def_system_macro('CPUMIPS');
-        def_system_macro('CPUMIPS32');
-        def_system_macro('CPUMIPSEL');
-        def_system_macro('CPUMIPSEL32');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_HAS_TYPE_DOUBLE');
-        def_system_macro('FPC_HAS_TYPE_SINGLE');
-        def_system_macro('FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-        def_system_macro('FPC_REQUIRES_PROPER_ALIGNMENT');
-        { On most systems, locals are accessed relative to base pointer,
-          but for MIPS cpu, they are accessed relative to stack pointer.
-          This needs adaptation for so low level routines,
-          like MethodPointerLocal and related objects unit functions. }
-        def_system_macro('FPC_LOCALS_ARE_STACK_REG_RELATIVE');
-      {$endif mipsel}
-
-      {$ifdef mipseb}
-        def_system_macro('CPUMIPS');
-        def_system_macro('CPUMIPS32');
-        def_system_macro('CPUMIPSEB');
-        def_system_macro('CPUMIPSEB32');
-        def_system_macro('CPU32');
-        def_system_macro('FPC_HAS_TYPE_DOUBLE');
-        def_system_macro('FPC_HAS_TYPE_SINGLE');
-        def_system_macro('FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-        def_system_macro('FPC_REQUIRES_PROPER_ALIGNMENT');
-        { See comment above for mipsel }
-        def_system_macro('FPC_LOCALS_ARE_STACK_REG_RELATIVE');
-      {$endif}
-
-      {$ifdef i8086}
-        def_system_macro('CPU86');  { Borland compatibility }
-        def_system_macro('CPU87');  { Borland compatibility }
-        def_system_macro('CPUI8086');
-        def_system_macro('CPU16');
-        def_system_macro('FPC_HAS_TYPE_EXTENDED');
-        def_system_macro('FPC_HAS_TYPE_DOUBLE');
-        def_system_macro('FPC_HAS_TYPE_SINGLE');
-        case init_settings.x86memorymodel of
-          mm_tiny:    def_system_macro('FPC_MM_TINY');
-          mm_small:   def_system_macro('FPC_MM_SMALL');
-          mm_medium:  def_system_macro('FPC_MM_MEDIUM');
-          mm_compact: def_system_macro('FPC_MM_COMPACT');
-          mm_large:   def_system_macro('FPC_MM_LARGE');
-          mm_huge:    def_system_macro('FPC_MM_HUGE');
-        end;
-      {$endif i8086}
-
-      {$ifdef aarch64}
-        def_system_macro('CPUAARCH64');
-        def_system_macro('CPU64');
-        def_system_macro('FPC_CURRENCY_IS_INT64');
-        def_system_macro('FPC_COMP_IS_INT64');
-      {$endif aarch64}
-
-      {$if defined(cpu8bitalu)}
-        def_system_macro('CPUINT8');
-      {$elseif defined(cpu16bitalu)}
-        def_system_macro('CPUINT16');
-      {$elseif defined(cpu32bitalu)}
-        def_system_macro('CPUINT32');
-      {$elseif defined(cpu64bitalu)}
-        def_system_macro('CPUINT64');
-      {$endif defined(cpu64bitalu)}
-
-      {$if defined(avr)}
-        def_system_macro('FPC_HAS_INTERNAL_ABS_SHORTINT');
-      {$endif}
-      {$if defined(i8086) or defined(avr)}
-        def_system_macro('FPC_HAS_INTERNAL_ABS_SMALLINT');
-      {$endif i8086 or avr}
-      { abs(long) is handled internally on all CPUs }
-        def_system_macro('FPC_HAS_INTERNAL_ABS_LONG');
-      {$if defined(i8086) or defined(i386) or defined(x86_64) or defined(powerpc64) or defined(aarch64)}
-        def_system_macro('FPC_HAS_INTERNAL_ABS_INT64');
-      {$endif i8086 or i386 or x86_64 or powerpc64 or aarch64}
-
-        def_system_macro('FPC_HAS_UNICODESTRING');
-        def_system_macro('FPC_RTTI_PACKSET1');
-        def_system_macro('FPC_HAS_CPSTRING');
-      {$ifdef x86_64}
-        def_system_macro('FPC_HAS_RIP_RELATIVE');
-      {$endif x86_64}
-        def_system_macro('FPC_HAS_CEXTENDED');
-        def_system_macro('FPC_HAS_RESSTRINITS');
-
-      { these cpus have an inline rol/ror implementaion }
-      {$ifdef cpurox}
-      {$ifdef m68k}
-        if CPUM68K_HAS_ROLROR in cpu_capabilities[init_settings.cputype] then
-          def_system_macro('FPC_HAS_INTERNAL_ROX');
-      {$else}
-        def_system_macro('FPC_HAS_INTERNAL_ROX');
-      {$endif}
-      {$endif}
-
-      {$ifdef powerpc64}
-        def_system_macro('FPC_HAS_LWSYNC');
-      {$endif}
-
-      { currently, all supported CPUs have an internal sar implementation }
-        def_system_macro('FPC_HAS_INTERNAL_SAR');
-      {$ifdef SUPPORT_GET_FRAME}
-        def_system_macro('INTERNAL_BACKTRACE');
-      {$endif SUPPORT_GET_FRAME}
-        def_system_macro('STR_CONCAT_PROCS');
-      {$warnings off}
-        if pocall_default = pocall_register then
-          def_system_macro('REGCALL');
-      {$warnings on}
-    end;
-
 var
   env: ansistring;
   i : tfeature;
-  j : longint;
   abi : tabi;
-  tmplist : TCmdStrList;
-  cmditem,
-  tmpcmditem : TCmdStrListItem;
-  cmdstr : TCmdStr;
 {$if defined(cpucapabilities)}
   cpuflag : tcpuflags;
   hs : string;
@@ -3704,49 +3205,232 @@ begin
   def_system_macro('VER'+version_nr+'_'+release_nr+'_'+patch_nr);
 
 { Temporary defines, until things settle down }
+  def_system_macro('RESSTRSECTIONS');
+  def_system_macro('FPC_HASFIXED64BITVARIANT');
+  def_system_macro('FPC_HASINTERNALOLEVARIANT2VARIANTCAST');
+  def_system_macro('FPC_HAS_VARSETS');
+  def_system_macro('FPC_HAS_VALGRINDBOOL');
+  def_system_macro('FPC_HAS_STR_CURRENCY');
+  def_system_macro('FPC_REAL2REAL_FIXED');
+  def_system_macro('FPC_STRTOCHARARRAYPROC');
+  def_system_macro('FPC_STRTOSHORTSTRINGPROC');
+  def_system_macro('FPC_OBJFPC_EXTENDED_IF');
   def_system_macro('FPC_HAS_OPERATOR_ENUMERATOR');
   def_system_macro('FPC_HAS_CONSTREF');
   def_system_macro('FPC_STATICRIPFIXED');
   def_system_macro('FPC_VARIANTCOPY_FIXED');
   def_system_macro('FPC_DYNARRAYCOPY_FIXED');
+
+{ abs(long) is handled internally on all CPUs }
+  def_system_macro('FPC_HAS_INTERNAL_ABS_LONG');
+{$if defined(x86_64) or defined(powerpc64)}
+  def_system_macro('FPC_HAS_INTERNAL_ABS_INT64');
+{$endif x86_64 or powerpc64}
+
+  def_system_macro('FPC_HAS_UNICODESTRING');
+  def_system_macro('FPC_RTTI_PACKSET1');
+  def_system_macro('FPC_HAS_CPSTRING');
+{$ifdef x86_64}
+  def_system_macro('FPC_HAS_RIP_RELATIVE');
+{$endif x86_64}
+  def_system_macro('FPC_HAS_CEXTENDED');
+  def_system_macro('FPC_HAS_RESSTRINITS');
+
+{ these cpus have an inline rol/ror implementaion }
+{$ifdef cpurox}
+  def_system_macro('FPC_HAS_INTERNAL_ROX');
+{$endif}
+
+{ these cpus have an inline sar implementaion }
+{ currently, all supported CPUs have an internal sar implementation }
+{ $if defined(x86) or defined(arm) or defined(powerpc) or defined(powerpc64) or defined(sparc) or defined(mips)}
+  def_system_macro('FPC_HAS_INTERNAL_SAR');
+{ $endif}
+
+{$ifdef powerpc64}
+  def_system_macro('FPC_HAS_LWSYNC');
+{$endif}
   def_system_macro('FPC_HAS_MEMBAR');
   def_system_macro('FPC_SETBASE_USED');
 
+{$ifdef SUPPORT_GET_FRAME}
+  def_system_macro('INTERNAL_BACKTRACE');
+{$endif SUPPORT_GET_FRAME}
+  def_system_macro('STR_CONCAT_PROCS');
+{$warnings off}
+  if pocall_default = pocall_register then
+    def_system_macro('REGCALL');
+{$warnings on}
   { don't remove this, it's also for fpdoc necessary (FK) }
   def_system_macro('FPC_HAS_FEATURE_SUPPORT');
+{ using a case is pretty useless here (FK) }
+{ some stuff for TP compatibility }
+{$ifdef i386}
+  def_system_macro('CPU86');
+  def_system_macro('CPU87');
+  def_system_macro('CPU386');
+{$endif}
 
-  { make cpu makros available when reading the config files the second time }
-  def_cpu_macros;
+{ new processor stuff }
+{$ifdef i386}
+  def_system_macro('CPUI386');
+  def_system_macro('CPU32');
+  def_system_macro('CPUX86');
+  def_system_macro('FPC_HAS_TYPE_EXTENDED');
+  def_system_macro('FPC_HAS_TYPE_DOUBLE');
+  def_system_macro('FPC_HAS_TYPE_SINGLE');
+{$endif}
+{$ifdef m68k}
+  def_system_macro('CPU68');
+  def_system_macro('CPU68K');
+  def_system_macro('CPUM68K');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif}
+{$ifdef ALPHA}
+  def_system_macro('CPUALPHA');
+  def_system_macro('CPU64');
+{$endif}
+{$ifdef powerpc}
+  def_system_macro('CPUPOWERPC');
+  def_system_macro('CPUPOWERPC32');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif}
+{$ifdef POWERPC64}
+  def_system_macro('CPUPOWERPC');
+  def_system_macro('CPUPOWERPC64');
+  def_system_macro('CPU64');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif}
+{$ifdef iA64}
+  def_system_macro('CPUIA64');
+  def_system_macro('CPU64');
+{$endif}
+{$ifdef x86_64}
+  def_system_macro('CPUX86_64');
+  def_system_macro('CPUAMD64');
+  def_system_macro('CPU64');
+  def_system_macro('CPUX64');
+  { not supported for now, afaik (FK)
+   def_system_macro('FPC_HAS_TYPE_FLOAT128'); }
+{$ifndef FPC_SUPPORT_X87_TYPES_ON_WIN64}
+  { normally, win64 doesn't support the legacy fpu }
+  if target_info.system=system_x86_64_win64 then
+    begin
+      def_system_macro('FPC_CURRENCY_IS_INT64');
+      def_system_macro('FPC_COMP_IS_INT64');
+    end;
+{$endif FPC_SUPPORT_X87_TYPES_ON_WIN64}
+{$endif}
+{$ifdef sparc}
+  def_system_macro('CPUSPARC');
+  def_system_macro('CPUSPARC32');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif}
+{$ifdef vis}
+  def_system_macro('CPUVIS');
+  def_system_macro('CPU32');
+{$endif}
+{$ifdef arm}
+  def_system_macro('CPUARM');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif arm}
+{$ifdef avr}
+  def_system_macro('CPUAVR');
+  def_system_macro('CPU16');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif avr}
+{$ifdef jvm}
+  def_system_macro('CPUJVM');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+{$endif jvm}
+
+{$ifdef mipsel}
+  def_system_macro('CPUMIPS');
+  def_system_macro('CPUMIPS32');
+  def_system_macro('CPUMIPSEL');
+  def_system_macro('CPUMIPSEL32');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_HAS_TYPE_DOUBLE');
+  def_system_macro('FPC_HAS_TYPE_SINGLE');
+  def_system_macro('FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+  def_system_macro('FPC_REQUIRES_PROPER_ALIGNMENT');
+  { On most systems, locals are accessed relative to base pointer,
+    but for MIPS cpu, they are accessed relative to stack pointer.
+    This needs adaptation for so low level routines,
+    like MethodPointerLocal and related objects unit functions. }
+  def_system_macro('FPC_LOCALS_ARE_STACK_REG_RELATIVE');
+{$endif mipsel}
+
+{$ifdef mipseb}
+  def_system_macro('CPUMIPS');
+  def_system_macro('CPUMIPS32');
+  def_system_macro('CPUMIPSEB');
+  def_system_macro('CPUMIPSEB32');
+  def_system_macro('CPU32');
+  def_system_macro('FPC_HAS_TYPE_DOUBLE');
+  def_system_macro('FPC_HAS_TYPE_SINGLE');
+  def_system_macro('FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE');
+  def_system_macro('FPC_CURRENCY_IS_INT64');
+  def_system_macro('FPC_COMP_IS_INT64');
+  def_system_macro('FPC_REQUIRES_PROPER_ALIGNMENT');
+  { See comment above for mipsel }
+  def_system_macro('FPC_LOCALS_ARE_STACK_REG_RELATIVE');
+{$endif}
+
+{$ifdef i8086}
+  def_system_macro('CPU86');  { Borland compatibility }
+  def_system_macro('CPU87');  { Borland compatibility }
+  def_system_macro('CPUI8086');
+  def_system_macro('CPU16');
+  def_system_macro('FPC_HAS_TYPE_EXTENDED');
+  def_system_macro('FPC_HAS_TYPE_DOUBLE');
+  def_system_macro('FPC_HAS_TYPE_SINGLE');
+  case init_settings.x86memorymodel of
+    mm_tiny:    def_system_macro('FPC_MM_TINY');
+    mm_small:   def_system_macro('FPC_MM_SMALL');
+    mm_medium:  def_system_macro('FPC_MM_MEDIUM');
+    mm_compact: def_system_macro('FPC_MM_COMPACT');
+    mm_large:   def_system_macro('FPC_MM_LARGE');
+    mm_huge:    def_system_macro('FPC_MM_HUGE');
+  end;
+{$endif i8086}
 
   if tf_cld in target_info.flags then
     if not UpdateTargetSwitchStr('CLD', init_settings.targetswitches, true) then
       InternalError(2013092801);
-  if tf_x86_far_procs_push_odd_bp in target_info.flags then
-    if not UpdateTargetSwitchStr('FARPROCSPUSHODDBP', init_settings.targetswitches, true) then
-      InternalError(2013092801);
 
-  { Use standard Android NDK prefixes when cross-compiling }
-  if (source_info.system<>target_info.system) and (target_info.system in systems_android) then
+  { Set up a default prefix for binutils when cross-compiling }
+  if source_info.system<>target_info.system then
     case target_info.system of
+      { Use standard Android NDK prefixes }
       system_arm_android:
         utilsprefix:='arm-linux-androideabi-';
       system_i386_android:
         utilsprefix:='i686-linux-android-';
-      else
-        utilsprefix:=target_cpu_string + '-linux-android-';
+      system_mipsel_android:
+        utilsprefix:='mipsel-linux-android-';
     end;
 
   { Set up default value for the heap }
   if target_info.system in systems_embedded then
     begin
       case target_info.system of
-{$ifdef AVR}
         system_avr_embedded:
-          if init_settings.controllertype=ct_avrsim then
-            heapsize:=8192
-          else
-            heapsize:=128;
-{$endif AVR}
+          heapsize:=128;
         system_arm_embedded:
           heapsize:=256;
         system_mipsel_embedded:
@@ -3789,10 +3473,6 @@ begin
   }
   option.checkoptionscompatibility;
 
-  { uses the CPUXXX-defines and target_info to determine whether the selected
-    target processor, if any, is supported }
-  Option.VerifyTargetProcessor;
-
   { Stop if errors in options }
   if ErrorCount>0 then
    StopOptions(1);
@@ -3810,6 +3490,16 @@ begin
         def_system_macro('FPC_BIG_ENDIAN');
       end;
   end;
+
+  { define abi }
+  for abi:=low(tabi) to high(tabi) do
+    undef_system_macro('FPC_ABI_'+abiinfo[abi].name);
+  def_system_macro('FPC_ABI_'+abiinfo[target_info.abi].name);
+
+  { Define FPC_ABI_EABI in addition to FPC_ABI_EABIHF on EABI VFP hardfloat
+    systems since most code needs to behave the same on both}
+  if target_info.abi = abi_eabihf then
+    def_system_macro('FPC_ABI_EABI');
 
   { Write logo }
   if option.ParaLogo then
@@ -3852,38 +3542,6 @@ begin
   IncludeSearchPath.AddList(option.ParaIncludePath,true);
   LibrarySearchPath.AddList(option.ParaLibraryPath,true);
   FrameworkSearchPath.AddList(option.ParaFrameworkPath,true);
-  packagesearchpath.addlist(option.parapackagepath,true);
-  for j:=0 to option.parapackages.count-1 do
-    add_package(option.parapackages.NameOfIndex(j),true,true);
-
-  { add default namespaces }
-  tmplist:=TCmdStrList.Create;
-  cmditem:=TCmdStrListItem(option.paranamespaces.First);
-  while assigned(cmditem) do
-    begin
-      { use a temporary list cause if ";" are involved we need to reverse the
-        order due to how TCmdStrList behaves }
-      cmdstr:=cmditem.str;
-      repeat
-        j:=Pos(';',cmdstr);
-        if j>0 then
-          begin
-            tmplist.insert(copy(cmdstr,1,j-1));
-            delete(cmdstr,1,j);
-          end
-        else
-          tmplist.insert(cmdstr);
-      until j=0;
-      tmpcmditem:=TCmdStrListItem(tmplist.First);
-      while assigned(tmpcmditem) do
-        begin
-          namespacelist.insert(tmpcmditem.Str);
-          tmpcmditem:=TCmdStrListItem(tmpcmditem.Next);
-        end;
-      tmplist.clear;
-      cmditem:=TCmdStrListItem(cmditem.Next);
-    end;
-  tmplist.Free;
 
   { add unit environment and exepath to the unit search path }
   if inputfilepath<>'' then
@@ -3940,42 +3598,30 @@ begin
   objectsearchpath.AddList(unitsearchpath,false);
   librarysearchpath.AddList(unitsearchpath,false);
 
-{$ifdef llvm}
-  { force llvm assembler writer }
-  option.paratargetasm:=as_llvm;
-{$endif llvm}
   { maybe override assembler }
-  if (option.paratargetasm<>as_none) then
+  if (paratargetasm<>as_none) then
     begin
-      if not set_target_asm(option.paratargetasm) then
+      if not set_target_asm(paratargetasm) then
         begin
-          Message2(option_incompatible_asm,asminfos[option.paratargetasm]^.idtxt,target_info.name);
+          Message2(option_incompatible_asm,asminfos[paratargetasm]^.idtxt,target_info.name);
           set_target_asm(target_info.assemextern);
           Message1(option_asm_forced,target_asm.idtxt);
         end;
-      if (af_no_debug in asminfos[option.paratargetasm]^.flags) and
-         (option.paratargetdbg<>dbg_none) then
+      if (af_no_debug in asminfos[paratargetasm]^.flags) and
+         (paratargetdbg<>dbg_none) then
         begin
           Message1(option_confict_asm_debug,
-            asminfos[option.paratargetasm]^.idtxt);
-          option.paratargetdbg:=dbg_none;
+            asminfos[paratargetasm]^.idtxt);
+          paratargetdbg:=dbg_none;
           exclude(init_settings.moduleswitches,cs_debuginfo);
         end;
-      { Some assemblers, like clang, do not support
-        stabs debugging format, switch to dwardé in that case }
-      if (af_no_stabs in asminfos[option.paratargetasm]^.flags) and
-         (option.paratargetdbg=dbg_stabs) then
-        begin
-          option.paratargetdbg:=dbg_dwarf2;
-        end;
-
     end;
   {TOptionheck a second time as we might have changed assembler just above }
   option.checkoptionscompatibility;
 
   { maybe override debug info format }
-  if (option.paratargetdbg<>dbg_none) then
-    if not set_target_dbg(option.paratargetdbg) then
+  if (paratargetdbg<>dbg_none) then
+    if not set_target_dbg(paratargetdbg) then
       Message(option_w_unsupported_debug_format);
 
   { switch assembler if it's binary and we got -a on the cmdline }
@@ -3984,9 +3630,6 @@ begin
    begin
      Message(option_switch_bin_to_src_assembler);
      set_target_asm(target_info.assemextern);
-     { At least i8086 needs that for nasm and -CX
-       which is incompatible with internal linker }
-     option.checkoptionscompatibility;
    end;
 
   { Force use of external linker if there is no
@@ -3994,9 +3637,7 @@ begin
   if not(cs_link_extern in init_settings.globalswitches) and
      ((target_info.link=ld_none) or
       (cs_link_nolink in init_settings.globalswitches)) then
-    begin
-      include(init_settings.globalswitches,cs_link_extern);
-    end;
+    include(init_settings.globalswitches,cs_link_extern);
 
   { turn off stripping if compiling with debuginfo or profile }
   if (
@@ -4013,7 +3654,7 @@ begin
     if fpu type not explicitly set }
   if not(option.FPUSetExplicitly) and
      ((target_info.system in [system_arm_wince,system_arm_gba,
-         system_m68k_amiga,system_m68k_atari,
+         system_m68k_amiga,system_m68k_atari,system_m68k_linux,
          system_arm_nds,system_arm_embedded])
 {$ifdef arm}
       or (target_info.abi=abi_eabi)
@@ -4031,35 +3672,36 @@ begin
 {$endif cpufpemu}
     end;
 
-{$ifdef i386}
-  case target_info.system of
-    system_i386_android:
-      begin
-        { set default cpu type to PentiumM for Android unless specified otherwise }
-        if not option.CPUSetExplicitly then
-          init_settings.cputype:=cpu_PentiumM;
-        if not option.OptCPUSetExplicitly then
-          init_settings.optimizecputype:=cpu_PentiumM;
-        { set default fpu type to SSSE3 for Android unless specified otherwise }
-        if not option.FPUSetExplicitly then
-          init_settings.fputype:=fpu_ssse3;
-      end;
-  end;
-{$endif i386}
+{$ifdef arm}
+  if target_info.abi = abi_eabihf then
+    begin
+      if not(option.FPUSetExplicitly) then
+        begin
+          init_settings.fputype:=fpu_vfpv3_d16
+        end
+      else
+        begin
+          if not (init_settings.fputype in [fpu_vfpv2,fpu_vfpv3,fpu_vfpv3_d16]) then
+            begin
+              Message(option_illegal_fpu_eabihf);
+              StopOptions(1);
+            end;
+        end;
+    end;
+{$endif arm}
 
 {$ifdef arm}
   case target_info.system of
     system_arm_darwin:
       begin
-        { set default cpu type to ARMv7 for Darwin unless specified otherwise, and fpu
-          to VFPv3 (that's what all 32 bit ARM iOS devices use nowadays)
-        }
+        { set default cpu type to ARMv6 for Darwin unless specified otherwise, and fpu
+          to VFPv2 }
         if not option.CPUSetExplicitly then
-          init_settings.cputype:=cpu_armv7;
+          init_settings.cputype:=cpu_armv6;
         if not option.OptCPUSetExplicitly then
-          init_settings.optimizecputype:=cpu_armv7;
+          init_settings.optimizecputype:=cpu_armv6;
         if not option.FPUSetExplicitly then
-          init_settings.fputype:=fpu_vfpv3;
+          init_settings.fputype:=fpu_vfpv2;
       end;
     system_arm_android:
       begin
@@ -4071,55 +3713,31 @@ begin
       end;
   end;
 
-  { ARMHF defaults }
-  if (target_info.abi = abi_eabihf) then
-    { set default cpu type to ARMv7a for ARMHF unless specified otherwise }
-    begin
-    {$ifdef CPUARMV6}
-      { if the compiler is built for armv6, then
-        inherit this setting, e.g. Raspian is armhf but
-        only armv6, this makes rebuilds of the compiler
-        easier }
-      if not option.CPUSetExplicitly then
-        init_settings.cputype:=cpu_armv6;
-      if not option.OptCPUSetExplicitly then
-        init_settings.optimizecputype:=cpu_armv6;
-    {$else CPUARMV6}
-      if not option.CPUSetExplicitly then
-        init_settings.cputype:=cpu_armv7a;
-      if not option.OptCPUSetExplicitly then
-        init_settings.optimizecputype:=cpu_armv7a;
-    {$endif CPUARMV6}
-
-      { Set FPU type }
-      if not(option.FPUSetExplicitly) then
-        begin
-          if init_settings.cputype < cpu_armv7 then
-            init_settings.fputype:=fpu_vfpv2
-          else
-            init_settings.fputype:=fpu_vfpv3_d16;
-        end
-      else
-        begin
-          if not (init_settings.fputype in [fpu_vfpv2,fpu_vfpv3,fpu_vfpv3_d16,fpu_vfpv4]) then
-            begin
-              Message(option_illegal_fpu_eabihf);
-              StopOptions(1);
-            end;
-        end;
-    end;
+{ set default cpu type to ARMv7a for ARMHF unless specified otherwise }
+if (target_info.abi = abi_eabihf) then
+  begin
+{$ifdef CPUARMV6}
+    { if the compiler is built for armv6, then
+      inherit this setting, e.g. Raspian is armhf but
+      only armv6, this makes rebuilds of the compiler
+      easier }
+    if not option.CPUSetExplicitly then
+      init_settings.cputype:=cpu_armv6;
+    if not option.OptCPUSetExplicitly then
+      init_settings.optimizecputype:=cpu_armv6;
+{$else CPUARMV6}
+    if not option.CPUSetExplicitly then
+      init_settings.cputype:=cpu_armv7a;
+    if not option.OptCPUSetExplicitly then
+      init_settings.optimizecputype:=cpu_armv7a;
+{$endif CPUARMV6}
+  end;
 
   if (init_settings.instructionset=is_thumb) and not(CPUARM_HAS_THUMB2 in cpu_capabilities[init_settings.cputype]) then
     begin
       def_system_macro('CPUTHUMB');
       if not option.FPUSetExplicitly then
         init_settings.fputype:=fpu_soft;
-{$if defined(FPC_ARMEL) or defined(FPC_ARMHF)}
-      target_info.llvmdatalayout:='e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:64:128-a0:0:32-n32-S64';
-{$else FPC_ARMAL or FPC_ARMHF}
-      if target_info.endian=endian_little then
-        target_info.llvmdatalayout:='e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32';
-{$endif FPC_ARMAL or FPC_ARMHF}
     end;
 
   if (init_settings.instructionset=is_thumb) and (CPUARM_HAS_THUMB2 in cpu_capabilities[init_settings.cputype]) then
@@ -4135,12 +3753,6 @@ begin
     end;
 {$endif jvm}
 
-{$ifdef llvm}
-  { standard extension for llvm bitcode files }
-  target_info.asmext:='.ll';
-  { don't generate dwarf cfi, llvm will do that }
-  exclude(target_info.flags,tf_needs_dwarf_cfi);
-{$endif llvm}
 {$ifdef mipsel}
   case target_info.system of
     system_mipsel_android:
@@ -4165,50 +3777,11 @@ begin
       end;
   end;
 {$endif mipsel}
-{$ifdef m68k}
-  if init_settings.cputype in cpu_coldfire then
-    def_system_macro('CPUCOLDFIRE');
-
-  case target_info.system of
-    system_m68k_linux,
-    system_m68k_netbsd:
-      begin
-        if not (option.FPUSetExplicitly) and
-           not (init_settings.cputype in cpu_coldfire) then
-          begin
-            { enable HW FPU for UNIX by default, but only for
-              original 68k, not Coldfire }
-            exclude(init_settings.moduleswitches,cs_fp_emulation);
-            init_settings.fputype:=fpu_68881;
-          end;
-      end;
-    system_m68k_palmos:
-      begin
-        if not option.CPUSetExplicitly then
-          init_settings.cputype:=cpu_mc68000;
-        if not (option.FPUSetExplicitly) then
-          begin
-            { No FPU for PalmOS by default }
-            exclude(init_settings.moduleswitches,cs_fp_emulation);
-            init_settings.fputype:=fpu_none;
-          end;
-      end;
-  end;
-{$endif m68k}
 
   { now we can define cpu and fpu type }
-  def_cpu_macros;
+  def_system_macro('CPU'+Cputypestr[init_settings.cputype]);
 
-  { Use init_settings cpu type for asm cpu type,
-    if asmcputype is cpu_none,
-    at least as long as there is no explicit
-    option to set it on command line PM }
-  if init_settings.asmcputype = cpu_none then
-    init_settings.asmcputype:=init_settings.cputype;
-
-{$ifdef llvm}
-  def_system_macro('CPULLVM');
-{$endif llvm}
+  def_system_macro('FPU'+fputypestr[init_settings.fputype]);
 
 {$if defined(cpucapabilities)}
   for cpuflag:=low(cpuflag) to high(cpuflag) do
@@ -4228,7 +3801,7 @@ begin
 {$endif}
       def_system_macro('FPC_HAS_TYPE_SINGLE');
       def_system_macro('FPC_HAS_TYPE_DOUBLE');
-{$if not defined(i386) and not defined(x86_64) and not defined(i8086) and not defined(aarch64)}
+{$if not defined(i386) and not defined(x86_64) and not defined(i8086)}
       def_system_macro('FPC_INCLUDE_SOFTWARE_INT64_TO_DOUBLE');
 {$endif}
 {$if defined(m68k)}
@@ -4255,10 +3828,10 @@ begin
       def_system_macro('FPC_USE_WIN64_SEH');
 {$endif DISABLE_WIN64_SEH}
 
-{$ifndef DISABLE_WIN32_SEH}
+{$ifdef TEST_WIN32_SEH}
     if target_info.system=system_i386_win32 then
       def_system_macro('FPC_USE_WIN32_SEH');
-{$endif not DISABLE_WIN32_SEH}
+{$endif TEST_WIN32_SEH}
 
 {$ifdef ARM}
   { define FPC_DOUBLE_HILO_SWAPPED if needed to properly handle doubles in RTL }
@@ -4268,7 +3841,7 @@ begin
 {$endif ARM}
 
 { inline bsf/bsr implementation }
-{$if not defined(llvm) and (defined(i386) or defined(x86_64) or defined(aarch64) or defined(powerpc) or defined(powerpc64))}
+{$if defined(i386) or defined(x86_64)}
   def_system_macro('FPC_HAS_INTERNAL_BSF');
   def_system_macro('FPC_HAS_INTERNAL_BSR');
 {$endif}
@@ -4296,39 +3869,13 @@ begin
     end;
 {$endif}
 
-{$if defined(powerpc64)}
-  { on sysv targets, default to elfv2 for little endian and to elfv1 for
-    big endian (unless specified otherwise). As the gcc man page says:
-    "Overriding the default ABI requires special system support and is
-     likely to fail in spectacular ways" }
-  if not option.ABISetExplicitly then
-    begin
-      if (target_info.abi=abi_powerpc_sysv) and
-         (target_info.endian=endian_little) then
-        target_info.abi:=abi_powerpc_elfv2
-      else
-        if (target_info.abi=abi_powerpc_elfv2) and
-         (target_info.endian=endian_big) then
-        target_info.abi:=abi_powerpc_sysv
-    end;
-{$endif}
-
-{$if defined(powerpc) or defined(powerpc64)}
-  { define _CALL_ELF symbol like gcc }
-  case target_info.abi of
-    abi_powerpc_sysv:
-      set_system_compvar('_CALL_ELF','1');
-    abi_powerpc_elfv2:
-      set_system_compvar('_CALL_ELF','2');
-    end;
-{$endif}
 
   { Section smartlinking conflicts with import sections on Windows }
   if GenerateImportSection and
      (target_info.system in [system_i386_win32,system_x86_64_win64]) then
     exclude(target_info.flags,tf_smartlink_sections);
 
-  if not option.LinkTypeSetExplicitly then
+  if not LinkTypeSetExplicitly then
     set_default_link_type;
 
   { Default alignment settings,
@@ -4336,16 +3883,11 @@ begin
     2. override with generic optimizer setting (little size)
     3. override with the user specified -Oa }
   UpdateAlignment(init_settings.alignment,target_info.alignment);
-  if (cs_opt_size in init_settings.optimizerswitches) then
+  if (cs_opt_size in current_settings.optimizerswitches) then
    begin
      init_settings.alignment.procalign:=1;
      init_settings.alignment.jumpalign:=1;
      init_settings.alignment.loopalign:=1;
-{$ifdef x86}
-     { constalignmax=1 keeps the executable and thus the memory foot print small but
-       all processors except x86 are really hurt by this or might even crash }
-     init_settings.alignment.constalignmax:=1;
-{$endif x86}
    end;
 
   UpdateAlignment(init_settings.alignment,option.paraalignment);
@@ -4355,49 +3897,17 @@ begin
   set_system_macro('FPC_PATCH',patch_nr);
   set_system_macro('FPC_FULLVERSION',Format('%d%.02d%.02d',[StrToInt(version_nr),StrToInt(release_nr),StrToInt(patch_nr)]));
 
-  if target_info.system in systems_indirect_entry_information then
-    def_system_macro('FPC_HAS_INDIRECT_ENTRY_INFORMATION');
-
-  if not (tf_winlikewidestring in target_info.flags) then
+  if not(target_info.system in systems_windows) then
     def_system_macro('FPC_WIDESTRING_EQUAL_UNICODESTRING');
 
-  if tf_supports_packages in target_info.flags then
-    def_system_macro('FPC_HAS_DYNAMIC_PACKAGES');
-
-  if target_info.system in systems_indirect_var_imports then
-    def_system_macro('FPC_HAS_INDIRECT_VAR_ACCESS');
-
-  if cs_compilesystem in init_settings.moduleswitches then
-    for i:=low(tfeature) to high(tfeature) do
-      if i in features then
-        def_system_macro('FPC_HAS_FEATURE_'+featurestr[i]);
-
-{$push}
-{$warn 6018 off} { Unreachable code due to compile time evaluation }
-  if ControllerSupport and (target_info.system in systems_embedded) and
-    (init_settings.controllertype<>ct_none) then
-    begin
-      with embedded_controllers[init_settings.controllertype] do
-        begin
-          set_system_macro('FPC_FLASHBASE',tostr(flashbase));
-          set_system_macro('FPC_FLASHSIZE',tostr(flashsize));
-          set_system_macro('FPC_SRAMBASE',tostr(srambase));
-          set_system_macro('FPC_SRAMSIZE',tostr(sramsize));
-          set_system_macro('FPC_EEPROMBASE',tostr(eeprombase));
-          set_system_macro('FPC_EEPROMSIZE',tostr(eepromsize));
-          set_system_macro('FPC_BOOTBASE',tostr(bootbase));
-          set_system_macro('FPC_BOOTSIZE',tostr(bootsize));
-        end;
-    end;
-{$pop}
-  { as stackalign is not part of the alignment record, we do not need to define the others alignments for symmetry yet }
-  set_system_macro('FPC_STACKALIGNMENT',tostr(target_info.stackalign));
-
+  for i:=low(tfeature) to high(tfeature) do
+    if i in features then
+      def_system_macro('FPC_HAS_FEATURE_'+featurestr[i]);
   option.free;
   Option:=nil;
 
-  clearstack_pocalls := [pocall_cdecl,pocall_cppdecl,pocall_syscall,pocall_mwpascal,pocall_sysv_abi_cdecl,pocall_ms_abi_cdecl];
-  cdecl_pocalls := [pocall_cdecl, pocall_cppdecl, pocall_mwpascal, pocall_sysv_abi_cdecl, pocall_ms_abi_cdecl];
+  clearstack_pocalls := [pocall_cdecl,pocall_cppdecl,pocall_syscall,pocall_mwpascal];
+  cdecl_pocalls := [pocall_cdecl, pocall_cppdecl, pocall_mwpascal];
   if (tf_safecall_clearstack in target_info.flags) then
     begin
       include (cdecl_pocalls, pocall_safecall);

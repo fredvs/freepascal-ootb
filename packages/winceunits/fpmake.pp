@@ -19,7 +19,7 @@ begin
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
 
-    P.Version:='3.2.0-beta';
+    P.Version:='3.0.5';
     P.OSes := [win32, wince];
 
     P.Author := 'FreePascal development team';
@@ -94,6 +94,7 @@ begin
     T:=P.Targets.AddImplicitUnit('tsp.pp', [wince]);
     T:=P.Targets.AddImplicitUnit('extapi.pp', [wince]);
     T:=P.Targets.AddImplicitUnit('imm.pp', [wince]);
+    T:=P.Targets.AddImplicitUnit('activex.pp', [wince]);
     T:=P.Targets.AddImplicitUnit('pnp.pas', [wince]);
     T:=P.Targets.AddImplicitUnit('storemgr.pas', [wince]);
 

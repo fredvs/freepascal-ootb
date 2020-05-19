@@ -89,8 +89,7 @@ unit i_gba;
             first_parm_offset : 8;
             stacksize    : 16384;
             stackalign   : 8;
-            abi : abi_eabi;
-            llvmdatalayout : 'todo';
+            abi : abi_eabi
           );
 
   implementation

@@ -120,7 +120,7 @@ end;
 Procedure TestParams;
 
 Var S : AnsiString;
-    Mem : sizeuint;
+    Mem : sizeint;
 
 begin
   Mem:=0;
@@ -317,7 +317,7 @@ Const S1 : AnsiString = 'ABC';
 
 Var I : Integer;
     S3 : AnsiString;
-    mem : sizeuint;
+    mem : sizeint;
 
 begin
  mem:=0;
@@ -362,7 +362,7 @@ Var S,T : AnsiString;
     E : Extended;
     Si : Single;
     Co : Comp;
-    TempMem:sizeuint;
+    TempMem:sizeint;
 begin
   TempMem:=0;
   DoMem(TempMem);
@@ -449,7 +449,7 @@ begin
   Writeln (S);
 end;
 
-Var GlobalStartMem,StartMem : SizeUInt;
+Var GlobalStartMem,StartMem : PtrInt;
 
 begin
   GlobalStartMem:=0;

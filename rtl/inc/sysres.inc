@@ -141,12 +141,10 @@ end;
 *****************************************************************************)
 { These functions will call the specified resource manager functions }
 
-{$ifndef Win16}
 Function HINSTANCE : TFPResourceHMODULE;
 begin
   Result:=resourcemanager.HINSTANCEFunc();
 end;
-{$endif Win16}
 
 Function EnumResourceTypes(ModuleHandle : TFPResourceHMODULE; EnumFunc : EnumResTypeProc; lParam : PtrInt) : LongBool;
 begin
@@ -163,7 +161,6 @@ begin
   Result:=resourcemanager.EnumResourceLanguagesFunc(ModuleHandle,ResourceType,ResourceName,EnumFunc,lParam);
 end;
 
-{$ifndef Win16}
 Function FindResource(ModuleHandle: TFPResourceHMODULE; ResourceName, ResourceType: PChar): TFPResourceHandle;
 begin
   Result:=resourcemanager.FindResourceFunc(ModuleHandle,ResourceName,ResourceType);
@@ -198,5 +195,4 @@ Function FreeResource(ResData: TFPResourceHGLOBAL): LongBool;
 begin
   Result:=resourcemanager.FreeResourceFunc(ResData);
 end;
-{$endif Win16}
 

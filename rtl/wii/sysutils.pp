@@ -37,8 +37,6 @@ interface
 { OS has an ansistring/single byte environment variable API }
 {$define SYSUTILS_HAS_ANSISTR_ENVVAR_IMPL}
 
-{$DEFINE executeprocuni} (* Only 1 byte version of ExecuteProcess is provided by the OS *)
-
 { Include platform independent interface part }
 {$i sysutilh.inc}
 
@@ -144,13 +142,7 @@ begin
 end;
 
 
-function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
-begin
-  Result := False;
-end;
-
-
-Function FileExists (Const FileName : RawByteString; FollowLink : Boolean) : Boolean;
+Function FileExists (Const FileName : RawByteString) : Boolean;
 Begin
   result := false;
 end;
@@ -208,7 +200,7 @@ Begin
 End;
 
 
-function DirectoryExists(const Directory: RawByteString; FollowLink : Boolean): Boolean;
+function DirectoryExists(const Directory: RawByteString): Boolean;
 begin
   result := false;
 end;
@@ -275,13 +267,13 @@ begin
   result := '';
 end;
 
-function ExecuteProcess (const Path: RawByteString; const ComLine: RawByteString;Flags:TExecuteFlags=[]): integer;
+function ExecuteProcess (const Path: AnsiString; const ComLine: AnsiString;Flags:TExecuteFlags=[]): integer;
 begin
   result := -1;
 end;
 
-function ExecuteProcess (const Path: RawByteString;
-                                  const ComLine: array of RawByteString;Flags:TExecuteFlags=[]): integer;
+function ExecuteProcess (const Path: AnsiString;
+                                  const ComLine: array of AnsiString;Flags:TExecuteFlags=[]): integer;
 begin
   result := -1;
 end;
@@ -294,6 +286,5 @@ end;
 Initialization
   InitExceptions;
 Finalization
-  FreeTerminateProcs;
   DoneExceptions;
 end.
