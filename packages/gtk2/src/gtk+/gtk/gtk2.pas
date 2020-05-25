@@ -99,7 +99,7 @@ const
       {$ifdef UseCustomLibs}
       gtklib = '';
       {$else}
-      gtklib = 'libgtk-x11-2.0.so';
+      gtklib = 'libgtk-x11-2.0.so.0';
       {$endif}
     {$endif}
   {$ENDIF}
