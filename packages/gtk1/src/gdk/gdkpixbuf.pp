@@ -79,7 +79,7 @@ Uses
   const
     libgdkpixbuf =
       {$Ifdef FPC}
-        'gdk_pixbuf_xlib';              (* Set library to gdk_pixbuf_xlib *)
+        'libgdk_pixbuf_xlib-2.0.so.0';              (* Set library to gdk_pixbuf_xlib *)
       {$Else}
         'libgdk_pixbuf_xlib.so';        (* Set library to gdk_pixbuf_xlib *)
       {$EndIf}
@@ -89,10 +89,10 @@ Uses
   const
     libgdkpixbuf =
       {$Ifdef FPC}
-        'gdk_pixbuf';           (* Set library to gdk_pixbuf *)
+        'libgdk_pixbuf-2.0.so.0';           (* Set library to gdk_pixbuf *)
 
       {$Else}
-        'libgdk_pixbuf.so';     (* Set library to gdk_pixbuf *)
+        'libgdk_pixbuf-2.0.so';     (* Set library to gdk_pixbuf *)
       {$EndIf}
 
 {$EndIf}

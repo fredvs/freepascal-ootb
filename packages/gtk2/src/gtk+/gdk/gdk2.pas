@@ -57,7 +57,7 @@ const
     {$ifdef UseCustomLibs}
     gdklib = '';
     {$else}
-    gdklib = 'libgdk-x11-2.0.so';
+    gdklib = 'libgdk-x11-2.0.so.0';
     {$endif}
   {$endif}
 {$endif}
