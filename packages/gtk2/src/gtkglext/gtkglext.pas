@@ -38,7 +38,7 @@ const
         'gtkglext-x11-1.0'
         {$linklib gtkglext-x11-1.0}
       {$else}
-        'libgtkglext-x11-1.0.so'
+        'libgtkglext-x11-1.0.so.0'
       {$endif}
     {$endif};
 
