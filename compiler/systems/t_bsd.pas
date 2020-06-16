@@ -165,10 +165,10 @@ procedure TLinkerBSD.SetDefaultInfo;
   This will also detect which libc version will be used
 }
 var
-  LdProgram: string='ld';
+  LdProgram: string='ld.bfd';
 begin
-  if target_info.system in (systems_openbsd+[system_x86_64_dragonfly]) then
-    LdProgram:='ld.bfd';
+ // if target_info.system in (systems_openbsd+[system_x86_64_dragonfly]) then
+ //   LdProgram:='ld.bfd';
   LibrarySuffix:=' ';
   LdSupportsNoResponseFile := (target_info.system in ([system_m68k_netbsd]+systems_darwin));
   with Info do
