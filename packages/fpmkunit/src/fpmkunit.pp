@@ -1249,7 +1249,7 @@ Type
     Procedure Clean(APackage : TPackage; ACPU:TCPU; AOS : TOS);
     Procedure CompileDependencies(APackage : TPackage);
     function CheckDependencies(APackage : TPackage; ErrorOnFailure: boolean): TCheckDependencyResult;
-    Function  CheckExternalPackage(Const APackageName : String; ErrorOnFailure: boolean):TPackage;
+    Function  CheckExternalPackage(Const APackageName, ForPackageName : String; ErrorOnFailure: boolean):TPackage;
     procedure CreateOutputDir(APackage: TPackage);
     // Packages commands
     Procedure Compile(Packages : TPackages);
@@ -1658,7 +1658,7 @@ ResourceString
   SErrNoDictionaryValue = 'The item "%s" in the dictionary is not a value';
   SErrNoDictionaryFunc  = 'The item "%s" in the dictionary is not a function';
   SErrInvalidFPCInfo    = 'Compiler returns invalid information, check if fpc -iV works';
-  SErrDependencyNotFound = 'Could not find unit directory for dependency package "%s"';
+  SErrDependencyNotFound = 'Could not find unit directory for dependency package "%s" required for package "%s"';
   SErrAlreadyInitialized = 'Installer can only be initialized once';
   SErrInvalidState      = 'Invalid state for target %s';
   SErrCouldNotCompile   = 'Could not compile target %s from package %s';
@@ -3174,8 +3174,8 @@ begin
     RTLeventWaitFor(FNotifyStartTask,500);
     if not FDone then
       begin
-      { synchronise with WriteBarrier in mainthread for same reason as above }
-      ReadBarrier;
+      { synchronise with ReadWriteBarrier in mainthread for same reason as above }
+      ReadWriteBarrier;
       FBuildEngine.log(vlInfo,'Compiling: '+APackage.Name);
       FCompilationOK:=false;
       try
@@ -6777,27 +6777,37 @@ begin
   // libc-linker path
   if APackage.NeedLibC then
     begin
-    if FCachedlibcPath='' then
-      begin
-      s:=GetDefaultLibGCCDir(Defaults.CPU, Defaults.OS,ErrS);
-      if s='' then
-        Log(vlWarning, SWarngcclibpath +' '+ErrS)
-      else
+      if FCachedlibcPath='' then
         begin
+          s:=GetDefaultLibGCCDir(Defaults.CPU, Defaults.OS,ErrS);
+          if s='' then
+            Log(vlWarning, SWarngcclibpath +' '+ErrS)
+          else
+            begin
 {$ifndef NO_THREADING}
-        EnterCriticalsection(FGeneralCriticalSection);
-        try
+              EnterCriticalsection(FGeneralCriticalSection);
+              { prevent FCachedlibcPath getting freed by thread 2 while thread 1 is
+                concatenating it to -Fl below }
+              try
+                if FCachedlibcPath='' then
+                  begin
 {$endif NO_THREADING}
-          FCachedlibcPath:=s;
+                    FCachedlibcPath:=s;
 {$ifndef NO_THREADING}
-        finally
-          LeaveCriticalsection(FGeneralCriticalSection);
-        end;
+                  end;
+              finally
+                LeaveCriticalsection(FGeneralCriticalSection);
+              end;
 {$endif NO_THREADING}
-        end;
-      end;
+            end;
+        end
+      else
+        { make sure we don't access the contents of the string before they've been
+          synchronised from the thread that wrote them; the critical section there
+          acts as a read/write barrier }
+        ReadBarrier;
 
-    Args.Add('-Fl'+FCachedlibcPath);
+      Args.Add('-Fl'+FCachedlibcPath);
     end;
 
   // Custom options which are added by dependencies
@@ -7075,7 +7085,7 @@ begin
         end
       else
         begin
-          S:=GetCompilerCommand(APackage,ATarget,Env);
+          S:=GetCompilerCommand(APackage,ATarget,nil);
           ExecuteCommand(GetCompiler,S,nil);
         end;
       If Assigned(ATarget.AfterCompile) then
@@ -7214,7 +7224,7 @@ begin
 end;
 
 
-function TBuildEngine.CheckExternalPackage(Const APackageName : String; ErrorOnFailure: boolean):TPackage;
+function TBuildEngine.CheckExternalPackage(Const APackageName, ForPackageName : String; ErrorOnFailure: boolean):TPackage;
 var
   S : String;
   F : String;
@@ -7248,7 +7258,7 @@ begin
       CompileDependencies(Result);
     end
   else if ErrorOnFailure then
-    Error(SErrDependencyNotFound,[APackageName]);
+    Error(SErrDependencyNotFound,[APackageName,ForPackageName]);
 end;
 
 
@@ -7281,7 +7291,7 @@ begin
             end
           else
             begin
-              D.Target:=CheckExternalPackage(D.Value, true);
+              D.Target:=CheckExternalPackage(D.Value, APackage.Name, true);
               P:=TPackage(D.Target);
             end;
           if (D.RequireChecksum<>$ffffffff) and (D.RequireChecksum<>0) and
@@ -7323,7 +7333,7 @@ begin
             end
           else
             begin
-              D.Target:=CheckExternalPackage(D.Value, ErrorOnFailure);
+              D.Target:=CheckExternalPackage(D.Value, APackage.Name, ErrorOnFailure);
               P:=TPackage(D.Target);
             end;
           if (D.RequireChecksum<>$ffffffff) and
@@ -8175,8 +8185,10 @@ Var
   begin
     if AThread.Done then
       begin
-        { synchronise with the WriteBarrier in the thread }
-        ReadBarrier;
+        { synchronise with the WriteBarrier in the thread (-> ReadBarrier), and prevent
+          any writes we do here afterwards to be reordered before that (so the compile
+          thread won't see these writes either -> also WriteBarrier) }
+        ReadWriteBarrier;
         if assigned(AThread.APackage) then
           begin
             // The thread has completed compiling the package

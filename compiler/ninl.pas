@@ -437,23 +437,30 @@ implementation
           { can't hardcode the position of the '$', e.g. on darwin an underscore
             is added }
           hashedid.id:=copy(defaultname,2,255);
-          { the default sym is always part of the current procedure/function }
-          srsymtable:=current_procinfo.procdef.localst;
-          srsym:=tsym(srsymtable.findwithhash(hashedid));
-          if not assigned(srsym) then
+          { in case of a previous error, current_procinfo might not be set
+            so avoid a crash in this case }
+          if assigned(current_procinfo) then
             begin
-              { no valid default variable found, so create it }
-              srsym:=clocalvarsym.create(defaultname,vs_const,def,[]);
-              srsymtable.insert(srsym);
-              { mark the staticvarsym as typedconst }
-              include(tabstractvarsym(srsym).varoptions,vo_is_typed_const);
-              include(tabstractvarsym(srsym).varoptions,vo_is_default_var);
-              { The variable has a value assigned }
-              tabstractvarsym(srsym).varstate:=vs_initialised;
-              { the variable can't be placed in a register }
-              tabstractvarsym(srsym).varregable:=vr_none;
-            end;
-          result:=cloadnode.create(srsym,srsymtable);
+              { the default sym is always part of the current procedure/function }
+              srsymtable:=current_procinfo.procdef.localst;
+              srsym:=tsym(srsymtable.findwithhash(hashedid));
+              if not assigned(srsym) then
+                begin
+                  { no valid default variable found, so create it }
+                  srsym:=clocalvarsym.create(defaultname,vs_const,def,[]);
+                  srsymtable.insert(srsym);
+                  { mark the staticvarsym as typedconst }
+                  include(tabstractvarsym(srsym).varoptions,vo_is_typed_const);
+                  include(tabstractvarsym(srsym).varoptions,vo_is_default_var);
+                  { The variable has a value assigned }
+                  tabstractvarsym(srsym).varstate:=vs_initialised;
+                  { the variable can't be placed in a register }
+                  tabstractvarsym(srsym).varregable:=vr_none;
+                end;
+              result:=cloadnode.create(srsym,srsymtable);
+            end
+          else
+            result:=cerrornode.create;
         end;
 
       var
@@ -4058,21 +4065,27 @@ implementation
       begin
         { create the call to the helper }
         { on entry left node contains the parameter }
-        first_arctan_real := ccallnode.createintern('fpc_arctan_real',
+        result := ccallnode.createintern('fpc_arctan_real',
                 ccallparanode.create(left,nil));
         left := nil;
       end;
 
      function tinlinenode.first_abs_real : tnode;
+      var
+         callnode : tcallnode;
       begin
         { create the call to the helper }
         { on entry left node contains the parameter }
-        first_abs_real := ctypeconvnode.create(ccallnode.createintern('fpc_abs_real',
-                ccallparanode.create(left,nil)),resultdef);
+        callnode:=ccallnode.createintern('fpc_abs_real',
+                    ccallparanode.create(left,nil));
+        result := ctypeconvnode.create(callnode,resultdef);
+        include(callnode.callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
      function tinlinenode.first_sqr_real : tnode;
+      var
+         callnode : tcallnode;
       begin
 {$ifndef cpufpemu}
         { this procedure might be only used for cpus definining cpufpemu else
@@ -4081,8 +4094,10 @@ implementation
 {$endif cpufpemu}
         { create the call to the helper }
         { on entry left node contains the parameter }
-        first_sqr_real := ctypeconvnode.create(ccallnode.createintern('fpc_sqr_real',
-                ccallparanode.create(left,nil)),resultdef);
+        callnode:=ccallnode.createintern('fpc_sqr_real',
+                    ccallparanode.create(left,nil));
+        result := ctypeconvnode.create(callnode,resultdef);
+        include(callnode.callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4090,6 +4105,7 @@ implementation
       var
         fdef: tdef;
         procname: string[31];
+        callnode: tcallnode;
       begin
         if ((cs_fp_emulation in current_settings.moduleswitches)
 {$ifdef cpufpemu}
@@ -4114,15 +4130,17 @@ implementation
             else
               internalerror(2014052101);
             end;
-            first_sqrt_real:=ctypeconvnode.create_internal(ccallnode.createintern(procname,ccallparanode.create(
+            result:=ctypeconvnode.create_internal(ccallnode.createintern(procname,ccallparanode.create(
                ctypeconvnode.create_internal(left,fdef),nil)),resultdef);
           end
         else
           begin
             { create the call to the helper }
             { on entry left node contains the parameter }
-            first_sqrt_real := ctypeconvnode.create(ccallnode.createintern('fpc_sqrt_real',
-                ccallparanode.create(left,nil)),resultdef);
+            callnode := ccallnode.createintern('fpc_sqrt_real',
+                ccallparanode.create(left,nil));
+            result := ctypeconvnode.create(callnode,resultdef);
+            include(callnode.callnodeflags,cnf_check_fpu_exceptions);
           end;
         left := nil;
       end;
@@ -4131,8 +4149,9 @@ implementation
       begin
         { create the call to the helper }
         { on entry left node contains the parameter }
-        first_ln_real := ccallnode.createintern('fpc_ln_real',
+        result := ccallnode.createintern('fpc_ln_real',
                 ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4140,8 +4159,9 @@ implementation
       begin
         { create the call to the helper }
         { on entry left node contains the parameter }
-        first_cos_real := ccallnode.createintern('fpc_cos_real',
+        result := ccallnode.createintern('fpc_cos_real',
                 ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4149,8 +4169,9 @@ implementation
       begin
         { create the call to the helper }
         { on entry left node contains the parameter }
-        first_sin_real := ccallnode.createintern('fpc_sin_real',
+        result := ccallnode.createintern('fpc_sin_real',
                 ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4159,6 +4180,7 @@ implementation
         { create the call to the helper }
         { on entry left node contains the parameter }
         result := ccallnode.createintern('fpc_exp_real',ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4167,6 +4189,7 @@ implementation
         { create the call to the helper }
         { on entry left node contains the parameter }
         result := ccallnode.createintern('fpc_int_real',ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4175,6 +4198,7 @@ implementation
         { create the call to the helper }
         { on entry left node contains the parameter }
         result := ccallnode.createintern('fpc_frac_real',ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4183,6 +4207,7 @@ implementation
         { create the call to the helper }
         { on entry left node contains the parameter }
         result := ccallnode.createintern('fpc_round_real',ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 
@@ -4191,6 +4216,7 @@ implementation
         { create the call to the helper }
         { on entry left node contains the parameter }
         result := ccallnode.createintern('fpc_trunc_real',ccallparanode.create(left,nil));
+        include(tcallnode(result).callnodeflags,cnf_check_fpu_exceptions);
         left := nil;
       end;
 

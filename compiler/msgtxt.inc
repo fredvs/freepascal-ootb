@@ -1360,7 +1360,7 @@ const msgtxt : array[0..000344,1..240] of char=(
   '11023_Free Pascal Compiler version $FPCFULL','VERSION [$FPCDATE] for $F'+
   'PCCPU'#010+
   'Copyright (c) 1993-2020 by Florian Klaempfl & friends.'#000+
-  '11024_Free Pascal Compiler version $FPCVERSION'#010+
+  '11024_Free Pascal Compiler  -OOTB- $FPCVERSION'#010+
   #010+
   'Compiler date      : $FPCDATE'#010+
   'Compiler CPU target: $FPCCPU'#010+

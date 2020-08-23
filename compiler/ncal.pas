@@ -56,7 +56,8 @@ interface
          cnf_call_never_returns, { information for the dfa that a subroutine never returns }
          cnf_call_self_node_done,{ the call_self_node has been generated if necessary
                                    (to prevent it from potentially happening again in a wrong context in case of constant propagation or so) }
-         cnf_ignore_visibility   { internally generated call that should ignore visibility checks }
+         cnf_ignore_visibility,  { internally generated call that should ignore visibility checks }
+         cnf_check_fpu_exceptions { after the call fpu exceptions shall be checked }
        );
        tcallnodeflags = set of tcallnodeflag;
 
@@ -572,7 +573,9 @@ implementation
 
         if variantdispatch then
           begin
-            tcb.emit_pchar_const(pchar(methodname),length(methodname),true);
+            { length-1, because the following names variable *always* starts
+              with #0 which will be the terminator for methodname }
+            tcb.emit_pchar_const(pchar(methodname),length(methodname)-1,true);
             { length-1 because we added a null terminator to the string itself
               already }
             tcb.emit_pchar_const(pchar(names),length(names)-1,true);

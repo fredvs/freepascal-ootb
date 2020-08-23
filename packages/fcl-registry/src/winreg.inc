@@ -48,12 +48,13 @@ Var
   Disposition: Dword;
   Handle: HKEY;
   SecurityAttributes: Pointer; //LPSECURITY_ATTRIBUTES;
+  U: UnicodeString;
 
 begin
   SecurityAttributes := Nil;
-  Key:=PrepKey(Key);
+  U:=PrepKey(Key);
   FLastError:=RegCreateKeyExW(GetBaseKey(RelativeKey(Key)),
-                              PWideChar(Key),
+                              PWideChar(U),
                               0,
                               '',
                               REG_OPTION_NON_VOLATILE,
@@ -221,8 +222,12 @@ begin
     end;                     
   If Result then begin
     if RelativeKey(Key) then
-      S:=CurrentPath + Key
-    else
+        begin
+          if (Key>'') and (CurrentPath>'') and (CurrentPath[Length(CurrentPath)]<>'\') then
+            S:=CurrentPath + '\' + Key
+          else
+            S:=CurrentPath + Key;
+        end  else
       S:=u;
     ChangeKey(Handle, S);
   end;
@@ -319,7 +324,7 @@ procedure TRegistry.ChangeKey(Value: HKey; const Path: UnicodeString);
 begin
   CloseKey;
   FCurrentKey:=Value;
-  FCurrentPath:=Path;
+  FCurrentPath:=FixPath(Path);
 end;
 
 
@@ -413,8 +418,6 @@ Function TRegistry.SysPutData(const Name: UnicodeString; Buffer: Pointer;
 
 Var
   RegDataType: DWORD;
-  B : Pchar;
-  S : String;
 
 begin
   RegDataType:=RegDataWords[RegData];
