@@ -3347,8 +3347,8 @@ begin
      4 - system path
   }
   if not FileExists(fn) then // current dir
-    if CfgFileExists(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn) then
-       foundfn:=IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn // dir of compiler
+    if CfgFileExists(exepath+fn) then
+       foundfn:=exepath+fn // dir of compiler
     else 
    begin
 {$ifdef Unix}
