@@ -17,14 +17,17 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
+    P.Dependencies.Add('rtl-objpas');
+    P.Dependencies.Add('fcl-base');
+    P.Dependencies.Add('tplylib');
     P.Author := 'Giulio Bernardi';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
     P.Email := '';
     P.Description := 'Resource handling of Free Component Libraries (FCL), FPC''s OOP library.';
     P.NeedLibC:= false;
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -188,6 +191,30 @@ begin
           AddUnit('fpcrestypes');
           AddInclude('machosubwriter.inc');
           AddInclude('machodefaulttarget.inc');
+        end;
+    T:=P.Targets.AddUnit('rcparser.pas');
+      with T.Dependencies do
+        begin
+          AddUnit('resource');
+          AddUnit('acceleratorsresource');
+          AddUnit('groupiconresource');
+          AddUnit('stringtableresource');
+          AddUnit('bitmapresource');
+          AddUnit('versionresource');
+          AddUnit('versiontypes');
+          AddUnit('groupcursorresource');
+          AddInclude('rcparserfn.inc');
+          AddInclude('rclex.inc');
+          AddInclude('yyinclude.pp');
+          AddInclude('yypreproc.pp');
+        end;
+    T:=P.Targets.AddUnit('rcreader.pp');
+      with T.Dependencies do
+        begin
+          AddUnit('resource');
+          AddUnit('resdatastream');
+          AddUnit('resfactory');
+          AddUnit('rcparser');
         end;
     T:=P.Targets.AddUnit('resdatastream.pp');
       with T.Dependencies do

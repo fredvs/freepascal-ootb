@@ -17,14 +17,14 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.Author := 'Stefan Heymann';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'http://www.destructor.de/';
     P.Description := 'Library for handling tar-files.';
 
-    P.OSes:=AllOSes-[embedded,win16,macos,palmos];
+    P.OSes:=AllOSes-[embedded,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

@@ -13,11 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libgc');
-    P.ShortName:='libgc';
+    P.ShortName:='lgc';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
     P.OSes := [linux];

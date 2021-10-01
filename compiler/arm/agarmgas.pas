@@ -49,6 +49,7 @@ unit agarmgas;
 
       TArmAppleGNUAssembler=class(TAppleGNUassembler)
         constructor CreateWithWriter(info: pasminfo; wr: TExternalAssemblerOutputFile; freewriter, smart: boolean); override;
+        function MakeCmdLine: TCmdStr; override;
         procedure WriteExtraHeader; override;
       end;
 
@@ -104,6 +105,12 @@ unit agarmgas;
         result:=inherited MakeCmdLine;
         if (current_settings.fputype = fpu_soft) then
           result:='-mfpu=softvfp '+result;
+        if (current_settings.fputype = fpu_fpa) then
+          result:='-mfpu=fpa '+result;
+        if (current_settings.fputype = fpu_fpa10) then
+          result:='-mfpu=fpa10 '+result;
+        if (current_settings.fputype = fpu_fpa11) then
+          result:='-mfpu=fpa11 '+result;
         if (current_settings.fputype = fpu_vfpv2) then
           result:='-mfpu=vfpv2 '+result;
         if (current_settings.fputype = fpu_vfpv3) then
@@ -145,6 +152,18 @@ unit agarmgas;
         TArmInstrWriter(InstrWriter).unified_syntax:=true;
       end;
 
+
+    function TArmAppleGNUAssembler.MakeCmdLine: TCmdStr;
+      begin
+        result:=inherited MakeCmdLine;
+	if (asminfo^.id in [as_clang_gas,as_clang_asdarwin]) then
+          begin
+            if fputypestrllvm[current_settings.fputype] <> '' then
+              result:='-m'+fputypestrllvm[current_settings.fputype]+' '+result;
+            { Apple arm always uses softfp floating point ABI }
+            result:='-mfloat-abi=softfp '+result;
+          end;
+      end;
 
     procedure TArmAppleGNUAssembler.WriteExtraHeader;
       begin
@@ -421,7 +440,7 @@ unit agarmgas;
             idtxt  : 'AS-DARWIN';
             asmbin : 'as';
             asmcmd : '-o $OBJ $EXTRAOPT $ASM -arch $ARCH';
-            supported_targets : [system_arm_darwin];
+            supported_targets : [system_arm_ios];
             flags : [af_needar,af_smartlink_sections,af_supports_dwarf,af_stabs_use_function_absolute_addresses];
             labelprefix : 'L';
             comment : '# ';
@@ -431,12 +450,12 @@ unit agarmgas;
 
        as_arm_clang_darwin_info : tasminfo =
           (
-            id     : as_clang;
+            id     : as_clang_asdarwin;
             idtxt  : 'CLANG';
             asmbin : 'clang';
-            asmcmd : '-c -o $OBJ $EXTRAOPT -arch $ARCH $DARWINVERSION -x assembler $ASM';
-            supported_targets : [system_arm_darwin];
-            flags : [af_needar,af_smartlink_sections,af_supports_dwarf];
+            asmcmd : '-x assembler -c -target $TRIPLET -o $OBJ $EXTRAOPT -x assembler $ASM';
+            supported_targets : [system_arm_ios];
+            flags : [af_needar,af_smartlink_sections,af_supports_dwarf,af_llvm];
             labelprefix : 'L';
             comment : '# ';
             dollarsign: '$';

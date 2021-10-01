@@ -10,9 +10,9 @@ procedure add_fcl_db(const ADirectory: string);
 const
   ParadoxOSes         = [beos,haiku,linux,freebsd,netbsd,openbsd,win32,dragonfly];
   DatadictOSes        = [aix,beos,darwin,haiku,linux,freebsd,win32,win64,wince,android,dragonfly];
-  SqldbConnectionOSes = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,netbsd,openbsd,solaris,win32,win64,wince,android,dragonfly];
-  SqliteOSes          = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,netbsd,openbsd,solaris,win32,win64,wince,android,dragonfly];
-  DBaseOSes           = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,netbsd,openbsd,solaris,win32,win64,wince,android,os2,dragonfly];
+  SqldbConnectionOSes = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,ios,netbsd,openbsd,solaris,win32,win64,wince,android,dragonfly];
+  SqliteOSes          = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,ios,netbsd,openbsd,solaris,win32,win64,wince,android,dragonfly];
+  DBaseOSes           = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,ios,netbsd,openbsd,solaris,win32,win64,wince,android,os2,dragonfly];
   MSSQLOSes           = [beos,haiku,linux,freebsd,netbsd,openbsd,solaris,win32,win64,android,dragonfly];
 
 
@@ -32,12 +32,12 @@ begin
     P.Email := '';
     P.Description := 'Database library of Free Component Libraries(FCL), FPC''s OOP library.';
     P.NeedLibC:= false;
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.SourcePath.Add('src');
     P.SourcePath.Add('src/base');
     P.SourcePath.Add('src/paradox', ParadoxOSes);
@@ -473,6 +473,14 @@ begin
           AddUnit('fpddsqldb');
           AddUnit('mysql57conn');
         end;
+    T:=P.Targets.AddUnit('fpddmysql80.pp', DatadictOSes);
+      with T.Dependencies do
+        begin
+          AddUnit('sqldb');
+          AddUnit('fpdatadict');
+          AddUnit('fpddsqldb');
+          AddUnit('mysql80conn');
+        end;
     T:=P.Targets.AddUnit('fpddodbc.pp', DatadictOSes);
       with T.Dependencies do
         begin
@@ -706,6 +714,17 @@ begin
         end;
 
     T:=P.Targets.AddUnit('mysql57conn.pas', SqldbConnectionOSes);
+    T.ResourceStrings:=true;
+      with T.Dependencies do
+        begin
+          AddInclude('mysqlconn.inc');
+          AddUnit('bufdataset');
+          AddUnit('sqldb');
+          AddUnit('db');
+          AddUnit('dbconst');
+        end;
+
+    T:=P.Targets.AddUnit('mysql80conn.pas', SqldbConnectionOSes);
     T.ResourceStrings:=true;
       with T.Dependencies do
         begin

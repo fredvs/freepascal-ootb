@@ -225,17 +225,17 @@ interface
           fcontains_stack_tainting_call_cached,
           ffollowed_by_stack_tainting_call_cached : boolean;
        protected
-          { in case of copy-out parameters: initialization code, and the code to
-            copy back the parameter value after the call (including any required
-            finalization code }
-          fparainit,
-          fparacopyback: tnode;
           procedure handlemanagedbyrefpara(orgparadef: tdef);virtual;
           { on some targets, value parameters that are passed by reference must
             be copied to a temp location by the caller (and then a reference to
             this temp location must be passed) }
           procedure copy_value_by_ref_para;
        public
+          { in case of copy-out parameters: initialization code, and the code to
+            copy back the parameter value after the call (including any required
+            finalization code) }
+          fparainit,
+          fparacopyback: tnode;
           callparaflags : tcallparaflags;
           parasym       : tparavarsym;
           { only the processor specific nodes need to override this }
@@ -729,7 +729,6 @@ implementation
     procedure tcallparanode.copy_value_by_ref_para;
       var
         initstat,
-        copybackstat,
         finistat: tstatementnode;
         finiblock: tblocknode;
         paratemp: ttempcreatenode;
@@ -743,13 +742,15 @@ implementation
           to be copied by the caller. It's basically the node-level equivalent
           of thlcgobj.g_copyvalueparas }
 
+        if assigned(fparainit) then
+          exit;
+
         { in case of an array constructor, we don't need a copy since the array
           constructor itself is already constructed on the fly (and hence if
           it's modified by the caller, that's no problem) }
         if not is_array_constructor(left.resultdef) then
           begin
             fparainit:=internalstatements(initstat);
-            fparacopyback:=internalstatements(copybackstat);
             finiblock:=internalstatements(finistat);
             paratemp:=nil;
 
@@ -928,10 +929,8 @@ implementation
                 left:=ctemprefnode.create(paratemp);
               end;
             addstatement(finistat,ctempdeletenode.create(paratemp));
-            addstatement(copybackstat,finiblock);
             firstpass(fparainit);
             firstpass(left);
-            firstpass(fparacopyback);
           end;
       end;
 
@@ -1206,6 +1205,13 @@ implementation
                     (parasym.vardef.typ=setdef) then
                    inserttypeconv(left,parasym.vardef);
 
+                 { if an array constructor can be a set and it is passed to
+                   a formaldef, a set must be passed, see also issue #37796 }
+                 if (left.nodetype=arrayconstructorn) and
+                    (parasym.vardef.typ=formaldef) and
+                    (arrayconstructor_can_be_set(left)) then
+                   left:=arrayconstructor_to_set(left,false);
+
                  { set some settings needed for arrayconstructor }
                  if is_array_constructor(left.resultdef) then
                   begin
@@ -1473,8 +1479,38 @@ implementation
 
 
     procedure tcallparanode.printnodetree(var t:text);
+      var
+        hp: tbinarynode;
       begin
-        printnodelist(t);
+        hp:=self;
+        while assigned(hp) do
+         begin
+           write(t,printnodeindention,'(');
+           printnodeindent;
+           hp.printnodeinfo(t);
+           writeln(t);
+           if assigned(tcallparanode(hp).fparainit) then
+             begin
+               writeln(t,printnodeindention,'(parainit =');
+               printnodeindent;
+               printnode(t,tcallparanode(hp).fparainit);
+               printnodeunindent;
+               writeln(t,printnodeindention,')');
+             end;
+           if assigned(tcallparanode(hp).fparacopyback) then
+             begin
+               writeln(t,printnodeindention,'(fparacopyback =');
+               printnodeindent;
+               printnode(t,tcallparanode(hp).fparacopyback);
+               printnodeunindent;
+               writeln(t,printnodeindention,')');
+             end;
+           printnode(t,hp.left);
+           writeln(t);
+           printnodeunindent;
+           writeln(t,printnodeindention,')');
+           hp:=tbinarynode(hp.right);
+         end;
       end;
 
 
@@ -3501,6 +3537,18 @@ implementation
 
 
     function tcallnode.pass_typecheck:tnode;
+
+      function is_undefined_recursive(def:tdef):boolean;
+        begin
+          { might become more refined in the future }
+          if def.typ=undefineddef then
+            result:=true
+          else if def.typ=arraydef then
+            result:=is_undefined_recursive(tarraydef(def).elementdef)
+          else
+            result:=false;
+        end;
+
       var
         candidates : tcallcandidates;
         oldcallnode : tcallnode;
@@ -3510,6 +3558,7 @@ implementation
         paraidx,
         cand_cnt : integer;
         i : longint;
+        ignoregenericparacall,
         ignorevisibility,
         is_const : boolean;
         statements : tstatementnode;
@@ -3697,12 +3746,33 @@ implementation
                       { Multiple candidates left? }
                       if cand_cnt>1 then
                        begin
-                         CGMessage(type_e_cant_choose_overload_function);
+                         { if we're inside a generic and call another function
+                           with generic types as arguments we don't complain in
+                           the generic, but only during the specialization }
+                         ignoregenericparacall:=false;
+                         if df_generic in current_procinfo.procdef.defoptions then
+                           begin
+                             pt:=tcallparanode(left);
+                             while assigned(pt) do
+                              begin
+                                if is_undefined_recursive(pt.resultdef) then
+                                  begin
+                                    ignoregenericparacall:=true;
+                                    break;
+                                  end;
+                                pt:=tcallparanode(pt.right);
+                              end;
+                           end;
+
+                         if not ignoregenericparacall then
+                           begin
+                             CGMessage(type_e_cant_choose_overload_function);
 {$ifdef EXTDEBUG}
-                         candidates.dump_info(V_Hint);
+                             candidates.dump_info(V_Hint);
 {$else EXTDEBUG}
-                         candidates.list(false);
+                             candidates.list(false);
 {$endif EXTDEBUG}
+                           end;
                          { we'll just use the first candidate to make the
                            call }
                        end;

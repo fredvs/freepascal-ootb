@@ -30,8 +30,10 @@ type
   TTestTSQLQuery = class(TSQLDBTestCase)
   private
     FMyQ: TSQLQuery;
+    FPrepareCount:Integer;
     procedure DoAfterPost(DataSet: TDataSet);
     Procedure DoApplyUpdates;
+    procedure DoCount(Sender: TSQLConnection; EventType: TDBEventType; const Msg: String);
     Procedure TrySetQueryOptions;
     Procedure TrySetPacketRecords;
   Protected
@@ -56,6 +58,9 @@ type
     procedure TestSequence;
     procedure TestReturningInsert;
     procedure TestReturningUpdate;
+    procedure TestMacros;
+    Procedure TestPrepareCount;
+    Procedure TestNullTypeParam;
   end;
 
   { TTestTSQLConnection }
@@ -94,6 +99,7 @@ implementation
 procedure TTestTSQLQuery.Setup;
 begin
   inherited Setup;
+  FPrepareCount:=0;
   SQLDBConnector.Connection.Options:=[];
 end;
 
@@ -337,6 +343,12 @@ procedure TTestTSQLQuery.DoApplyUpdates;
 
 begin
   FMyQ.ApplyUpdates();
+end;
+
+procedure TTestTSQLQuery.DoCount(Sender: TSQLConnection; EventType: TDBEventType; const Msg: String);
+begin
+  If (EventType=detPrepare) then
+    Inc(FPrepareCount);
 end;
 
 procedure TTestTSQLQuery.TestCheckRowsAffected;
@@ -721,6 +733,93 @@ begin
   FMyQ.Next;
   AssertEquals('#2.a updated', 'a2', FMyQ.FieldByName('a').AsString);
   AssertEquals('#2.b updated', 'b2', FMyQ.FieldByName('b').AsString);
+end;
+
+procedure TTestTSQLQuery.TestMacros;
+begin
+  with SQLDBConnector do
+    begin
+    ExecuteDirect('create table FPDEV2 (id integer not null, constraint PK_FPDEV2 primary key(id))');
+    CommitDDL;
+    ExecuteDirect('insert into FPDEV2 (id) values (1)');
+    ExecuteDirect('insert into FPDEV2 (id) values (2)');
+    end;
+
+  With SQLDBConnector.Query do
+    begin
+    SQL.Text:='Select ID from FPDEV2 '+
+      '%WHERE_CL' +sLineBreak+
+      '%ORDER_CL' +sLineBreak;
+    MacroCheck:=true;
+    MacroByName('WHERE_CL').AsString:='where 1=1';
+    MacroByName('ORDER_CL').AsString:='order by 1';
+    Open;
+    AssertEquals('Correct SQL executed, macros substituted: ',1,Fields[0].AsInteger);
+    Close;
+    MacroByName('ORDER_CL').AsString := 'Order by 1 DESC';
+    Open;
+    AssertEquals('Correct SQL executed, macro value changed: ',2,Fields[0].AsInteger);
+    end;
+end;
+
+procedure TTestTSQLQuery.TestPrepareCount;
+
+begin
+  with SQLDBConnector do
+    begin
+    ExecuteDirect('create table FPDEV2 (id integer not null, constraint PK_FPDEV2 primary key(id))');
+    CommitDDL;
+    ExecuteDirect('insert into FPDEV2 (id) values (1)');
+    ExecuteDirect('insert into FPDEV2 (id) values (2)');
+    Connection.OnLog:=@DoCount;
+    Connection.LogEvents:=[detPrepare];
+    end;
+  try
+    With SQLDBConnector.Query do
+      begin
+      Unidirectional:=True; // Disable server index defs etc
+      UsePrimaryKeyAsKey:=False; // Idem
+      SQL.Text:='Select ID from FPDEV2 where (ID=:ID)';
+      ParamByname('ID').AsInteger:=1;
+      Prepare;
+      Open;
+      AssertEquals('Correct record count param 1',1,RecordCount);
+      AssertEquals('Correct SQL executed, correct paramete: ',1,Fields[0].AsInteger);
+      Close;
+      ParamByname('ID').AsInteger:=2;
+      Open;
+      AssertEquals('Correct record count param 2',1,RecordCount);
+      AssertEquals('Correct SQL executed, macro value changed: ',2,Fields[0].AsInteger);
+      end;
+    AssertEquals('Prepare called only once ',1,FPrepareCount);
+  finally
+    SQLDBConnector.Connection.OnLog:=Nil;
+  end;
+
+end;
+
+procedure TTestTSQLQuery.TestNullTypeParam;
+begin
+  if not (SQLServerType in [ssSQLite, ssFirebird]) then
+    Ignore(STestNotApplicable);
+  CreateAndFillIDField;
+  try
+    With SQLDBConnector.Query do
+      begin
+      UsePrimaryKeyAsKey:=False; // Disable server index defs etc
+      SQL.Text:='Select ID from FPDEV2 where (:ID IS NULL or ID = :ID)';
+      Open;
+      AssertEquals('Correct record count param NULL',10,RecordCount);
+      Close;
+      ParamByname('ID').AsInteger:=1;
+      Open;
+      AssertEquals('Correct record count param 1',1,RecordCount);
+      AssertEquals('Correct field value: ',1,Fields[0].AsInteger);
+      Close;
+      end;
+  finally
+    SQLDBConnector.Connection.OnLog:=Nil;
+  end;
 end;
 
 

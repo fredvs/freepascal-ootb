@@ -13,16 +13,16 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libenet');
-    P.ShortName:='libenet';
+    P.ShortName:='lnet';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.SourcePath.Add('src');
     P.SourcePath.Add('examples');
     P.IncludePath.Add('src');
     { only enable for darwin after testing }
-    P.OSes := AllUnixOSes+AllWindowsOSes-[qnx,darwin,iphonesim];
+    P.OSes := AllUnixOSes+AllWindowsOSes-[qnx,darwin,iphonesim,ios];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

@@ -18,8 +18,9 @@ begin
   With Installer do
     begin
       P:=AddPackage('dblib');
+      P.ShortName := 'dblb';
       P.Directory:=ADirectory;
-      P.Version:='3.2.1';
+      P.Version:='3.2.2';
       P.Author := 'Library: (FreeTDS/Microsoft), header: Ladislav Karrach';
       P.License := 'Library: FreeTDS License, header: LGPL with modification, ';
       P.HomepageURL := 'www.freepascal.org';

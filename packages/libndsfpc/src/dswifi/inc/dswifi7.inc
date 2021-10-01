@@ -1,5 +1,5 @@
 (*
-  $Id: dswifi7.inc 13217 2009-05-31 12:15:24Z Legolas $
+  $Id$
   ------------------------------------------------------------------------------
   DSWifi Project - Arm7 Library Header file (dswifi7.h)
   (C) 2005-2006 Stephen Stair - sgstair@akkit.org - http://www.akkit.org

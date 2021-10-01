@@ -1,3 +1,6 @@
+{$IFDEF MYSQL80_UP}
+  {$DEFINE MYSQL57_UP}
+{$ENDIF}
 {$IFDEF MYSQL57_UP}
   {$DEFINE MYSQL56_UP}
 {$ENDIF}
@@ -17,6 +20,9 @@ interface
 
 uses
   Classes, SysUtils,bufdataset,sqldb,db,ctypes,fmtbcd,
+{$IFDEF mysql80}
+  mysql80dyn;
+{$ELSE}
 {$IFDEF mysql57}
   mysql57dyn;
 {$ELSE}
@@ -42,9 +48,13 @@ uses
 {$endif}
 {$ENDIF}
 {$ENDIF}
+{$ENDIF}
 
 Const
   MySQLVersion =
+{$IFDEF mysql80}
+    '8.0';
+{$ELSE}
 {$IFDEF mysql57}
     '5.7';
 {$ELSE}
@@ -68,6 +78,7 @@ Const
   {$EndIf}
 {$endif}
 {$endif}
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 
@@ -96,6 +107,7 @@ Type
     FPreparedStatement : String;
     // Statement with param placeholders replaced with actual values.
     FActualStatement : String;
+    FStatement : String;
     Row : MYSQL_ROW;
     Lengths : pculong;                  { Lengths of the columns of the current row }
     RowsAffected : QWord;
@@ -126,6 +138,7 @@ Type
     function InternalStrToDateTime(C: pchar; Len: integer): TDateTime;
     function InternalStrToFloat(C: pchar; Len: integer): Extended;
     function InternalStrToInt(C: pchar; Len: integer): integer;
+    function InternalStrToDWord(C: pchar; Len: integer): DWord;
     function InternalStrToInt64(C: pchar; Len: integer): Int64;
     function InternalStrToTime(C: pchar; Len: integer): TDateTime;
     function StrToMSecs(C: pchar; Len: integer): Word;
@@ -208,6 +221,12 @@ Type
   end;
 
 
+  {$IFDEF mysql80}
+    TMySQL80Connection = Class(TConnectionName);
+    TMySQL80ConnectionDef = Class(TMySQLConnectionDef);
+    TMySQL80Transaction = Class(TTransactionName);
+    TMySQL80Cursor = Class(TCursorName);
+  {$ELSE}
   {$IFDEF mysql57}
     TMySQL57Connection = Class(TConnectionName);
     TMySQL57ConnectionDef = Class(TMySQLConnectionDef);
@@ -254,6 +273,7 @@ Type
   {$ENDIF}
   {$ENDIF}
   {$ENDIF}
+  {$ENDIF}
 
 implementation
 
@@ -263,15 +283,57 @@ uses
   DateUtils;
 
 const
-  Mysql_Option_Names : array[mysql_option] of string = ('MYSQL_OPT_CONNECT_TIMEOUT','MYSQL_OPT_COMPRESS',
-     'MYSQL_OPT_NAMED_PIPE','MYSQL_INIT_COMMAND',
-     'MYSQL_READ_DEFAULT_FILE','MYSQL_READ_DEFAULT_GROUP',
-     'MYSQL_SET_CHARSET_DIR','MYSQL_SET_CHARSET_NAME',
-     'MYSQL_OPT_LOCAL_INFILE','MYSQL_OPT_PROTOCOL',
-     'MYSQL_SHARED_MEMORY_BASE_NAME','MYSQL_OPT_READ_TIMEOUT',
-     'MYSQL_OPT_WRITE_TIMEOUT','MYSQL_OPT_USE_RESULT',
-     'MYSQL_OPT_USE_REMOTE_CONNECTION','MYSQL_OPT_USE_EMBEDDED_CONNECTION',
-     'MYSQL_OPT_GUESS_CONNECTION','MYSQL_SET_CLIENT_IP',
+  Mysql_Option_Names : array[mysql_option] of string = (
+     'MYSQL_OPT_CONNECT_TIMEOUT',
+     'MYSQL_OPT_COMPRESS',
+     'MYSQL_OPT_NAMED_PIPE',
+     'MYSQL_INIT_COMMAND',
+     'MYSQL_READ_DEFAULT_FILE',
+     'MYSQL_READ_DEFAULT_GROUP',
+     'MYSQL_SET_CHARSET_DIR',
+     'MYSQL_SET_CHARSET_NAME',
+     'MYSQL_OPT_LOCAL_INFILE',
+     'MYSQL_OPT_PROTOCOL',
+     'MYSQL_SHARED_MEMORY_BASE_NAME',
+     'MYSQL_OPT_READ_TIMEOUT',
+     'MYSQL_OPT_WRITE_TIMEOUT',
+     'MYSQL_OPT_USE_RESULT'
+     {$IFDEF MYSQL80}
+     ,'MYSQL_REPORT_DATA_TRUNCATION',
+     'MYSQL_OPT_RECONNECT',
+     'MYSQL_PLUGIN_DIR',
+     'MYSQL_DEFAULT_AUTH',
+     'MYSQL_OPT_BIND',
+     'MYSQL_OPT_SSL_KEY',
+     'MYSQL_OPT_SSL_CERT',
+     'MYSQL_OPT_SSL_CA',
+     'MYSQL_OPT_SSL_CAPATH',
+     'MYSQL_OPT_SSL_CIPHER',
+     'MYSQL_OPT_SSL_CRL',
+     'MYSQL_OPT_SSL_CRLPATH',
+     'MYSQL_OPT_CONNECT_ATTR_RESET',
+     'MYSQL_OPT_CONNECT_ATTR_ADD',
+     'MYSQL_OPT_CONNECT_ATTR_DELETE',
+     'MYSQL_SERVER_PUBLIC_KEY',
+     'MYSQL_ENABLE_CLEARTEXT_PLUGIN',
+     'MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS',
+     'MYSQL_OPT_MAX_ALLOWED_PACKET',
+     'MYSQL_OPT_NET_BUFFER_LENGTH',
+     'MYSQL_OPT_TLS_VERSION',
+     'MYSQL_OPT_SSL_MODE',
+     'MYSQL_OPT_GET_SERVER_PUBLIC_KEY',
+     'MYSQL_OPT_RETRY_COUNT',
+     'MYSQL_OPT_OPTIONAL_RESULTSET_METADATA',
+     'MYSQL_OPT_SSL_FIPS_MODE',
+     'MYSQL_OPT_TLS_CIPHERSUITES',
+     'MYSQL_OPT_COMPRESSION_ALGORITHMS',
+     'MYSQL_OPT_ZSTD_COMPRESSION_LEVEL',
+     'MYSQL_OPT_LOAD_DATA_LOCAL_DIR'
+     {$ELSE}
+     ,'MYSQL_OPT_USE_REMOTE_CONNECTION',
+     'MYSQL_OPT_USE_EMBEDDED_CONNECTION',
+     'MYSQL_OPT_GUESS_CONNECTION',
+     'MYSQL_SET_CLIENT_IP',
      'MYSQL_SECURE_AUTH'
 {$IFDEF MYSQL50_UP}
      ,'MYSQL_REPORT_DATA_TRUNCATION', 'MYSQL_OPT_RECONNECT'
@@ -293,15 +355,16 @@ const
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
+{$ENDIF}
      );
 
 Resourcestring
   SErrServerConnectFailed = 'Server connect failed.';
   SErrSetCharsetFailed = 'Failed to set connection character set: %s';
   SErrDatabaseSelectFailed = 'Failed to select database: %s';
-  SErrDatabaseCreate = 'Failed to create database: %s';
-  SErrDatabaseDrop = 'Failed to drop database: %s';
-  SErrNoData = 'No data for record';
+  //SErrDatabaseCreate = 'Failed to create database: %s';
+  //SErrDatabaseDrop = 'Failed to drop database: %s';
+  //SErrNoData = 'No data for record';
   SErrExecuting = 'Error executing query: %s';
   SErrFetchingdata = 'Error fetching row data: %s';
   SErrGettingResult = 'Error getting result set: %s';
@@ -546,6 +609,9 @@ end;
 
 Function TConnectionName.AllocateCursorHandle: TSQLCursor;
 begin
+  {$IFDEF mysql80}
+    Result:=TMySQL80Cursor.Create;
+  {$ELSE}
   {$IFDEF mysql57}
     Result:=TMySQL57Cursor.Create;
   {$ELSE}
@@ -569,6 +635,7 @@ begin
       {$EndIf}
     {$EndIf}
   {$EndIf}
+  {$ENDIF}
   {$ENDIF}
   {$ENDIF}
 end;
@@ -595,7 +662,8 @@ begin
     FPreparedStatement:=Buf;
     if assigned(AParams) and (AParams.count > 0) then
       FPreparedStatement := AParams.ParseSQL(FPreparedStatement,false,sqEscapeSlash in ConnOptions, sqEscapeRepeat in ConnOptions,psSimulated,paramBinding,ParamReplaceString);
-    end
+    FPrepared:=True;
+    end;
 end;
 
 procedure TConnectionName.UnPrepareStatement(cursor: TSQLCursor);
@@ -925,6 +993,17 @@ begin
   Result:=StrToInt(S);
 end;
 
+function TConnectionName.InternalStrToDWord(C: pchar; Len: integer): DWord;
+Var
+  S : String;
+begin
+  Result := 0;
+  if (Len=0) or (C=Nil) then
+    exit;
+  SetString(S,C,Len);
+  Result:=StrToDWord(S);
+end;
+
 function TConnectionName.InternalStrToInt64(C: pchar; Len: integer): Int64;
 
 Var
@@ -1043,7 +1122,7 @@ begin
     Result := 0
   else
     Result := EncodeDate(EY, EM, ED);
-  Result := ComposeDateTime(Result, EncodeTime(EH, EN, ES, EMS));
+  Result := ComposeDateTime(Result, EncodeTimeInterval(EH, EN, ES, EMS));
 end;
 
 function TConnectionName.InternalStrToTime(C: pchar; Len: integer): TDateTime;
@@ -1111,6 +1190,7 @@ var
   VL: LargeInt;
   VS: Smallint;
   VW: Word;
+  VO: LongWord;
   VF: Double;
   VC: Currency;
   VD: TDateTime;
@@ -1152,6 +1232,13 @@ begin
       VL := InternalStrToInt64(Source, Len);
       Move(VL, Dest^, SizeOf(LargeInt));
       end;
+{$IF FPC_FULLVERSION >=30301}      
+    ftLongWord:
+      begin
+      VO := InternalStrToDWord(Source, Len);
+      Move(VO, Dest^, SizeOf(LongWord));
+      end;
+{$ENDIF}      
     ftFloat:
       begin
       VF := InternalStrToFloat(Source, Len);
@@ -1396,6 +1483,9 @@ end;
 
 class function TMySQLConnectionDef.ConnectionClass: TSQLConnectionClass;
 begin
+  {$IFDEF mysql80}
+    Result:=TMySQL80Connection;
+  {$ELSE}
   {$IFDEF mysql57}
     Result:=TMySQL57Connection;
   {$ELSE}
@@ -1419,6 +1509,7 @@ begin
       {$EndIf}
     {$endif}
   {$endif}
+  {$ENDIF}
   {$ENDIF}
   {$ENDIF}
 end;
@@ -1448,6 +1539,12 @@ begin
   Result:=MysqlLoadedLibrary;
 end;
 
+{$IFDEF mysql80}
+  initialization
+    RegisterConnection(TMySQL80ConnectionDef);
+  finalization
+    UnRegisterConnection(TMySQL80ConnectionDef);
+{$ELSE}
 {$IFDEF mysql57}
   initialization
     RegisterConnection(TMySQL57ConnectionDef);
@@ -1491,7 +1588,8 @@ end;
       {$EndIf}
     {$EndIf}
   {$ENDIF}
-{$endif}
+{$ENDIF}
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 

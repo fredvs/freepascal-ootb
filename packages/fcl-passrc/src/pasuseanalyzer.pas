@@ -198,7 +198,8 @@ type
 
   TPasAnalyzerOption = (
     paoOnlyExports, // default: use all class members accessible from outside (protected, but not private)
-    paoImplReferences // collect references of top lvl proc implementations, initializationa dn finalization sections
+    paoImplReferences, // collect references of top lvl proc implementations, initializationa dn finalization sections
+    paoSkipGenericProc // ignore generic procedure body
     );
   TPasAnalyzerOptions = set of TPasAnalyzerOption;
 
@@ -328,6 +329,7 @@ function CompareElementWithPAElement(El, Id: Pointer): integer;
 function ComparePAOverrideLists(List1, List2: Pointer): integer;
 function CompareElementWithPAOverrideList(El, List: Pointer): integer;
 {$endif}
+function CreatePasElementSet: TPasAnalyzerKeySet;
 function GetElModName(El: TPasElement): string;
 function dbgs(a: TPAIdentifierAccess): string; overload;
 
@@ -392,6 +394,17 @@ begin
   Result:=ComparePointer(El,OvList.Element);
 end;
 {$endif}
+
+function CreatePasElementSet: TPasAnalyzerKeySet;
+begin
+  Result:=TPasAnalyzerKeySet.Create(
+            {$ifdef pas2js}
+            @PasElementToHashName
+            {$else}
+            @ComparePointer
+            {$endif}
+            ,nil);
+end;
 
 function GetElModName(El: TPasElement): string;
 var
@@ -1078,6 +1091,7 @@ function TPasAnalyzer.CanSkipGenericProc(DeclProc: TPasProcedure): boolean;
 
 var
   Templates: TFPList;
+  Parent: TPasElement;
 begin
   Result:=false;
   if ScopeModule=nil then
@@ -1091,10 +1105,30 @@ begin
     // analyze a module
     Templates:=Resolver.GetProcTemplateTypes(DeclProc);
     if (Templates<>nil) and (Templates.Count>0) then
-      // generic template -> analyze
+      begin
+      // generic procedure
+      if paoSkipGenericProc in Options then
+        exit(true); // emit no hints for generic proc
+      // -> analyze
+      end
     else if not Resolver.IsFullySpecialized(DeclProc) then
       // half specialized -> skip
-      exit(true);
+      exit(true)
+    else if paoSkipGenericProc in Options then
+      begin
+      Parent:=DeclProc.Parent;
+      while Parent<>nil do
+        begin
+        if (Parent is TPasGenericType) then
+          begin
+          Templates:=TPasGenericType(Parent).GenericTemplateTypes;
+          if (Templates<>nil) and (Templates.Count>0) then
+            // procedure of a generic parent -> emit no hints
+            exit(true);
+          end;
+        Parent:=Parent.Parent;
+        end;
+      end;
     end;
 end;
 
@@ -1151,12 +1185,13 @@ var
   C: TClass;
   Members, Args: TFPList;
   i: Integer;
-  Member: TPasElement;
+  Member, Param: TPasElement;
   MemberResolved: TPasResolverResult;
   Prop: TPasProperty;
   ProcType: TPasProcedureType;
   ClassEl: TPasClassType;
   ArrType: TPasArrayType;
+  SpecType: TPasSpecializeType;
 begin
   {$IFDEF VerbosePasAnalyzer}
   writeln('TPasAnalyzer.UsePublished START ',GetObjName(El));
@@ -1248,7 +1283,18 @@ begin
       UseSubEl(TPasFunctionType(El).ResultEl.ResultType);
     end
   else if C=TPasSpecializeType then
-    UseSubEl(TPasSpecializeType(El).DestType)
+    begin
+    SpecType:=TPasSpecializeType(El);
+    // SpecType.DestType is the generic type, which is never used
+    if SpecType.CustomData is TPasSpecializeTypeData then
+      UseSubEl(TPasSpecializeTypeData(El.CustomData).SpecializedType);
+    for i:=0 to SpecType.Params.Count-1 do
+      begin
+      Param:=TPasElement(SpecType.Params[i]);
+      if Param is TPasGenericTemplateType then continue;
+      UseSubEl(Param);
+      end;
+    end
   else if C=TPasGenericTemplateType then
     begin
     if ScopeModule=nil then
@@ -1524,7 +1570,7 @@ begin
     begin
     // while-do
     UseExpr(TPasImplWhileDo(El).ConditionExpr);
-    UseImplBlock(TPasImplWhileDo(El),false);
+    UseImplElement(TPasImplWhileDo(El).Body);
     end
   else if C=TPasImplWithDo then
     begin
@@ -1532,7 +1578,7 @@ begin
     WithDo:=TPasImplWithDo(El);
     for i:=0 to WithDo.Expressions.Count-1 do
       UseExpr(TObject(WithDo.Expressions[i]) as TPasExpr);
-    UseImplBlock(WithDo,false);
+    UseImplElement(WithDo.Body);
     end
   else if C=TPasImplExceptOn then
     begin
@@ -1923,9 +1969,9 @@ begin
   if Proc.Parent is TPasMembersType then
     UseClassOrRecType(TPasMembersType(Proc.Parent),paumElement);
 
-  UseScopeReferences(ProcScope.References);
-
   UseProcedureType(Proc.ProcType);
+
+  UseScopeReferences(ProcScope.References);
 
   ImplProc:=Proc;
   if ProcScope.ImplProc<>nil then
@@ -2363,7 +2409,7 @@ var
   i: Integer;
 begin
   if not MarkElementAsUsed(El) then exit;
-  // El.DestType is TPasGenericType, which is never be used
+  // El.DestType is the generic type, which is never used
   if El.CustomData is TPasSpecializeTypeData then
     UseElType(El,TPasSpecializeTypeData(El.CustomData).SpecializedType,Mode);
   for i:=0 to El.Params.Count-1 do
@@ -2668,7 +2714,7 @@ begin
         begin
         // declaration was never used
         if IsSpecializedGenericType(Decl) then
-          continue;
+          continue; // no hints for not used specializations
         EmitMessage(20170311231734,mtHint,nPALocalXYNotUsed,
           sPALocalXYNotUsed,[Decl.ElementTypeName,Decl.Name],Decl);
         end;
@@ -2704,7 +2750,7 @@ begin
           begin
           SpecEl:=TPRSpecializedItem(SpecializedItems[i]).SpecializedEl;
           if FindElement(SpecEl)<>nil then
-            exit; // a specialization of this generic type is used
+            exit; // a specialization of this generic type is used -> the generic is used
           end;
       end;
 
@@ -2810,7 +2856,7 @@ begin
     ImplProc:=ProcScope.ImplProc;
   if (ProcScope.ClassRecScope<>nil)
       and (ProcScope.ClassRecScope.SpecializedFromItem<>nil) then
-    exit; // specialized proc
+    exit; // no hints for not used specializations
 
   if not PAElementExists(DeclProc) then
     begin
@@ -2943,23 +2989,9 @@ var
 begin
   CreateTree;
   for m in TPAUseMode do
-    FModeChecked[m]:=TPasAnalyzerKeySet.Create(
-      {$ifdef pas2js}
-      @PasElementToHashName
-      {$else}
-      @ComparePointer
-      {$endif}
-      ,nil
-      );
+    FModeChecked[m]:=CreatePasElementSet;
   for oc in TPAOtherCheckedEl do
-    FOtherChecked[oc]:=TPasAnalyzerKeySet.Create(
-      {$ifdef pas2js}
-      @PasElementToHashName
-      {$else}
-      @ComparePointer
-      {$endif}
-      ,nil
-      );
+    FOtherChecked[oc]:=CreatePasElementSet;
   FOverrideLists:=TPasAnalyzerKeySet.Create(
     {$ifdef pas2js}
     @PAOverrideList_ElToHashName,@PasElementToHashName

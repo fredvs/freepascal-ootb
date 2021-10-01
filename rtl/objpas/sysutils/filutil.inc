@@ -602,31 +602,51 @@ begin
   InternalFindClose(f.FindHandle{$ifdef SEARCHREC_USEFINDDATA},f.FindData{$endif});
 end;
 
+{$if defined(windows) and not defined(win16)}
+function FindDataTimeToDateTime(constref aFileTime: FILETIME; out aResult: TDateTime): Boolean;
+var
+  st, lt: TSystemTime;
+begin
+  Result := FileTimeToSystemTime(aFileTime, st);
+  if Result then begin
+{$ifndef wince}
+    if SystemTimeToTzSpecificLocalTime(Nil, st, lt) then
+      aResult := SystemTimeToDateTime(lt)
+    else
+{$endif}
+      aResult := SystemTimeToDateTime(st);
+  end;
+end;
+{$endif}
+
 { TUnicodeSearchRec }
 
 function TUnicodeSearchRec.GetTimeStamp: TDateTime;
 begin
+{$if declared(FindDataTimeToDateTime)}
+  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
+{$else}
   Result := FileDateToDateTime(Time);
+{$endif}
 end;
 
 { TRawbyteSearchRec }
 
 function TRawbyteSearchRec.GetTimeStamp: TDateTime;
 begin
+{$if declared(FindDataTimeToDateTime)}
+  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
+{$else}
   Result := FileDateToDateTime(Time);
+{$endif}
 end;
 
 { TUnicodeSymLinkRec }
 
 function TUnicodeSymLinkRec.GetTimeStamp: TDateTime;
-{$if defined(win32) or defined(win64) or defined(wince)}
-var
-  st: TSystemTime;
-{$endif}
 begin
-{$if defined(win32) or defined(win64) or defined(wince)}
-  FileTimeToSystemTime(FindData.ftLastWriteTime, st);
-  Result := SystemTimeToDateTime(st);
+{$if declared(FindDataTimeToDateTime)}
+  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
 {$else}
   Result := 0;
 {$endif}
@@ -635,14 +655,9 @@ end;
 { TRawbyteSymLinkRec }
 
 function TRawbyteSymLinkRec.GetTimeStamp: TDateTime;
-{$if defined(win32) or defined(win64) or defined(wince)}
-var
-  st: TSystemTime;
-{$endif}
 begin
-{$if defined(win32) or defined(win64) or defined(wince)}
-  FileTimeToSystemTime(FindData.ftLastWriteTime, st);
-  Result := SystemTimeToDateTime(st);
+{$if declared(FindDataTimeToDateTime)}
+  if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
 {$else}
   Result := 0;
 {$endif}
@@ -655,3 +670,77 @@ begin
   Result:= False;
 end;
 {$endif}
+
+Function GetFileContents(Const aFileName : RawByteString) : TBytes;
+
+Var
+  H : Thandle;
+
+begin
+  H:=FileOpen(aFileName,fmOpenRead or fmShareDenyWrite);
+  if H<0 then
+    Raise EFileNotFoundException.Create(SFileNotFound);
+  try
+    Result:=GetFileContents(H);
+  finally
+    FileClose(H);
+  end;
+end;
+
+Function GetFileContents(Const aFileName : UnicodeString) : TBytes;
+
+Var
+  H : Thandle;
+
+begin
+  H:=FileOpen(aFileName,fmOpenRead or fmShareDenyWrite);
+  if H<0 then
+    Raise EFileNotFoundException.Create(SFileNotFound);
+  try
+    Result:=GetFileContents(H);
+  finally
+    FileClose(H);
+  end;
+end;
+
+Function GetFileContents(Const aHandle : THandle) : TBytes;
+
+Var
+  aLen,aOffset,aRead : Int64;
+  aBuf : PByte;
+
+begin
+  aLen:=FileSeek(aHandle,0,fsFromEnd);
+  FileSeek(aHandle,0,fsFromBeginning);
+  SetLength(Result,aLen);
+  aOffset:=0;
+  Repeat
+    aBuf:=@Result[aOffset];
+    aRead:=FileRead(aHandle,aBuf^,aLen-aOffset);
+    aOffset:=aOffset+aRead;
+  Until (aOffset>=aLen) or (aRead<=0);
+  if aRead<0 then
+    RaiseLastOSError;
+end;
+
+Function GetFileAsString(Const aFileName : RawByteString; aEncoding : TEncoding) : RawByteString;
+
+begin
+  Result:=aEncoding.GetAnsiString(GetFileContents(aFileName));
+end;
+
+Function GetFileAsString(Const aFileName : RawByteString) : RawByteString;
+
+begin
+  Result:=GetFileAsString(aFileName,TEncoding.SystemEncoding);
+end;
+
+Function GetFileAsString(Const aFileName : UnicodeString) : UnicodeString;
+begin
+  Result:=GetFileAsString(aFileName, TEncoding.Unicode);
+end;
+
+Function GetFileAsString(Const aFileName : UnicodeString; aEncoding : TEncoding) : UnicodeString;
+begin
+  Result:=aEncoding.GetString(GetFileContents(aFileName))
+end;

@@ -50,8 +50,8 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils');
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.ShortName := 'tils';
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -68,13 +68,13 @@ begin
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('paszlib');
     P.Dependencies.Add('hash');
-    P.Dependencies.Add('univint',[darwin,iphonesim]);
+    P.Dependencies.Add('univint',[darwin,iphonesim,ios]);
     P.Dependencies.Add('fcl-json');
 
     P.Dependencies.Add('rtl-extra');
     P.Dependencies.Add('rtl-objpas');
 
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     T:=P.Targets.AddProgram('ptop.pp');
     T.Dependencies.AddUnit('ptopu');

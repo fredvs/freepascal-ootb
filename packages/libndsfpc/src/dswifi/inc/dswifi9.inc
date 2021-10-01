@@ -1,5 +1,5 @@
 (*
-  $Id: dswifi9.inc 28299 2014-08-02 15:23:51Z Legolas $
+  $Id$
   ------------------------------------------------------------------------------
   DSWifi Project - Arm9 Library Header File (dswifi9.h)
   (C) 2005-2006 Stephen Stair - sgstair@akkit.org - http://www.akkit.org

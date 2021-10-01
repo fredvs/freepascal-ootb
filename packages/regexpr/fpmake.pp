@@ -18,8 +18,8 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
-    P.OSes:=P.OSes-[embedded,win16,macos,palmos];
+    P.Version:='3.2.2';
+    P.OSes:=P.OSes-[embedded,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

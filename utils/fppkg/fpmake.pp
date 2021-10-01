@@ -8,7 +8,7 @@ uses fpmkunit;
 procedure add_fppkg_util(const ADirectory: string);
 
 const
-  lnetOSes = [linux,beos,haiku,freebsd,netbsd,openbsd,darwin,iphonesim,solaris,win32,win64,wince,aix,dragonfly];
+  lnetOSes = [linux,beos,haiku,freebsd,netbsd,openbsd,darwin,iphonesim,ios,solaris,win32,win64,wince,aix,dragonfly];
   WindowsOSes = [win32,win64,wince];
 Var
   P : TPackage;
@@ -19,7 +19,7 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-fppkg');
-    P.ShortName:='fppkg';
+    P.ShortName:='fpkg';
 
     P.Author := '<various>';
     P.License := 'LGPL with modification';
@@ -29,9 +29,9 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
-    P.OSes:=AllOSes-[embedded,msdos,win16,go32v2,nativent,macos,palmos,atari];
+    P.OSes:=AllOSes-[embedded,msdos,win16,go32v2,nativent,macosclassic,palmos,atari,symbian];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -55,9 +55,9 @@ begin
     P.Dependencies.Add('fcl-process');
     P.Dependencies.Add('fcl-net');
     P.Dependencies.Add('paszlib');
-    //P.Dependencies.Add('libcurl',[beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,aix]);
+    //P.Dependencies.Add('libcurl',[beos,haiku,freebsd,darwin,iphonesim,ios,solaris,netbsd,openbsd,linux,aix]);
     P.Dependencies.Add('fppkg');
-    P.Dependencies.Add('univint', [Darwin, iphonesim]);
+    P.Dependencies.Add('univint', [Darwin, iphonesim,ios]);
 
     T:=P.Targets.AddProgram('fppkg.pp');
 

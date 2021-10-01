@@ -23,16 +23,16 @@ begin
   With Installer do
     begin
     P:=AddPackage('odata');
-    P.ShortName:='odata';
+    P.ShortName:='odat';
     P.Author := 'Michael Van Canneyt';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
     P.Email := '';
     P.Description := 'OData client base libraries, Microsoft Office365 clients';
     P.NeedLibC:= false;
-    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,win32,win64,wince,aix,amiga,aros,morphos,dragonfly];
+    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,ios,solaris,netbsd,openbsd,linux,win32,win64,wince,aix,amiga,aros,morphos,dragonfly];
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('rtl-extra');
     P.Dependencies.Add('rtl-objpas');

@@ -152,7 +152,7 @@ begin
       begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-         Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
       end
      else

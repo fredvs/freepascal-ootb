@@ -20,6 +20,7 @@ type
     procedure TestGen_GenericNotFoundFail;
     procedure TestGen_SameNameSameParamCountFail;
     procedure TestGen_TypeAliasWithoutSpecializeFail;
+    procedure TestGen_TemplNameEqTypeNameFail; // type T<T>
 
     // constraints
     procedure TestGen_ConstraintStringFail;
@@ -29,12 +30,13 @@ type
     procedure TestGen_ConstraintRecordClassFail;
     procedure TestGen_ConstraintArrayFail;
     procedure TestGen_ConstraintConstructor;
-    // ToDo: constraint T:Unit2.TBird
-    // ToDo: constraint T:Unit2.TGen<word>
+    procedure TestGen_ConstraintUnit;
+    // ToDo: constraint T:Unit2.specialize TGen<word>
     procedure TestGen_ConstraintSpecialize;
     procedure TestGen_ConstraintTSpecializeWithT;
-    procedure TestGen_ConstraintTSpecializeAsTFail;
-    procedure TestGen_TemplNameEqTypeNameFail;
+    procedure TestGen_ConstraintTSpecializeAsTFail; // TBird<T; U: T<word>>  and no T<>
+    procedure TestGen_ConstraintTSpecializeWithTFail; // TBird<T: TAnt<T>>
+    procedure TestGen_ConstraintSameNameFail; // TAnt<T:T>
     procedure TestGen_ConstraintInheritedMissingRecordFail;
     procedure TestGen_ConstraintInheritedMissingClassTypeFail;
     procedure TestGen_ConstraintMultiParam;
@@ -42,8 +44,6 @@ type
     procedure TestGen_ConstraintClassType_DotIsAsTypeCast;
     procedure TestGen_ConstraintClassType_ForInT;
     procedure TestGen_ConstraintClassType_IsAs;
-    // ToDo: A<T:T> fail
-    // ToDo: A<T:B<T>> fail
 
     // generic record
     procedure TestGen_RecordLocalNameDuplicateFail;
@@ -51,8 +51,9 @@ type
     procedure TestGen_RecordDelphi;
     procedure TestGen_RecordNestedSpecialized;
     procedure TestGen_Record_SpecializeSelfInsideFail;
+    procedure TestGen_Record_ReferGenericSelfFail;
     procedure TestGen_RecordAnoArray;
-    // ToDo: unitname.specialize TBird<word>.specialize
+    // ToDo: unitname.specialize TBird<word>.specialize TAnt<word>
     procedure TestGen_RecordNestedSpecialize;
 
     // generic class
@@ -87,11 +88,15 @@ type
     procedure TestGen_Class_Enums_NotPropagating;
     procedure TestGen_Class_Self;
     procedure TestGen_Class_MemberTypeConstructor;
+    procedure TestGen_Class_AliasMemberType;
+    procedure TestGen_Class_AccessGenericMemberTypeFail;
+    procedure TestGen_Class_ReferenceTo; // ToDo
     procedure TestGen_Class_List;
     // ToDo: different modeswitches at parse time and specialize time
 
     // generic external class
     procedure TestGen_ExtClass_Array;
+    procedure TestGen_ExtClass_VarargsOfType;
 
     // generic interface
     procedure TestGen_ClassInterface;
@@ -104,6 +109,7 @@ type
 
     // generic procedure type
     procedure TestGen_ProcType;
+    procedure TestGen_ProcType_AnonymousFunc_Delphi;
 
     // pointer of generic
     procedure TestGen_PointerDirectSpecializeFail;
@@ -144,6 +150,7 @@ type
     procedure TestGenProc_TypeParamCntOverload;
     procedure TestGenProc_TypeParamCntOverloadNoParams;
     procedure TestGenProc_TypeParamWithDefaultParamDelphiFail;
+    procedure TestGenProc_ParamSpecWithT; // ToDo: Func<T>(Bird: TBird<T>)
     // ToDo: NestedResultAssign
 
     // generic function infer types
@@ -169,7 +176,8 @@ type
     procedure TestGenMethod_TemplNameDifferFail;
     procedure TestGenMethod_ImplConstraintFail;
     procedure TestGenMethod_NestedSelf;
-    procedure TestGenMethod_OverloadTypeParamCnt;
+    procedure TestGenMethod_OverloadTypeParamCntObjFPC;
+    procedure TestGenMethod_OverloadTypeParamCntDelphi;
     procedure TestGenMethod_OverloadArgs;
   end;
 
@@ -250,6 +258,20 @@ begin
   '']);
   CheckResolverException('type expected, but TBird<> found',
     nXExpectedButYFound);
+end;
+
+procedure TTestResolveGenerics.TestGen_TemplNameEqTypeNameFail;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  generic TBird<TBird> = record v: T; end;',
+  'var r: specialize TBird<word>;',
+  'begin',
+  '']);
+  CheckResolverException('Duplicate identifier "TBird" at afile.pp(4,16)',
+    nDuplicateIdentifier);
 end;
 
 procedure TTestResolveGenerics.TestGen_ConstraintStringFail;
@@ -358,6 +380,36 @@ begin
   ParseProgram;
 end;
 
+procedure TTestResolveGenerics.TestGen_ConstraintUnit;
+begin
+  AddModuleWithIntfImplSrc('unit1.pas',
+    LinesToStr([
+    'type',
+    '  TBird = class b1: word; end;',
+    '  generic TAnt<T> = class a1: T; end;',
+    '']),
+    LinesToStr([
+    '']));
+  StartProgram(true,[supTObject]);
+  Add([
+  'uses unit1;',
+  'type',
+  '  generic TCat<T: unit1.TBird> = class v: T; end;',
+  '  generic TFish<T: specialize TAnt<word>> = class v: T; end;',
+  '  TEagle = class(unit1.TBird);',
+  '  TRedAnt = specialize TAnt<word>;',
+  'var',
+  '  eagle: TEagle;',
+  '  redant: TRedAnt;',
+  '  cat: specialize TCat<TEagle>;',
+  '  fish: specialize TFish<TRedAnt>;',
+  'begin',
+  '  cat.v:=eagle;',
+  '  fish.v:=redant;',
+  '']);
+  ParseProgram;
+end;
+
 procedure TTestResolveGenerics.TestGen_ConstraintSpecialize;
 begin
   StartProgram(false);
@@ -415,25 +467,41 @@ begin
   Add([
   '{$mode objfpc}',
   'type',
-  '  generic TAnt<S> = record v: S; end;',
+  '  TObject = class end;',
+  // Note: would work if  generic T<S>  exists
   '  generic TBird<T; U: specialize T<word>> = record v: T; end;',
   'begin',
   '']);
   CheckResolverException('identifier not found "T<>"',nIdentifierNotFound);
 end;
 
-procedure TTestResolveGenerics.TestGen_TemplNameEqTypeNameFail;
+procedure TTestResolveGenerics.TestGen_ConstraintTSpecializeWithTFail;
 begin
   StartProgram(false);
   Add([
   '{$mode objfpc}',
   'type',
-  '  generic TBird<TBird> = record v: T; end;',
-  'var r: specialize TBird<word>;',
+  '  TObject = class end;',
+  '  generic TAnt<S> = class v: S; end;',
+  '  generic TBird<T: specialize TAnt<T>> = class v: T; end;',
+  '  TEagle = specialize TBird<specialize TAnt<word>>;',
   'begin',
   '']);
-  CheckResolverException('Duplicate identifier "TBird" at afile.pp(4,16)',
-    nDuplicateIdentifier);
+  CheckResolverException('identifier not found "T"',nIdentifierNotFound);
+end;
+
+procedure TTestResolveGenerics.TestGen_ConstraintSameNameFail;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  TObject = class end;',
+  '  T = TObject;',
+  '  generic TAnt<T:T> = record v: word; end;',
+  'begin',
+  '']);
+  CheckResolverException(sTypeCycleFound,nTypeCycleFound);
 end;
 
 procedure TTestResolveGenerics.TestGen_ConstraintInheritedMissingRecordFail;
@@ -684,6 +752,21 @@ begin
   'type',
   '  generic TBird<T> = record',
   '    v: specialize TBird<word>;',
+  '  end;',
+  'begin',
+  '']);
+  CheckResolverException('type "TBird<>" is not yet completely defined',
+    nTypeXIsNotYetCompletelyDefined);
+end;
+
+procedure TTestResolveGenerics.TestGen_Record_ReferGenericSelfFail;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode delphi}',
+  'Type',
+  '  TBird<T> = record',
+  '    b: TBird<T>;',
   '  end;',
   'begin',
   '']);
@@ -1387,6 +1470,87 @@ begin
   ParseProgram;
 end;
 
+procedure TTestResolveGenerics.TestGen_Class_AliasMemberType;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode objfpc}',
+  '{$modeswitch externalclass}',
+  'type',
+  '  TObject = class end;',
+  '',
+  '  generic TBird<T> = class',
+  '  public type',
+  '    TRun = reference to function (aValue : T) : T;',
+  '  end;',
+  '  TBirdWord = specialize TBird<Word>;',
+  '  TBirdWordRun = TBirdWord.TRun;',
+  '',
+  '  generic TExt<T> = class external name ''Ext''',
+  '  public type',
+  '    TRun = reference to function (aValue : T) : T;',
+  '  end;',
+  '  TExtWord = specialize TExt<Word>;',
+  '  TExtWordRun = TExtWord.TRun;',
+  'begin',
+  '']);
+  ParseProgram;
+end;
+
+procedure TTestResolveGenerics.TestGen_Class_AccessGenericMemberTypeFail;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  TObject = class end;',
+  '',
+  '  generic TBird<T> = class',
+  '  public type',
+  '    TRun = reference to function (aValue : T) : T;',
+  '  end;',
+  '  TBirdRun = TBird.TRun;',
+  'begin',
+  '']);
+  CheckResolverException('Generics without specialization cannot be used as a type for a reference',
+    nGenericsWithoutSpecializationAsType);
+end;
+
+procedure TTestResolveGenerics.TestGen_Class_ReferenceTo;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  TObject = class end;',
+  '  generic TGJSPromise<T> = class',
+  '  public type',
+  '    TGJSPromiseResolver = reference to function (aValue : T) : T;',
+  '    TGJSPromiseExecutor = reference to procedure (resolve,reject : TGJSPromiseResolver);',
+  '  public',
+  '    constructor new(Executor : TGJSPromiseExecutor);',
+  '  end;',
+  'constructor TGJSPromise.new(Executor : TGJSPromiseExecutor);',
+  'begin',
+  'end;',
+  '',
+  'type',
+  '  TJSPromise = specialize TGJSPromise<Word>;',
+  '  TJSPromiseResolver = reference to function (aValue : Word) : Word;',
+  '',
+  '  TURLLoader = Class(TObject)',
+  '    procedure dofetch(resolve, reject: TJSPromiseResolver); virtual; abstract;',
+  '    Function fetch : TJSPromise;',
+  '  end;',
+  'function TURLLoader.fetch : TJSPromise;',
+  'begin',
+  '  Result:=TJSPromise.New(@Dofetch);',
+  'end;',
+  'begin',
+  '']);
+  ParseProgram;
+end;
+
 procedure TTestResolveGenerics.TestGen_Class_List;
 begin
   StartProgram(false);
@@ -1472,6 +1636,33 @@ begin
   '           begin',
   '           end',
   '      );',
+  '']);
+  ParseProgram;
+end;
+
+procedure TTestResolveGenerics.TestGen_ExtClass_VarargsOfType;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode objfpc}',
+  '{$modeswitch externalclass}',
+  'type',
+  '  TJSObject = class external name ''Object''',
+  '  end;',
+  '  generic TGJSSet<T> = class external name ''Set''',
+  '    constructor new(aElement1: T); varargs of T; overload;',
+  '    function bind(thisArg: TJSObject): T; varargs of T;',
+  '  end;',
+  '  TJSWordSet = specialize TGJSSet<word>;',
+  'var',
+  '  s: TJSWordSet;',
+  '  w: word;',
+  'begin',
+  '  s:=TJSWordSet.new(3);',
+  '  s:=TJSWordSet.new(3,5);',
+  '  w:=s.bind(nil);',
+  '  w:=s.bind(nil,6);',
+  '  w:=s.bind(nil,7,8);',
   '']);
   ParseProgram;
 end;
@@ -1615,6 +1806,51 @@ begin
   '  b:=@GetIt;',
   '']);
   ParseProgram;
+end;
+
+procedure TTestResolveGenerics.TestGen_ProcType_AnonymousFunc_Delphi;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TObject = class',
+  '  end;',
+  '  IInterface = interface',
+  '  end;',
+  '  Integer = longint;',
+  '  IComparer<T> = interface',
+  '    function Compare(const Left, Right: T): Integer; overload;',
+  '  end;',
+  '  TOnComparison<T> = function(const Left, Right: T): Integer of object;',
+  '  TComparisonFunc<T> = reference to function(const Left, Right: T): Integer;',
+  '  TComparer<T> = class(TObject, IComparer<T>)',
+  '  public',
+  '    function Compare(const Left, Right: T): Integer; overload;',
+  '    class function Construct(const AComparison: TOnComparison<T>): IComparer<T>; overload;',
+  '    class function Construct(const AComparison: TComparisonFunc<T>): IComparer<T>; overload;',
+  '  end;',
+  'function TComparer<T>.Compare(const Left, Right: T): Integer; overload;',
+  'begin',
+  'end;',
+  'class function TComparer<T>.Construct(const AComparison: TOnComparison<T>): IComparer<T>;',
+  'begin',
+  'end;',
+  'class function TComparer<T>.Construct(const AComparison: TComparisonFunc<T>): IComparer<T>;',
+  'begin',
+  'end;',
+  'procedure Test;',
+  'var',
+  '  aComparer : IComparer<Integer>;',
+  'begin',
+  '  aComparer:=TComparer<Integer>.Construct(function (Const a,b : integer) : integer',
+  '    begin',
+  '      Result:=a-b;',
+  '    end);',
+  'end;',
+  'begin',
+  '  Test;']);
+  ParseModule;
 end;
 
 procedure TTestResolveGenerics.TestGen_PointerDirectSpecializeFail;
@@ -2191,6 +2427,31 @@ begin
   CheckResolverException(sParamOfThisTypeCannotHaveDefVal,nParamOfThisTypeCannotHaveDefVal);
 end;
 
+procedure TTestResolveGenerics.TestGenProc_ParamSpecWithT;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TObject = class end;',
+  '  TBird<T> = class v: T; end;',
+  '  TAnt = class',
+  '    procedure Func<T: class>(Bird: TBird<T>);',
+  '  end;',
+  'procedure TAnt.Func<T>(Bird: TBird<T>);',
+  'begin',
+  'end;',
+  'var',
+  '  Ant: TAnt;',
+  '  Bird: TBird<TObject>;',
+  '  BirdOfBird: TBird<TBird<TObject>>;',
+  'begin',
+  '  Ant.Func<TObject>(Bird);',
+  '  Ant.Func<TBird<TObject>>(BirdOfBird);',
+  '']);
+  ParseProgram;
+end;
+
 procedure TTestResolveGenerics.TestGenProc_Infer_NeedExplicitFail;
 begin
   StartProgram(false);
@@ -2544,7 +2805,7 @@ begin
   ParseProgram;
 end;
 
-procedure TTestResolveGenerics.TestGenMethod_OverloadTypeParamCnt;
+procedure TTestResolveGenerics.TestGenMethod_OverloadTypeParamCntObjFPC;
 begin
   StartProgram(false);
   Add([
@@ -2565,6 +2826,32 @@ begin
   'begin',
   '  obj.specialize {@A}Run<word>(3);',
   '  obj.specialize {@B}Run<word,char>(4);',
+  '']);
+  ParseProgram;
+end;
+
+procedure TTestResolveGenerics.TestGenMethod_OverloadTypeParamCntDelphi;
+begin
+  StartProgram(false);
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TObject = class',
+  '    procedure {#A}Run<T>(a: T); overload;',
+  '    procedure {#B}Run<M,N>(a: M); overload;',
+  '  end;',
+  'procedure TObject.Run<T>(a: T);',
+  'begin',
+  'end;',
+  'procedure TObject.Run<M,N>(a: M);',
+  'begin',
+  '  {@A}Run<M>(a);',
+  '  {@B}Run<double,char>(1.3);',
+  'end;',
+  'var obj: TObject;',
+  'begin',
+  '  obj.{@A}Run<word>(3);',
+  '  obj.{@B}Run<word,char>(4);',
   '']);
   ParseProgram;
 end;

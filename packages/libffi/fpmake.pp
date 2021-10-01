@@ -13,18 +13,18 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libffi');
+    P.ShortName := 'lffi';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Author := 'Anthony Green and others';
     P.License := 'MIT license';
     P.HomepageURL := 'https://sourceware.org/libffi/';
     P.Email := 'libffi-discuss@sourceware.org';
     P.Description := 'Headers for the libFFI library (Foreign Function Interface)';
     P.NeedLibC:= true;  // true for headers that indirectly link to libc?
-    P.OSes := [linux];
-    P.CPUs := [x86_64];
+    P.OSes := [linux,win32,win64] + AllBSDOSes;
     P.Dependencies.Add('rtl-objpas');
 
     P.SourcePath.Add('src');

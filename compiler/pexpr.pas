@@ -440,7 +440,7 @@ implementation
                   is_open_string(p1.resultdef)
                  )) or
                  { keep the function call if it is a type parameter to avoid arithmetic errors due to constant folding }
-                 (p1.resultdef.typ=undefineddef) then
+                 is_typeparam(p1.resultdef) then
                 begin
                   statement_syssym:=geninlinenode(in_sizeof_x,false,p1);
                   { no packed bit support for these things }
@@ -1974,7 +1974,7 @@ implementation
                       not is_objectpascal_helper(tdef(srsymtable.defowner)) then
                     internalerror(2013011401);
                   { convert const node to temp node of the extended type }
-                  if node.nodetype in (nodetype_const+[niln,addrn]) then
+                  if node.nodetype in (nodetype_const+[addrn]) then
                     begin
                       extdef:=tobjectdef(srsymtable.defowner).extendeddef;
                       newstatement:=nil;
@@ -2449,16 +2449,26 @@ implementation
                            begin
                              if not try_type_helper(p1,nil) then
                                begin
-                                 if pattern='CREATE' then
+                                 if p1.nodetype=typen then
                                    begin
-                                     consume(_ID);
-                                     p2:=parse_array_constructor(tarraydef(p1.resultdef));
-                                     p1.destroy;
-                                     p1:=p2;
+                                     if pattern='CREATE' then
+                                       begin
+                                         consume(_ID);
+                                         p2:=parse_array_constructor(tarraydef(p1.resultdef));
+                                         p1.destroy;
+                                         p1:=p2;
+                                       end
+                                     else
+                                       begin
+                                         Message2(scan_f_syn_expected,'CREATE',pattern);
+                                         p1.destroy;
+                                         p1:=cerrornode.create;
+                                         consume(_ID);
+                                       end;
                                    end
                                  else
                                    begin
-                                     Message2(scan_f_syn_expected,'CREATE',pattern);
+                                     Message(parser_e_invalid_qualifier);
                                      p1.destroy;
                                      p1:=cerrornode.create;
                                      consume(_ID);
@@ -2947,7 +2957,10 @@ implementation
                                  else
                                    begin
                                      srsym:=tprocdef(hdef).procsym;
-                                     srsymtable:=srsym.owner;
+                                     if assigned(spezcontext.symtable) then
+                                       srsymtable:=spezcontext.symtable
+                                     else
+                                       srsymtable:=srsym.owner;
                                    end;
                                end
                              else
@@ -2959,11 +2972,11 @@ implementation
                wasgenericdummy:=false;
                if assigned(srsym) and
                    (sp_generic_dummy in srsym.symoptions) and
+                   (srsym.typ=typesym) and
                    (
                      (
                        (m_delphi in current_settings.modeswitches) and
                        not (token in [_LT, _LSHARPBRACKET]) and
-                       (srsym.typ=typesym) and
                        (ttypesym(srsym).typedef.typ=undefineddef)
                      )
                      or

@@ -276,7 +276,7 @@ end;
 procedure TLinkerMacOS.SetDefaultInfo;
 begin
   case (target_info.system) of
-    system_m68k_macos:      SetMacOS68kInfo;
+    system_m68k_macosclassic:      SetMacOS68kInfo;
   end;
 end;
 
@@ -358,7 +358,7 @@ begin
        begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-         Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
        end
       else
@@ -448,8 +448,8 @@ initialization
 {$ifndef macos}
   RegisterLinker(ld_mpw,TLinkerMacOS);
 {$endif}
-  RegisterTarget(system_m68k_macos_info);
-  RegisterImport(system_m68k_macos,timportlibmacos);
+  RegisterTarget(system_m68k_macosclassic_info);
+  RegisterImport(system_m68k_macosclassic,timportlibmacos);
 {$endif m68k}
 {$ifdef powerpc}
 {$ifndef macos}
@@ -457,7 +457,7 @@ initialization
 {$else}
   RegisterLinker(ld_mpw,TLinkerMPW);
 {$endif}
-  RegisterTarget(system_powerpc_macos_info);
-  RegisterImport(system_powerpc_macos,timportlibmacos);
+  RegisterTarget(system_powerpc_macosclassic_info);
+  RegisterImport(system_powerpc_macosclassic,timportlibmacos);
 {$endif powerpc}
 end.

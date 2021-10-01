@@ -971,7 +971,7 @@ type
     procedure WriteWord(w : Word);
     procedure WriteDWord(d : Cardinal);
     procedure WriteQWord(q : QWord);
-    Procedure WriteAnsiString (const S : String);
+    Procedure WriteAnsiString (const S : String); virtual;
     property Position: Int64 read GetPosition write SetPosition;
     property Size: Int64 read GetSize write SetSize64;
   end;
@@ -1105,9 +1105,9 @@ type
     Destructor Destroy; override;
     function ReadUnicodeString(Count: Longint): UnicodeString;
     procedure WriteUnicodeString(const AString: UnicodeString);
-    function ReadAnsiString(Count: Longint): AnsiString;
-    procedure WriteAnsiString(const AString: AnsiString);
-    function ReadString(Count: Longint): string;
+    function ReadAnsiString(Count: Longint): AnsiString; overload;
+    procedure WriteAnsiString(const AString: AnsiString); override;
+    function ReadString(Count: Longint): string; 
     procedure WriteString(const AString: string);
     property DataString: string read GetDataString;
     Property UnicodeDataString : UnicodeString Read GetUnicodeDataString;
@@ -1793,13 +1793,7 @@ type
     destructor Destroy; override;
     { Note: Once closures are supported aProc will be changed to TProc }
     class function CreateAnonymousThread(aProc: TProcedure): TThread; static;
-    { Use HAS_TTHREAD_NAMETHREADFORDEBUGGING to implement a platform specific
-      variant of the UnicodeString method. The AnsiString method calls the
-      UnicodeString method. If your platform's API only supports AnsiString you
-      can additionally define THREADNAME_IS_ANSISTRING to swap the logic. Then
-      the UnicodeString variant will call the AnsiString variant which can be
-      implemented for a specific platform }
-    class procedure NameThreadForDebugging(aThreadName: UnicodeString; aThreadID: TThreadID = TThreadID(-1)); static;
+    class procedure NameThreadForDebugging(aThreadName: UnicodeString; aThreadID: TThreadID = TThreadID(-1)); static; inline;
     class procedure NameThreadForDebugging(aThreadName: AnsiString; aThreadID: TThreadID = TThreadID(-1)); static; inline;
     class procedure SetReturnValue(aValue: Integer); static;
     class function CheckTerminated: Boolean; static;

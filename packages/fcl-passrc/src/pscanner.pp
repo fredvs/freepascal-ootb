@@ -16,22 +16,7 @@
 
 unit PScanner;
 
-{$mode objfpc}
-{$h+}
-
-{$ifdef fpc}
-  {$define UsePChar}
-  {$define UseAnsiStrings}
-  {$define HasStreams}
-  {$IF FPC_FULLVERSION<30101}
-    {$define EmulateArrayInsert}
-  {$endif}
-  {$define HasFS}
-{$endif}
-
-{$IFDEF NODEJS}
-  {$define HasFS}
-{$ENDIF}
+{$i fcl-passrc.inc}
 
 interface
 
@@ -39,7 +24,7 @@ uses
   {$ifdef pas2js}
   js,
   {$IFDEF NODEJS}
-  NodeJSFS,
+  Node.FS,
   {$ENDIF}
   Types,
   {$endif}
@@ -220,10 +205,14 @@ type
     tkmod,
     tknil,
     tknot,
+    tkobjccategory,
+    tkobjcclass,
+    tkobjcprotocol,
     tkobject,
     tkof,
     tkoperator,
     tkor,
+    tkotherwise,
     tkpacked,
     tkprocedure,
     tkprogram,
@@ -666,7 +655,8 @@ type
     po_StopOnErrorDirective, // error on user $Error, $message error|fatal
     po_ExtConstWithoutExpr,  // allow typed const without expression in external class and with external modifier
     po_StopOnUnitInterface,  // parse only a unit name and stop at interface keyword
-    po_IgnoreUnknownResource // Ignore resources for which no handler is registered.
+    po_IgnoreUnknownResource,// Ignore resources for which no handler is registered.
+    po_AsyncProcs            // allow async procedure modifier
     );
   TPOptions = set of TPOption;
 
@@ -816,6 +806,8 @@ type
     procedure HandleMessageDirective(Param: String); virtual;
     procedure HandleIncludeFile(Param: String); virtual;
     procedure HandleResource(Param : string); virtual;
+    procedure HandleOptimizations(Param : string); virtual;
+    procedure DoHandleOptimization(OptName, OptValue: string); virtual;
 
     procedure HandleUnDefine(Param: String); virtual;
 
@@ -1002,10 +994,14 @@ const
     'mod',
     'nil',
     'not',
+    'objccategory',
+    'objcclass',
+    'objcprotocol',
     'object',
     'of',
     'operator',
     'or',
+    'otherwise',
     'packed',
     'procedure',
     'program',
@@ -1162,9 +1158,6 @@ const
     );
 
 const
-  AllLanguageModes = [msFPC,msObjFPC,msDelphi,msTP7,msMac,msISO,msExtPas];
-
-const
   MessageTypeNames : Array[TMessageType] of string = (
     'Fatal','Error','Warning','Note','Hint','Info','Debug'
   );
@@ -1172,6 +1165,7 @@ const
 const
   // all mode switches supported by FPC
   msAllModeSwitches = [low(TModeSwitch)..High(TModeSwitch)];
+  AllLanguageModes = [msFPC..msGPC];
 
   DelphiModeSwitches = [msDelphi,msClass,msObjpas,msResult,msStringPchar,
      msPointer2Procedure,msAutoDeref,msTPProcVar,msInitFinal,msDefaultAnsistring,
@@ -1950,6 +1944,8 @@ begin
             dec(Lvl);
             if Lvl=0 then break;
             end;
+          else
+            // Do nothing, satisfy compiler
           end;
           NextToken;
         until false;
@@ -2098,6 +2094,8 @@ begin
               tkshr: R:=IntToStr(AInt shr BInt);
               tkPlus: R:=IntToStr(AInt+BInt);
               tkMinus: R:=IntToStr(AInt-BInt);
+            else
+              // Do nothing, satisfy compiler
             end
           else if IsExtended(B,BFloat) then
             case Op of
@@ -2148,6 +2146,8 @@ begin
           tkGreaterThan: R:=CondDirectiveBool[AInt>BInt];
           tkLessEqualThan: R:=CondDirectiveBool[AInt<=BInt];
           tkGreaterEqualThan: R:=CondDirectiveBool[AInt>=BInt];
+          else
+          // Do nothing, satisfy compiler
           end
         else if IsExtended(A,AFloat) and IsExtended(B,BFloat) then
           case Op of
@@ -2157,6 +2157,8 @@ begin
           tkGreaterThan: R:=CondDirectiveBool[AFloat>BFloat];
           tkLessEqualThan: R:=CondDirectiveBool[AFloat<=BFloat];
           tkGreaterEqualThan: R:=CondDirectiveBool[AFloat>=BFloat];
+          else
+          // Do nothing, satisfy compiler
           end
         else
           case Op of
@@ -2166,6 +2168,8 @@ begin
           tkGreaterThan: R:=CondDirectiveBool[A>B];
           tkLessEqualThan: R:=CondDirectiveBool[A<=B];
           tkGreaterEqualThan: R:=CondDirectiveBool[A>=B];
+          else
+          // Do nothing, satisfy compiler
           end;
         end;
       else
@@ -3088,6 +3092,7 @@ var
   end;
 
 begin
+  Result:=tkEOF;
   FCurTokenString := '';
   StartPos:=FTokenPos;
   {$ifndef UsePChar}
@@ -3398,6 +3403,47 @@ begin
   end;
 end;
 
+procedure TPascalScanner.HandleOptimizations(Param: string);
+// $optimization A,B-,C+
+var
+  p, StartP, l: Integer;
+  OptName, Value: String;
+begin
+  p:=1;
+  l:=length(Param);
+  while p<=l do
+    begin
+    // read next flag
+    // skip whitespace
+    while (p<=l) and (Param[p] in [' ',#9,#10,#13]) do
+      inc(p);
+    // read name
+    StartP:=p;
+    while (p<=l) and (Param[p] in ['a'..'z','A'..'Z','0'..'9','_']) do
+      inc(p);
+    if p=StartP then
+      Error(nWarnIllegalCompilerDirectiveX,sWarnIllegalCompilerDirectiveX,['optimization']);
+    OptName:=copy(Param,StartP,p-StartP);
+    // skip whitespace
+    while (p<=l) and (Param[p] in [' ',#9,#10,#13]) do
+      inc(p);
+    // read value
+    StartP:=p;
+    while (p<=l) and (Param[p]<>',') do
+      inc(p);
+    Value:=TrimRight(copy(Param,StartP,p-StartP));
+    DoHandleOptimization(OptName,Value);
+    inc(p);
+    end;
+end;
+
+procedure TPascalScanner.DoHandleOptimization(OptName, OptValue: string);
+begin
+  // default: skip any optimization directive
+  if OptName='' then ;
+  if OptValue='' then ;
+end;
+
 function TPascalScanner.HandleMacro(AIndex : integer) : TToken;
 
 Var
@@ -3609,7 +3655,8 @@ procedure TPascalScanner.HandleMode(const Param: String);
   procedure SetMode(const LangMode: TModeSwitch;
     const NewModeSwitches: TModeSwitches; IsDelphi: boolean;
     const AddBoolSwitches: TBoolSwitches = [];
-    const RemoveBoolSwitches: TBoolSwitches = []
+    const RemoveBoolSwitches: TBoolSwitches = [];
+    UseOtherwise: boolean = true
     );
   var
     Handled: Boolean;
@@ -3628,6 +3675,10 @@ procedure TPascalScanner.HandleMode(const Param: String);
         FOptions:=FOptions+[po_delphi]
       else
         FOptions:=FOptions-[po_delphi];
+      if UseOtherwise then
+        UnsetNonToken(tkotherwise)
+      else
+        SetNonToken(tkotherwise);
       end;
     Handled:=false;
     if Assigned(OnModeChanged) then
@@ -3645,33 +3696,47 @@ begin
   P:=Trim(UpperCase(Param));
   Case P of
   'FPC','DEFAULT':
+    begin
     SetMode(msFpc,FPCModeSwitches,false,bsFPCMode);
+    SetNonToken(tkobjcclass);
+    SetNonToken(tkobjcprotocol);
+    SetNonToken(tkobjcCategory);
+    end;
   'OBJFPC':
     begin
     SetMode(msObjfpc,OBJFPCModeSwitches,true,bsObjFPCMode);
     UnsetNonToken(tkgeneric);
     UnsetNonToken(tkspecialize);
+    SetNonToken(tkobjcclass);
+    SetNonToken(tkobjcprotocol);
+    SetNonToken(tkobjcCategory);
     end;
   'DELPHI':
     begin
     SetMode(msDelphi,DelphiModeSwitches,true,bsDelphiMode,[bsPointerMath]);
     SetNonToken(tkgeneric);
     SetNonToken(tkspecialize);
+    SetNonToken(tkobjcclass);
+    SetNonToken(tkobjcprotocol);
+    SetNonToken(tkobjcCategory);
     end;
   'DELPHIUNICODE':
     begin
     SetMode(msDelphiUnicode,DelphiUnicodeModeSwitches,true,bsDelphiUnicodeMode,[bsPointerMath]);
     SetNonToken(tkgeneric);
     SetNonToken(tkspecialize);
+    SetNonToken(tkobjcclass);
+    SetNonToken(tkobjcprotocol);
+    SetNonToken(tkobjcCategory);
     end;
   'TP':
     SetMode(msTP7,TPModeSwitches,false);
   'MACPAS':
     SetMode(msMac,MacModeSwitches,false,bsMacPasMode);
   'ISO':
-    SetMode(msIso,ISOModeSwitches,false);
+    SetMode(msIso,ISOModeSwitches,false,[],[],false);
   'EXTENDED':
-    SetMode(msExtpas,ExtPasModeSwitches,false);
+    SetMode(msExtpas,ExtPasModeSwitches,false,[],[],false);
   'GPC':
     SetMode(msGPC,GPCModeSwitches,false);
   else
@@ -3689,6 +3754,7 @@ Var
   Enable: Boolean;
 
 begin
+  Enable:=False;
   PM:=Param;
   p:=1;
   while (p<=length(PM)) and (PM[p] in ['a'..'z','A'..'Z','_','0'..'9']) do
@@ -3972,66 +4038,68 @@ begin
       Handled:=true;
       Param:=Trim(Param);
       Case UpperCase(Directive) of
-        'ASSERTIONS':
-          DoBoolDirective(bsAssertions);
-        'DEFINE':
-          HandleDefine(Param);
-        'GOTO':
-          DoBoolDirective(bsGoto);
-        'DIRECTIVEFIELD':
-          HandleDispatchField(Param,vsDispatchField);
-        'DIRECTIVESTRFIELD':
-          HandleDispatchField(Param,vsDispatchStrField);
-        'ERROR':
-          HandleError(Param);
-        'HINT':
-          DoLog(mtHint,nUserDefined,SUserDefined,[Param]);
-        'HINTS':
-          DoBoolDirective(bsHints);
-        'I','INCLUDE':
-          Result:=HandleInclude(Param);
-        'INTERFACES':
-          HandleInterfaces(Param);
-        'LONGSTRINGS':
-          DoBoolDirective(bsLongStrings);
-        'MACRO':
-          DoBoolDirective(bsMacro);
-        'MESSAGE':
-          HandleMessageDirective(Param);
-        'MODE':
-          HandleMode(Param);
-        'MODESWITCH':
-          HandleModeSwitch(Param);
-        'NOTE':
-          DoLog(mtNote,nUserDefined,SUserDefined,[Param]);
-        'NOTES':
-          DoBoolDirective(bsNotes);
-        'OBJECTCHECKS':
-          DoBoolDirective(bsObjectChecks);
-        'OVERFLOWCHECKS','OV':
-          DoBoolDirective(bsOverflowChecks);
-        'POINTERMATH':
-          DoBoolDirective(bsPointerMath);
-        'R' :
-          HandleResource(Param);
-        'RANGECHECKS':
-          DoBoolDirective(bsRangeChecks);
-        'SCOPEDENUMS':
-          DoBoolDirective(bsScopedEnums);
-        'TYPEDADDRESS':
-          DoBoolDirective(bsTypedAddress);
-        'TYPEINFO':
-          DoBoolDirective(bsTypeInfo);
-        'UNDEF':
-          HandleUnDefine(Param);
-        'WARN':
-          HandleWarn(Param);
-        'WARNING':
-          DoLog(mtWarning,nUserDefined,SUserDefined,[Param]);
-        'WARNINGS':
-          DoBoolDirective(bsWarnings);
-        'WRITEABLECONST':
-          DoBoolDirective(bsWriteableConst);
+      'ASSERTIONS':
+        DoBoolDirective(bsAssertions);
+      'DEFINE':
+        HandleDefine(Param);
+      'GOTO':
+        DoBoolDirective(bsGoto);
+      'DIRECTIVEFIELD':
+        HandleDispatchField(Param,vsDispatchField);
+      'DIRECTIVESTRFIELD':
+        HandleDispatchField(Param,vsDispatchStrField);
+      'ERROR':
+        HandleError(Param);
+      'HINT':
+        DoLog(mtHint,nUserDefined,SUserDefined,[Param]);
+      'HINTS':
+        DoBoolDirective(bsHints);
+      'I','INCLUDE':
+        Result:=HandleInclude(Param);
+      'INTERFACES':
+        HandleInterfaces(Param);
+      'LONGSTRINGS':
+        DoBoolDirective(bsLongStrings);
+      'MACRO':
+        DoBoolDirective(bsMacro);
+      'MESSAGE':
+        HandleMessageDirective(Param);
+      'MODE':
+        HandleMode(Param);
+      'MODESWITCH':
+        HandleModeSwitch(Param);
+      'NOTE':
+        DoLog(mtNote,nUserDefined,SUserDefined,[Param]);
+      'NOTES':
+        DoBoolDirective(bsNotes);
+      'OBJECTCHECKS':
+        DoBoolDirective(bsObjectChecks);
+      'OPTIMIZATION':
+        HandleOptimizations(Param);
+      'OVERFLOWCHECKS','OV':
+        DoBoolDirective(bsOverflowChecks);
+      'POINTERMATH':
+        DoBoolDirective(bsPointerMath);
+      'R' :
+        HandleResource(Param);
+      'RANGECHECKS':
+        DoBoolDirective(bsRangeChecks);
+      'SCOPEDENUMS':
+        DoBoolDirective(bsScopedEnums);
+      'TYPEDADDRESS':
+        DoBoolDirective(bsTypedAddress);
+      'TYPEINFO':
+        DoBoolDirective(bsTypeInfo);
+      'UNDEF':
+        HandleUnDefine(Param);
+      'WARN':
+        HandleWarn(Param);
+      'WARNING':
+        DoLog(mtWarning,nUserDefined,SUserDefined,[Param]);
+      'WARNINGS':
+        DoBoolDirective(bsWarnings);
+      'WRITEABLECONST':
+        DoBoolDirective(bsWriteableConst);
       else
         Handled:=false;
       end;
@@ -4092,7 +4160,10 @@ begin
   else if CompareText(Param,'off')=0 then
     NewValue:=false
   else
+    begin
+    NewValue:=True;// Fool compiler
     Error(nErrXExpectedButYFound,SErrXExpectedButYFound,['on',Param]);
+    end;
   if (bs in CurrentBoolSwitches)=NewValue then exit;
   if bs in ReadOnlyBoolSwitches then
     DoLog(mtWarning,nWarnIllegalCompilerDirectiveX,sWarnIllegalCompilerDirectiveX,
@@ -4150,6 +4221,7 @@ var
   end;
 
 begin
+  TokenStart:={$ifdef UsePChar}nil{$else}0{$endif};
   Result:=tkLineEnding;
   if FTokenPos {$ifdef UsePChar}= nil{$else}<1{$endif} then
     if not FetchLine then
@@ -4887,6 +4959,18 @@ begin
     UnDefine(LetterSwitchNames['H'],true);
     Exclude(FCurrentBoolSwitches,bsLongStrings);
     end;
+  if ([msObjectiveC1,msObjectiveC2] * FCurrentModeSwitches) = [] then
+    begin
+    SetNonToken(tkobjcclass);
+    SetNonToken(tkobjcprotocol);
+    SetNonToken(tkobjccategory);
+    end
+  else
+    begin
+    UnSetNonToken(tkobjcclass);
+    UnSetNonToken(tkobjcprotocol);
+    UnSetNonToken(tkobjccategory);
+    end
 end;
 
 procedure TPascalScanner.SetCurrentValueSwitch(V: TValueSwitch;
@@ -5236,12 +5320,14 @@ end;
 
 function TPascalScanner.IgnoreMsgType(MsgType: TMessageType): boolean;
 begin
+  Result:=false;
   case MsgType of
     mtWarning: if not (bsWarnings in FCurrentBoolSwitches) then exit(true);
     mtNote: if not (bsNotes in FCurrentBoolSwitches) then exit(true);
     mtHint: if not (bsHints in FCurrentBoolSwitches) then exit(true);
+  else
+    // Do nothing, satisfy compiler
   end;
-  Result:=false;
 end;
 
 end.

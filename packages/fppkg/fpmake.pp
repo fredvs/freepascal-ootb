@@ -8,7 +8,7 @@ uses fpmkunit, sysutils;
 procedure add_fppkg(const ADirectory: string);
 
 const
-  TargetsWithWGet = [linux,beos,haiku,freebsd,netbsd,openbsd,darwin,iphonesim,solaris,win32,win64,wince,aix,dragonfly];
+  TargetsWithWGet = [linux,beos,haiku,freebsd,netbsd,openbsd,darwin,iphonesim,ios,solaris,win32,win64,wince,aix,dragonfly];
   TargetsWithfpWeb = TargetsWithWGet;
 
 Var
@@ -26,14 +26,14 @@ begin
     P.ShortName:='fppk';
     P.Directory:=ADirectory;
 
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-xml');
     P.Dependencies.Add('fcl-process',AllOSes-[go32v2,os2]);
     P.Dependencies.Add('paszlib');
     P.Dependencies.Add('fpmkunit');
 
-    P.Dependencies.Add('univint',[MacOSX,iphonesim]);
+    P.Dependencies.Add('univint',[MacOSX,iphonesim,ios]);
     P.Dependencies.Add('fcl-net', TargetsWithfpWeb);
     P.Dependencies.Add('fcl-web', TargetsWithfpWeb);
     P.Dependencies.Add('httpd22', TargetsWithfpWeb);
@@ -44,7 +44,7 @@ begin
     P.Email := '';
     P.Description := 'Libraries to create fppkg package managers.';
     P.NeedLibC:= false;
-    P.OSes := P.OSes - [embedded,nativent,msdos,win16,atari,macos,palmos,symbian];
+    P.OSes := P.OSes - [embedded,nativent,msdos,win16,atari,macosclassic,palmos,symbian];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

@@ -56,10 +56,6 @@ interface
        sysutils;
 
 {$IFDEF FPDOC_MATH}
-{$DEFINE FPC_HAS_TYPE_SINGLE}
-{$DEFINE FPC_HAS_TYPE_DOUBLE}
-{$DEFINE FPC_HAS_TYPE_EXTENDED}
-{$DEFINE FPC_HAS_TYPE_COMP}
 Type
   Float = MaxFloatType;
 
@@ -157,6 +153,17 @@ Const
        Infinity = 1.0/0.0;
        NegInfinity = -1.0/0.0;
 {$pop}
+
+
+{$IFDEF FPDOC_MATH}
+
+// This must be after the above defines.
+
+{$DEFINE FPC_HAS_TYPE_SINGLE}
+{$DEFINE FPC_HAS_TYPE_DOUBLE}
+{$DEFINE FPC_HAS_TYPE_EXTENDED}
+{$DEFINE FPC_HAS_TYPE_COMP}
+{$ENDIF}
 
 { Min/max determination }
 function MinIntValue(const Data: array of Integer): Integer;
@@ -502,6 +509,7 @@ function MaxValue(const data : PInteger; Const N : Integer) : Integer;
 
 { returns random values with gaussian distribution }
 function RandG(mean,stddev : float) : float;
+
 function RandomRange(const aFrom, aTo: Integer): Integer;
 function RandomRange(const aFrom, aTo: Int64): Int64;
 

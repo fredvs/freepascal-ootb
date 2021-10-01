@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Description:='Free Pascal Make Tool';
     P.Author := 'Peter Vreman';
     P.License := 'LGPL with modification, ';
@@ -25,7 +25,7 @@ begin
     P.Email := '';
     P.Description := 'Basic library of the fpmake/fppkg build system.';
     P.NeedLibC:= false;  // true for headers that indirectly link to libc?
-    P.OSes := P.OSes - [embedded,nativent,msdos,win16,atari,macos,palmos];
+    P.OSes := P.OSes - [embedded,nativent,msdos,win16,atari,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

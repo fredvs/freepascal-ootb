@@ -933,9 +933,14 @@ implementation
                         typecheckpass(expr);
                       end;
                     case expr.resultdef.typ of
-                      stringdef: result:=create_string_for_in_loop(hloopvar, hloopbody, expr);
-                      arraydef: result:=create_array_for_in_loop(hloopvar, hloopbody, expr);
-                      setdef: result:=create_set_for_in_loop(hloopvar, hloopbody, expr);
+                      stringdef:
+                        result:=create_string_for_in_loop(hloopvar, hloopbody, expr);
+                      arraydef:
+                        result:=create_array_for_in_loop(hloopvar, hloopbody, expr);
+                      setdef:
+                        result:=create_set_for_in_loop(hloopvar, hloopbody, expr);
+                      undefineddef:
+                        result:=cnothingnode.create;
                     else
                       begin
                         result:=cerrornode.create;
@@ -1961,7 +1966,8 @@ implementation
                     p2:=current_procinfo;
                     while true do
                       begin
-                        if (p2.flags*[pi_needs_implicit_finally,pi_uses_exceptions,pi_has_implicit_finally])<>[] then
+                        if ((cs_implicit_exceptions in current_settings.moduleswitches) and ((p2.flags*[pi_needs_implicit_finally,pi_has_implicit_finally])<>[])) or
+                        ((p2.flags*[pi_uses_exceptions])<>[]) then
                           Message(cg_e_goto_across_procedures_with_exceptions_not_allowed);
                         if labelsym.owner=p2.procdef.localst then
                           break;

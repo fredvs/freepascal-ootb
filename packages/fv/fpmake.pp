@@ -16,11 +16,11 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Author := 'Leon De Boer and Pierre Mueller';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
-    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,win16,win32,win64,os2,emx,netware,netwlibc,go32v2,msdos,aix,dragonfly]+AllAmigaLikeOSes;
+    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,ios,solaris,netbsd,openbsd,linux,win16,win32,win64,os2,emx,netware,netwlibc,go32v2,msdos,aix,dragonfly]+AllAmigaLikeOSes;
     P.Email := '';
     P.Description := 'Free Vision, a portable Turbo Vision clone.';
     P.NeedLibC:= false;

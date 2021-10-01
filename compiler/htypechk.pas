@@ -37,6 +37,8 @@ interface
         nod : tnodetype;
         inr : tinlinenumber;
         op_overloading_supported : boolean;
+        minargs : longint;
+        maxargs : longint;
       end;
 
       Ttok2opRec=record
@@ -111,33 +113,33 @@ interface
     const
       tok2nodes=27;
       tok2node:array[1..tok2nodes] of ttok2noderec=(
-        (tok:_PLUS       ;nod:addn;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_MINUS      ;nod:subn;inr:in_none;op_overloading_supported:true),      { binary and unary overloading supported }
-        (tok:_STAR       ;nod:muln;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_SLASH      ;nod:slashn;inr:in_none;op_overloading_supported:true),    { binary overloading supported }
-        (tok:_EQ         ;nod:equaln;inr:in_none;op_overloading_supported:true),    { binary overloading supported }
-        (tok:_GT         ;nod:gtn;inr:in_none;op_overloading_supported:true),       { binary overloading supported }
-        (tok:_LT         ;nod:ltn;inr:in_none;op_overloading_supported:true),       { binary overloading supported }
-        (tok:_GTE        ;nod:gten;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_LTE        ;nod:lten;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_SYMDIF     ;nod:symdifn;inr:in_none;op_overloading_supported:true),   { binary overloading supported }
-        (tok:_STARSTAR   ;nod:starstarn;inr:in_none;op_overloading_supported:true), { binary overloading supported }
-        (tok:_OP_AS      ;nod:asn;inr:in_none;op_overloading_supported:false),      { binary overloading NOT supported }
-        (tok:_OP_IN      ;nod:inn;inr:in_none;op_overloading_supported:true),       { binary overloading supported }
-        (tok:_OP_IS      ;nod:isn;inr:in_none;op_overloading_supported:false),      { binary overloading NOT supported }
-        (tok:_OP_OR      ;nod:orn;inr:in_none;op_overloading_supported:true),       { binary overloading supported }
-        (tok:_OP_AND     ;nod:andn;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_OP_DIV     ;nod:divn;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_OP_NOT     ;nod:notn;inr:in_none;op_overloading_supported:true),      { unary overloading supported }
-        (tok:_OP_MOD     ;nod:modn;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_OP_SHL     ;nod:shln;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_OP_SHR     ;nod:shrn;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_OP_XOR     ;nod:xorn;inr:in_none;op_overloading_supported:true),      { binary overloading supported }
-        (tok:_ASSIGNMENT ;nod:assignn;inr:in_none;op_overloading_supported:true),   { unary overloading supported }
-        (tok:_OP_EXPLICIT;nod:assignn;inr:in_none;op_overloading_supported:true),   { unary overloading supported }
-        (tok:_NE         ;nod:unequaln;inr:in_none;op_overloading_supported:true),  { binary overloading supported }
-        (tok:_OP_INC     ;nod:inlinen;inr:in_inc_x;op_overloading_supported:true),  { unary overloading supported }
-        (tok:_OP_DEC     ;nod:inlinen;inr:in_dec_x;op_overloading_supported:true)   { unary overloading supported }
+        (tok:_PLUS       ;nod:addn;inr:in_none;op_overloading_supported:true;minargs:1;maxargs:2),      { binary overloading supported }
+        (tok:_MINUS      ;nod:subn;inr:in_none;op_overloading_supported:true;minargs:1;maxargs:2),      { binary and unary overloading supported }
+        (tok:_STAR       ;nod:muln;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_SLASH      ;nod:slashn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),    { binary overloading supported }
+        (tok:_EQ         ;nod:equaln;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),    { binary overloading supported }
+        (tok:_GT         ;nod:gtn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),       { binary overloading supported }
+        (tok:_LT         ;nod:ltn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),       { binary overloading supported }
+        (tok:_GTE        ;nod:gten;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_LTE        ;nod:lten;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_SYMDIF     ;nod:symdifn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),   { binary overloading supported }
+        (tok:_STARSTAR   ;nod:starstarn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2), { binary overloading supported }
+        (tok:_OP_AS      ;nod:asn;inr:in_none;op_overloading_supported:false;minargs:0;maxargs:0),      { binary overloading NOT supported }
+        (tok:_OP_IN      ;nod:inn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),       { binary overloading supported }
+        (tok:_OP_IS      ;nod:isn;inr:in_none;op_overloading_supported:false;minargs:0;maxargs:0),      { binary overloading NOT supported }
+        (tok:_OP_OR      ;nod:orn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),       { binary overloading supported }
+        (tok:_OP_AND     ;nod:andn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_OP_DIV     ;nod:divn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_OP_NOT     ;nod:notn;inr:in_none;op_overloading_supported:true;minargs:1;maxargs:1),      { unary overloading supported }
+        (tok:_OP_MOD     ;nod:modn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_OP_SHL     ;nod:shln;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_OP_SHR     ;nod:shrn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_OP_XOR     ;nod:xorn;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),      { binary overloading supported }
+        (tok:_ASSIGNMENT ;nod:assignn;inr:in_none;op_overloading_supported:true;minargs:1;maxargs:1),   { unary overloading supported }
+        (tok:_OP_EXPLICIT;nod:assignn;inr:in_none;op_overloading_supported:true;minargs:1;maxargs:1),   { unary overloading supported }
+        (tok:_NE         ;nod:unequaln;inr:in_none;op_overloading_supported:true;minargs:2;maxargs:2),  { binary overloading supported }
+        (tok:_OP_INC     ;nod:inlinen;inr:in_inc_x;op_overloading_supported:true;minargs:1;maxargs:1),  { unary overloading supported }
+        (tok:_OP_DEC     ;nod:inlinen;inr:in_dec_x;op_overloading_supported:true;minargs:1;maxargs:1)   { unary overloading supported }
       );
 
       tok2ops=4;
@@ -613,6 +615,7 @@ implementation
         i : longint;
         eq : tequaltype;
         conv : tconverttype;
+        cdo : tcompare_defs_options;
         pd : tprocdef;
         oldcount,
         count: longint;
@@ -625,7 +628,11 @@ implementation
         while count > 0 do
           begin
             parasym:=tparavarsym(pf.parast.SymList[count-1]);
-            if is_boolean(parasym.vardef) then
+            if parasym.typ<>paravarsym then
+              begin
+                dec(count);
+              end
+            else if is_boolean(parasym.vardef) then
               begin
                 if parasym.name='RANGECHECK' then
                   begin
@@ -654,20 +661,13 @@ implementation
                 { assignment is a special case }
                 if optoken in [_ASSIGNMENT,_OP_EXPLICIT] then
                   begin
-                    eq:=compare_defs_ext(ld,pf.returndef,nothingn,conv,pd,[cdo_explicit]);
+                    cdo:=[];
+                    if optoken=_OP_EXPLICIT then
+                      include(cdo,cdo_explicit);
+                    eq:=compare_defs_ext(ld,pf.returndef,nothingn,conv,pd,cdo);
                     result:=
                       (eq=te_exact) or
-                      (
-                        (eq=te_incompatible) and
-                        { don't allow overloading assigning to custom shortstring
-                          types, because we also don't want to differentiate based
-                          on different shortstring types (e.g.,
-                          "operator :=(const v: variant) res: shorstring" also
-                          has to work for assigning a variant to a string[80])
-                        }
-                        (not is_shortstring(pf.returndef) or
-                         (tstringdef(pf.returndef).len=255))
-                      );
+                      (eq=te_incompatible);
                   end
                 else
                 { enumerator is a special case too }
@@ -697,6 +697,8 @@ implementation
                         begin
                           result:=
                             tok2node[i].op_overloading_supported and
+                            (tok2node[i].minargs<=1) and
+                            (tok2node[i].maxargs>=1) and
                             isunaryoperatoroverloadable(tok2node[i].nod,tok2node[i].inr,ld);
                           break;
                         end;
@@ -713,6 +715,8 @@ implementation
                       rd:=tparavarsym(pf.parast.SymList[1]).vardef;
                       result:=
                         tok2node[i].op_overloading_supported and
+                        (tok2node[i].minargs<=2) and
+                        (tok2node[i].maxargs>=2) and
                         isbinaryoperatoroverloadable(tok2node[i].nod,ld,nothingn,rd,nothingn);
                       break;
                     end;
@@ -1767,6 +1771,7 @@ implementation
                  mayberesettypeconvs;
                  exit;
                end;
+             arrayconstructorn,
              setconstn,
              stringconstn,
              guidconstn :
@@ -2068,6 +2073,7 @@ implementation
                  (tstringdef(def_to).encoding=tstringdef(p.resultdef).encoding) then
                 eq:=te_equal
             end;
+          formaldef,
           setdef :
             begin
               { set can also be a not yet converted array constructor }

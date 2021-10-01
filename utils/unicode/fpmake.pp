@@ -15,8 +15,8 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-unicode');
-    P.ShortName:='ucode';
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.ShortName:='ucd';
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -29,7 +29,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Dependencies.Add('rtl');
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-xml');

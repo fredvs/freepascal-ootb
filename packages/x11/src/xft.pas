@@ -59,7 +59,7 @@ const
     libXft = 'libXft.dylib';
     {$linklib Xft}
   {$ELSE}
-    libXft = 'libXft.so.2';
+    libXft = 'libXft.so';
   {$IFEND}
 
 {* Current Xft version number, set from version in the Xft configure.ac file. *}

@@ -13,17 +13,18 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('aspell');
+    P.ShortName := 'asp';
 
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
 
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.Author := 'header:Aleš Katona, library: Kevin Atkinson';
     P.License := 'header: LGPL with modification, library: LGPL 2.0 or 2.1';
     P.HomepageURL := 'www.freepascal.org';
-    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,netbsd,openbsd,linux,win32,aix,dragonfly];
+    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,ios,netbsd,openbsd,linux,win32,aix,dragonfly];
     P.Email := '';
     P.Description := 'The New Aspell, spelling library';
     P.NeedLibC:= true;
@@ -44,7 +45,7 @@ begin
 
     P.ExamplePath.Add('examples');
     T:=P.Targets.AddExampleProgram('example.pas');
-    
+
 {$ifndef ALLPACKAGES}
     Run;
     end;

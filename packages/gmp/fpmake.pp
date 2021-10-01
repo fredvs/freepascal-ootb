@@ -16,7 +16,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.Author := 'FreePascal development team';
     P.License := 'LGPL with modification, ';
@@ -24,7 +24,7 @@ begin
     P.Email := '';
     P.Description := 'GMP';
     P.NeedLibC:= false;
-    P.OSes := [freebsd,darwin,iphonesim,linux,win32,aix];
+    P.OSes := [freebsd,darwin,iphonesim,ios,linux,win32,aix];
 
     P.SourcePath.Add('src');
 

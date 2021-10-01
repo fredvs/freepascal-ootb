@@ -164,6 +164,7 @@ begin
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/i386-linux-gnu',true);
 {$endif i386}
 {$ifdef aarch64}
+      LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib64',true);
       LibrarySearchPath.AddLibraryPath(sysrootpath,'=/usr/lib/aarch64-linux-gnu',true);
 {$endif aarch64}
 {$ifdef powerpc}
@@ -353,7 +354,7 @@ begin
   with Info do
    begin
      ExeCmd[1]:='ld '+platform_select+platformopt+' $OPT $DYNLINK $STATIC $GCSECTIONS $STRIP $MAP -L. -o $EXE';
-     DllCmd[1]:='ld '+platform_select+' $OPT $INIT $FINI $SONAME $MAP -shared $GCSECTIONS -L. -o $EXE';
+     DllCmd[1]:='ld '+platform_select+platformopt+' $OPT $INIT $FINI $SONAME $MAP -shared $GCSECTIONS -L. -o $EXE';
      { when we want to cross-link we need to override default library paths;
        when targeting binutils 2.19 or later, we use the "INSERT" command to
        augment the default linkerscript, which also requires -T (normally that
@@ -547,7 +548,7 @@ begin
 
       { Write sharedlibraries like -l<lib>, also add the needed dynamic linker
         here to be sure that it gets linked this is needed for glibc2 systems (PFV) }
-      if (isdll) then
+      if isdll and not linklibc then
        begin
          Add('INPUT(');
          Add(sysrootpath+info.DynamicLinker);
@@ -570,7 +571,7 @@ begin
                  begin
                    i:=Pos(target_info.sharedlibext,S);
                    if i>0 then
-                    Insert(':',s,1);   // needed for the linker
+                    Delete(S,i,255);
                    Add('-l'+s);
                  end
                 else

@@ -15,8 +15,8 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-fpcres');
-    P.ShortName:='fpres';
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.ShortName:='fprs';
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -28,7 +28,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.OSes:=[win32,win64,wince,haiku,linux,freebsd,openbsd,netbsd,darwin,iphonesim,solaris,os2,emx,aix,aros,amiga,morphos];
 

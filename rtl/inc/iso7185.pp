@@ -44,6 +44,8 @@ unit iso7185;
 
     Procedure Get(Var t: Text);
     Procedure Put(Var t: Text);
+    procedure Get;
+    Procedure Put;
 
     Procedure Get(Var f: TypedFile);
     Procedure Put(Var f: TypedFile);
@@ -204,10 +206,30 @@ unit iso7185;
       end;
 
 
+    procedure Get;[IOCheck];
+      var
+        c : char;
+      Begin
+        Read(input,c);
+      End;
+
+
+    Procedure Put;[IOCheck];
+      type
+        FileFunc = Procedure(var t : TextRec);
+      begin
+        inc(TextRec(Output).BufPos);
+        If TextRec(Output).BufPos>=TextRec(Output).BufSize Then
+          FileFunc(TextRec(Output).InOutFunc)(TextRec(Output));
+      end;
+
+
     procedure Get(var f:TypedFile);[IOCheck];
       Begin
-        if not(eof(f)) then
-          BlockRead(f,(pbyte(@f)+sizeof(FileRec))^,1);
+        if not(system.eof(f)) then
+          BlockRead(f,(pbyte(@f)+sizeof(FileRec))^,1)
+        else
+          FileRec(f)._private[1]:=1;
       End;
 
 

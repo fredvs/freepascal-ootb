@@ -16,7 +16,7 @@ begin
     begin
     P:=AddPackage('utils-pas2ut');
     P.ShortName:='p2ut';
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -28,7 +28,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Dependencies.Add('fcl-passrc');
 
     T:=P.Targets.AddProgram('pas2ut.pp');

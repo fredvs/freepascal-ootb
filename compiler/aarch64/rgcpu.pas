@@ -1,7 +1,7 @@
 {
     Copyright (c) 1998-2002 by Florian Klaempfl
 
-    This unit implements the SPARC specific class for the register
+    This unit implements the AArch64 specific class for the register
     allocator
 
     This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,7 @@ unit rgcpu;
       trgcpu=class(trgobj)
         procedure do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
         procedure do_spill_written(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister); override;
+        function get_spill_subreg(r: tregister): tsubregister; override;
        protected
         procedure do_spill_op(list: tasmlist; op: tasmop; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
       end;
@@ -50,6 +51,15 @@ implementation
     uses
       verbose,cutils,
       cgobj;
+
+    function  trgcpu.get_spill_subreg(r:tregister) : tsubregister;
+      begin
+        if (getregtype(r)<>R_MMREGISTER) then
+          result:=defaultsub
+        else
+          result:=getsubreg(r);
+      end;
+
 
     procedure trgcpu.do_spill_read(list: TAsmList; pos: tai; const spilltemp: treference; tempreg: tregister; orgsupreg: tsuperregister);
       begin
@@ -77,8 +87,8 @@ implementation
           begin
             helplist:=TAsmList.create;
 
-            if getregtype(tempreg)=R_INTREGISTER then
-              hreg:=tempreg
+            if (getregtype(tempreg)=R_INTREGISTER) then
+              hreg:=getregisterinline(helplist,[R_SUBWHOLE])
             else
               hreg:=cg.getaddressregister(helplist);
 
@@ -90,6 +100,8 @@ implementation
             else
               helpins:=spilling_create_store(tempreg,tmpref);
             helplist.concat(helpins);
+            if (getregtype(tempreg)=R_INTREGISTER) then
+              ungetregisterinline(helplist,hreg);
             add_cpu_interferences(helpins);
             list.insertlistafter(pos,helplist);
             helplist.free;

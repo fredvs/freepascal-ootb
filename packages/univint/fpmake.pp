@@ -13,12 +13,13 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('univint');
+    P.ShortName := 'univ';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.SourcePath.Add('src');
-    P.OSes:=[darwin,iphonesim];
+    P.OSes:=[darwin,iphonesim,ios];
     P.Options.Add('-Mmacpas');
 
     P.SupportBuildModes:=[bmOneByOne];

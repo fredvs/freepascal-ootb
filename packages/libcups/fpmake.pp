@@ -13,15 +13,16 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('libcups');
+    P.ShortName := 'lcup';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.Author := 'Header: Olivier GUILBAUD';
     P.License := 'Header: LGPL with modi ';
     P.HomepageURL := 'www.freepascal.org';
-    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,solaris,netbsd,openbsd,linux,aix,dragonfly];
+    P.OSes := [beos,haiku,freebsd,darwin,iphonesim,ios,solaris,netbsd,openbsd,linux,aix,dragonfly];
     P.Email := '';
     P.Description := 'This package provides an interface with Common UNIX Printing System.';
     P.NeedLibC:= false;  // true for headers that indirectly link to libc?

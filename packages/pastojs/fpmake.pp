@@ -14,11 +14,12 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('pastojs');
+    P.ShortName := 'p2js';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
 
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.OSes:=AllUnixOSes+AllBSDOSes+AllWindowsOSes-[WinCE];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
@@ -57,6 +58,11 @@ begin
     T:=P.Targets.AddUnit('pas2jspparser.pp');
     T:=P.Targets.AddUnit('pas2jsuseanalyzer.pp');
     T:=P.Targets.AddUnit('pas2jscompiler.pp');
+    T:=P.Targets.AddUnit('pas2jsresstrfile.pp');
+      T.ResourceStrings := True;
+    T:=P.Targets.AddUnit('pas2jsresources.pp');
+    T:=P.Targets.AddUnit('pas2jshtmlresources.pp');
+    T:=P.Targets.AddUnit('pas2jsjsresources.pp');
     T:=P.Targets.AddUnit('pas2jsfscompiler.pp');
       T.Dependencies.AddUnit('pas2jscompiler');
     T:=P.Targets.AddUnit('pas2jspcucompiler.pp');

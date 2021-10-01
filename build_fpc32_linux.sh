@@ -1,9 +1,9 @@
 #!/bin/sh 
 
-TARGET_VER=3.2.0 
+TARGET_VER=3.2.2 
 
  TARGET=i386-linux 
- COMPILER=/usr/lib/fpc/3.0.4/ppc386
+ COMPILER=/home/fred/fpc-ootb_bin/fpc-ootb-320-i386-linux/fpc-ootb-32
 
 make clean
 make all FPC=$COMPILER OPT="-Fl/usr/local/lib" 

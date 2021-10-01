@@ -176,7 +176,7 @@ interface
        ttempinfoflags = set of ttempinfoflag;
 
      const
-       tempinfostoreflags = [ti_may_be_in_reg,ti_addr_taken,ti_reference,ti_readonly,ti_no_final_regsync];
+       tempinfostoreflags = [ti_may_be_in_reg,ti_addr_taken,ti_reference,ti_readonly,ti_no_final_regsync,ti_nofini,ti_const];
 
      type
        { to allow access to the location by temp references even after the temp has }
@@ -1067,6 +1067,12 @@ implementation
         if assigned(tempinfo^.tempinitcode) then
           firstpass(tempinfo^.tempinitcode);
         inc(current_procinfo.estimatedtempsize,size);;
+        { if a temp. create node is loaded from a ppu, it could be that the unit was compiled with other settings which
+          enabled a certain type to be stored in a register while the current settings do not support this, so correct this here
+          if needed
+        }
+        if not(tstoreddef(tempinfo^.typedef).is_fpuregable) and not(tstoreddef(tempinfo^.typedef).is_intregable) and (ti_may_be_in_reg in tempflags) then
+          excludetempflag(ti_may_be_in_reg);
       end;
 
 
@@ -1095,10 +1101,23 @@ implementation
 
 
     procedure ttempcreatenode.printnodedata(var t:text);
+      var
+        f: ttempinfoflag;
+        first: Boolean;
       begin
         inherited printnodedata(t);
         writeln(t,printnodeindention,'size = ',size,', temptypedef = ',tempinfo^.typedef.typesymbolprettyname,' = "',
           tempinfo^.typedef.GetTypeName,'", tempinfo = $',hexstr(ptrint(tempinfo),sizeof(ptrint)*2));
+        write(t,printnodeindention,'[');
+        first:=true;
+        for f in tempflags do
+          begin
+            if not(first) then
+              write(t,',');
+            write(t,f);
+            first:=false;
+          end;
+        writeln(t,']');
         writeln(t,printnodeindention,'tempinit =');
         printnode(t,tempinfo^.tempinitcode);
       end;

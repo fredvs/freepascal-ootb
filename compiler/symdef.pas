@@ -50,6 +50,8 @@ interface
          interfaces : tfpobjectlist;
          interfacesderef : tfplist;
          flags : tgenericconstraintflags;
+         { only required while parsing }
+         fileinfo : tfileposinfo;
          constructor create;
          destructor destroy;override;
          procedure ppuload(ppufile:tcompilerppufile);
@@ -168,6 +170,7 @@ interface
           constructor ppuload(ppufile:tcompilerppufile);
           function getcopy : tstoreddef;override;
           function GetTypeName:string;override;
+          function alignment : shortint;override;
           { do not override this routine in platform-specific subclasses,
             override ppuwrite_platform instead }
           procedure ppuwrite(ppufile:tcompilerppufile);override;final;
@@ -2879,7 +2882,7 @@ implementation
 
     function torddef.alignment:shortint;
       begin
-        if (target_info.system in [system_i386_darwin,system_i386_iphonesim,system_arm_darwin]) and
+        if (target_info.system in [system_i386_darwin,system_i386_iphonesim,system_arm_ios]) and
            (ordtype in [s64bit,u64bit]) then
           result := 4
         else
@@ -3017,7 +3020,7 @@ implementation
 
     function tfloatdef.alignment:shortint;
       begin
-        if (target_info.system in [system_i386_darwin,system_i386_iphonesim,system_arm_darwin]) then
+        if (target_info.system in [system_i386_darwin,system_i386_iphonesim,system_arm_ios]) then
           case floattype of
             sc80real,
             s80real: result:=16;
@@ -3287,6 +3290,12 @@ implementation
     function tvariantdef.getcopy : tstoreddef;
       begin
         result:=cvariantdef.create(varianttype);
+      end;
+
+
+    function tvariantdef.alignment: shortint;
+      begin
+        result:=search_system_type('TVARDATA').typedef.alignment;
       end;
 
 
@@ -5256,7 +5265,7 @@ implementation
 {$endif}
         if (typ=procdef) and
            (newtyp=procvardef) and
-           (owner.symtabletype=ObjectSymtable) then
+           (owner.symtabletype in [ObjectSymtable,recordsymtable]) then
           include(tprocvardef(result).procoptions,po_methodpointer);
       end;
 
@@ -6023,7 +6032,7 @@ implementation
       begin
         { don't check assigned(_class), that's also the case for nested
           procedures inside methods }
-        result:=(owner.symtabletype=ObjectSymtable)and not no_self_node;
+        result:=(owner.symtabletype in [recordsymtable,ObjectSymtable]) and not no_self_node;
       end;
 
 
@@ -6259,10 +6268,17 @@ implementation
 
 
     function tprocdef.defaultmangledname: TSymStr;
+      var
+        n : TSymStr;
       begin
+        n:=procsym.name;
+        { make sure that the mangled names of these overloadable methods types is
+          unique even if it's made lowercase (e.g. for section names) }
+        if proctypeoption in [potype_operator,potype_class_constructor,potype_class_destructor] then
+          n:='$'+n;
         { we need to use the symtable where the procsym is inserted,
           because that is visible to the world }
-        defaultmangledname:=make_mangledname('',procsym.owner,procsym.name);
+        defaultmangledname:=make_mangledname('',procsym.owner,n);
         defaultmangledname:=defaultmangledname+mangledprocparanames(Length(defaultmangledname))
       end;
 
@@ -8282,7 +8298,7 @@ implementation
       begin
         if assigned(objc_fastenumeration) then
           exit;
-        if not(target_info.system in [system_arm_darwin,system_i386_iphonesim,system_aarch64_darwin,system_x86_64_iphonesim]) then
+        if not(target_info.system in [system_arm_ios,system_i386_iphonesim,system_aarch64_ios,system_x86_64_iphonesim]) then
           cocoaunit:='COCOAALL'
         else
           cocoaunit:='IPHONEALL';

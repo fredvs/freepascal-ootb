@@ -13,7 +13,7 @@ Const
   UnixLikes = AllUnixOSes -[QNX];
 
   CollationOSes = [aix,android,darwin,emx,freebsd,go32v2,linux,netbsd,openbsd,os2,solaris,win32,win64,dragonfly,haiku];
-  CPUnits       = [aix,amiga,aros,android,beos,darwin,iphonesim,emx,gba,nds,freebsd,go32v2,haiku,linux,morphos,netbsd,netware,netwlibc,openbsd,os2,solaris,watcom,wii,win32,win64,wince,dragonfly];
+  CPUnits       = [aix,amiga,aros,android,beos,darwin,iphonesim,ios,emx,gba,nds,freebsd,go32v2,haiku,linux,morphos,netbsd,netware,netwlibc,openbsd,os2,solaris,watcom,wii,win32,win64,wince,dragonfly];
   utf8bidiOSes  = [netware,netwlibc];
   freebidiOSes  = [netware,netwlibc];
 
@@ -34,7 +34,7 @@ begin
     P:=AddPackage('rtl-unicode');
     P.ShortName:='rtlu';
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';

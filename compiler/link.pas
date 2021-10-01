@@ -55,7 +55,8 @@ interface
          ObjectFiles,
          SharedLibFiles,
          StaticLibFiles,
-         FrameworkFiles  : TCmdStrList;
+         FrameworkFiles,
+         OrderedSymbols: TCmdStrList;
          Constructor Create;virtual;
          Destructor Destroy;override;
          procedure AddModuleFiles(hp:tmodule);
@@ -65,6 +66,7 @@ interface
          Procedure AddStaticCLibrary(const S : TCmdStr);
          Procedure AddSharedCLibrary(S : TCmdStr);
          Procedure AddFramework(S : TCmdStr);
+         Procedure AddOrderedSymbol(const s: TCmdStr);
          procedure AddImportSymbol(const libname,symname,symmangledname:TCmdStr;OrdNr: longint;isvar:boolean);virtual;
          Procedure InitSysInitUnitName;virtual;
          Function  MakeExecutable:boolean;virtual;
@@ -76,6 +78,8 @@ interface
        end;
 
       TExternalLinker = class(TLinker)
+      protected
+         Function WriteSymbolOrderFile: TCmdStr;
       public
          Info : TLinkerInfo;
          Constructor Create;override;
@@ -85,6 +89,8 @@ interface
          Function  DoExec(const command:TCmdStr; para:TCmdStr;showinfo,useshell:boolean):boolean;
          procedure SetDefaultInfo;virtual;
          Function  MakeStaticLibrary:boolean;override;
+
+         Function UniqueName(const str:TCmdStr): TCmdStr;
        end;
 
       TBooleanArray = array [1..1024] of boolean;
@@ -353,6 +359,7 @@ Implementation
         SharedLibFiles:=TCmdStrList.Create_no_double;
         StaticLibFiles:=TCmdStrList.Create_no_double;
         FrameworkFiles:=TCmdStrList.Create_no_double;
+        OrderedSymbols:=TCmdStrList.Create;
       end;
 
 
@@ -362,6 +369,8 @@ Implementation
         SharedLibFiles.Free;
         StaticLibFiles.Free;
         FrameworkFiles.Free;
+        OrderedSymbols.Free;
+        inherited;
       end;
 
 
@@ -371,6 +380,7 @@ Implementation
         i,j  : longint;
         ImportLibrary : TImportLibrary;
         ImportSymbol  : TImportSymbol;
+        cmdstritem: TCmdStrListItem;
       begin
         with hp do
          begin
@@ -468,6 +478,8 @@ Implementation
                      ImportSymbol.MangledName,ImportSymbol.OrdNr,ImportSymbol.IsVar);
                  end;
              end;
+           { ordered symbols }
+           OrderedSymbols.concatList(linkorderedsymbols);
          end;
       end;
 
@@ -483,15 +495,17 @@ Implementation
       end;
 
 
-   Procedure TLinker.AddSharedLibrary(S:TCmdStr);
+    Procedure TLinker.AddSharedLibrary(S:TCmdStr);
       begin
         if s='' then
           exit;
-           { remove prefix 'lib' only if no extension }
-        if (Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix)
-        and (system.pos(target_info.sharedlibext,s) = 0) then
-         Delete(s,1,length(target_info.sharedlibprefix));
-            
+        { remove prefix 'lib' }
+        if Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix then
+          Delete(s,1,length(target_info.sharedlibprefix));
+        { remove extension if any }
+        if Copy(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext))=target_info.sharedlibext then
+          Delete(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext)+1);
+        { ready to be added }
         SharedLibFiles.Concat(S);
       end;
 
@@ -509,18 +523,21 @@ Implementation
         StaticLibFiles.Concat(ns);
       end;
 
-     Procedure TLinker.AddSharedCLibrary(S:TCmdStr);
+
+    Procedure TLinker.AddSharedCLibrary(S:TCmdStr);
       begin
         if s='' then
           exit;
-      { remove prefix 'lib' only if no extension}
-      if (Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix)
-        and (system.pos(target_info.sharedclibext,s) = 0) then
-         Delete(s,1,length(target_info.sharedclibprefix));   
-    
-       SharedLibFiles.Concat(S);
-     
+        { remove prefix 'lib' }
+        if Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix then
+          Delete(s,1,length(target_info.sharedclibprefix));
+        { remove extension if any }
+        if Copy(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext))=target_info.sharedclibext then
+          Delete(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext)+1);
+        { ready to be added }
+        SharedLibFiles.Concat(S);
       end;
+
 
     Procedure TLinker.AddFramework(S:TCmdStr);
       begin
@@ -528,6 +545,12 @@ Implementation
           exit;
         { ready to be added }
         FrameworkFiles.Concat(S);
+      end;
+
+
+    procedure TLinker.AddOrderedSymbol(const s: TCmdStr);
+      begin
+        OrderedSymbols.Concat(s);
       end;
 
 
@@ -614,6 +637,30 @@ Implementation
                               TEXTERNALLINKER
 *****************************************************************************}
 
+    Function TExternalLinker.WriteSymbolOrderFile: TCmdStr;
+      var
+        item: TCmdStrListItem;
+        symfile: TScript;
+      begin
+        result:='';
+        { only for darwin for now; can also enable for other platforms when using
+          the LLVM linker }
+        if (OrderedSymbols.Empty) or
+           not(tf_supports_symbolorderfile in target_info.flags) then
+          exit;
+        symfile:=TScript.Create(outputexedir+'symbol_order.fpc');
+        item:=TCmdStrListItem(OrderedSymbols.First);
+        while assigned(item) do
+          begin
+            symfile.add(item.str);
+            item:=TCmdStrListItem(item.next);
+          end;
+        symfile.WriteToDisk;
+        result:=symfile.fn;
+        symfile.Free;
+      end;
+
+
     Constructor TExternalLinker.Create;
       begin
         inherited Create;
@@ -626,8 +673,8 @@ Implementation
           end
         else
           begin
-            Info.ResName:='link.res';
-            Info.ScriptName:='script.res';
+            Info.ResName:=UniqueName('link')+'.res';
+            Info.ScriptName:=UniqueName('script')+'.res';
           end;
         { set the linker specific defaults }
         SetDefaultInfo;
@@ -903,6 +950,18 @@ Implementation
             AsmRes.AddDeleteDirCommand(smartpath);
           end;
         MakeStaticLibrary:=success;
+      end;
+
+    function TExternalLinker.UniqueName(const str: TCmdStr): TCmdStr;
+      const
+        pid: SizeUInt = 0;
+      begin
+        if pid=0 then
+          pid:=GetProcessID;
+        if pid>0 then
+          result:=str+tostr(pid)
+        else
+          result:=str;
       end;
 
 

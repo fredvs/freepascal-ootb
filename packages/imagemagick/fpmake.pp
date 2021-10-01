@@ -13,10 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('imagemagick');
+    P.ShortName := 'imgm';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.Author := 'Library: ImageMagick Studio LLC , header: Felipe Monteiro de Carvalho';
     P.License := 'Library: Imagemagick license, header: LGPL with modification, ';

@@ -323,6 +323,9 @@ implementation
            { Heaptrc unit, load heaptrace before any other units especially objpas }
            if (cs_use_heaptrc in current_settings.globalswitches) then
              AddUnit('heaptrc');
+           { Valgrind requires c memory manager }
+           if (cs_gdb_valgrind in current_settings.globalswitches) then
+             AddUnit('cmem');
            { Lineinfo unit }
            if (cs_use_lineinfo in current_settings.globalswitches) then begin
              case target_dbg.id of
@@ -334,9 +337,6 @@ implementation
                  AddUnit('lnfodwrf');
              end;
            end;
-           { Valgrind requires c memory manager }
-           if (cs_gdb_valgrind in current_settings.globalswitches) then
-             AddUnit('cmem');
 {$ifdef cpufpemu}
            { Floating point emulation unit?
              softfpu must be in the system unit anyways (FK)
@@ -2143,7 +2143,7 @@ type
                 they are directly added to the assembler output by llvm }
             exportlib.setinitname(current_asmdata.AsmLists[al_pure_assembler],initname);
           end
-         else if (target_info.system in ([system_i386_netware,system_i386_netwlibc,system_powerpc_macos]+systems_darwin+systems_aix)) then
+         else if (target_info.system in ([system_i386_netware,system_i386_netwlibc,system_powerpc_macosclassic]+systems_darwin+systems_aix)) then
            begin
              { create a stub with the name of the desired main routine, with
                the same signature as the C "main" function, and call through to

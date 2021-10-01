@@ -24,7 +24,7 @@ begin
     P.Email := '';
     P.Description := 'PDF generating and TTF file info library';
     P.NeedLibC:= false;
-    P.OSes:=P.OSes-[embedded,win16,msdos,nativent,macos,palmos];
+    P.OSes:=P.OSes-[embedded,win16,msdos,nativent,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -34,7 +34,7 @@ begin
     P.Dependencies.Add('fcl-xml');
     P.Dependencies.Add('paszlib');
     P.Dependencies.add('winunits-base',AllWindowsOSes-[wince]);
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     T:=P.Targets.AddUnit('src/fpttfencodings.pp');
     T:=P.Targets.AddUnit('src/fpparsettf.pp');
       T.ResourceStrings:=true;

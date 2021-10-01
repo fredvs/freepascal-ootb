@@ -198,7 +198,7 @@ begin
        begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-         Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
        end
       else
@@ -260,6 +260,7 @@ begin
       Add('  .data           : {');
       Add('    PROVIDE(_DATA_BASE_ = .);');
       Add('    *(.data .data.* .gnu.linkonce.d.*)');
+      Add('    *(fpc.resources)');
       Add('    VBCC_CONSTRUCTORS_ELF');
       Add('  }');
       Add('  .ctors          : { *(.ctors .ctors.*) }');
@@ -291,6 +292,7 @@ begin
       Add('  .plt            : { *(.plt) }');
       Add('  .bss            : {');
       Add('    *(.bss .bss.* .gnu.linkonce.b.*)');
+      Add('    *(fpc.reshandles)');
       Add('    *(COMMON)');
       Add('  }');
       Add('  .bss68k         : { *(BSS bss) }');
@@ -359,7 +361,7 @@ begin
   if UseVLink then
     begin
       if create_smartlink_sections then
-        GCSectionsStr:='-gc-all -sc -sd';
+        GCSectionsStr:='-gc-all -mtype';
     end;
 
   { Call linker }

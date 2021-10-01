@@ -54,12 +54,12 @@ type
 
 Const
   OrdinalVarTypes = [varSmallInt, varInteger, varBoolean, varShortInt,
-                     varByte, varWord,varLongWord,varInt64];
+                     varByte, varWord,varLongWord,varInt64,varQWord];
   FloatVarTypes = [
 {$ifndef FPUNONE}
     varSingle, varDouble,
 {$endif}
-    varCurrency];
+    varCurrency, varDecimal];
 
 { Variant support procedures and functions }
 
@@ -2351,10 +2351,14 @@ begin
 end;
 
 procedure DoVarCast(var aDest : TVarData; const aSource : TVarData; aVarType : LongInt);
+var
+  Handler: TCustomVariantType;
 begin
   with aSource do
     if vType = aVarType then
       DoVarCopy(aDest, aSource)
+    else if FindCustomVariantType(vType, Handler) then
+      Handler.CastTo(aDest, aSource, aVarType)
     else begin
       if (vType = varNull) and NullStrictConvert then
         VarCastError(varNull, aVarType);
@@ -4125,7 +4129,7 @@ begin
         if not DoProcedure(Source,method_name,args) then
         // may be function?
         try
-          variant(dummy_data) := Unassigned;
+          dummy_data.VType := varEmpty;
           if not DoFunction(dummy_data,Source,method_name,args) then
             RaiseDispError;
         finally
@@ -4478,7 +4482,7 @@ Var
 begin
   case (PropInfo^.PropProcs shr 2) and 3 of
     ptfield:
-      PVariant(Pointer(Instance)+PtrUInt(PropInfo^.SetProc))^:=Value;	
+      PVariant(Pointer(Instance)+PtrUInt(PropInfo^.SetProc))^:=Value;
     ptVirtual,ptStatic:
       begin
         if ((PropInfo^.PropProcs shr 2) and 3)=ptStatic then

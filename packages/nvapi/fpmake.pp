@@ -13,10 +13,11 @@ begin
 {$endif ALLPACKAGES}
 
     P:=AddPackage('nvapi');
+    P.ShortName := 'nva';
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.Author := 'NVidia, Andreas Hausladen, Dmitry "skalogryz" Boyarintsev';
     P.License := 'NVidia license';
     P.HomepageURL := 'nvidia.com';

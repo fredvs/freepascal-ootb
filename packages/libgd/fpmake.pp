@@ -18,9 +18,9 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.SourcePath.Add('src');
-    P.OSes := P.OSes - [embedded,nativent,msdos,wii,win16,atari,macos,palmos,symbian];
+    P.OSes := P.OSes - [embedded,nativent,msdos,wii,win16,atari,macosclassic,palmos,symbian];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 

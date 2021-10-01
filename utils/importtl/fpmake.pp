@@ -15,8 +15,8 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-importtl');
-    P.ShortName:='importttl';
-    P.OSes:=AllOSes-[embedded,msdos,win16,macos,palmos];
+    P.ShortName:='impt';
+    P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -31,7 +31,7 @@ begin
     P.Dependencies.Add('fcl-registry');
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.OSes:=[win32,win64];
 

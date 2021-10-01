@@ -74,7 +74,7 @@ const
   NSActivitySuddenTerminationDisabled = 1 shl 14;
   NSActivityAutomaticTerminationDisabled = 1 shl 15;
   NSActivityUserInitiated = $00FFFFFF + NSActivityIdleSystemSleepDisabled;
-  NSActivityUserInitiatedAllowingIdleSystemSleep = NSActivityUserInitiated and NSActivityIdleSystemSleepDisabled;
+  NSActivityUserInitiatedAllowingIdleSystemSleep = NSActivityUserInitiated and (not NSActivityIdleSystemSleepDisabled);
   NSActivityBackground = $000000FF;
   NSActivityLatencyCritical = $FF00000000;
 {$endif}
@@ -82,8 +82,7 @@ const
 {$ifdef CLASSES}
 
 type
-  NSProcessInfo_NSObject = objcclass external (NSObject)
-  public
+  NSProcessInfoActivity = objccategory external (NSProcessInfo)
     function beginActivityWithOptions_reason (options: NSActivityOptions; reason: NSString): NSObjectProtocol; message 'beginActivityWithOptions:reason:'; { available in 10_9, 7_0 }
     procedure endActivity (activity: NSObjectProtocol); message 'endActivity:'; { available in 10_9, 7_0 }
     procedure performActivityWithOptions_reason_usingBlock (options: NSActivityOptions; reason: NSString; block: OpaqueCBlock); message 'performActivityWithOptions:reason:usingBlock:'; { available in 10_9, 7_0 }

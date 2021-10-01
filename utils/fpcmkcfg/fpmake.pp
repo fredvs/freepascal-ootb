@@ -18,7 +18,7 @@ begin
     begin
     P:=AddPackage('utils-fpcmkcfg');
     P.ShortName:='fcmk';
-    P.OSes:=AllOSes-[embedded,msdos,nativent,win16,atari,macos,palmos];
+    P.OSes:=AllOSes-[embedded,msdos,nativent,win16,atari,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -30,7 +30,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
 
     P.Options.Add('-Sm');
     Str(P.PackageVersion.Major, VS);

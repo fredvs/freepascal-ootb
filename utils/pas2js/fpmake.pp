@@ -15,6 +15,7 @@ begin
   With Installer do
     begin
     P:=AddPackage('utils-pas2js');
+    P.ShortName := 'upjs';
 
     P.Author := 'Free Pascal Team';
     P.License := 'LGPL with modification';
@@ -22,9 +23,10 @@ begin
     P.Description := 'Convert pascal sources to javascript.';
     P.Email := 'michael@freepascal.org';
     P.NeedLibC:= false;
+    P.ShortName:='p2js';
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.1';
+    P.Version:='3.2.2';
     P.OSes:=AllUnixOSes+AllBSDOSes+AllWindowsOSes-[WinCE];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];

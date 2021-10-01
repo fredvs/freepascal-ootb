@@ -205,6 +205,8 @@ const
   nCouldNotInferTypeArgXForMethodY = 3139;
   nInferredTypeXFromDiffArgsMismatchFromMethodY = 3140;
   nParamOfThisTypeCannotHaveDefVal = 3141;
+  nClassTypesAreNotRelatedXY = 3142;
+  nDirectiveXNotAllowedHere = 3143;
 
   // using same IDs as FPC
   nVirtualMethodXHasLowerVisibility = 3250; // was 3050
@@ -357,6 +359,8 @@ resourcestring
   sCouldNotInferTypeArgXForMethodY = 'Could not infer generic type argument "%s" for method "%s"';
   sInferredTypeXFromDiffArgsMismatchFromMethodY = 'Inferred type "%s" from different arguments mismatch for method "%s"';
   sParamOfThisTypeCannotHaveDefVal = 'Parameters of this type cannot have default values';
+  sClassTypesAreNotRelatedXY = 'Class types "%s" and "%s" are not related';
+  sDirectiveXNotAllowedHere = 'Directive "%s" not allowed here';
 
 type
   { TResolveData - base class for data stored in TPasElement.CustomData }

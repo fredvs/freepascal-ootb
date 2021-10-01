@@ -3619,7 +3619,7 @@ implementation
       begin
         { Reference all DEBUGINFO sections from the main .fpc section }
         { to prevent eliminating them by smartlinking                 }
-        if (target_info.system in ([system_powerpc_macos]+systems_darwin)) then
+        if (target_info.system in ([system_powerpc_macosclassic]+systems_darwin)) then
           exit;
         new_section(list,sec_fpc,'links',0);
 
@@ -4209,7 +4209,7 @@ implementation
         current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_skip)));
         current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_16bit_unaligned(3));
         { no -> load length }
-        current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_lit0)+sizeof(ptrint)));
+        current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_lit0)+sizesinttype.size));
         current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_minus)));
         current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_deref)));
         append_labelentry_ref(DW_AT_type,def_dwarf_lab(def.rangedef));
@@ -4401,15 +4401,21 @@ implementation
           else
             append_entry(DW_TAG_structure_type,true,[]);
           append_attribute(DW_AT_byte_size,DW_FORM_udata,[tobjectsymtable(def.symtable).datasize]);
-          // The pointer to the class-structure is hidden. The debug-information
-          // does not contain an implicit pointer, but the data-adress is dereferenced here.
-          // In case of a nil-pointer, report the class as being unallocated.
-          append_block1(DW_AT_allocated,2);
-          current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_push_object_address)));
-          current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_deref)));
-          append_block1(DW_AT_data_location,2);
-          current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_push_object_address)));
-          current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_deref)));
+          { an old style object and a cpp class are accessed directly, so we do not need DW_AT_allocated and DW_AT_data_location tags,
+            see issue #36017 }
+          if not(is_object(def) or is_cppclass(def)) then
+            begin
+              { The pointer to the class-structure is hidden. The debug-information
+                does not contain an implicit pointer, but the data-adress is dereferenced here.
+                In case of a nil-pointer, report the class as being unallocated.
+              }
+              append_block1(DW_AT_allocated,2);
+              current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_push_object_address)));
+              current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_deref)));
+              append_block1(DW_AT_data_location,2);
+              current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_push_object_address)));
+              current_asmdata.asmlists[al_dwarf_info].concat(tai_const.create_8bit(ord(DW_OP_deref)));
+            end;
           finish_entry;
         end;
 
