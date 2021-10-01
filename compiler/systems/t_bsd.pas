@@ -126,8 +126,9 @@ procedure TLinkerBSD.SetDefaultInfo;
 var
   LdProgram: string='ld';
 begin
-  if target_info.system in (systems_openbsd+[system_x86_64_dragonfly]) then
-    LdProgram:='ld.bfd';
+ if (target_info.system in (systems_openbsd+[system_x86_64_dragonfly])) or
+  (target_info.system in (systems_freebsd+[system_x86_64_freebsd])) then
+   LdProgram:='ld.bfd';
   LibrarySuffix:=' ';
   LdSupportsNoResponseFile := (target_info.system in ([system_m68k_netbsd]+systems_darwin));
   with Info do
