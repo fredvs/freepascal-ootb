@@ -567,7 +567,7 @@ begin
              While not SharedLibFiles.Empty do
               begin
                 S:=SharedLibFiles.GetFirst;
-                if ((s<>'c') and (Pos('libc.so',S) = 0)) or reorder then
+                if ((S <> 'c') and (Pos('libc.so',S) = 0)) or reorder then
                  begin
                    i:=Pos(target_info.sharedlibext,S);
                      if i>0 then
@@ -575,7 +575,7 @@ begin
                    Add('-l'+s);
                  end
                 else
-                 begin
+                 begin 
                   linklibc:=true;
               end;
               end;
