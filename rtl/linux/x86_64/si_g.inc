@@ -48,7 +48,7 @@ procedure libc_atexit; external name 'atexit';
 procedure libc_exit; external name '__libc_exit';
 procedure libc_init; external name '__libc_init';
 procedure libc_setfpucw; external name '__setfpucw';
-procedure libc_start_main; external name '__libc_start_main';
+procedure libc_start_main; external name '__libc_start_main@GLIBC_2.2.5';
 
 procedure gmon_monstartup; external name 'monstartup';
 procedure gmon_mcleanup; external name '_mcleanup';
