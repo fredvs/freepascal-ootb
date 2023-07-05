@@ -85,18 +85,18 @@ type
     dli_saddr      : pointer;
   end;
 
-function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl;
-function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl;
+function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.2.5';
+function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.2.5';
 {$ifdef ELF}
-function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl;
+function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym@GLIBC_2.2.5';
 {$endif}
-function dlclose(Lib : Pointer) : Longint; cdecl; external libdl;
-function dlerror() : Pchar; cdecl; external libdl;
+function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.2.5';
+function dlerror() : Pchar; cdecl; external libdl name 'dlerror@GLIBC_2.2.5';
 
 { overloaded for compatibility with hmodule }
-function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl;
-function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl;
-function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external; {$endif}
+function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.2.5';
+function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.2.5';
+function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr@GLIBC_2.2.5';{$endif}
 
 type
   plink_map = ^link_map;
@@ -109,7 +109,7 @@ type
   end;
 
 {$if defined(BSD) or defined(LINUX)}
-function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl;
+function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.2.5';
 {$else}
 { Fortunately investigating the sources of open source projects brought the understanding, that
   `handle` is just a `struct link_map*` that contains full library name.}
