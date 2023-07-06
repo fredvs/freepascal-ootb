@@ -23,8 +23,12 @@ const
   {$ifdef HAIKU}
     LibDL = 'root';
   {$else}
+   {$ifdef linux}
+    LibDL = 'libdl.so.2';
+  {$else}
     LibDL = 'dl';
   {$endif}
+{$endif}
 {$endif}
 
 {$if defined(linux) or defined(freebsd) or defined(openbsd) or defined(dragonfly)}
