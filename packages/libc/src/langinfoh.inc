@@ -363,10 +363,17 @@ const
    YESSTR = __YESSTR;
    NOSTR = __NOSTR;
 
+{$if defined(linux) and defined(cpu64)}
 
 function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo@GLIBC_2.2.5';
 function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l@GLIBC_2.2.5';
 
+{$else}
+
+function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo';
+function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l';
+
+{$endif}
 
 { ---------------------------------------------------------------------
     Borland compatibility types

@@ -1,8 +1,17 @@
 
 const
    CLOCKS_PER_SEC = 1000000;
+   
+{$if defined(linux) and defined(cpu64)}
 
 function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf@GLIBC_2.2.5';
+
+{$else}
+
+function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf';
+
+{$endif}
+
 function CLK_TCK : __clock_t;
 
 const

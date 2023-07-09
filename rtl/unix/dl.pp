@@ -89,6 +89,18 @@ type
     dli_saddr      : pointer;
   end;
 
+type
+  plink_map = ^link_map;
+  link_map = record
+    l_addr:pointer;  { Difference between the address in the ELF file and the address in memory }
+    l_name:Pchar;  { Absolute pathname where object was found }
+    l_ld:pointer;    { Dynamic section of the shared object }
+    l_next, l_prev:^link_map; { Chain of loaded objects }
+    {Plus additional fields private to the implementation }
+  end;
+  
+{$if defined(linux) and defined(cpu64)}
+  
 function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.2.5';
 function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.2.5';
 {$ifdef ELF}
@@ -102,16 +114,6 @@ function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name
 function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.2.5';
 function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr@GLIBC_2.2.5';{$endif}
 
-type
-  plink_map = ^link_map;
-  link_map = record
-    l_addr:pointer;  { Difference between the address in the ELF file and the address in memory }
-    l_name:Pchar;  { Absolute pathname where object was found }
-    l_ld:pointer;    { Dynamic section of the shared object }
-    l_next, l_prev:^link_map; { Chain of loaded objects }
-    {Plus additional fields private to the implementation }
-  end;
-
 {$if defined(BSD) or defined(LINUX)}
 function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.2.5';
 {$else}
@@ -119,6 +121,29 @@ function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external
   `handle` is just a `struct link_map*` that contains full library name.}
 {$endif}
 
+{$else}
+
+function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen';
+function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym';
+{$ifdef ELF}
+function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym';
+{$endif}
+function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose';
+function dlerror() : Pchar; cdecl; external libdl name 'dlerror';
+
+{ overloaded for compatibility with hmodule }
+function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym';
+function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose';
+function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr';{$endif}
+
+{$if defined(BSD) or defined(LINUX)}
+function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo';
+{$else}
+{ Fortunately investigating the sources of open source projects brought the understanding, that
+  `handle` is just a `struct link_map*` that contains full library name.}
+{$endif}
+
+{$endif}
 
 implementation
 
