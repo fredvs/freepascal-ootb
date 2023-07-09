@@ -114,12 +114,7 @@ function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name
 function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.2.5';
 function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr@GLIBC_2.2.5';{$endif}
 
-{$if defined(BSD) or defined(LINUX)}
 function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.2.5';
-{$else}
-{ Fortunately investigating the sources of open source projects brought the understanding, that
-  `handle` is just a `struct link_map*` that contains full library name.}
-{$endif}
 
 {$else}
 
