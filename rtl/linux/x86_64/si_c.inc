@@ -37,17 +37,17 @@
 
 {$L abitag.o}
 var
-  libc_environ: pchar; external name '__environ';
-  libc_fpu_control: word; external name '__fpu_control';
-  libc_init_proc: procedure; external name '_init';
-  libc_fini_proc: procedure; external name '_fini';
+  libc_environ: pchar; external name '__environ@GLIBC_2.2.5';
+  libc_fpu_control: word; external name '__fpu_control@GLIBC_2.2.5';
+  libc_init_proc: procedure; external name '_init@GLIBC_2.2.5';
+  libc_fini_proc: procedure; external name '_fini@GLIBC_2.2.5';
 
   fpc_ret,fpc_ret_rbp : pointer;
 
-procedure libc_atexit; external name '__libc_atexit';
-procedure libc_exit; external name '__libc_exit';
-procedure libc_init; external name '__libc_init';
-procedure libc_setfpucw; external name '__setfpucw';
+procedure libc_atexit; external name '__libc_atexit@GLIBC_2.2.5';
+procedure libc_exit; external name '__libc_exit@GLIBC_2.2.5';
+procedure libc_init; external name '__libc_init@GLIBC_2.2.5';
+procedure libc_setfpucw; external name '__setfpucw@GLIBC_2.2.5';
 procedure libc_start_main; external name '__libc_start_main@GLIBC_2.2.5';
 
 procedure _FPC_libc_haltproc(e:longint); forward;
