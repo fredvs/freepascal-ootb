@@ -27,6 +27,13 @@ Example:
 -Fu$FPCBINDIR/units/$fpctarget/*
 -Fu$FPCBINDIR/units/$fpctarget/rtl
 
+NEW: Release OOTB-glibc255 for Linux 64 bit: with signed symbol GLIBC_2.2.5. for all glibc methods and link with 'libdl.so.2'.
+This is to have binaries that run on system with older or newer version of glibc than the one on the system-compilation.
+
+NEW: Release OOTB-glibc20 for Linux 32 bit: with signed symbol GLIBC_2.0. for all glibc methods and link with 'libdl.so.2'.
+This is to have binaries that run on system with older or newer version of glibc than the one on the system-compilation.
+Also fixed libc_csu_init and l_ibc_csu_fini_ error at linking on last Linux distros.
+
 There is binary release for Windows 64/32 bit, Linux 64/32 bit and Rasbian ARM Rpi:
 [EDIT] Added release for FreeBSD 64 bit.
 https://github.com/fredvs/freepascal-ootb/releases
