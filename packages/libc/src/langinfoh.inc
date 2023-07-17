@@ -369,14 +369,15 @@ function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo
 function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
+
+function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo@GLIBC_2.0';
+function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l@GLIBC_2.0';
+
+{$else}
 
 function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo';
 function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l';
 
 {$endif}
-
-{ ---------------------------------------------------------------------
-    Borland compatibility types
-  ---------------------------------------------------------------------}
-
-// Type
+{$endif}

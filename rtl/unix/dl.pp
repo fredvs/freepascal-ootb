@@ -117,6 +117,24 @@ function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(
 function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
+  
+function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.0';
+function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.0';
+{$ifdef ELF}
+function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym@GLIBC_2.0';
+{$endif}
+function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.0';
+function dlerror() : Pchar; cdecl; external libdl name 'dlerror@GLIBC_2.0';
+
+{ overloaded for compatibility with hmodule }
+function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.0';
+function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.0';
+function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr@GLIBC_2.0';{$endif}
+
+function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.0';
+
+{$else}
 
 function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen';
 function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym';
@@ -138,6 +156,7 @@ function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external
   `handle` is just a `struct link_map*` that contains full library name.}
 {$endif}
 
+{$endif}
 {$endif}
 
 implementation

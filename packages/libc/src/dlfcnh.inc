@@ -34,6 +34,23 @@ function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib
 function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
+
+function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen@GLIBC_2.0';
+function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose@GLIBC_2.0';
+function dlsym(__handle:pointer; __name:Pchar):pointer;cdecl;external dllib name 'dlsym@GLIBC_2.0';
+function dlvsym(__handle:pointer; __name:Pchar; __version:Pchar):pointer;cdecl;external dllib name 'dlvsym@GLIBC_2.0';
+function dlerror:Pchar;cdecl;external clib name 'dlerror@GLIBC_2.0';
+
+function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.0';
+
+{ ---------------------------------------------------------------------
+    Borland compatibility types
+  ---------------------------------------------------------------------}
+
+function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.0';
+
+{$else}
 
 function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen';
 function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose';
@@ -49,4 +66,5 @@ function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib
 
 function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr';
 
+{$endif}
 {$endif}

@@ -63,6 +63,70 @@ function memfrob(__s:pointer; __n:size_t):pointer;cdecl;external clib name 'memf
 function basename(__filename:Pchar):Pchar;cdecl;external clib name 'basename@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
+
+function memcpy(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memcpy@GLIBC_2.0';
+function memmove(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memmove@GLIBC_2.0';
+function memccpy(__dest:pointer; __src:pointer; __c:longint; __n:size_t):pointer;cdecl;external clib name 'memccpy@GLIBC_2.0';
+function memset(__s:pointer; __c:longint; __n:size_t):pointer;cdecl;external clib name 'memset@GLIBC_2.0';
+function memcmp(__s1:pointer; __s2:pointer; __n:size_t):longint;cdecl;external clib name 'memcmp@GLIBC_2.0';
+function memchr(__s:pointer; __c:longint; __n:size_t):pointer;cdecl;external clib name 'memchr@GLIBC_2.0';
+function rawmemchr(__s:pointer; __c:longint):pointer;cdecl;external clib name 'rawmemchr@GLIBC_2.0';
+function memrchr(__s:pointer; __c:longint; __n:size_t):pointer;cdecl;external clib name 'memrchr@GLIBC_2.0';
+function strcpy(__dest:Pchar; __src:Pchar):Pchar;cdecl;external clib name 'strcpy@GLIBC_2.0';
+function strncpy(__dest:Pchar; __src:Pchar; __n:size_t):Pchar;cdecl;external clib name 'strncpy@GLIBC_2.0';
+function __strcat(__dest:Pchar; __src:Pchar):Pchar;cdecl;external clib name 'strcat@GLIBC_2.0';
+function strncat(__dest:Pchar; __src:Pchar; __n:size_t):Pchar;cdecl;external clib name 'strncat@GLIBC_2.0';
+function strcmp(__s1:Pchar; __s2:Pchar):longint;cdecl;external clib name 'strcmp@GLIBC_2.0';
+function strncmp(__s1:Pchar; __s2:Pchar; __n:size_t):longint;cdecl;external clib name 'strncmp@GLIBC_2.0';
+function strcoll(__s1:Pchar; __s2:Pchar):longint;cdecl;external clib name 'strcoll@GLIBC_2.0';
+function strxfrm(__dest:Pchar; __src:Pchar; __n:size_t):size_t;cdecl;external clib name 'strxfrm@GLIBC_2.0';
+function __strcoll_l(__s1:Pchar; __s2:Pchar; __l:__locale_t):longint;cdecl;external clib name '__strcoll_l@GLIBC_2.0';
+function __strxfrm_l(__dest:Pchar; __src:Pchar; __n:size_t; __l:__locale_t):size_t;cdecl;external clib name '__strxfrm_l@GLIBC_2.0';
+function strdup(const S: PChar): PChar; cdecl;external clib name 'strdup@GLIBC_2.0';
+function strndup(const S: PChar; N: size_t): PChar; cdecl; external clib name 'strndup@GLIBC_2.0';
+function strrchr(__s:Pchar; __c:longint):Pchar;cdecl;external clib name 'strrchr@GLIBC_2.0';
+function strchrnul(__s:Pchar; __c:longint):Pchar;cdecl;external clib name 'strchrnul@GLIBC_2.0';
+function strcspn(__s:Pchar; __reject:Pchar):size_t;cdecl;external clib name 'strcspn@GLIBC_2.0';
+function strspn(__s:Pchar; __accept:Pchar):size_t;cdecl;external clib name 'strspn@GLIBC_2.0';
+function strpbrk(__s:Pchar; __accept:Pchar):Pchar;cdecl;external clib name 'strpbrk@GLIBC_2.0';
+function strstr(__haystack:Pchar; __needle:Pchar):Pchar;cdecl;external clib name 'strstr@GLIBC_2.0';
+function strcasestr(__haystack:Pchar; __needle:Pchar):Pchar;cdecl;external clib name 'strcasestr@GLIBC_2.0';
+function strtok(__s:Pchar; __delim:Pchar):Pchar;cdecl;external clib name 'strtok@GLIBC_2.0';
+function __strtok_r(__s:Pchar; __delim:Pchar; __save_ptr:PPchar):Pchar;cdecl;external clib name '__strtok_r@GLIBC_2.0';
+function strtok_r(__s:Pchar; __delim:Pchar; __save_ptr:PPchar):Pchar;cdecl;external clib name 'strtok_r@GLIBC_2.0';
+function memmem(__haystack:pointer; __haystacklen:size_t; __needle:pointer; __needlelen:size_t):pointer;cdecl;external clib name 'memmem@GLIBC_2.0';
+function __mempcpy(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name '__mempcpy@GLIBC_2.0';
+function mempcpy(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'mempcpy@GLIBC_2.0';
+function __strlen(__s:Pchar):size_t;cdecl;external clib name 'strlen@GLIBC_2.0';
+function strnlen(__string:Pchar; __maxlen:size_t):size_t;cdecl;external clib name 'strnlen@GLIBC_2.0';
+function strerror(__errnum:longint):Pchar;cdecl;external clib name 'strerror@GLIBC_2.0';
+function strerror_r(__errnum:longint; __buf:Pchar; __buflen:size_t):Pchar;cdecl;external clib name 'strerror_r@GLIBC_2.0';
+procedure __bzero(__s:pointer; __n:size_t);cdecl;external clib name '__bzero@GLIBC_2.0';
+procedure bcopy(__src:pointer; __dest:pointer; __n:size_t);cdecl;external clib name 'bcopy@GLIBC_2.0';
+procedure bzero(__s:pointer; __n:size_t);cdecl;external clib name 'bzero@GLIBC_2.0';
+function bcmp(__s1:pointer; __s2:pointer; __n:size_t):longint;cdecl;external clib name 'bcmp@GLIBC_2.0';
+function __index(__s:Pchar; __c:longint):Pchar;cdecl;external clib name 'index@GLIBC_2.0';
+function rindex(__s:Pchar; __c:longint):Pchar;cdecl;external clib name 'rindex@GLIBC_2.0';
+function ffs(I: Integer): Integer; cdecl; external clib name 'ffs@GLIBC_2.0';
+function ffsl(L: Integer): Integer; cdecl; external clib name 'ffsl@GLIBC_2.0';
+function ffsll(LL: Int64): Integer; cdecl; external clib name 'ffsll@GLIBC_2.0';
+function strcasecmp(__s1:Pchar; __s2:Pchar):longint;cdecl;external clib name 'strcasecmp@GLIBC_2.0';
+function strncasecmp(__s1:Pchar; __s2:Pchar; __n:size_t):longint;cdecl;external clib name 'strncasecmp@GLIBC_2.0';
+function __strcasecmp_l(__s1:Pchar; __s2:Pchar; __loc:__locale_t):longint;cdecl;external clib name '__strcasecmp_l@GLIBC_2.0';
+function __strncasecmp_l(__s1:Pchar; __s2:Pchar; __n:size_t; __loc:__locale_t):longint;cdecl;external clib name '__strncasecmp_l@GLIBC_2.0';
+function strsep(__stringp:PPchar; __delim:Pchar):Pchar;cdecl;external clib name 'strsep@GLIBC_2.0';
+function strverscmp(__s1:Pchar; __s2:Pchar):longint;cdecl;external clib name 'strverscmp@GLIBC_2.0';
+function strsignal(__sig:longint):Pchar;cdecl;external clib name 'strsignal@GLIBC_2.0';
+function __stpcpy(__dest:Pchar; __src:Pchar):Pchar;cdecl;external clib name '__stpcpy@GLIBC_2.0';
+function stpcpy(__dest:Pchar; __src:Pchar):Pchar;cdecl;external clib name 'stpcpy@GLIBC_2.0';
+function __stpncpy(__dest:Pchar; __src:Pchar; __n:size_t):Pchar;cdecl;external clib name '__stpncpy@GLIBC_2.0';
+function stpncpy(__dest:Pchar; __src:Pchar; __n:size_t):Pchar;cdecl;external clib name 'stpncpy@GLIBC_2.0';
+function strfry(__string:Pchar):Pchar;cdecl;external clib name 'strfry@GLIBC_2.0';
+function memfrob(__s:pointer; __n:size_t):pointer;cdecl;external clib name 'memfrob@GLIBC_2.0';
+function basename(__filename:Pchar):Pchar;cdecl;external clib name 'basename@GLIBC_2.0';
+
+{$else}
 
 function memcpy(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memcpy';
 function memmove(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memmove';
@@ -126,4 +190,4 @@ function memfrob(__s:pointer; __n:size_t):pointer;cdecl;external clib name 'memf
 function basename(__filename:Pchar):Pchar;cdecl;external clib name 'basename';
 
 {$endif}
-
+{$endif}

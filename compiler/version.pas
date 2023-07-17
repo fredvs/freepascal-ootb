@@ -30,8 +30,16 @@ interface
        version_nr = '3';
        release_nr = '2';
        patch_nr   = '2';
+       {$if defined(linux) and defined(cpu64)}
        minorpatch = '_glibc225';
-
+       {$else}
+       {$if defined(linux) and defined(cpu32)}
+       minorpatch = '_glibc20';
+       {$else}
+       minorpatch = ' ';
+       {$endif}
+       {$endif}
+       
        { word version for ppu file }
        wordversion = ((ord(version_nr)-ord('0')) shl 14)+
                      ((ord(release_nr)-ord('0')) shl 7)+

@@ -7,9 +7,14 @@ const
 function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
 
+function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf@GLIBC_2.0';
+
+{$else}
 function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf';
 
+{$endif}
 {$endif}
 
 function CLK_TCK : __clock_t;

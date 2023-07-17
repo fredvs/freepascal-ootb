@@ -157,7 +157,14 @@ const
 function __errno_location: PInteger; cdecl;external clib name '__errno_location@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
+
+function __errno_location: PInteger; cdecl;external clib name '__errno_location@GLIBC_2.0';
+
+{$else}
 
 function __errno_location: PInteger; cdecl;external clib name '__errno_location';
+
+{$endif}
 
 {$endif}

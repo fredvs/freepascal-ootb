@@ -118,6 +118,120 @@ function fputws_unlocked(__ws:Pwchar_t; __stream:P__FILE):longint;cdecl;external
 function wcsftime(__s:Pwchar_t; __maxsize:size_t; __format:Pwchar_t; __tp:Ptm):size_t;cdecl;external clib name 'wcsftime@GLIBC_2.2.5';
 
 {$else}
+{$if defined(linux) and defined(cpu32)}
+
+function wcscpy(__dest:Pwchar_t; __src:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcscpy@GLIBC_2.0';
+function wcsncpy(__dest:Pwchar_t; __src:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wcsncpy@GLIBC_2.0';
+function wcscat(__dest:Pwchar_t; __src:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcscat@GLIBC_2.0';
+function wcsncat(__dest:Pwchar_t; __src:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wcsncat@GLIBC_2.0';
+function wcscmp(__s1:Pwchar_t; __s2:Pwchar_t):longint;cdecl;external clib name 'wcscmp@GLIBC_2.0';
+function wcsncmp(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):longint;cdecl;external clib name 'wcsncmp@GLIBC_2.0';
+function wcscasecmp(__s1:Pwchar_t; __s2:Pwchar_t):longint;cdecl;external clib name 'wcscasecmp@GLIBC_2.0';
+function wcsncasecmp(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):longint;cdecl;external clib name 'wcsncasecmp@GLIBC_2.0';
+function __wcscasecmp_l(__s1:Pwchar_t; __s2:Pwchar_t; __loc:__locale_t):longint;cdecl;external clib name '__wcscasecmp_l@GLIBC_2.0';
+function __wcsncasecmp_l(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t; __loc:__locale_t):longint;cdecl;external clib name '__wcsncasecmp_l@GLIBC_2.0';
+function wcscoll(__s1:Pwchar_t; __s2:Pwchar_t):longint;cdecl;external clib name 'wcscoll@GLIBC_2.0';
+function wcsxfrm(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):size_t;cdecl;external clib name 'wcsxfrm@GLIBC_2.0';
+function __wcscoll_l(__s1:Pwchar_t; __s2:Pwchar_t; __loc:__locale_t):longint;cdecl;external clib name '__wcscoll_l@GLIBC_2.0';
+function __wcsxfrm_l(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t; __loc:__locale_t):size_t;cdecl;external clib name '__wcsxfrm_l@GLIBC_2.0';
+function wcsdup(__s:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcsdup@GLIBC_2.0';
+function wcschr(__wcs:Pwchar_t; __wc:wchar_t):Pwchar_t;cdecl;external clib name 'wcschr@GLIBC_2.0';
+function wcsrchr(__wcs:Pwchar_t; __wc:wchar_t):Pwchar_t;cdecl;external clib name 'wcsrchr@GLIBC_2.0';
+function wcschrnul(__s:Pwchar_t; __wc:wchar_t):Pwchar_t;cdecl;external clib name 'wcschrnul@GLIBC_2.0';
+function wcscspn(__wcs:Pwchar_t; __reject:Pwchar_t):size_t;cdecl;external clib name 'wcscspn@GLIBC_2.0';
+function wcsspn(__wcs:Pwchar_t; __accept:Pwchar_t):size_t;cdecl;external clib name 'wcsspn@GLIBC_2.0';
+function wcspbrk(__wcs:Pwchar_t; __accept:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcspbrk@GLIBC_2.0';
+function wcsstr(__haystack:Pwchar_t; __needle:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcsstr@GLIBC_2.0';
+function wcswcs(__haystack:Pwchar_t; __needle:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcswcs@GLIBC_2.0';
+function wcstok(__s:Pwchar_t; __delim:Pwchar_t; __ptr:PPwchar_t):Pwchar_t;cdecl;external clib name 'wcstok@GLIBC_2.0';
+function wcslen(__s:Pwchar_t):size_t;cdecl;external clib name 'wcslen@GLIBC_2.0';
+function wcsnlen(__s:Pwchar_t; __maxlen:size_t):size_t;cdecl;external clib name 'wcsnlen@GLIBC_2.0';
+function wmemchr(__s:Pwchar_t; __c:wchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wmemchr@GLIBC_2.0';
+function wmemcmp(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):longint;cdecl;external clib name 'wmemcmp@GLIBC_2.0';
+function wmemcpy(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wmemcpy@GLIBC_2.0';
+function wmemmove(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wmemmove@GLIBC_2.0';
+function wmemset(__s:Pwchar_t; __c:wchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wmemset@GLIBC_2.0';
+function wmempcpy(__s1:Pwchar_t; __s2:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wmempcpy@GLIBC_2.0';
+function btowc(__c:longint):wint_t;cdecl;external clib name 'btowc@GLIBC_2.0';
+function wctob(__c:wint_t):longint;cdecl;external clib name 'wctob@GLIBC_2.0';
+function mbsinit(__ps:Pmbstate_t):longint;cdecl;external clib name 'mbsinit@GLIBC_2.0';
+function mbrtowc(__pwc:Pwchar_t; __s:Pchar; __n:size_t; __p:Pmbstate_t):size_t;cdecl;external clib name 'mbrtowc@GLIBC_2.0';
+function wcrtomb(__s:Pchar; __wc:wchar_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'wcrtomb@GLIBC_2.0@GLIBC_2.0';
+function __mbrlen(__s:Pchar; __n:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name '__mbrlen@GLIBC_2.0';
+function mbrlen(__s:Pchar; __n:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'mbrlen@GLIBC_2.0';
+function mbsrtowcs(__dst:Pwchar_t; __src:PPchar; __len:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'mbsrtowcs@GLIBC_2.0';
+function wcsrtombs(__dst:Pchar; __src:PPwchar_t; __len:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'wcsrtombs@GLIBC_2.0';
+function mbsnrtowcs(__dst:Pwchar_t; __src:PPchar; __nmc:size_t; __len:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'mbsnrtowcs@GLIBC_2.0';
+function wcsnrtombs(__dst:Pchar; __src:PPwchar_t; __nwc:size_t; __len:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'wcsnrtombs@GLIBC_2.0';
+function wcwidth(__c:wchar_t):longint;cdecl;external clib name 'wcwidth@GLIBC_2.0';
+function wcswidth(__s:Pwchar_t; __n:size_t):longint;cdecl;external clib name 'wcswidth@GLIBC_2.0';
+function wcstod(__nptr:Pwchar_t; __endptr:PPwchar_t):double;cdecl;external clib name 'wcstod@GLIBC_2.0';
+function wcstof(__nptr:Pwchar_t; __endptr:PPwchar_t):double;cdecl;external clib name 'wcstof@GLIBC_2.0';
+function wcstold(__nptr:Pwchar_t; __endptr:PPwchar_t):extended;cdecl;external clib name 'wcstold@GLIBC_2.0';
+function wcstol(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint):longint;cdecl;external clib name 'wcstol@GLIBC_2.0';
+function wcstoul(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint):dword;cdecl;external clib name 'wcstoul@GLIBC_2.0';
+function wcstoq(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint):int64;cdecl;external clib name 'wcstoq@GLIBC_2.0';
+function wcstouq(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint):qword;cdecl;external clib name 'wcstouq@GLIBC_2.0';
+function wcstoll(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint):int64;cdecl;external clib name 'wcstoll@GLIBC_2.0';
+function wcstoull(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint):qword;cdecl;external clib name 'wcstoull@GLIBC_2.0';
+
+function __wcstol_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __loc:__locale_t):longint;cdecl;external clib name '__wcstol_l@GLIBC_2.0';
+function __wcstoul_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __loc:__locale_t):dword;cdecl;external clib name '__wcstoul_l@GLIBC_2.0';
+function __wcstoll_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __loc:__locale_t):int64;cdecl;external clib name '__wcstoll_l@GLIBC_2.0';
+function __wcstoull_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __loc:__locale_t):qword;cdecl;external clib name '__wcstoull_l@GLIBC_2.0';
+function __wcstod_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __loc:__locale_t):double;cdecl;external clib name '__wcstod_l@GLIBC_2.0';
+function __wcstof_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __loc:__locale_t):double;cdecl;external clib name '__wcstof_l@GLIBC_2.0';
+function __wcstold_l(__nptr:Pwchar_t; __endptr:PPwchar_t; __loc:__locale_t):extended;cdecl;external clib name '__wcstold_l@GLIBC_2.0';
+
+function __wcstod_internal(__nptr:Pwchar_t; __endptr:PPwchar_t; __group:longint):double;cdecl;external clib name '__wcstod_internal@GLIBC_2.0';
+function __wcstof_internal(__nptr:Pwchar_t; __endptr:PPwchar_t; __group:longint):double;cdecl;external clib name '__wcstof_internal@GLIBC_2.0';
+function __wcstold_internal(__nptr:Pwchar_t; __endptr:PPwchar_t; __group:longint):extended;cdecl;external clib name '__wcstold_internal@GLIBC_2.0';
+function __wcstol_internal(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __group:longint):longint;cdecl;external clib name '__wcstol_internal@GLIBC_2.0';
+function __wcstoul_internal(__npt:Pwchar_t; __endptr:PPwchar_t; __base:longint; __group:longint):dword;cdecl;external clib name '__wcstoul_internal@GLIBC_2.0';
+function __wcstoll_internal(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __group:longint):int64;cdecl;external clib name '__wcstoll_internal@GLIBC_2.0';
+function __wcstoull_internal(__nptr:Pwchar_t; __endptr:PPwchar_t; __base:longint; __group:longint):qword;cdecl;external clib name '__wcstoull_internal@GLIBC_2.0';
+
+function wcpcpy(__dest:Pwchar_t; __src:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcpcpy@GLIBC_2.0';
+function wcpncpy(__dest:Pwchar_t; __src:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wcpncpy@GLIBC_2.0';
+function fwide(__fp:P__FILE; __mode:longint):longint;cdecl;external clib name 'fwide@GLIBC_2.0';
+function fwprintf(__stream:P__FILE; __format:Pwchar_t; args:array of const):longint;cdecl;external clib name 'fwprintf@GLIBC_2.0';
+function fwprintf(__stream:P__FILE; __format:Pwchar_t):longint;cdecl;varargs;external clib name 'fwprintf@GLIBC_2.0';
+function wprintf(__format:Pwchar_t; args:array of const):longint;cdecl;external clib name 'wprintf@GLIBC_2.0';
+function wprintf(__format:Pwchar_t):longint;cdecl;varargs;external clib name 'wprintf@GLIBC_2.0';
+function swprintf(__s:Pwchar_t; __n:size_t; __format:Pwchar_t; args:array of const):longint;cdecl;external clib name 'swprintf@GLIBC_2.0';
+function swprintf(__s:Pwchar_t; __n:size_t; __format:Pwchar_t):longint;cdecl;varargs;external clib name 'swprintf@GLIBC_2.0';
+function vfwprintf(__s:P__FILE; __format:Pwchar_t; __arg:__gnuc_va_list):longint;cdecl;external clib name 'vfwprintf@GLIBC_2.0';
+function vwprintf(__format:Pwchar_t; __arg:__gnuc_va_list):longint;cdecl;external clib name 'vwprintf@GLIBC_2.0';
+function vswprintf(__s:Pwchar_t; __n:size_t; __format:Pwchar_t; __arg:__gnuc_va_list):longint;cdecl;external clib name 'vswprintf@GLIBC_2.0';
+function fwscanf(__stream:P__FILE; __format:Pwchar_t; args:array of const):longint;cdecl;external clib name 'fwscanf@GLIBC_2.0';
+function fwscanf(__stream:P__FILE; __format:Pwchar_t):longint;cdecl;varargs;external clib name 'fwscanf@GLIBC_2.0';
+function wscanf(__format:Pwchar_t; args:array of const):longint;cdecl;external clib name 'wscanf@GLIBC_2.0';
+function wscanf(__format:Pwchar_t):longint;cdecl;varargs;external clib name 'wscanf@GLIBC_2.0';
+function swscanf(__s:Pwchar_t; __format:Pwchar_t; args:array of const):longint;cdecl;external clib name 'swscanf@GLIBC_2.0';
+function swscanf(__s:Pwchar_t; __format:Pwchar_t):longint;cdecl;varargs;external clib name 'swscanf@GLIBC_2.0';
+function vfwscanf(__s:P__FILE; __format:Pwchar_t; __arg:__gnuc_va_list):longint;cdecl;external clib name 'vfwscanf@GLIBC_2.0';
+function vwscanf(__format:Pwchar_t; __arg:__gnuc_va_list):longint;cdecl;external clib name 'vwscanf@GLIBC_2.0';
+function vswscanf(__s:Pwchar_t; __format:Pwchar_t; __arg:__gnuc_va_list):longint;cdecl;external clib name 'vswscanf@GLIBC_2.0';
+function fgetwc(__stream:P__FILE):wint_t;cdecl;external clib name 'fgetwc@GLIBC_2.0';
+function getwc(__stream:P__FILE):wint_t;cdecl;external clib name 'getwc@GLIBC_2.0';
+function getwchar:wint_t;cdecl;external clib name 'getwchar@GLIBC_2.0';
+function fputwc(__wc:wchar_t; __stream:P__FILE):wint_t;cdecl;external clib name 'fputwc@GLIBC_2.0';
+function putwc(__wc:wchar_t; __stream:P__FILE):wint_t;cdecl;external clib name 'putwc@GLIBC_2.0';
+function putwchar(__wc:wchar_t):wint_t;cdecl;external clib name 'putwchar@GLIBC_2.0';
+function fgetws(__ws:Pwchar_t; __n:longint; __stream:P__FILE):Pwchar_t;cdecl;external clib name 'fgetws@GLIBC_2.0';
+function fputws(__ws:Pwchar_t; __stream:P__FILE):longint;cdecl;external clib name 'fputws@GLIBC_2.0';
+function ungetwc(__wc:wint_t; __stream:P__FILE):wint_t;cdecl;external clib name 'ungetwc@GLIBC_2.0';
+function getwc_unlocked(__stream:P__FILE):wint_t;cdecl;external clib name 'getwc_unlocked@GLIBC_2.0';
+function getwchar_unlocked:wint_t;cdecl;external clib name 'getwchar_unlocked@GLIBC_2.0';
+function fgetwc_unlocked(__stream:P__FILE):wint_t;cdecl;external clib name 'fgetwc_unlocked@GLIBC_2.0';
+function fputwc_unlocked(__wc:wchar_t; __stream:P__FILE):wint_t;cdecl;external clib name 'fputwc_unlocked@GLIBC_2.0';
+function putwc_unlocked(__wc:wchar_t; __stream:P__FILE):wint_t;cdecl;external clib name 'putwc_unlocked@GLIBC_2.0';
+function putwchar_unlocked(__wc:wchar_t):wint_t;cdecl;external clib name 'putwchar_unlocked@GLIBC_2.0';
+function fgetws_unlocked(__ws:Pwchar_t; __n:longint; __stream:P__FILE):Pwchar_t;cdecl;external clib name 'fgetws_unlocked@GLIBC_2.0';
+function fputws_unlocked(__ws:Pwchar_t; __stream:P__FILE):longint;cdecl;external clib name 'fputws_unlocked@GLIBC_2.0';
+function wcsftime(__s:Pwchar_t; __maxsize:size_t; __format:Pwchar_t; __tp:Ptm):size_t;cdecl;external clib name 'wcsftime@GLIBC_2.0';
+
+{$else}
 
 function wcscpy(__dest:Pwchar_t; __src:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcscpy';
 function wcsncpy(__dest:Pwchar_t; __src:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wcsncpy';
@@ -230,5 +344,5 @@ function fgetws_unlocked(__ws:Pwchar_t; __n:longint; __stream:P__FILE):Pwchar_t;
 function fputws_unlocked(__ws:Pwchar_t; __stream:P__FILE):longint;cdecl;external clib name 'fputws_unlocked';
 function wcsftime(__s:Pwchar_t; __maxsize:size_t; __format:Pwchar_t; __tp:Ptm):size_t;cdecl;external clib name 'wcsftime';
 
-
+{$endif}
 {$endif}

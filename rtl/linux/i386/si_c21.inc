@@ -35,15 +35,23 @@
 
 {$asmmode att}
 
-procedure __libc_csu_init; cdecl; external;
-procedure __libc_csu_fini; cdecl; external;
-procedure libc_start_main; external name '__libc_start_main';
-procedure libc_exit(code: longint); cdecl; external name 'exit';
+//procedure __libc_csu_init; cdecl; external name '__libc_csu_init@GLIBC_2.0';
+//procedure __libc_csu_fini; cdecl; external name '__libc_csu_fini@GLIBC_2.0';
+procedure libc_start_main; external name '__libc_start_main@GLIBC_2.0';
+procedure libc_exit(code: longint); cdecl; external name 'exit@GLIBC_2.0';
 
 
 {******************************************************************************
                        glibc 2.1 lib + profiling start/halt
  ******************************************************************************}
+ 
+procedure __libc_csu_init; // dummy
+begin
+end;
+
+procedure __libc_csu_fini;  // dummy
+begin
+end;
 
 procedure _FPC_libc21_start; assembler; nostackframe; public name '_start';
 asm
