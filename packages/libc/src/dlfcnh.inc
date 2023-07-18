@@ -17,7 +17,7 @@ Type
   TDLInfo = Dl_info;
   PDLInfo = ^TDLInfo;
 
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen@GLIBC_2.2.5';
 function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose@GLIBC_2.2.5';
@@ -34,7 +34,7 @@ function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib
 function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen@GLIBC_2.0';
 function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose@GLIBC_2.0';

@@ -99,8 +99,8 @@ type
     {Plus additional fields private to the implementation }
   end;
   
-{$if defined(linux) and defined(cpu64)}
-  
+{$if defined(linux) and defined(x86_64)}
+
 function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.2.5';
 function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.2.5';
 {$ifdef ELF}
@@ -117,7 +117,7 @@ function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(
 function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
   
 function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.0';
 function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.0';

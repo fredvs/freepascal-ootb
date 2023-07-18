@@ -4,7 +4,7 @@ type
   P__FILE = PFILE;
   __GNUC_VA_LIST = pointer;
 
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 function wcscpy(__dest:Pwchar_t; __src:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcscpy@GLIBC_2.2.5';
 function wcsncpy(__dest:Pwchar_t; __src:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wcsncpy@GLIBC_2.2.5';
@@ -118,7 +118,7 @@ function fputws_unlocked(__ws:Pwchar_t; __stream:P__FILE):longint;cdecl;external
 function wcsftime(__s:Pwchar_t; __maxsize:size_t; __format:Pwchar_t; __tp:Ptm):size_t;cdecl;external clib name 'wcsftime@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 function wcscpy(__dest:Pwchar_t; __src:Pwchar_t):Pwchar_t;cdecl;external clib name 'wcscpy@GLIBC_2.0';
 function wcsncpy(__dest:Pwchar_t; __src:Pwchar_t; __n:size_t):Pwchar_t;cdecl;external clib name 'wcsncpy@GLIBC_2.0';

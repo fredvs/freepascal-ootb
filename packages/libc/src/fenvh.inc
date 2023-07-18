@@ -1,4 +1,4 @@
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 function feclearexcept(__excepts:longint):longint;cdecl;external clib name 'feclearexcept@GLIBC_2.2.5';
 function fegetexceptflag(__flagp:Pfexcept_t; __excepts:longint):longint;cdecl;external clib name 'fegetexceptflag@GLIBC_2.2.5';
@@ -29,7 +29,7 @@ function feupdateenv(var __envp:fenv_t):longint;cdecl;external clib name 'feupda
 
 {$else}
 
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 function feclearexcept(__excepts:longint):longint;cdecl;external clib name 'feclearexcept@GLIBC_2.0';
 function fegetexceptflag(__flagp:Pfexcept_t; __excepts:longint):longint;cdecl;external clib name 'fegetexceptflag@GLIBC_2.0';

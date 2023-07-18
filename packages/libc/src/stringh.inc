@@ -1,5 +1,5 @@
 
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 function memcpy(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memcpy@GLIBC_2.2.5';
 function memmove(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memmove@GLIBC_2.2.5';
@@ -63,7 +63,7 @@ function memfrob(__s:pointer; __n:size_t):pointer;cdecl;external clib name 'memf
 function basename(__filename:Pchar):Pchar;cdecl;external clib name 'basename@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 function memcpy(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memcpy@GLIBC_2.0';
 function memmove(__dest:pointer; __src:pointer; __n:size_t):pointer;cdecl;external clib name 'memmove@GLIBC_2.0';

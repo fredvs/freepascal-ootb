@@ -1,5 +1,5 @@
 
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 function sched_setparam(__pid:__pid_t; __param:Psched_param):longint;cdecl;external clib name 'sched_setparam@GLIBC_2.2.5';
 function sched_getparam(__pid:__pid_t; __param:Psched_param):longint;cdecl;external clib name 'sched_getparam@GLIBC_2.2.5';
@@ -20,7 +20,7 @@ function sched_setscheduler(__pid:__pid_t; __policy:longint; var __param: sched_
 function sched_rr_get_interval(__pid:__pid_t; var __t: timespec):longint;cdecl;external clib name 'sched_rr_get_interval@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 function sched_setparam(__pid:__pid_t; __param:Psched_param):longint;cdecl;external clib name 'sched_setparam@GLIBC_2.0';
 function sched_getparam(__pid:__pid_t; __param:Psched_param):longint;cdecl;external clib name 'sched_getparam@GLIBC_2.0';

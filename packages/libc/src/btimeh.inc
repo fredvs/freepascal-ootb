@@ -2,12 +2,12 @@
 const
    CLOCKS_PER_SEC = 1000000;
    
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf@GLIBC_2.0';
 

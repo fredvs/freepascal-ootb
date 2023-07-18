@@ -112,7 +112,7 @@ const
    LOG_NOWAIT = $10;
    LOG_PERROR = $20;
    
-{$if defined(linux) and defined(cpu64)}
+{$if defined(linux) and defined(x86_64)}
 
 procedure closelog;cdecl;external clib name 'closelog@GLIBC_2.2.5';
 procedure openlog(__ident:Pchar; __option:longint; __facility:longint);cdecl;external clib name 'openlog@GLIBC_2.2.5';
@@ -121,7 +121,7 @@ procedure syslog(__pri: Integer; __fmt: PChar; arg : array of const); cdecl; ext
 procedure vsyslog(__pri: Integer; Fmt: PChar; Arg: Pointer);cdecl; external clib name 'vsyslog@GLIBC_2.2.5';
 
 {$else}
-{$if defined(linux) and defined(cpu32)}
+{$if defined(linux) and defined(i386)}
 
 procedure closelog;cdecl;external clib name 'closelog@GLIBC_2.0';
 procedure openlog(__ident:Pchar; __option:longint; __facility:longint);cdecl;external clib name 'openlog@GLIBC_2.0';
