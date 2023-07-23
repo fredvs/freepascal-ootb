@@ -183,7 +183,7 @@ begin
     while not SharedLibFiles.Empty do
      begin
       S:=SharedLibFiles.GetFirst;
-      if s<>'c' then
+     if ((S <> 'c') and (Pos('libc.so',S) = 0)) then
        begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
