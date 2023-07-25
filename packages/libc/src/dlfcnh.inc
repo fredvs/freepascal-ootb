@@ -17,54 +17,18 @@ Type
   TDLInfo = Dl_info;
   PDLInfo = ^TDLInfo;
 
-{$if defined(linux) and defined(x86_64)}
 
-function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen@GLIBC_2.2.5';
-function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose@GLIBC_2.2.5';
-function dlsym(__handle:pointer; __name:Pchar):pointer;cdecl;external dllib name 'dlsym@GLIBC_2.2.5';
-function dlvsym(__handle:pointer; __name:Pchar; __version:Pchar):pointer;cdecl;external dllib name 'dlvsym@GLIBC_2.2.5';
-function dlerror:Pchar;cdecl;external clib name 'dlerror@GLIBC_2.2.5';
+function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen' + LIBC_SUFFIX;
+function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose' + LIBC_SUFFIX;
+function dlsym(__handle:pointer; __name:Pchar):pointer;cdecl;external dllib name 'dlsym' + LIBC_SUFFIX;
+function dlvsym(__handle:pointer; __name:Pchar; __version:Pchar):pointer;cdecl;external dllib name 'dlvsym' + LIBC_SUFFIX;
+function dlerror:Pchar;cdecl;external clib name 'dlerror' + LIBC_SUFFIX;
 
-function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.2.5';
-
-{ ---------------------------------------------------------------------
-    Borland compatibility types
-  ---------------------------------------------------------------------}
-
-function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.2.5';
-
-{$else}
-{$if defined(linux) and defined(i386)}
-
-function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen@GLIBC_2.0';
-function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose@GLIBC_2.0';
-function dlsym(__handle:pointer; __name:Pchar):pointer;cdecl;external dllib name 'dlsym@GLIBC_2.0';
-function dlvsym(__handle:pointer; __name:Pchar; __version:Pchar):pointer;cdecl;external dllib name 'dlvsym@GLIBC_2.0';
-function dlerror:Pchar;cdecl;external clib name 'dlerror@GLIBC_2.0';
-
-function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.0';
+function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib name 'dladdr' + LIBC_SUFFIX;
 
 { ---------------------------------------------------------------------
     Borland compatibility types
   ---------------------------------------------------------------------}
 
-function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr@GLIBC_2.0';
+function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr' + LIBC_SUFFIX;
 
-{$else}
-
-function dlopen(__file:Pchar; __mode:longint):pointer;cdecl;external dllib name 'dlopen';
-function dlclose(__handle:pointer):longint;cdecl;external dllib name 'dlclose';
-function dlsym(__handle:pointer; __name:Pchar):pointer;cdecl;external dllib name 'dlsym';
-function dlvsym(__handle:pointer; __name:Pchar; __version:Pchar):pointer;cdecl;external dllib name 'dlvsym';
-function dlerror:Pchar;cdecl;external clib name 'dlerror';
-
-function dladdr(__address:pointer; __info:PDl_info):longint;cdecl;external dllib name 'dladdr';
-
-{ ---------------------------------------------------------------------
-    Borland compatibility types
-  ---------------------------------------------------------------------}
-
-function dladdr(__address:pointer; var __info: Dl_info):longint;cdecl;external dllib name 'dladdr';
-
-{$endif}
-{$endif}

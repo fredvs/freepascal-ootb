@@ -152,19 +152,4 @@ const
    ENOTSUP = EOPNOTSUPP;
    ECANCELED = 125;
 
-{$if defined(linux) and defined(x86_64)}
-
-function __errno_location: PInteger; cdecl;external clib name '__errno_location@GLIBC_2.2.5';
-
-{$else}
-{$if defined(linux) and defined(i386)}
-
-function __errno_location: PInteger; cdecl;external clib name '__errno_location@GLIBC_2.0';
-
-{$else}
-
-function __errno_location: PInteger; cdecl;external clib name '__errno_location';
-
-{$endif}
-
-{$endif}
+function __errno_location: PInteger; cdecl;external clib name '__errno_location' + LIBC_SUFFIX;

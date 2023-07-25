@@ -17,6 +17,18 @@ unit dl;
 interface
 
 const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}
+
+const
 {$ifdef BSD}   // dlopen is in libc on FreeBSD.
   LibDL = 'c';
 {$else}
@@ -99,65 +111,20 @@ type
     {Plus additional fields private to the implementation }
   end;
   
-{$if defined(linux) and defined(x86_64)}
-
-function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.2.5';
-function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.2.5';
+function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen'  + LIBC_SUFFIX ;
+function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym'  + LIBC_SUFFIX ;
 {$ifdef ELF}
-function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym@GLIBC_2.2.5';
+function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym' + LIBC_SUFFIX ;
 {$endif}
-function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.2.5';
-function dlerror() : Pchar; cdecl; external libdl name 'dlerror@GLIBC_2.2.5';
+function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose' + LIBC_SUFFIX ;
+function dlerror() : Pchar; cdecl; external libdl name 'dlerror' + LIBC_SUFFIX ;
 
 { overloaded for compatibility with hmodule }
-function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.2.5';
-function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.2.5';
-function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr@GLIBC_2.2.5';{$endif}
+function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym'  + LIBC_SUFFIX ;
+function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose'  + LIBC_SUFFIX ;
+function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr'  + LIBC_SUFFIX ;{$endif}
 
-function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.2.5';
-
-{$else}
-{$if defined(linux) and defined(i386)}
-  
-function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen@GLIBC_2.0';
-function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.0';
-{$ifdef ELF}
-function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym@GLIBC_2.0';
-{$endif}
-function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.0';
-function dlerror() : Pchar; cdecl; external libdl name 'dlerror@GLIBC_2.0';
-
-{ overloaded for compatibility with hmodule }
-function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym@GLIBC_2.0';
-function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose@GLIBC_2.0';
-function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr@GLIBC_2.0';{$endif}
-
-function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo@GLIBC_2.0';
-
-{$else}
-
-function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen';
-function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym';
-{$ifdef ELF}
-function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym';
-{$endif}
-function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose';
-function dlerror() : Pchar; cdecl; external libdl name 'dlerror';
-
-{ overloaded for compatibility with hmodule }
-function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym';
-function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose';
-function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr';{$endif}
-
-{$if defined(BSD) or defined(LINUX)}
-function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo';
-{$else}
-{ Fortunately investigating the sources of open source projects brought the understanding, that
-  `handle` is just a `struct link_map*` that contains full library name.}
-{$endif}
-
-{$endif}
-{$endif}
+function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo'  + LIBC_SUFFIX ;
 
 implementation
 
