@@ -30,10 +30,10 @@ interface
        version_nr = '3';
        release_nr = '2';
        patch_nr   = '2';
-       {$if defined(linux) and defined(cpu64)}
+       {$if defined(linux) and defined(cpux86_64)}
        minorpatch = '_glibc225';
        {$else}
-       {$if defined(linux) and defined(cpu32)}
+       {$if defined(linux) and defined(cpui386)}
        minorpatch = '_glibc20';
        {$else}
        minorpatch = ' ';
