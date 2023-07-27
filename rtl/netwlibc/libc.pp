@@ -1126,7 +1126,7 @@ type
         tm_hour  : longint;    // hours since midnight [0..23]
         tm_mday  : longint;    // days of the month [1..31]
         tm_mon   : longint;    // months since January [0..11]
-        tm_year  : longint;    // years since 1900 [0..?]
+        tm_year  : longint;    // years since 1900 [0..i]
         tm_wday  : longint;    // days since Sunday [0..6]
         tm_yday  : longint;    // days since first of January [0..365]
         tm_isdst: longint;    // on summer time (-1 unknown, 0 no, !0 yes)
@@ -3340,22 +3340,22 @@ type
      SCROLL_LOCK_IS_ON = $10;
      _PASSWORD_LEN     = 128;  // suggested 'maxlen' argument for getpassword()...
   { string-embeddable color representations...  }
-     COLOR_STR_BLACK   = '\x1B[0;30m' + LIBC_SUFFIX ;
-     COLOR_STR_MAROON  = '\x1B[0;31m' + LIBC_SUFFIX ;
-     COLOR_STR_GREEN   = '\x1B[0;32m' + LIBC_SUFFIX ;
-     COLOR_STR_OLIVE   = '\x1B[0;33m' + LIBC_SUFFIX ;
-     COLOR_STR_NAVY    = '\x1B[0;34m' + LIBC_SUFFIX ;
-     COLOR_STR_PURPLE  = '\x1B[0;35m' + LIBC_SUFFIX ;
-     COLOR_STR_TEAL    = '\x1B[0;36m' + LIBC_SUFFIX ;
-     COLOR_STR_SILVER  = '\x1B[0;37m' + LIBC_SUFFIX ;
-     COLOR_STR_GREY    = '\x1B[1;30m' + LIBC_SUFFIX ;
-     COLOR_STR_RED     = '\x1B[1;31m' + LIBC_SUFFIX ;
-     COLOR_STR_LIME    = '\x1B[1;32m' + LIBC_SUFFIX ;
-     COLOR_STR_YELLOW  = '\x1B[1;33m' + LIBC_SUFFIX ;
-     COLOR_STR_BLUE    = '\x1B[1;34m' + LIBC_SUFFIX ;
-     COLOR_STR_MAGENTA = '\x1B[1;35m' + LIBC_SUFFIX ;
-     COLOR_STR_CYAN    = '\x1B[1;36m' + LIBC_SUFFIX ;
-     COLOR_STR_WHITE   = '\x1B[1;37m' + LIBC_SUFFIX ;
+     COLOR_STR_BLACK   = '\x1B[0;30m' ;
+     COLOR_STR_MAROON  = '\x1B[0;31m' ;
+     COLOR_STR_GREEN   = '\x1B[0;32m' ;
+     COLOR_STR_OLIVE   = '\x1B[0;33m' ;
+     COLOR_STR_NAVY    = '\x1B[0;34m' ;
+     COLOR_STR_PURPLE  = '\x1B[0;35m' ;
+     COLOR_STR_TEAL    = '\x1B[0;36m' ;
+     COLOR_STR_SILVER  = '\x1B[0;37m' ;
+     COLOR_STR_GREY    = '\x1B[1;30m' ;
+     COLOR_STR_RED     = '\x1B[1;31m' ;
+     COLOR_STR_LIME    = '\x1B[1;32m' ;
+     COLOR_STR_YELLOW  = '\x1B[1;33m' ;
+     COLOR_STR_BLUE    = '\x1B[1;34m' ;
+     COLOR_STR_MAGENTA = '\x1B[1;35m' ;
+     COLOR_STR_CYAN    = '\x1B[1;36m' ;
+     COLOR_STR_WHITE   = '\x1B[1;37m' ;
 
      COLOR_STR_NORMAL  = COLOR_STR_SILVER;  // dim/unhighlighted white
      COLOR_STR_GRAY    = COLOR_STR_GREY;
