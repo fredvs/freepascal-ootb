@@ -165,13 +165,18 @@ function pthread_getcpuclockid(__thread_id:pthread_t; __clock_id:Pclockid_t):lon
 function pthread_atfork(__prepare:TForkHandler ; _parent:TForkHandler ; __child:TForkHandler ):longint;cdecl;external threadslib name 'pthread_atfork' + LIBC_SUFFIX ;
 procedure pthread_kill_other_threads_np;cdecl;external threadslib name 'pthread_kill_other_threads_np' + LIBC_SUFFIX ;
 
-
+// Borland compatibility types
+Type
+  TPthreadCleanupBuffer = _pthread_cleanup_buffer;
+  
+function pthread_mutexattr_init(var __attr: pthread_mutexattr_t):longint;cdecl; external threadslib name 'pthread_mutexattr_init' + LIBC_SUFFIX ;
+function pthread_mutexattr_settype(var __attr: pthread_mutexattr_t; Kind: Integer): Integer; cdecl;external threadslib name 'pthread_mutexattr_settype' + LIBC_SUFFIX ;
+function pthread_mutexattr_destroy(var __attr: pthread_mutexattr_t):longint;cdecl; external threadslib name 'pthread_mutexattr_destroy' + LIBC_SUFFIX ;
+function pthread_mutex_trylock(var __mutex: pthread_mutex_t):longint;cdecl; external threadslib name 'pthread_mutex_trylock' + LIBC_SUFFIX ;
+function pthread_mutex_init(var __mutex: pthread_mutex_t; var __mutex_attr: pthread_mutexattr_t):longint;cdecl; external threadslib name 'pthread_mutex_t' + LIBC_SUFFIX ;
 { ---------------------------------------------------------------------
     Borland compatibility types
   ---------------------------------------------------------------------}
-
-Type
-  TPthreadCleanupBuffer = _pthread_cleanup_buffer;
 
 {
 function pthread_create(var __thread:pthread_t; var __attr: pthread_attr_t; __start_routine:TStartRoutine; __arg:pointer):longint;cdecl; external threadslib;
