@@ -52,6 +52,19 @@ const
 
 { some limits wanted by POSIX...  }
 { exact-width signed types...  }
+const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}
+
+
 type
 
    Pint8_t = ^int8_t;
@@ -199,89 +212,89 @@ type
 
 { prototypes for functions standard and nonstandard...  }
 
-function memchr(_para1:pointer; _para2:longint; _para3:size_t):pointer;cdecl;external libc_nlm name 'memchr';
-function memcmp(_para1, _para2:pointer; _para3:size_t):longint;cdecl;external libc_nlm name 'memcmp';
-function memcpy(__restrict, __restrict1:pointer; _para3:size_t):pointer;cdecl;external libc_nlm name 'memcpy';
-function memmove(_para1, _para2:pointer; _para3:size_t):pointer;cdecl;external libc_nlm name 'memmove';
-function memset(_para1:pointer; _para2:longint; _para3:size_t):pointer;cdecl;external libc_nlm name 'memset';
-function strcasecmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'strcasecmp';
-function strcat(dst,src:Pchar):Pchar;cdecl;external libc_nlm name 'strcat';
-function strchr(_para1:Pchar; _para2:longint):Pchar;cdecl;external libc_nlm name 'strchr';
-function strcmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'strcmp';
-function strcoll(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'strcoll';
-function strcpy(__restrict, __restrict1:Pchar):Pchar;cdecl;external libc_nlm name 'strcpy';
-function strcspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'strcspn';
-function strerror(_para1:longint):Pchar;cdecl;external libc_nlm name 'strerror';
-function strlcat(__restrict, __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'strlcat';
-function strlcpy(__restrict, __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'strlcpy';
-function {$ifdef INCLUDED_FROM_SYSTEM}libc_strlen{$else}strlen{$endif}(_para1:Pchar):size_t;cdecl;external libc_nlm name 'strlen';
-function strncasecmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strncasecmp';
-function strncat(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'strncat';
-function strncmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strncmp';
-function strncoll(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strncoll';
-function strncpy(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'strncpy';
-function strnicmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strnicmp';
-function strnset(_para1, _para2:longint; _para3:size_t):Pchar;cdecl;external libc_nlm name 'strnset';
-function strpbrk(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strpbrk';
-function strrchr(_para1, _para2:longint):Pchar;cdecl;external libc_nlm name 'strrchr';
-function strrev(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strrev';
-function strset(_para1:Pchar; _para2:longint):Pchar;cdecl;external libc_nlm name 'strset';
-function strspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'strspn';
-function strstr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strstr';
-function strtok(__restrict, __restrict1:Pchar):Pchar;cdecl;external libc_nlm name 'strtok';
-function strxfrm(__restrict, __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'strxfrm';
+function memchr(_para1:pointer; _para2:longint; _para3:size_t):pointer;cdecl;external libc_nlm name 'memchr' + LIBC_SUFFIX ;
+function memcmp(_para1, _para2:pointer; _para3:size_t):longint;cdecl;external libc_nlm name 'memcmp' + LIBC_SUFFIX ;
+function memcpy(__restrict, __restrict1:pointer; _para3:size_t):pointer;cdecl;external libc_nlm name 'memcpy' + LIBC_SUFFIX ;
+function memmove(_para1, _para2:pointer; _para3:size_t):pointer;cdecl;external libc_nlm name 'memmove' + LIBC_SUFFIX ;
+function memset(_para1:pointer; _para2:longint; _para3:size_t):pointer;cdecl;external libc_nlm name 'memset' + LIBC_SUFFIX ;
+function strcasecmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'strcasecmp' + LIBC_SUFFIX ;
+function strcat(dst,src:Pchar):Pchar;cdecl;external libc_nlm name 'strcat' + LIBC_SUFFIX ;
+function strchr(_para1:Pchar; _para2:longint):Pchar;cdecl;external libc_nlm name 'strchr' + LIBC_SUFFIX ;
+function strcmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'strcmp' + LIBC_SUFFIX ;
+function strcoll(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'strcoll' + LIBC_SUFFIX ;
+function strcpy(__restrict, __restrict1:Pchar):Pchar;cdecl;external libc_nlm name 'strcpy' + LIBC_SUFFIX ;
+function strcspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'strcspn' + LIBC_SUFFIX ;
+function strerror(_para1:longint):Pchar;cdecl;external libc_nlm name 'strerror' + LIBC_SUFFIX ;
+function strlcat(__restrict, __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'strlcat' + LIBC_SUFFIX ;
+function strlcpy(__restrict, __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'strlcpy' + LIBC_SUFFIX ;
+function {$ifdef INCLUDED_FROM_SYSTEM}libc_strlen{$else}strlen{$endif}(_para1:Pchar):size_t;cdecl;external libc_nlm name 'strlen' + LIBC_SUFFIX ;
+function strncasecmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strncasecmp' + LIBC_SUFFIX ;
+function strncat(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'strncat' + LIBC_SUFFIX ;
+function strncmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strncmp' + LIBC_SUFFIX ;
+function strncoll(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strncoll' + LIBC_SUFFIX ;
+function strncpy(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'strncpy' + LIBC_SUFFIX ;
+function strnicmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strnicmp' + LIBC_SUFFIX ;
+function strnset(_para1, _para2:longint; _para3:size_t):Pchar;cdecl;external libc_nlm name 'strnset' + LIBC_SUFFIX ;
+function strpbrk(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strpbrk' + LIBC_SUFFIX ;
+function strrchr(_para1, _para2:longint):Pchar;cdecl;external libc_nlm name 'strrchr' + LIBC_SUFFIX ;
+function strrev(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strrev' + LIBC_SUFFIX ;
+function strset(_para1:Pchar; _para2:longint):Pchar;cdecl;external libc_nlm name 'strset' + LIBC_SUFFIX ;
+function strspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'strspn' + LIBC_SUFFIX ;
+function strstr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strstr' + LIBC_SUFFIX ;
+function strtok(__restrict, __restrict1:Pchar):Pchar;cdecl;external libc_nlm name 'strtok' + LIBC_SUFFIX ;
+function strxfrm(__restrict, __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'strxfrm' + LIBC_SUFFIX ;
 { POSIX and other functions...  }
 
-function strtok_r(__restrict, __restrict1, __restrict2:PPchar):Pchar;cdecl;external libc_nlm name 'strtok_r';
-function memicmp(_para1, _para2:pointer; _para3:size_t):longint;cdecl;external libc_nlm name 'memicmp';
-function stpcpy(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'stpcpy';
-function stricmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'stricmp';
-function strdup(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strdup';
-function strecpy(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strecpy';
-function strerror_r(_para1:longint; _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strerror_r';
+function strtok_r(__restrict, __restrict1, __restrict2:PPchar):Pchar;cdecl;external libc_nlm name 'strtok_r' + LIBC_SUFFIX ;
+function memicmp(_para1, _para2:pointer; _para3:size_t):longint;cdecl;external libc_nlm name 'memicmp' + LIBC_SUFFIX ;
+function stpcpy(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'stpcpy' + LIBC_SUFFIX ;
+function stricmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'stricmp' + LIBC_SUFFIX ;
+function strdup(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strdup' + LIBC_SUFFIX ;
+function strecpy(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strecpy' + LIBC_SUFFIX ;
+function strerror_r(_para1:longint; _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'strerror_r' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function strlist(_para1, _para2:Pchar; args:array of const):Pchar;cdecl;external libc_nlm name 'strlist';
+function strlist(_para1, _para2:Pchar; args:array of const):Pchar;cdecl;external libc_nlm name 'strlist' + LIBC_SUFFIX ;
 {$endif}
-function strlist(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strlist';
-function strlwr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strlwr';
-function strrindex(_para1:Pchar; _para2:size_t; _para3:longint):Pchar;cdecl;external libc_nlm name 'strrindex';
-function strwhich(_para1:Pchar; _para2:longint; _para3:Pchar):Pchar;cdecl;external libc_nlm name 'strwhich';
-function strupr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strupr';
-procedure swab(_para1, _para2:pointer; _para3:size_t);cdecl;external libc_nlm name 'swab';
-procedure swaw(_para1, _para2:pointer; _para3:size_t);cdecl;external libc_nlm name 'swaw';
-procedure ungettok(__restrict, __restrict1:Pchar);cdecl;external libc_nlm name 'ungettok';
-procedure ungettok_r(__restrict, __restrict1:Pchar; __restrict2:PPchar);cdecl;external libc_nlm name 'ungettok_r';
+function strlist(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strlist' + LIBC_SUFFIX ;
+function strlwr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strlwr' + LIBC_SUFFIX ;
+function strrindex(_para1:Pchar; _para2:size_t; _para3:longint):Pchar;cdecl;external libc_nlm name 'strrindex' + LIBC_SUFFIX ;
+function strwhich(_para1:Pchar; _para2:longint; _para3:Pchar):Pchar;cdecl;external libc_nlm name 'strwhich' + LIBC_SUFFIX ;
+function strupr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'strupr' + LIBC_SUFFIX ;
+procedure swab(_para1, _para2:pointer; _para3:size_t);cdecl;external libc_nlm name 'swab' + LIBC_SUFFIX ;
+procedure swaw(_para1, _para2:pointer; _para3:size_t);cdecl;external libc_nlm name 'swaw' + LIBC_SUFFIX ;
+procedure ungettok(__restrict, __restrict1:Pchar);cdecl;external libc_nlm name 'ungettok' + LIBC_SUFFIX ;
+procedure ungettok_r(__restrict, __restrict1:Pchar; __restrict2:PPchar);cdecl;external libc_nlm name 'ungettok_r' + LIBC_SUFFIX ;
 { multibyte (double) interfaces for locale code page work...  }
-function Lstrbcpy(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'Lstrbcpy';
-function Lstrchr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrchr';
-function Lstrcmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'Lstrcmp';
-function Lstrcoll(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'Lstrcoll';
-function Lstrcspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'Lstrcspn';
-function Lstricmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'Lstricmp';
-function Lstrlen(_para1:Pchar):size_t;cdecl;external libc_nlm name 'Lstrlen';
-function Lstrlwr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrlwr';
-function Lstrncat(__restrict:Pchar; __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'Lstrncat';
-function Lstrncmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'Lstrncmp';
-function Lstrncoll(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'Lstrncoll';
-function Lstrncpy(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'Lstrncpy';
-function Lstrnicmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'Lstrnicmp';
-function Lstrpbrk(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrpbrk';
-function Lstrrchr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrrchr';
-function Lstrrev(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrrev';
-function Lstrspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'Lstrspn';
-function Lstrstr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrstr';
-function Lstrtok_r(__restrict:Pchar; __restrict1:Pchar; __restrict2:PPchar):Pchar;cdecl;external libc_nlm name 'Lstrtok_r';
-function Lstrupr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrupr';
-function Lstrxfrm(__restrict:Pchar; __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'Lstrxfrm';
+function Lstrbcpy(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'Lstrbcpy' + LIBC_SUFFIX ;
+function Lstrchr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrchr' + LIBC_SUFFIX ;
+function Lstrcmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'Lstrcmp' + LIBC_SUFFIX ;
+function Lstrcoll(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'Lstrcoll' + LIBC_SUFFIX ;
+function Lstrcspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'Lstrcspn' + LIBC_SUFFIX ;
+function Lstricmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'Lstricmp' + LIBC_SUFFIX ;
+function Lstrlen(_para1:Pchar):size_t;cdecl;external libc_nlm name 'Lstrlen' + LIBC_SUFFIX ;
+function Lstrlwr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrlwr' + LIBC_SUFFIX ;
+function Lstrncat(__restrict:Pchar; __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'Lstrncat' + LIBC_SUFFIX ;
+function Lstrncmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'Lstrncmp' + LIBC_SUFFIX ;
+function Lstrncoll(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'Lstrncoll' + LIBC_SUFFIX ;
+function Lstrncpy(__restrict, __restrict1:Pchar; _para3:size_t):Pchar;cdecl;external libc_nlm name 'Lstrncpy' + LIBC_SUFFIX ;
+function Lstrnicmp(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'Lstrnicmp' + LIBC_SUFFIX ;
+function Lstrpbrk(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrpbrk' + LIBC_SUFFIX ;
+function Lstrrchr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrrchr' + LIBC_SUFFIX ;
+function Lstrrev(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrrev' + LIBC_SUFFIX ;
+function Lstrspn(_para1, _para2:Pchar):size_t;cdecl;external libc_nlm name 'Lstrspn' + LIBC_SUFFIX ;
+function Lstrstr(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrstr' + LIBC_SUFFIX ;
+function Lstrtok_r(__restrict:Pchar; __restrict1:Pchar; __restrict2:PPchar):Pchar;cdecl;external libc_nlm name 'Lstrtok_r' + LIBC_SUFFIX ;
+function Lstrupr(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'Lstrupr' + LIBC_SUFFIX ;
+function Lstrxfrm(__restrict:Pchar; __restrict1:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'Lstrxfrm' + LIBC_SUFFIX ;
 { length-preceeded string manipulation...  }
-function ASCIIZToLenStr(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'ASCIIZToLenStr';
-function ASCIIZToMaxLenStr(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'ASCIIZToMaxLenStr';
-function LenStrCat(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'LenStrCat';
-function LenStrCmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'LenStrCmp';
-function LenStrCpy(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'LenStrCpy';
-function LenToASCIIZStr(_para1,_para2:Pchar):longint;cdecl;external libc_nlm name 'LenToASCIIZStr';
-function strindex(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strindex';
+function ASCIIZToLenStr(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'ASCIIZToLenStr' + LIBC_SUFFIX ;
+function ASCIIZToMaxLenStr(_para1, _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'ASCIIZToMaxLenStr' + LIBC_SUFFIX ;
+function LenStrCat(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'LenStrCat' + LIBC_SUFFIX ;
+function LenStrCmp(_para1, _para2:Pchar):longint;cdecl;external libc_nlm name 'LenStrCmp' + LIBC_SUFFIX ;
+function LenStrCpy(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'LenStrCpy' + LIBC_SUFFIX ;
+function LenToASCIIZStr(_para1,_para2:Pchar):longint;cdecl;external libc_nlm name 'LenToASCIIZStr' + LIBC_SUFFIX ;
+function strindex(_para1, _para2:Pchar):Pchar;cdecl;external libc_nlm name 'strindex' + LIBC_SUFFIX ;
 
 
 // stdarg.h
@@ -325,135 +338,135 @@ type
    Pfpos64_t = ^fpos64_t;
    fpos64_t = off64_t;
 
-procedure clearerr(_para1:PFILE);cdecl;external libc_nlm name 'clearerr';
-function fclose(_para1:PFILE):longint;cdecl;external libc_nlm name 'fclose';
-function feof(_para1:PFILE):longint;cdecl;external libc_nlm name 'feof';
-function ferror(_para1:PFILE):longint;cdecl;external libc_nlm name 'ferror';
-function fflush(_para1:PFILE):longint;cdecl;external libc_nlm name 'fflush';
-function fgetc(_para1:PFILE):longint;cdecl;external libc_nlm name 'fgetc';
-function fgetpos(_para1:PFILE; _para2:Pfpos_t):longint;cdecl;external libc_nlm name 'fgetpos';
-function fgets(_para1:Pchar; _para2:longint; _para3:PFILE):Pchar;cdecl;external libc_nlm name 'fgets';
+procedure clearerr(_para1:PFILE);cdecl;external libc_nlm name 'clearerr' + LIBC_SUFFIX ;
+function fclose(_para1:PFILE):longint;cdecl;external libc_nlm name 'fclose' + LIBC_SUFFIX ;
+function feof(_para1:PFILE):longint;cdecl;external libc_nlm name 'feof' + LIBC_SUFFIX ;
+function ferror(_para1:PFILE):longint;cdecl;external libc_nlm name 'ferror' + LIBC_SUFFIX ;
+function fflush(_para1:PFILE):longint;cdecl;external libc_nlm name 'fflush' + LIBC_SUFFIX ;
+function fgetc(_para1:PFILE):longint;cdecl;external libc_nlm name 'fgetc' + LIBC_SUFFIX ;
+function fgetpos(_para1:PFILE; _para2:Pfpos_t):longint;cdecl;external libc_nlm name 'fgetpos' + LIBC_SUFFIX ;
+function fgets(_para1:Pchar; _para2:longint; _para3:PFILE):Pchar;cdecl;external libc_nlm name 'fgets' + LIBC_SUFFIX ;
 
 
-function fopen(__restrict:Pchar; __restrict1:Pchar):PFILE;cdecl;external libc_nlm name 'fopen';
+function fopen(__restrict:Pchar; __restrict1:Pchar):PFILE;cdecl;external libc_nlm name 'fopen' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function fprintf(__restrict:PFILE; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'fprintf';
+function fprintf(__restrict:PFILE; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'fprintf' + LIBC_SUFFIX ;
 {$endif}
-function fprintf(__restrict:PFILE; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'fprintf';
-function fputc(_para1:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'fputc';
+function fprintf(__restrict:PFILE; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'fprintf' + LIBC_SUFFIX ;
+function fputc(_para1:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'fputc' + LIBC_SUFFIX ;
 
-function fputs(__restrict:Pchar; __restrict1:PFILE):longint;cdecl;external libc_nlm name 'fputs';
-function fread(__restrict:pointer; _para2:size_t; _para3:size_t; __restrict1:PFILE):size_t;cdecl;external libc_nlm name 'fread';
+function fputs(__restrict:Pchar; __restrict1:PFILE):longint;cdecl;external libc_nlm name 'fputs' + LIBC_SUFFIX ;
+function fread(__restrict:pointer; _para2:size_t; _para3:size_t; __restrict1:PFILE):size_t;cdecl;external libc_nlm name 'fread' + LIBC_SUFFIX ;
 
 
-function freopen(__restrict:Pchar; __restrict1:Pchar; __restrict2:PFILE):PFILE;cdecl;external libc_nlm name 'freopen';
+function freopen(__restrict:Pchar; __restrict1:Pchar; __restrict2:PFILE):PFILE;cdecl;external libc_nlm name 'freopen' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function fscanf(__restrict:PFILE; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'fscanf';
+function fscanf(__restrict:PFILE; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'fscanf' + LIBC_SUFFIX ;
 {$endif}
-function fscanf(__restrict:PFILE; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'fscanf';
-function fseek(fp:PFILE; offset:longint; whence:longint):longint;cdecl;external libc_nlm name 'fseek';
+function fscanf(__restrict:PFILE; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'fscanf' + LIBC_SUFFIX ;
+function fseek(fp:PFILE; offset:longint; whence:longint):longint;cdecl;external libc_nlm name 'fseek' + LIBC_SUFFIX ;
 
-function fsetpos(_para1:PFILE; _para2:Pfpos_t):longint;cdecl;external libc_nlm name 'fsetpos';
-function ftell(_para1:PFILE):longint;cdecl;external libc_nlm name 'ftell';
+function fsetpos(_para1:PFILE; _para2:Pfpos_t):longint;cdecl;external libc_nlm name 'fsetpos' + LIBC_SUFFIX ;
+function ftell(_para1:PFILE):longint;cdecl;external libc_nlm name 'ftell' + LIBC_SUFFIX ;
 
-function fwrite(__restrict:pointer; _para2:size_t; _para3:size_t; __restrict1:PFILE):size_t;cdecl;external libc_nlm name 'fwrite';
-function getc(_para1:PFILE):longint;cdecl;external libc_nlm name 'getc';
-function getchar:longint;cdecl;external libc_nlm name 'getchar';
-function gets(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'gets';
-procedure {$ifdef INCLUDED_FROM_SYSTEM}libc_perror{$else}perror{$endif}(_para1:Pchar);cdecl;external libc_nlm name 'perror';
-
-{$ifndef DisableArrayOfConst}
-function printf(__restrict:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'printf';
-{$endif}
-function printf(__restrict:Pchar):longint;cdecl;external libc_nlm name 'printf';
-function putc(_para1:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'putc';
-function putchar(_para1:longint):longint;cdecl;external libc_nlm name 'putchar';
-function puts(_para1:Pchar):longint;cdecl;external libc_nlm name 'puts';
-function remove(_para1:Pchar):longint;cdecl;external libc_nlm name 'remove';
-function rename(_para1:Pchar; _para2:Pchar):longint;cdecl;external libc_nlm name 'rename';
-procedure rewind(_para1:PFILE);cdecl;external libc_nlm name 'rewind';
+function fwrite(__restrict:pointer; _para2:size_t; _para3:size_t; __restrict1:PFILE):size_t;cdecl;external libc_nlm name 'fwrite' + LIBC_SUFFIX ;
+function getc(_para1:PFILE):longint;cdecl;external libc_nlm name 'getc' + LIBC_SUFFIX ;
+function getchar:longint;cdecl;external libc_nlm name 'getchar' + LIBC_SUFFIX ;
+function gets(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'gets' + LIBC_SUFFIX ;
+procedure {$ifdef INCLUDED_FROM_SYSTEM}libc_perror{$else}perror{$endif}(_para1:Pchar);cdecl;external libc_nlm name 'perror' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function scanf(__restrict:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'scanf';
+function printf(__restrict:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'printf' + LIBC_SUFFIX ;
 {$endif}
-function scanf(__restrict:Pchar):longint;cdecl;external libc_nlm name 'scanf';
-procedure setbuf(__restrict:PFILE; __restrict1:Pchar);cdecl;external libc_nlm name 'setbuf';
-function setvbuf(__restrict:PFILE; __restrict1:Pchar; _para3:longint; _para4:size_t):longint;cdecl;external libc_nlm name 'setvbuf';
-{$ifndef DisableArrayOfConst}
-function sprintf(__restrict:Pchar; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'sprintf';
-{$endif}
-function sprintf(__restrict:Pchar; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'sprintf';
-{$ifndef DisableArrayOfConst}
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'snprintf';
-{$endif}
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1:longint):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1:longint; p2:pchar):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1:pchar):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2:pchar):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2,p3:pchar):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2:longint):longint;cdecl;external libc_nlm name 'snprintf';
-function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2,p3:longint):longint;cdecl;external libc_nlm name 'snprintf';
+function printf(__restrict:Pchar):longint;cdecl;external libc_nlm name 'printf' + LIBC_SUFFIX ;
+function putc(_para1:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'putc' + LIBC_SUFFIX ;
+function putchar(_para1:longint):longint;cdecl;external libc_nlm name 'putchar' + LIBC_SUFFIX ;
+function puts(_para1:Pchar):longint;cdecl;external libc_nlm name 'puts' + LIBC_SUFFIX ;
+function remove(_para1:Pchar):longint;cdecl;external libc_nlm name 'remove' + LIBC_SUFFIX ;
+function rename(_para1:Pchar; _para2:Pchar):longint;cdecl;external libc_nlm name 'rename' + LIBC_SUFFIX ;
+procedure rewind(_para1:PFILE);cdecl;external libc_nlm name 'rewind' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function sscanf(__restrict:Pchar; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'sscanf';
+function scanf(__restrict:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'scanf' + LIBC_SUFFIX ;
 {$endif}
-function sscanf(__restrict:Pchar; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'sscanf';
-function tmpfile:PFILE;cdecl;external libc_nlm name 'tmpfile';
-function tmpnam(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'tmpnam';
-function ungetc(_para1:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'ungetc';
+function scanf(__restrict:Pchar):longint;cdecl;external libc_nlm name 'scanf' + LIBC_SUFFIX ;
+procedure setbuf(__restrict:PFILE; __restrict1:Pchar);cdecl;external libc_nlm name 'setbuf' + LIBC_SUFFIX ;
+function setvbuf(__restrict:PFILE; __restrict1:Pchar; _para3:longint; _para4:size_t):longint;cdecl;external libc_nlm name 'setvbuf' + LIBC_SUFFIX ;
+{$ifndef DisableArrayOfConst}
+function sprintf(__restrict:Pchar; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'sprintf' + LIBC_SUFFIX ;
+{$endif}
+function sprintf(__restrict:Pchar; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'sprintf' + LIBC_SUFFIX ;
+{$ifndef DisableArrayOfConst}
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+{$endif}
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1:longint):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1:longint; p2:pchar):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1:pchar):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2:pchar):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2,p3:pchar):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2:longint):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
+function snprintf(__restrict:Pchar; n:size_t; Format:Pchar; p1,p2,p3:longint):longint;cdecl;external libc_nlm name 'snprintf' + LIBC_SUFFIX ;
 
-function vfprintf(__restrict:PFILE; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vfprintf';
-function vfscanf(__restrict:PFILE; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vfscanf';
-function vprintf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vprintf';
-function vscanf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vscanf';
-function vsnprintf(__restrict:Pchar; n:size_t; __restrict1:Pchar; _para4:va_list):longint;cdecl;external libc_nlm name 'vsnprintf';
-function vsprintf(__restrict:Pchar; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vsprintf';
+{$ifndef DisableArrayOfConst}
+function sscanf(__restrict:Pchar; __restrict1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'sscanf' + LIBC_SUFFIX ;
+{$endif}
+function sscanf(__restrict:Pchar; __restrict1:Pchar):longint;cdecl;external libc_nlm name 'sscanf' + LIBC_SUFFIX ;
+function tmpfile:PFILE;cdecl;external libc_nlm name 'tmpfile' + LIBC_SUFFIX ;
+function tmpnam(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'tmpnam' + LIBC_SUFFIX ;
+function ungetc(_para1:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'ungetc' + LIBC_SUFFIX ;
 
-function vsscanf(__restrict:Pchar; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vsscanf';
+function vfprintf(__restrict:PFILE; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vfprintf' + LIBC_SUFFIX ;
+function vfscanf(__restrict:PFILE; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vfscanf' + LIBC_SUFFIX ;
+function vprintf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vprintf' + LIBC_SUFFIX ;
+function vscanf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vscanf' + LIBC_SUFFIX ;
+function vsnprintf(__restrict:Pchar; n:size_t; __restrict1:Pchar; _para4:va_list):longint;cdecl;external libc_nlm name 'vsnprintf' + LIBC_SUFFIX ;
+function vsprintf(__restrict:Pchar; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vsprintf' + LIBC_SUFFIX ;
+
+function vsscanf(__restrict:Pchar; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vsscanf' + LIBC_SUFFIX ;
 { functions underlying macro support...  }
-function ___stdin:PPFILE;cdecl;external libc_nlm name '___stdin';
-function ___stdout:PPFILE;cdecl;external libc_nlm name '___stdout';
-function ___stderr:PPFILE;cdecl;external libc_nlm name '___stderr';
-function ___cin:PPFILE;cdecl;external libc_nlm name '___cin';
-function ___cout:PPFILE;cdecl;external libc_nlm name '___cout';
+function ___stdin:PPFILE;cdecl;external libc_nlm name '___stdin' + LIBC_SUFFIX ;
+function ___stdout:PPFILE;cdecl;external libc_nlm name '___stdout' + LIBC_SUFFIX ;
+function ___stderr:PPFILE;cdecl;external libc_nlm name '___stderr' + LIBC_SUFFIX ;
+function ___cin:PPFILE;cdecl;external libc_nlm name '___cin' + LIBC_SUFFIX ;
+function ___cout:PPFILE;cdecl;external libc_nlm name '___cout' + LIBC_SUFFIX ;
 { POSIX-defined and other additions...  }
 
-function fdopen(_para1:longint; __restrict:Pchar):PFILE;cdecl;external libc_nlm name 'fdopen';
-function fileno(_para1:PFILE):longint;cdecl;external libc_nlm name 'fileno';
-procedure flockfile(_para1:PFILE);cdecl;external libc_nlm name 'flockfile';
-function ftrylockfile(_para1:PFILE):longint;cdecl;external libc_nlm name 'ftrylockfile';
-procedure funlockfile(_para1:PFILE);cdecl;external libc_nlm name 'funlockfile';
-function getc_unlocked(_para1:PFILE):longint;cdecl;external libc_nlm name 'getc_unlocked';
-function getchar_unlocked:longint;cdecl;external libc_nlm name 'getchar_unlocked';
-function getw(_para1:PFILE):longint;cdecl;external libc_nlm name 'getw';
-function pclose(stream:PFILE):longint;cdecl;external libc_nlm name 'pclose';
-function popen(command:Pchar; mode:Pchar):PFILE;cdecl;external libc_nlm name 'popen';
-function putc_unlocked(c:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'putc_unlocked';
-function putchar_unlocked(c:longint):longint;cdecl;external libc_nlm name 'putchar_unlocked';
-function tempnam(dirpath:Pchar; prefix:Pchar):Pchar;cdecl;external libc_nlm name 'tempnam';
+function fdopen(_para1:longint; __restrict:Pchar):PFILE;cdecl;external libc_nlm name 'fdopen' + LIBC_SUFFIX ;
+function fileno(_para1:PFILE):longint;cdecl;external libc_nlm name 'fileno' + LIBC_SUFFIX ;
+procedure flockfile(_para1:PFILE);cdecl;external libc_nlm name 'flockfile' + LIBC_SUFFIX ;
+function ftrylockfile(_para1:PFILE):longint;cdecl;external libc_nlm name 'ftrylockfile' + LIBC_SUFFIX ;
+procedure funlockfile(_para1:PFILE);cdecl;external libc_nlm name 'funlockfile' + LIBC_SUFFIX ;
+function getc_unlocked(_para1:PFILE):longint;cdecl;external libc_nlm name 'getc_unlocked' + LIBC_SUFFIX ;
+function getchar_unlocked:longint;cdecl;external libc_nlm name 'getchar_unlocked' + LIBC_SUFFIX ;
+function getw(_para1:PFILE):longint;cdecl;external libc_nlm name 'getw' + LIBC_SUFFIX ;
+function pclose(stream:PFILE):longint;cdecl;external libc_nlm name 'pclose' + LIBC_SUFFIX ;
+function popen(command:Pchar; mode:Pchar):PFILE;cdecl;external libc_nlm name 'popen' + LIBC_SUFFIX ;
+function putc_unlocked(c:longint; _para2:PFILE):longint;cdecl;external libc_nlm name 'putc_unlocked' + LIBC_SUFFIX ;
+function putchar_unlocked(c:longint):longint;cdecl;external libc_nlm name 'putchar_unlocked' + LIBC_SUFFIX ;
+function tempnam(dirpath:Pchar; prefix:Pchar):Pchar;cdecl;external libc_nlm name 'tempnam' + LIBC_SUFFIX ;
 { nonstandard (transitional) addtions for 64-bit file I/O...  }
-function fgetpos64(_para1:PFILE; _para2:Pfpos64_t):longint;cdecl;external libc_nlm name 'fgetpos64';
-function fseek64(fp:PFILE; offset:fpos64_t; whence:longint):longint;cdecl;external libc_nlm name 'fseek64';
-function fsetpos64(_para1:PFILE; _para2:Pfpos64_t):longint;cdecl;external libc_nlm name 'fsetpos64';
-function ftell64(_para1:PFILE):off64_t;cdecl;external libc_nlm name 'ftell64';
+function fgetpos64(_para1:PFILE; _para2:Pfpos64_t):longint;cdecl;external libc_nlm name 'fgetpos64' + LIBC_SUFFIX ;
+function fseek64(fp:PFILE; offset:fpos64_t; whence:longint):longint;cdecl;external libc_nlm name 'fseek64' + LIBC_SUFFIX ;
+function fsetpos64(_para1:PFILE; _para2:Pfpos64_t):longint;cdecl;external libc_nlm name 'fsetpos64' + LIBC_SUFFIX ;
+function ftell64(_para1:PFILE):off64_t;cdecl;external libc_nlm name 'ftell64' + LIBC_SUFFIX ;
 { hard-wired console I/O support (cannot be redirected)...  }
-function cgetc:longint;cdecl;external libc_nlm name 'cgetc';
-function cgets(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'cgets';
+function cgetc:longint;cdecl;external libc_nlm name 'cgetc' + LIBC_SUFFIX ;
+function cgets(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'cgets' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function cprintf(_para1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'cprintf';
+function cprintf(_para1:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'cprintf' + LIBC_SUFFIX ;
 {$endif}
-function cprintf(_para1:Pchar):longint;cdecl;external libc_nlm name 'cprintf';
-function cputc(_para1:longint):longint;cdecl;external libc_nlm name 'cputc';
-function cputs(_para1:Pchar):longint;cdecl;external libc_nlm name 'cputs';
+function cprintf(_para1:Pchar):longint;cdecl;external libc_nlm name 'cprintf' + LIBC_SUFFIX ;
+function cputc(_para1:longint):longint;cdecl;external libc_nlm name 'cputc' + LIBC_SUFFIX ;
+function cputs(_para1:Pchar):longint;cdecl;external libc_nlm name 'cputs' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function cscanf(__restrict:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'cscanf';
+function cscanf(__restrict:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'cscanf' + LIBC_SUFFIX ;
 {$endif}
-function cscanf(__restrict:Pchar):longint;cdecl;external libc_nlm name 'cscanf';
-function vcprintf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vcprintf';
-function vcscanf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vcscanf';
-function vasprintf(__restrict:PPchar; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vasprintf';
+function cscanf(__restrict:Pchar):longint;cdecl;external libc_nlm name 'cscanf' + LIBC_SUFFIX ;
+function vcprintf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vcprintf' + LIBC_SUFFIX ;
+function vcscanf(__restrict:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vcscanf' + LIBC_SUFFIX ;
+function vasprintf(__restrict:PPchar; __restrict1:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vasprintf' + LIBC_SUFFIX ;
 { defined as macros in both C and C++...  }
 { UNIX 98/POSIX.1-2002 defined additions  }
 
@@ -491,109 +504,109 @@ type
 
 type TCDeclProcedure = procedure; cdecl;
 
-procedure abort;cdecl;external libc_nlm name 'abort';
-// function {$ifdef INCLUDED_FROM_SYSTEM}libc_abs{$else}abs{$endif}(_para1:longint):longint;cdecl;external libc_nlm name 'abs';
-function atexit(_para1:TCDeclProcedure ):longint;cdecl;external libc_nlm name 'atexit';
-function atof(_para1:Pchar):double;cdecl;external libc_nlm name 'atof';
-function atoi(_para1:Pchar):longint;cdecl;external libc_nlm name 'atoi';
-function atol(_para1:Pchar):longint;cdecl;external libc_nlm name 'atol';
-function atoll(_para1:Pchar):Tint64;cdecl;external libc_nlm name 'atoll';
+procedure abort;cdecl;external libc_nlm name 'abort' + LIBC_SUFFIX ;
+// function {$ifdef INCLUDED_FROM_SYSTEM}libc_abs{$else}abs{$endif}(_para1:longint):longint;cdecl;external libc_nlm name 'abs' + LIBC_SUFFIX ;
+function atexit(_para1:TCDeclProcedure ):longint;cdecl;external libc_nlm name 'atexit' + LIBC_SUFFIX ;
+function atof(_para1:Pchar):double;cdecl;external libc_nlm name 'atof' + LIBC_SUFFIX ;
+function atoi(_para1:Pchar):longint;cdecl;external libc_nlm name 'atoi' + LIBC_SUFFIX ;
+function atol(_para1:Pchar):longint;cdecl;external libc_nlm name 'atol' + LIBC_SUFFIX ;
+function atoll(_para1:Pchar):Tint64;cdecl;external libc_nlm name 'atoll' + LIBC_SUFFIX ;
 
-//!! function bsearch(_para1:pointer; _para2:pointer; _para3:size_t; _para4:size_t; _para5:function (_para1:pointer; _para2:pointer):longint):pointer;cdecl;external libc_nlm name 'bsearch';
-function calloc(_para1:size_t; _para2:size_t):pointer;cdecl;external libc_nlm name 'calloc';
-function __CW_div(_para1:longint; _para2:longint):div_t;cdecl;external libc_nlm name '__CW_div';
-procedure libc_exit(status:longint);cdecl;external libc_nlm name 'exit';
-procedure free(_para1:pointer);cdecl;external libc_nlm name 'free';
-function getenv(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'getenv';
-function labs(_para1:longint):longint;cdecl;external libc_nlm name 'labs';
-function __CW_ldiv(_para1:longint; _para2:longint):ldiv_t;cdecl;external libc_nlm name '__CW_ldiv';
-function llabs(_para1:Tint64):Tint64;cdecl;external libc_nlm name 'llabs';
-function __CW_lldiv(_para1:Tint64; _para2:Tint64):lldiv_t;cdecl;external libc_nlm name '__CW_lldiv';
-function malloc(_para1:size_t):pointer;cdecl;external libc_nlm name 'malloc';
-function mblen(_para1:Pchar; _para2:size_t):longint;cdecl;external libc_nlm name 'mblen';
-function mbstowcs(_para1:Pwchar_t; _para2:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'mbstowcs';
-function mbtowc(_para1:Pwchar_t; _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'mbtowc';
+//!! function bsearch(_para1:pointer; _para2:pointer; _para3:size_t; _para4:size_t; _para5:function (_para1:pointer; _para2:pointer):longint):pointer;cdecl;external libc_nlm name 'bsearch' + LIBC_SUFFIX ;
+function calloc(_para1:size_t; _para2:size_t):pointer;cdecl;external libc_nlm name 'calloc' + LIBC_SUFFIX ;
+function __CW_div(_para1:longint; _para2:longint):div_t;cdecl;external libc_nlm name '__CW_div' + LIBC_SUFFIX ;
+procedure libc_exit(status:longint);cdecl;external libc_nlm name 'exit' + LIBC_SUFFIX ;
+procedure free(_para1:pointer);cdecl;external libc_nlm name 'free' + LIBC_SUFFIX ;
+function getenv(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'getenv' + LIBC_SUFFIX ;
+function labs(_para1:longint):longint;cdecl;external libc_nlm name 'labs' + LIBC_SUFFIX ;
+function __CW_ldiv(_para1:longint; _para2:longint):ldiv_t;cdecl;external libc_nlm name '__CW_ldiv' + LIBC_SUFFIX ;
+function llabs(_para1:Tint64):Tint64;cdecl;external libc_nlm name 'llabs' + LIBC_SUFFIX ;
+function __CW_lldiv(_para1:Tint64; _para2:Tint64):lldiv_t;cdecl;external libc_nlm name '__CW_lldiv' + LIBC_SUFFIX ;
+function malloc(_para1:size_t):pointer;cdecl;external libc_nlm name 'malloc' + LIBC_SUFFIX ;
+function mblen(_para1:Pchar; _para2:size_t):longint;cdecl;external libc_nlm name 'mblen' + LIBC_SUFFIX ;
+function mbstowcs(_para1:Pwchar_t; _para2:Pchar; _para3:size_t):size_t;cdecl;external libc_nlm name 'mbstowcs' + LIBC_SUFFIX ;
+function mbtowc(_para1:Pwchar_t; _para2:Pchar; _para3:size_t):longint;cdecl;external libc_nlm name 'mbtowc' + LIBC_SUFFIX ;
 
 type TQSortFunc = function (_para1:pointer; _para2:pointer):longint; cdecl;
-procedure qsort(_para1:pointer; _para2:size_t; _para3:size_t; _para4:TQSortFunc);cdecl;external libc_nlm name 'qsort';
-function rand:longint;cdecl;external libc_nlm name 'rand';
-function realloc(_para1:pointer; _para2:size_t):pointer;cdecl;external libc_nlm name 'realloc';
-procedure srand(_para1:dword);cdecl;external libc_nlm name 'srand';
-function strtod(__restrict:Pchar; __restrict1:PPchar):double;cdecl;external libc_nlm name 'strtod';
-function strtol(__restrict:Pchar; __restrict1:PPchar; _para3:longint):longint;cdecl;external libc_nlm name 'strtol';
-function strtoll(__restrict:Pchar; __restrict1:PPchar; _para3:longint):Tint64;cdecl;external libc_nlm name 'strtoll';
-function strtoul(__restrict:Pchar; __restrict1:PPchar; _para3:longint):dword;cdecl;external libc_nlm name 'strtoul';
-function strtoull(__restrict:Pchar; __restrict1:PPchar; _para3:longint):Tuint64;cdecl;external libc_nlm name 'strtoull';
-function system(_para1:Pchar):longint;cdecl;external libc_nlm name 'system';
-function wcstombs(__restrict:Pchar; __restrict1:Pwchar_t; _para3:size_t):size_t;cdecl;external libc_nlm name 'wcstombs';
-function wctomb(_para1:Pchar; _para2:wchar_t):longint;cdecl;external libc_nlm name 'wctomb';
-function alloca(_para1:size_t):pointer;cdecl;external libc_nlm name 'alloca';
-function clearenv:longint;cdecl;external libc_nlm name 'clearenv';
-function getcmd(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'getcmd';
-function flushenv(_para1:Pchar; _para2:longint):longint;cdecl;external libc_nlm name 'flushenv';
-function getbsize(_para1:Plongint; _para2:Plongint):Pchar;cdecl;external libc_nlm name 'getbsize';
-function htol(_para1:Pchar):dword;cdecl;external libc_nlm name 'htol';
-function itoa(_para1:longint; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'itoa';
-function itoab(_para1:dword; _para2:Pchar):Pchar;cdecl;external libc_nlm name 'itoab';
-function ltoa(_para1:longint; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'ltoa';
-function lltoa(_para1:Tint64; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'lltoa';
-function _lrotr(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_lrotr';
-function _lrotl(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_lrotl';
-function mkdtemp(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'mkdtemp';
-function mkstemp(_para1:Pchar):longint;cdecl;external libc_nlm name 'mkstemp';
-function mktemp(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'mktemp';
-function msize(_para1:pointer):size_t;cdecl;external libc_nlm name 'msize';
-function multibyte:longint;cdecl;external libc_nlm name 'multibyte';
-function mvalidrange(_para1:pointer; _para2:size_t):longint;cdecl;external libc_nlm name 'mvalidrange';
-function nextmb(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'nextmb';
-function prevmb(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'prevmb';
-function putenv(_para1:Pchar):longint;cdecl;external libc_nlm name 'putenv';
-function rand_r(_para1:Pdword):longint;cdecl;external libc_nlm name 'rand_r';
-function _rotr(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_rotr';
-function _rotl(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_rotl';
-function rotl8(_para1:byte; _para2:longint):byte;cdecl;external libc_nlm name 'rotl8';
-function rotl16(_para1:word; _para2:longint):word;cdecl;external libc_nlm name 'rotl16';
-function rotl32(_para1:dword; _para2:longint):dword;cdecl;external libc_nlm name 'rotl32';
-function rotl64(_para1:Tuint64; _para2:longint):Tuint64;cdecl;external libc_nlm name 'rotl64';
-function rotr8(_para1:byte; _para2:longint):byte;cdecl;external libc_nlm name 'rotr8';
-function rotr16(_para1:word; _para2:longint):word;cdecl;external libc_nlm name 'rotr16';
-function rotr32(_para1:dword; _para2:longint):dword;cdecl;external libc_nlm name 'rotr32';
-function rotr64(_para1:Tuint64; _para2:longint):Tuint64;cdecl;external libc_nlm name 'rotr64';
-function setenv(_para1:Pchar; _para2:Pchar; _para3:longint):longint;cdecl;external libc_nlm name 'setenv';
-procedure setkey(_para1:Pchar);cdecl;external libc_nlm name 'setkey';
-function stackavail:size_t;cdecl;external libc_nlm name 'stackavail';
-function stackbase:pointer;cdecl;external libc_nlm name 'stackbase';
-function stackwatermark:size_t;cdecl;external libc_nlm name 'stackwatermark';
-function strtoi(_para1:Pchar; _para2:longint):longint;cdecl;external libc_nlm name 'strtoi';
-function truncmb(_para1:Pchar; _para2:size_t):Pchar;cdecl;external libc_nlm name 'truncmb';
-function ultoa(_para1:dword; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'ultoa';
-function ulltoa(_para1:Tuint64; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'ulltoa';
-function unsetenv(name:Pchar):longint;cdecl;external libc_nlm name 'unsetenv';
-function utoa(_para1:dword; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'utoa';
-function valuemb(_para1:Pchar):longint;cdecl;external libc_nlm name 'valuemb';
+procedure qsort(_para1:pointer; _para2:size_t; _para3:size_t; _para4:TQSortFunc);cdecl;external libc_nlm name 'qsort' + LIBC_SUFFIX ;
+function rand:longint;cdecl;external libc_nlm name 'rand' + LIBC_SUFFIX ;
+function realloc(_para1:pointer; _para2:size_t):pointer;cdecl;external libc_nlm name 'realloc' + LIBC_SUFFIX ;
+procedure srand(_para1:dword);cdecl;external libc_nlm name 'srand' + LIBC_SUFFIX ;
+function strtod(__restrict:Pchar; __restrict1:PPchar):double;cdecl;external libc_nlm name 'strtod' + LIBC_SUFFIX ;
+function strtol(__restrict:Pchar; __restrict1:PPchar; _para3:longint):longint;cdecl;external libc_nlm name 'strtol' + LIBC_SUFFIX ;
+function strtoll(__restrict:Pchar; __restrict1:PPchar; _para3:longint):Tint64;cdecl;external libc_nlm name 'strtoll' + LIBC_SUFFIX ;
+function strtoul(__restrict:Pchar; __restrict1:PPchar; _para3:longint):dword;cdecl;external libc_nlm name 'strtoul' + LIBC_SUFFIX ;
+function strtoull(__restrict:Pchar; __restrict1:PPchar; _para3:longint):Tuint64;cdecl;external libc_nlm name 'strtoull' + LIBC_SUFFIX ;
+function system(_para1:Pchar):longint;cdecl;external libc_nlm name 'system' + LIBC_SUFFIX ;
+function wcstombs(__restrict:Pchar; __restrict1:Pwchar_t; _para3:size_t):size_t;cdecl;external libc_nlm name 'wcstombs' + LIBC_SUFFIX ;
+function wctomb(_para1:Pchar; _para2:wchar_t):longint;cdecl;external libc_nlm name 'wctomb' + LIBC_SUFFIX ;
+function alloca(_para1:size_t):pointer;cdecl;external libc_nlm name 'alloca' + LIBC_SUFFIX ;
+function clearenv:longint;cdecl;external libc_nlm name 'clearenv' + LIBC_SUFFIX ;
+function getcmd(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'getcmd' + LIBC_SUFFIX ;
+function flushenv(_para1:Pchar; _para2:longint):longint;cdecl;external libc_nlm name 'flushenv' + LIBC_SUFFIX ;
+function getbsize(_para1:Plongint; _para2:Plongint):Pchar;cdecl;external libc_nlm name 'getbsize' + LIBC_SUFFIX ;
+function htol(_para1:Pchar):dword;cdecl;external libc_nlm name 'htol' + LIBC_SUFFIX ;
+function itoa(_para1:longint; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'itoa' + LIBC_SUFFIX ;
+function itoab(_para1:dword; _para2:Pchar):Pchar;cdecl;external libc_nlm name 'itoab' + LIBC_SUFFIX ;
+function ltoa(_para1:longint; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'ltoa' + LIBC_SUFFIX ;
+function lltoa(_para1:Tint64; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'lltoa' + LIBC_SUFFIX ;
+function _lrotr(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_lrotr' + LIBC_SUFFIX ;
+function _lrotl(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_lrotl' + LIBC_SUFFIX ;
+function mkdtemp(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'mkdtemp' + LIBC_SUFFIX ;
+function mkstemp(_para1:Pchar):longint;cdecl;external libc_nlm name 'mkstemp' + LIBC_SUFFIX ;
+function mktemp(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'mktemp' + LIBC_SUFFIX ;
+function msize(_para1:pointer):size_t;cdecl;external libc_nlm name 'msize' + LIBC_SUFFIX ;
+function multibyte:longint;cdecl;external libc_nlm name 'multibyte' + LIBC_SUFFIX ;
+function mvalidrange(_para1:pointer; _para2:size_t):longint;cdecl;external libc_nlm name 'mvalidrange' + LIBC_SUFFIX ;
+function nextmb(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'nextmb' + LIBC_SUFFIX ;
+function prevmb(_para1:Pchar):Pchar;cdecl;external libc_nlm name 'prevmb' + LIBC_SUFFIX ;
+function putenv(_para1:Pchar):longint;cdecl;external libc_nlm name 'putenv' + LIBC_SUFFIX ;
+function rand_r(_para1:Pdword):longint;cdecl;external libc_nlm name 'rand_r' + LIBC_SUFFIX ;
+function _rotr(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_rotr' + LIBC_SUFFIX ;
+function _rotl(_para1:dword; _para2:dword):dword;cdecl;external libc_nlm name '_rotl' + LIBC_SUFFIX ;
+function rotl8(_para1:byte; _para2:longint):byte;cdecl;external libc_nlm name 'rotl8' + LIBC_SUFFIX ;
+function rotl16(_para1:word; _para2:longint):word;cdecl;external libc_nlm name 'rotl16' + LIBC_SUFFIX ;
+function rotl32(_para1:dword; _para2:longint):dword;cdecl;external libc_nlm name 'rotl32' + LIBC_SUFFIX ;
+function rotl64(_para1:Tuint64; _para2:longint):Tuint64;cdecl;external libc_nlm name 'rotl64' + LIBC_SUFFIX ;
+function rotr8(_para1:byte; _para2:longint):byte;cdecl;external libc_nlm name 'rotr8' + LIBC_SUFFIX ;
+function rotr16(_para1:word; _para2:longint):word;cdecl;external libc_nlm name 'rotr16' + LIBC_SUFFIX ;
+function rotr32(_para1:dword; _para2:longint):dword;cdecl;external libc_nlm name 'rotr32' + LIBC_SUFFIX ;
+function rotr64(_para1:Tuint64; _para2:longint):Tuint64;cdecl;external libc_nlm name 'rotr64' + LIBC_SUFFIX ;
+function setenv(_para1:Pchar; _para2:Pchar; _para3:longint):longint;cdecl;external libc_nlm name 'setenv' + LIBC_SUFFIX ;
+procedure setkey(_para1:Pchar);cdecl;external libc_nlm name 'setkey' + LIBC_SUFFIX ;
+function stackavail:size_t;cdecl;external libc_nlm name 'stackavail' + LIBC_SUFFIX ;
+function stackbase:pointer;cdecl;external libc_nlm name 'stackbase' + LIBC_SUFFIX ;
+function stackwatermark:size_t;cdecl;external libc_nlm name 'stackwatermark' + LIBC_SUFFIX ;
+function strtoi(_para1:Pchar; _para2:longint):longint;cdecl;external libc_nlm name 'strtoi' + LIBC_SUFFIX ;
+function truncmb(_para1:Pchar; _para2:size_t):Pchar;cdecl;external libc_nlm name 'truncmb' + LIBC_SUFFIX ;
+function ultoa(_para1:dword; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'ultoa' + LIBC_SUFFIX ;
+function ulltoa(_para1:Tuint64; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'ulltoa' + LIBC_SUFFIX ;
+function unsetenv(name:Pchar):longint;cdecl;external libc_nlm name 'unsetenv' + LIBC_SUFFIX ;
+function utoa(_para1:dword; _para2:Pchar; _para3:longint):Pchar;cdecl;external libc_nlm name 'utoa' + LIBC_SUFFIX ;
+function valuemb(_para1:Pchar):longint;cdecl;external libc_nlm name 'valuemb' + LIBC_SUFFIX ;
 { atomic functions...  }
-procedure atomic_add(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_add';
-function atomic_bts(addr:Pdword; offset:dword):dword;cdecl;external libc_nlm name 'atomic_bts';
-function atomic_btr(addr:Pdword; offset:dword):dword;cdecl;external libc_nlm name 'atomic_btr';
-procedure atomic_dec(addr:Pdword);cdecl;external libc_nlm name 'atomic_dec';
-procedure atomic_inc(addr:Pdword);cdecl;external libc_nlm name 'atomic_inc';
-procedure atomic_sub(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_sub';
-function atomic_xchg(addr:Pdword; value:dword):dword;cdecl;external libc_nlm name 'atomic_xchg';
-procedure atomic_or(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_or';
-procedure atomic_xor(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_xor';
-procedure atomic_and(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_and';
-function atomic_xchgadd(addr:Pdword; value:dword):dword;cdecl;external libc_nlm name 'atomic_xchgadd';
-function atomic_cmpxchg(addr:Pdword; cmpvalue:dword; newvalue:dword):dword;cdecl;external libc_nlm name 'atomic_cmpxchg';
-procedure atomic64_inc(addr:Puint64);cdecl;external libc_nlm name 'atomic64_inc';
-procedure atomic64_dec(addr:Puint64);cdecl;external libc_nlm name 'atomic64_dec';
-procedure atomic64_add(addr:Puint64; value:tuint64);cdecl;external libc_nlm name 'atomic64_add';
-procedure atomic64_sub(addr:Puint64; value:tuint64);cdecl;external libc_nlm name 'atomic64_sub';
-function atomic64_xchg(addr:Puint64; value:tuint64):Tuint64;cdecl;external libc_nlm name 'atomic64_xchg';
-function atomic64_xchgadd(addr:Puint64; value:Tuint64):Tuint64;cdecl;external libc_nlm name 'atomic64_xchgadd';
-function atomic64_cmpxchg(addr:Puint64; cmpvalue:Tuint64; newvalue:Tuint64):Tuint64;cdecl;external libc_nlm name 'atomic64_cmpxchg';
+procedure atomic_add(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_add' + LIBC_SUFFIX ;
+function atomic_bts(addr:Pdword; offset:dword):dword;cdecl;external libc_nlm name 'atomic_bts' + LIBC_SUFFIX ;
+function atomic_btr(addr:Pdword; offset:dword):dword;cdecl;external libc_nlm name 'atomic_btr' + LIBC_SUFFIX ;
+procedure atomic_dec(addr:Pdword);cdecl;external libc_nlm name 'atomic_dec' + LIBC_SUFFIX ;
+procedure atomic_inc(addr:Pdword);cdecl;external libc_nlm name 'atomic_inc' + LIBC_SUFFIX ;
+procedure atomic_sub(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_sub' + LIBC_SUFFIX ;
+function atomic_xchg(addr:Pdword; value:dword):dword;cdecl;external libc_nlm name 'atomic_xchg' + LIBC_SUFFIX ;
+procedure atomic_or(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_or' + LIBC_SUFFIX ;
+procedure atomic_xor(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_xor' + LIBC_SUFFIX ;
+procedure atomic_and(addr:Pdword; value:dword);cdecl;external libc_nlm name 'atomic_and' + LIBC_SUFFIX ;
+function atomic_xchgadd(addr:Pdword; value:dword):dword;cdecl;external libc_nlm name 'atomic_xchgadd' + LIBC_SUFFIX ;
+function atomic_cmpxchg(addr:Pdword; cmpvalue:dword; newvalue:dword):dword;cdecl;external libc_nlm name 'atomic_cmpxchg' + LIBC_SUFFIX ;
+procedure atomic64_inc(addr:Puint64);cdecl;external libc_nlm name 'atomic64_inc' + LIBC_SUFFIX ;
+procedure atomic64_dec(addr:Puint64);cdecl;external libc_nlm name 'atomic64_dec' + LIBC_SUFFIX ;
+procedure atomic64_add(addr:Puint64; value:tuint64);cdecl;external libc_nlm name 'atomic64_add' + LIBC_SUFFIX ;
+procedure atomic64_sub(addr:Puint64; value:tuint64);cdecl;external libc_nlm name 'atomic64_sub' + LIBC_SUFFIX ;
+function atomic64_xchg(addr:Puint64; value:tuint64):Tuint64;cdecl;external libc_nlm name 'atomic64_xchg' + LIBC_SUFFIX ;
+function atomic64_xchgadd(addr:Puint64; value:Tuint64):Tuint64;cdecl;external libc_nlm name 'atomic64_xchgadd' + LIBC_SUFFIX ;
+function atomic64_cmpxchg(addr:Puint64; cmpvalue:Tuint64; newvalue:Tuint64):Tuint64;cdecl;external libc_nlm name 'atomic64_cmpxchg' + LIBC_SUFFIX ;
 { compiler-specific implementations of alloca()...  }
-function max(a:longint; b:longint):longint;cdecl;external libc_nlm name 'max';
-function min(a:longint; b:longint):longint;cdecl;external libc_nlm name 'min';
+function max(a:longint; b:longint):longint;cdecl;external libc_nlm name 'max' + LIBC_SUFFIX ;
+function min(a:longint; b:longint):longint;cdecl;external libc_nlm name 'min' + LIBC_SUFFIX ;
 
 
 // stropts.h
@@ -647,29 +660,29 @@ type
    Pu_int64_t = ^u_int64_t;
    u_int64_t = Tuint64;
 
-function getpid:pid_t;cdecl;external libc_nlm name 'getpid';
-function getppid:pid_t;cdecl;external libc_nlm name 'getppid';
-function getuid:uid_t;cdecl;external libc_nlm name 'getuid';
-function geteuid:uid_t;cdecl;external libc_nlm name 'geteuid';
-function getgid:gid_t;cdecl;external libc_nlm name 'getgid';
-function getegid:gid_t;cdecl;external libc_nlm name 'getegid';
-function setuid(uid:uid_t):longint;cdecl;external libc_nlm name 'setuid';
-function setgid(gid:gid_t):longint;cdecl;external libc_nlm name 'setgid';
-function getpgrp:pid_t;cdecl;external libc_nlm name 'getpgrp';
-function setsid:pid_t;cdecl;external libc_nlm name 'setsid';
-function setpgid(pid:pid_t; pgid:pid_t):longint;cdecl;external libc_nlm name 'setpgid';
+function getpid:pid_t;cdecl;external libc_nlm name 'getpid' + LIBC_SUFFIX ;
+function getppid:pid_t;cdecl;external libc_nlm name 'getppid' + LIBC_SUFFIX ;
+function getuid:uid_t;cdecl;external libc_nlm name 'getuid' + LIBC_SUFFIX ;
+function geteuid:uid_t;cdecl;external libc_nlm name 'geteuid' + LIBC_SUFFIX ;
+function getgid:gid_t;cdecl;external libc_nlm name 'getgid' + LIBC_SUFFIX ;
+function getegid:gid_t;cdecl;external libc_nlm name 'getegid' + LIBC_SUFFIX ;
+function setuid(uid:uid_t):longint;cdecl;external libc_nlm name 'setuid' + LIBC_SUFFIX ;
+function setgid(gid:gid_t):longint;cdecl;external libc_nlm name 'setgid' + LIBC_SUFFIX ;
+function getpgrp:pid_t;cdecl;external libc_nlm name 'getpgrp' + LIBC_SUFFIX ;
+function setsid:pid_t;cdecl;external libc_nlm name 'setsid' + LIBC_SUFFIX ;
+function setpgid(pid:pid_t; pgid:pid_t):longint;cdecl;external libc_nlm name 'setpgid' + LIBC_SUFFIX ;
 
-function FpGetpid:pid_t;cdecl;external libc_nlm name 'getpid';
-function FpGetppid:pid_t;cdecl;external libc_nlm name 'getppid';
-function FpGetuid:uid_t;cdecl;external libc_nlm name 'getuid';
-function FpGeteuid:uid_t;cdecl;external libc_nlm name 'geteuid';
-function FpGetgid:gid_t;cdecl;external libc_nlm name 'getgid';
-function FpGetegid:gid_t;cdecl;external libc_nlm name 'getegid';
-function FpSetuid(uid:uid_t):longint;cdecl;external libc_nlm name 'setuid';
-function FpSetgid(gid:gid_t):longint;cdecl;external libc_nlm name 'setgid';
-function FpSetpgrp:pid_t;cdecl;external libc_nlm name 'getpgrp';
-function FpSetsid:pid_t;cdecl;external libc_nlm name 'setsid';
-function FpSetpgid(pid:pid_t; pgid:pid_t):longint;cdecl;external libc_nlm name 'setpgid';
+function FpGetpid:pid_t;cdecl;external libc_nlm name 'getpid' + LIBC_SUFFIX ;
+function FpGetppid:pid_t;cdecl;external libc_nlm name 'getppid' + LIBC_SUFFIX ;
+function FpGetuid:uid_t;cdecl;external libc_nlm name 'getuid' + LIBC_SUFFIX ;
+function FpGeteuid:uid_t;cdecl;external libc_nlm name 'geteuid' + LIBC_SUFFIX ;
+function FpGetgid:gid_t;cdecl;external libc_nlm name 'getgid' + LIBC_SUFFIX ;
+function FpGetegid:gid_t;cdecl;external libc_nlm name 'getegid' + LIBC_SUFFIX ;
+function FpSetuid(uid:uid_t):longint;cdecl;external libc_nlm name 'setuid' + LIBC_SUFFIX ;
+function FpSetgid(gid:gid_t):longint;cdecl;external libc_nlm name 'setgid' + LIBC_SUFFIX ;
+function FpSetpgrp:pid_t;cdecl;external libc_nlm name 'getpgrp' + LIBC_SUFFIX ;
+function FpSetsid:pid_t;cdecl;external libc_nlm name 'setsid' + LIBC_SUFFIX ;
+function FpSetpgid(pid:pid_t; pgid:pid_t):longint;cdecl;external libc_nlm name 'setpgid' + LIBC_SUFFIX ;
 
 
 // sys/unistd.h
@@ -722,108 +735,108 @@ type
      _POSIX_VDISABLE = 0;
 
 
-function access(path:Pchar; mode:longint):longint;cdecl;external libc_nlm name 'access';
-function FpAccess(path:Pchar; mode:longint):longint;cdecl;external libc_nlm name 'access';
-function alarm(seconds:dword):dword;cdecl;external libc_nlm name 'alarm';
-function FpChdir(path:Pchar):longint;cdecl;external libc_nlm name 'chdir';
-function {$ifdef INCLUDED_FROM_SYSTEM}libc_chsize{$else}chsize{$endif}(fildes:longint; size:size_t):longint;cdecl;external libc_nlm name 'chsize';
-function FpChsize(fildes:longint; size:size_t):longint;cdecl;external libc_nlm name 'chsize';
-function FpClose(fildes:longint):longint;cdecl;external libc_nlm name 'close';
-function crypt(key:Pchar; salt:Pchar):Pchar;cdecl;external libc_nlm name 'crypt';
-function dup(fildes:longint):longint;cdecl;external libc_nlm name 'dup';
-function Fpdup(fildes:longint):longint;cdecl;external libc_nlm name 'dup';
-function dup2(fildes1:longint; fildes2:longint):longint;cdecl;external libc_nlm name 'dup2';
-function Fpdup2(fildes1:longint; fildes2:longint):longint;cdecl;external libc_nlm name 'dup2';
+function access(path:Pchar; mode:longint):longint;cdecl;external libc_nlm name 'access' + LIBC_SUFFIX ;
+function FpAccess(path:Pchar; mode:longint):longint;cdecl;external libc_nlm name 'access' + LIBC_SUFFIX ;
+function alarm(seconds:dword):dword;cdecl;external libc_nlm name 'alarm' + LIBC_SUFFIX ;
+function FpChdir(path:Pchar):longint;cdecl;external libc_nlm name 'chdir' + LIBC_SUFFIX ;
+function {$ifdef INCLUDED_FROM_SYSTEM}libc_chsize{$else}chsize{$endif}(fildes:longint; size:size_t):longint;cdecl;external libc_nlm name 'chsize' + LIBC_SUFFIX ;
+function FpChsize(fildes:longint; size:size_t):longint;cdecl;external libc_nlm name 'chsize' + LIBC_SUFFIX ;
+function FpClose(fildes:longint):longint;cdecl;external libc_nlm name 'close' + LIBC_SUFFIX ;
+function crypt(key:Pchar; salt:Pchar):Pchar;cdecl;external libc_nlm name 'crypt' + LIBC_SUFFIX ;
+function dup(fildes:longint):longint;cdecl;external libc_nlm name 'dup' + LIBC_SUFFIX ;
+function Fpdup(fildes:longint):longint;cdecl;external libc_nlm name 'dup' + LIBC_SUFFIX ;
+function dup2(fildes1:longint; fildes2:longint):longint;cdecl;external libc_nlm name 'dup2' + LIBC_SUFFIX ;
+function Fpdup2(fildes1:longint; fildes2:longint):longint;cdecl;external libc_nlm name 'dup2' + LIBC_SUFFIX ;
 type TArr064char = array [0..63] of char;
-procedure encrypt(block:TArr064char; edflag:longint);cdecl;external libc_nlm name 'encrypt';
-procedure _exit(status:longint);cdecl;external libc_nlm name '_exit';
-procedure FpExit(status:longint);cdecl;external libc_nlm name '_exit';
-function fchdir(fildes:longint):longint;cdecl;external libc_nlm name 'fchdir';
-function fdatasync(fildes:longint):longint;cdecl;external libc_nlm name 'fdatasync';
-function fork:pid_t;cdecl;external libc_nlm name 'fork';
-function fsync(fildes:longint):longint;cdecl;external libc_nlm name 'fsync';
-function fpathconf(fildes:longint; name:longint):longint;cdecl;external libc_nlm name 'fpathconf';
-function ftruncate(fildes:longint; len:off_t):longint;cdecl;external libc_nlm name 'ftruncate';
-function getcwd(path:Pchar; len:size_t):Pchar;cdecl;external libc_nlm name 'getcwd';
-function gethostid:longint;cdecl;external libc_nlm name 'gethostid';
+procedure encrypt(block:TArr064char; edflag:longint);cdecl;external libc_nlm name 'encrypt' + LIBC_SUFFIX ;
+procedure _exit(status:longint);cdecl;external libc_nlm name '_exit' + LIBC_SUFFIX ;
+procedure FpExit(status:longint);cdecl;external libc_nlm name '_exit' + LIBC_SUFFIX ;
+function fchdir(fildes:longint):longint;cdecl;external libc_nlm name 'fchdir' + LIBC_SUFFIX ;
+function fdatasync(fildes:longint):longint;cdecl;external libc_nlm name 'fdatasync' + LIBC_SUFFIX ;
+function fork:pid_t;cdecl;external libc_nlm name 'fork' + LIBC_SUFFIX ;
+function fsync(fildes:longint):longint;cdecl;external libc_nlm name 'fsync' + LIBC_SUFFIX ;
+function fpathconf(fildes:longint; name:longint):longint;cdecl;external libc_nlm name 'fpathconf' + LIBC_SUFFIX ;
+function ftruncate(fildes:longint; len:off_t):longint;cdecl;external libc_nlm name 'ftruncate' + LIBC_SUFFIX ;
+function getcwd(path:Pchar; len:size_t):Pchar;cdecl;external libc_nlm name 'getcwd' + LIBC_SUFFIX ;
+function gethostid:longint;cdecl;external libc_nlm name 'gethostid' + LIBC_SUFFIX ;
 (* Const before declarator ignored *)
 
-function getopt(argc:longint; argv:array of Pchar; optstr:Pchar):longint;cdecl;external libc_nlm name 'getopt';
+function getopt(argc:longint; argv:array of Pchar; optstr:Pchar):longint;cdecl;external libc_nlm name 'getopt' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function Fpioctl(_para1:longint; _para2:longint; args:array of const):longint;cdecl;external libc_nlm name 'ioctl';
+function Fpioctl(_para1:longint; _para2:longint; args:array of const):longint;cdecl;external libc_nlm name 'ioctl' + LIBC_SUFFIX ;
 {$endif}
-function Fpioctl(_para1:longint; _para2:longint):longint;cdecl;external libc_nlm name 'ioctl';
-function Fpisatty(fildes:longint):longint;cdecl;external libc_nlm name 'isatty';
-//function lseek(fildes:longint; offset:off_t; whence:longint):off_t;cdecl;external libc_nlm name 'lseek';
-function fplseek(fildes:longint; offset:off_t; whence:longint):off_t;cdecl;external libc_nlm name 'lseek';
+function Fpioctl(_para1:longint; _para2:longint):longint;cdecl;external libc_nlm name 'ioctl' + LIBC_SUFFIX ;
+function Fpisatty(fildes:longint):longint;cdecl;external libc_nlm name 'isatty' + LIBC_SUFFIX ;
+//function lseek(fildes:longint; offset:off_t; whence:longint):off_t;cdecl;external libc_nlm name 'lseek' + LIBC_SUFFIX ;
+function fplseek(fildes:longint; offset:off_t; whence:longint):off_t;cdecl;external libc_nlm name 'lseek' + LIBC_SUFFIX ;
 
-function pathconf(path:Pchar; name:longint):longint;cdecl;external libc_nlm name 'pathconf';
-//!!function pipe(fildes:array[0..1] of longint):longint;cdecl;external libc_nlm name 'pipe';
-function FpPipe(var fildes:TFilDes):cInt;cdecl;external libc_nlm name 'pipe';
-function pread(fildes:longint; buf:pointer; nbytes:size_t; off:off_t):ssize_t;cdecl;external libc_nlm name 'pread';
-function pwrite(fildes:longint; buf:pointer; nbytes:size_t; off:off_t):ssize_t;cdecl;external libc_nlm name 'pwrite';
-function FpRead(fildes:longint; buf:pointer; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'read';
-function FpRead(fildes:longint; var buf; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'read';
-function Fprmdir(path:Pchar):longint;cdecl;external libc_nlm name 'rmdir';
-procedure sync;cdecl;external libc_nlm name 'sync';
-function sysconf(name:longint):longint;cdecl;external libc_nlm name 'sysconf';
-function unlink(path:Pchar):longint;cdecl;external libc_nlm name 'unlink';
-function FpUnlink(path:Pchar):longint;cdecl;external libc_nlm name 'unlink';
-function FpWrite(fildes:longint; buf:pointer; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'write';
-function FpWrite(fildes:longint; var buf; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'write';
+function pathconf(path:Pchar; name:longint):longint;cdecl;external libc_nlm name 'pathconf' + LIBC_SUFFIX ;
+//!!function pipe(fildes:array[0..1] of longint):longint;cdecl;external libc_nlm name 'pipe' + LIBC_SUFFIX ;
+function FpPipe(var fildes:TFilDes):cInt;cdecl;external libc_nlm name 'pipe' + LIBC_SUFFIX ;
+function pread(fildes:longint; buf:pointer; nbytes:size_t; off:off_t):ssize_t;cdecl;external libc_nlm name 'pread' + LIBC_SUFFIX ;
+function pwrite(fildes:longint; buf:pointer; nbytes:size_t; off:off_t):ssize_t;cdecl;external libc_nlm name 'pwrite' + LIBC_SUFFIX ;
+function FpRead(fildes:longint; buf:pointer; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'read' + LIBC_SUFFIX ;
+function FpRead(fildes:longint; var buf; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'read' + LIBC_SUFFIX ;
+function Fprmdir(path:Pchar):longint;cdecl;external libc_nlm name 'rmdir' + LIBC_SUFFIX ;
+procedure sync;cdecl;external libc_nlm name 'sync' + LIBC_SUFFIX ;
+function sysconf(name:longint):longint;cdecl;external libc_nlm name 'sysconf' + LIBC_SUFFIX ;
+function unlink(path:Pchar):longint;cdecl;external libc_nlm name 'unlink' + LIBC_SUFFIX ;
+function FpUnlink(path:Pchar):longint;cdecl;external libc_nlm name 'unlink' + LIBC_SUFFIX ;
+function FpWrite(fildes:longint; buf:pointer; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'write' + LIBC_SUFFIX ;
+function FpWrite(fildes:longint; var buf; nbytes:size_t):ssize_t;cdecl;external libc_nlm name 'write' + LIBC_SUFFIX ;
 { appeared in BSD...  }
-function brk(endds:pointer):longint;cdecl;external libc_nlm name 'brk';
-function getdtablehi:longint;cdecl;external libc_nlm name 'getdtablehi';
-function getdtablesize:longint;cdecl;external libc_nlm name 'getdtablesize';
-function getpagesize:longint;cdecl;external libc_nlm name 'getpagesize';
+function brk(endds:pointer):longint;cdecl;external libc_nlm name 'brk' + LIBC_SUFFIX ;
+function getdtablehi:longint;cdecl;external libc_nlm name 'getdtablehi' + LIBC_SUFFIX ;
+function getdtablesize:longint;cdecl;external libc_nlm name 'getdtablesize' + LIBC_SUFFIX ;
+function getpagesize:longint;cdecl;external libc_nlm name 'getpagesize' + LIBC_SUFFIX ;
 
-function readlink(path:Pchar; buf:Pchar; bufsize:size_t):longint;cdecl;external libc_nlm name 'readlink';
-function FpReadlink(path:Pchar; buf:Pchar; bufsize:size_t):longint;cdecl;external libc_nlm name 'readlink';
-function sbrk(incr:intptr_t):pointer;cdecl;external libc_nlm name 'sbrk';
+function readlink(path:Pchar; buf:Pchar; bufsize:size_t):longint;cdecl;external libc_nlm name 'readlink' + LIBC_SUFFIX ;
+function FpReadlink(path:Pchar; buf:Pchar; bufsize:size_t):longint;cdecl;external libc_nlm name 'readlink' + LIBC_SUFFIX ;
+function sbrk(incr:intptr_t):pointer;cdecl;external libc_nlm name 'sbrk' + LIBC_SUFFIX ;
 { nonstandard additions (see also fsio.h)...  }
-function cancel(t_id:longint):longint;cdecl;external libc_nlm name 'cancel';
-function confstr(name:longint; buf:Pchar; len:size_t):size_t;cdecl;external libc_nlm name 'confstr';
-function delay(milliseconds:dword):longint;cdecl;external libc_nlm name 'delay';
-function _delay(milliseconds:dword):longint;cdecl;external libc_nlm name 'delay';
-function sethostid(hostid:longint):longint;cdecl;external libc_nlm name 'sethostid';
-function setmode(fildes:longint; oflag:longint):longint;cdecl;external libc_nlm name 'setmode';
-function sleep(seconds:dword):dword;cdecl;external libc_nlm name 'sleep';
-function FpSleep(seconds:dword):dword;cdecl;external libc_nlm name 'sleep';
-function usleep(useconds:useconds_t):longint;cdecl;external libc_nlm name 'usleep';
+function cancel(t_id:longint):longint;cdecl;external libc_nlm name 'cancel' + LIBC_SUFFIX ;
+function confstr(name:longint; buf:Pchar; len:size_t):size_t;cdecl;external libc_nlm name 'confstr' + LIBC_SUFFIX ;
+function delay(milliseconds:dword):longint;cdecl;external libc_nlm name 'delay' + LIBC_SUFFIX ;
+function _delay(milliseconds:dword):longint;cdecl;external libc_nlm name 'delay' + LIBC_SUFFIX ;
+function sethostid(hostid:longint):longint;cdecl;external libc_nlm name 'sethostid' + LIBC_SUFFIX ;
+function setmode(fildes:longint; oflag:longint):longint;cdecl;external libc_nlm name 'setmode' + LIBC_SUFFIX ;
+function sleep(seconds:dword):dword;cdecl;external libc_nlm name 'sleep' + LIBC_SUFFIX ;
+function FpSleep(seconds:dword):dword;cdecl;external libc_nlm name 'sleep' + LIBC_SUFFIX ;
+function usleep(useconds:useconds_t):longint;cdecl;external libc_nlm name 'usleep' + LIBC_SUFFIX ;
 { nonstandard (transitional) addtions for 64-bit file I/O...  }
-function chsize64(fildes:longint; size:size64_t):longint;cdecl;external libc_nlm name 'chsize64';
-function Fpchsize64(fildes:longint; size:size64_t):longint;cdecl;external libc_nlm name 'chsize64';
-function ftruncate64(fildes:longint; len:off64_t):longint;cdecl;external libc_nlm name 'ftruncate64';
-function Fpftruncate64(fildes:longint; len:off64_t):longint;cdecl;external libc_nlm name 'ftruncate64';
-function lseek64(fildes:longint; offset:off64_t; whence:longint):off64_t;cdecl;external libc_nlm name 'lseek64';
-function Fplseek64(fildes:longint; offset:off64_t; whence:longint):off64_t;cdecl;external libc_nlm name 'lseek64';
-function pread64(fildes:longint; buf:pointer; nbytes:size_t; off:off64_t):ssize_t;cdecl;external libc_nlm name 'pread64';
-function pwrite64(fildes:longint; buf:pointer; nbytes:size_t; off:off64_t):ssize_t;cdecl;external libc_nlm name 'pwrite64';
-function tell64(fildes:longint):off64_t;cdecl;external libc_nlm name 'tell64';
-function Fptell64(fildes:longint):off64_t;cdecl;external libc_nlm name 'tell64';
-function ____environ:PPPchar;cdecl;external libc_nlm name '____environ';
-function ___optarg:PPchar;cdecl;external libc_nlm name '___optarg';
-function ___optind:Plongint;cdecl;external libc_nlm name '___optind';
-function ___opterr:Plongint;cdecl;external libc_nlm name '___opterr';
-function ___optopt:Plongint;cdecl;external libc_nlm name '___optopt';
-function ___optreset:Plongint;cdecl;external libc_nlm name '___optreset';
-function want_posix_semantics(timestamp:longint):longint;cdecl;external libc_nlm name 'want_posix_semantics';
+function chsize64(fildes:longint; size:size64_t):longint;cdecl;external libc_nlm name 'chsize64' + LIBC_SUFFIX ;
+function Fpchsize64(fildes:longint; size:size64_t):longint;cdecl;external libc_nlm name 'chsize64' + LIBC_SUFFIX ;
+function ftruncate64(fildes:longint; len:off64_t):longint;cdecl;external libc_nlm name 'ftruncate64' + LIBC_SUFFIX ;
+function Fpftruncate64(fildes:longint; len:off64_t):longint;cdecl;external libc_nlm name 'ftruncate64' + LIBC_SUFFIX ;
+function lseek64(fildes:longint; offset:off64_t; whence:longint):off64_t;cdecl;external libc_nlm name 'lseek64' + LIBC_SUFFIX ;
+function Fplseek64(fildes:longint; offset:off64_t; whence:longint):off64_t;cdecl;external libc_nlm name 'lseek64' + LIBC_SUFFIX ;
+function pread64(fildes:longint; buf:pointer; nbytes:size_t; off:off64_t):ssize_t;cdecl;external libc_nlm name 'pread64' + LIBC_SUFFIX ;
+function pwrite64(fildes:longint; buf:pointer; nbytes:size_t; off:off64_t):ssize_t;cdecl;external libc_nlm name 'pwrite64' + LIBC_SUFFIX ;
+function tell64(fildes:longint):off64_t;cdecl;external libc_nlm name 'tell64' + LIBC_SUFFIX ;
+function Fptell64(fildes:longint):off64_t;cdecl;external libc_nlm name 'tell64' + LIBC_SUFFIX ;
+function ____environ:PPPchar;cdecl;external libc_nlm name '____environ' + LIBC_SUFFIX ;
+function ___optarg:PPchar;cdecl;external libc_nlm name '___optarg' + LIBC_SUFFIX ;
+function ___optind:Plongint;cdecl;external libc_nlm name '___optind' + LIBC_SUFFIX ;
+function ___opterr:Plongint;cdecl;external libc_nlm name '___opterr' + LIBC_SUFFIX ;
+function ___optopt:Plongint;cdecl;external libc_nlm name '___optopt' + LIBC_SUFFIX ;
+function ___optreset:Plongint;cdecl;external libc_nlm name '___optreset' + LIBC_SUFFIX ;
+function want_posix_semantics(timestamp:longint):longint;cdecl;external libc_nlm name 'want_posix_semantics' + LIBC_SUFFIX ;
 {
 ** Prototype for libraries writing their own start-up and shut-down code. This
 ** is not an interface, but only a prototype for code furnished by the UNIX-
 ** style NLM library. The presence of these is noted by the prelude object.
  }
-function _init:longint;cdecl;external libc_nlm name '_init';
-function _fini:longint;cdecl;external libc_nlm name '_fini';
+function _init:longint;cdecl;external libc_nlm name '_init' + LIBC_SUFFIX ;
+function _fini:longint;cdecl;external libc_nlm name '_fini' + LIBC_SUFFIX ;
 { globals for getopt() implementation...  }
 { the prototype for ioctl() is in unistd.h...  }
 
 
 // sys/byteorder.h
-function htonl(_para1:dword):dword;cdecl;external libc_nlm name 'htonl';
-function htons(_para1:word):word;cdecl;external libc_nlm name 'htons';
-function ntohl(_para1:dword):dword;cdecl;external libc_nlm name 'ntohl';
-function ntohs(_para1:word):word;cdecl;external libc_nlm name 'ntohs';
+function htonl(_para1:dword):dword;cdecl;external libc_nlm name 'htonl' + LIBC_SUFFIX ;
+function htons(_para1:word):word;cdecl;external libc_nlm name 'htons' + LIBC_SUFFIX ;
+function ntohl(_para1:dword):dword;cdecl;external libc_nlm name 'ntohl' + LIBC_SUFFIX ;
+function ntohs(_para1:word):word;cdecl;external libc_nlm name 'ntohs' + LIBC_SUFFIX ;
 
 
 // sys/cdefs.h
@@ -934,17 +947,17 @@ type
 (** unsupported pragma#pragma pack()*)
 
 
-function closedir(dirp:Pdirent):longint;cdecl;external libc_nlm name 'closedir';
-function opendir(pathName:Pchar):Pdirent;cdecl;external libc_nlm name 'opendir';
-function readdir(dirp:Pdirent):Pdirent;cdecl;external libc_nlm name 'readdir';
-function readdir_r(dirp:Pdirent; entry:Pdirent; result:PPdirent):longint;cdecl;external libc_nlm name 'readdir_r';
-procedure rewinddir(dirp:Pdirent);cdecl;external libc_nlm name 'rewinddir';
+function closedir(dirp:Pdirent):longint;cdecl;external libc_nlm name 'closedir' + LIBC_SUFFIX ;
+function opendir(pathName:Pchar):Pdirent;cdecl;external libc_nlm name 'opendir' + LIBC_SUFFIX ;
+function readdir(dirp:Pdirent):Pdirent;cdecl;external libc_nlm name 'readdir' + LIBC_SUFFIX ;
+function readdir_r(dirp:Pdirent; entry:Pdirent; result:PPdirent):longint;cdecl;external libc_nlm name 'readdir_r' + LIBC_SUFFIX ;
+procedure rewinddir(dirp:Pdirent);cdecl;external libc_nlm name 'rewinddir' + LIBC_SUFFIX ;
 
-function Fpclosedir(dirp:Pdirent):longint;cdecl;external libc_nlm name 'closedir';
-function Fpopendir(pathName:Pchar):Pdirent;cdecl;external libc_nlm name 'opendir';
-function Fpreaddir(dirp:Pdirent):Pdirent;cdecl;external libc_nlm name 'readdir';
-function Fpreaddir_r(dirp:Pdirent; entry:Pdirent; result:PPdirent):longint;cdecl;external libc_nlm name 'readdir_r';
-procedure Fprewinddir(dirp:Pdirent);cdecl;external libc_nlm name 'rewinddir';
+function Fpclosedir(dirp:Pdirent):longint;cdecl;external libc_nlm name 'closedir' + LIBC_SUFFIX ;
+function Fpopendir(pathName:Pchar):Pdirent;cdecl;external libc_nlm name 'opendir' + LIBC_SUFFIX ;
+function Fpreaddir(dirp:Pdirent):Pdirent;cdecl;external libc_nlm name 'readdir' + LIBC_SUFFIX ;
+function Fpreaddir_r(dirp:Pdirent; entry:Pdirent; result:PPdirent):longint;cdecl;external libc_nlm name 'readdir_r' + LIBC_SUFFIX ;
+procedure Fprewinddir(dirp:Pdirent);cdecl;external libc_nlm name 'rewinddir' + LIBC_SUFFIX ;
 
 // sys/file.h
 // fcntl.h
@@ -1026,25 +1039,25 @@ type
         l_len : off64_t;              { size; if 0, then until EOF                  }
      end;
 
-function creat(path:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'creat';
+function creat(path:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'creat' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function fcntl(fildes:longint; cmd:longint; args:array of const):longint;cdecl;external libc_nlm name 'fcntl';
+function fcntl(fildes:longint; cmd:longint; args:array of const):longint;cdecl;external libc_nlm name 'fcntl' + LIBC_SUFFIX ;
 {$endif}
-function fcntl(fildes:longint; cmd:longint):longint;cdecl;external libc_nlm name 'fcntl';
+function fcntl(fildes:longint; cmd:longint):longint;cdecl;external libc_nlm name 'fcntl' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function open(path:Pchar; oflag:longint; args:array of const):longint;cdecl;external libc_nlm name 'open';
+function open(path:Pchar; oflag:longint; args:array of const):longint;cdecl;external libc_nlm name 'open' + LIBC_SUFFIX ;
 {$endif}
-function open(path:Pchar; oflag:longint):longint;cdecl;external libc_nlm name 'open';
-function open(path:Pchar; oflag,mode:longint):longint;cdecl;external libc_nlm name 'open';
-function FpOpen(path:Pchar; oflag:longint):longint;cdecl;external libc_nlm name 'open';
-function FpOpen(path:Pchar; oflag,mode:longint):longint;cdecl;external libc_nlm name 'open';
+function open(path:Pchar; oflag:longint):longint;cdecl;external libc_nlm name 'open' + LIBC_SUFFIX ;
+function open(path:Pchar; oflag,mode:longint):longint;cdecl;external libc_nlm name 'open' + LIBC_SUFFIX ;
+function FpOpen(path:Pchar; oflag:longint):longint;cdecl;external libc_nlm name 'open' + LIBC_SUFFIX ;
+function FpOpen(path:Pchar; oflag,mode:longint):longint;cdecl;external libc_nlm name 'open' + LIBC_SUFFIX ;
 
-function pipe_open(path:Pchar; oflag:longint):longint;cdecl;external libc_nlm name 'pipe_open';
-function pipe_open(path:Pchar; oflag,mode:longint):longint;cdecl;external libc_nlm name 'pipe_open';
+function pipe_open(path:Pchar; oflag:longint):longint;cdecl;external libc_nlm name 'pipe_open' + LIBC_SUFFIX ;
+function pipe_open(path:Pchar; oflag,mode:longint):longint;cdecl;external libc_nlm name 'pipe_open' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function sopen(path:Pchar; oflag:longint; shflag:longint; args:array of const):longint;cdecl;external libc_nlm name 'sopen';
+function sopen(path:Pchar; oflag:longint; shflag:longint; args:array of const):longint;cdecl;external libc_nlm name 'sopen' + LIBC_SUFFIX ;
 {$endif}
-function sopen(path:Pchar; oflag:longint; shflag:longint):longint;cdecl;external libc_nlm name 'sopen';
+function sopen(path:Pchar; oflag:longint; shflag:longint):longint;cdecl;external libc_nlm name 'sopen' + LIBC_SUFFIX ;
 
 
 // sys/filio.h
@@ -1068,7 +1081,7 @@ type
 
 
 
-function ftok(path:Pchar; id:longint):key_t;cdecl;external libc_nlm name 'ftok';
+function ftok(path:Pchar; id:longint):key_t;cdecl;external libc_nlm name 'ftok' + LIBC_SUFFIX ;
 
 
 // sys/mman.h
@@ -1081,12 +1094,12 @@ function ftok(path:Pchar; id:longint):key_t;cdecl;external libc_nlm name 'ftok';
 { 'advice' to madvice()...  }
 { effectual dummies that will never do anything...  }
 
-function mlock(addr:pointer; len:size_t):longint;cdecl;external libc_nlm name 'mlock';
-function mlockall(flags:longint):longint;cdecl;external libc_nlm name 'mlockall';
-function munlock(addr:pointer; len:size_t):longint;cdecl;external libc_nlm name 'munlock';
-function munlockall:longint;cdecl;external libc_nlm name 'munlockall';
-function mprotect(addr:pointer; len:size_t; prot:longint):longint;cdecl;external libc_nlm name 'mprotect';
-function madvise(addr:pointer; len:size_t; advice:longint):longint;cdecl;external libc_nlm name 'madvise';
+function mlock(addr:pointer; len:size_t):longint;cdecl;external libc_nlm name 'mlock' + LIBC_SUFFIX ;
+function mlockall(flags:longint):longint;cdecl;external libc_nlm name 'mlockall' + LIBC_SUFFIX ;
+function munlock(addr:pointer; len:size_t):longint;cdecl;external libc_nlm name 'munlock' + LIBC_SUFFIX ;
+function munlockall:longint;cdecl;external libc_nlm name 'munlockall' + LIBC_SUFFIX ;
+function mprotect(addr:pointer; len:size_t; prot:longint):longint;cdecl;external libc_nlm name 'mprotect' + LIBC_SUFFIX ;
+function madvise(addr:pointer; len:size_t; advice:longint):longint;cdecl;external libc_nlm name 'madvise' + LIBC_SUFFIX ;
 
 
 
@@ -1113,7 +1126,7 @@ type
         tm_hour  : longint;    // hours since midnight [0..23]
         tm_mday  : longint;    // days of the month [1..31]
         tm_mon   : longint;    // months since January [0..11]
-        tm_year  : longint;    // years since 1900 [0..ì]
+        tm_year  : longint;    // years since 1900 [0..?]
         tm_wday  : longint;    // days since Sunday [0..6]
         tm_yday  : longint;    // days since first of January [0..365]
         tm_isdst: longint;    // on summer time (-1 unknown, 0 no, !0 yes)
@@ -1201,54 +1214,54 @@ type
 (** unsupported pragma#pragma pack()*)
 
 
-function asctime(localtime:Ptm):Pchar;cdecl;external libc_nlm name 'asctime';
-function asctime(var localtime:Ttm):Pchar;cdecl;external libc_nlm name 'asctime';
-function clock:clock_t;cdecl;external libc_nlm name 'clock';
-function ctime(calendar:Ptime_t):Pchar;cdecl;external libc_nlm name 'ctime';
-function ctime(var calendar:Ttime_t):Pchar;cdecl;external libc_nlm name 'ctime';
-function difftime(t1, t2:Ttime_t):double;cdecl;external libc_nlm name 'difftime';
-function gmtime(calendar:Ptime_t):Ptm;cdecl;external libc_nlm name 'gmtime';
-function gmtime(var calendar:Ttime_t):Ptm;cdecl;external libc_nlm name 'gmtime';
-function localtime(calendar:Ptime_t):Ptm;cdecl;external libc_nlm name 'localtime';
-function localtime(var calendar:Ttime_t):Ptm;cdecl;external libc_nlm name 'localtime';
-function mktime(localtime:Ptm):time_t;cdecl;external libc_nlm name 'mktime';
-function mktime(var localtime:Ttm):time_t;cdecl;external libc_nlm name 'mktime';
+function asctime(localtime:Ptm):Pchar;cdecl;external libc_nlm name 'asctime' + LIBC_SUFFIX ;
+function asctime(var localtime:Ttm):Pchar;cdecl;external libc_nlm name 'asctime' + LIBC_SUFFIX ;
+function clock:clock_t;cdecl;external libc_nlm name 'clock' + LIBC_SUFFIX ;
+function ctime(calendar:Ptime_t):Pchar;cdecl;external libc_nlm name 'ctime' + LIBC_SUFFIX ;
+function ctime(var calendar:Ttime_t):Pchar;cdecl;external libc_nlm name 'ctime' + LIBC_SUFFIX ;
+function difftime(t1, t2:Ttime_t):double;cdecl;external libc_nlm name 'difftime' + LIBC_SUFFIX ;
+function gmtime(calendar:Ptime_t):Ptm;cdecl;external libc_nlm name 'gmtime' + LIBC_SUFFIX ;
+function gmtime(var calendar:Ttime_t):Ptm;cdecl;external libc_nlm name 'gmtime' + LIBC_SUFFIX ;
+function localtime(calendar:Ptime_t):Ptm;cdecl;external libc_nlm name 'localtime' + LIBC_SUFFIX ;
+function localtime(var calendar:Ttime_t):Ptm;cdecl;external libc_nlm name 'localtime' + LIBC_SUFFIX ;
+function mktime(localtime:Ptm):time_t;cdecl;external libc_nlm name 'mktime' + LIBC_SUFFIX ;
+function mktime(var localtime:Ttm):time_t;cdecl;external libc_nlm name 'mktime' + LIBC_SUFFIX ;
 
 //size_t strftime ( char * __restrict s, size_t, const char * __restrict format,
 //size_t strftime ( char * __restrict s, size_t, const char * __restrict format,
 //                      const tm * __restrict localtime );
 
-function time(calendar:Ptime_t):time_t;cdecl;external libc_nlm name 'time';
-function time(var calendar:Ttime_t):time_t;cdecl;external libc_nlm name 'time';
-function ___clocks_per_sec:longint;cdecl;external libc_nlm name '___clocks_per_sec';
+function time(calendar:Ptime_t):time_t;cdecl;external libc_nlm name 'time' + LIBC_SUFFIX ;
+function time(var calendar:Ttime_t):time_t;cdecl;external libc_nlm name 'time' + LIBC_SUFFIX ;
+function ___clocks_per_sec:longint;cdecl;external libc_nlm name '___clocks_per_sec' + LIBC_SUFFIX ;
 { POSIX data and helper functions...  }
-function ___daylight:Plongint;cdecl;external libc_nlm name '___daylight';
-function ___daylightOnOff:Plongint;cdecl;external libc_nlm name '___daylightOnOff';
-function ___daylightOffset:Ptime_t;cdecl;external libc_nlm name '___daylightOffset';
-function ___timezone:Ptime_t;cdecl;external libc_nlm name '___timezone';
-function ___tzname:PPchar;cdecl;external libc_nlm name '___tzname';
-function __isleap(year:longint):longint;cdecl;external libc_nlm name '__isleap';
-procedure tzset;cdecl;external libc_nlm name 'tzset';
+function ___daylight:Plongint;cdecl;external libc_nlm name '___daylight' + LIBC_SUFFIX ;
+function ___daylightOnOff:Plongint;cdecl;external libc_nlm name '___daylightOnOff' + LIBC_SUFFIX ;
+function ___daylightOffset:Ptime_t;cdecl;external libc_nlm name '___daylightOffset' + LIBC_SUFFIX ;
+function ___timezone:Ptime_t;cdecl;external libc_nlm name '___timezone' + LIBC_SUFFIX ;
+function ___tzname:PPchar;cdecl;external libc_nlm name '___tzname' + LIBC_SUFFIX ;
+function __isleap(year:longint):longint;cdecl;external libc_nlm name '__isleap' + LIBC_SUFFIX ;
+procedure tzset;cdecl;external libc_nlm name 'tzset' + LIBC_SUFFIX ;
 { POSIX-defined reentrant additions...  }
 
-function asctime_r(localtime:Ptm; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'asctime_r';
-function asctime_r(var localtime:Ttm; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'asctime_r';
-function ctime_r(calendar:Ptime_t; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'ctime_r';
-function ctime_r(var calendar:Ttime_t; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'ctime_r';
-function gmtime_r(calendar:Ptime_t; localtime:Ptm):Ptm;cdecl;external libc_nlm name 'gmtime_r';
-function gmtime_r(var calendar:Ttime_t; localtime:Ptm):Ptm;cdecl;external libc_nlm name 'gmtime_r';
-function localtime_r(calendar:Ptime_t; localtime:Ptm):Ptm;cdecl;external libc_nlm name 'localtime_r';
-function localtime_r(var calendar:Ttime_t; var localtime:Ttm):Ptm;cdecl;external libc_nlm name 'localtime_r';
+function asctime_r(localtime:Ptm; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'asctime_r' + LIBC_SUFFIX ;
+function asctime_r(var localtime:Ttm; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'asctime_r' + LIBC_SUFFIX ;
+function ctime_r(calendar:Ptime_t; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'ctime_r' + LIBC_SUFFIX ;
+function ctime_r(var calendar:Ttime_t; timestr:Pchar):Pchar;cdecl;external libc_nlm name 'ctime_r' + LIBC_SUFFIX ;
+function gmtime_r(calendar:Ptime_t; localtime:Ptm):Ptm;cdecl;external libc_nlm name 'gmtime_r' + LIBC_SUFFIX ;
+function gmtime_r(var calendar:Ttime_t; localtime:Ptm):Ptm;cdecl;external libc_nlm name 'gmtime_r' + LIBC_SUFFIX ;
+function localtime_r(calendar:Ptime_t; localtime:Ptm):Ptm;cdecl;external libc_nlm name 'localtime_r' + LIBC_SUFFIX ;
+function localtime_r(var calendar:Ttime_t; var localtime:Ttm):Ptm;cdecl;external libc_nlm name 'localtime_r' + LIBC_SUFFIX ;
 { Single UNIX Specification additions...  }
-function nanosleep(rqtp, rmtp:Ptimespec):longint;cdecl;external libc_nlm name 'nanosleep';
-function nanosleep(var rqtp, rmtp:Ttimespec):longint;cdecl;external libc_nlm name 'nanosleep';
+function nanosleep(rqtp, rmtp:Ptimespec):longint;cdecl;external libc_nlm name 'nanosleep' + LIBC_SUFFIX ;
+function nanosleep(var rqtp, rmtp:Ttimespec):longint;cdecl;external libc_nlm name 'nanosleep' + LIBC_SUFFIX ;
 { Novell-defined additions...  }
-function ltime(calendar:Ptime_t):time_t;cdecl;external libc_nlm name 'ltime';
-function ltime(var calendar:Ttime_t):time_t;cdecl;external libc_nlm name 'ltime';
-function mkgmtime(gmtime:Ptm):time_t;cdecl;external libc_nlm name 'mkgmtime';
-function mkgmtime(var gmtime:Ttm):time_t;cdecl;external libc_nlm name 'mkgmtime';
-function dos2calendar(dostime:Tdos_d):time_t;cdecl;external libc_nlm name 'dos2calendar';
-function calendar2dos(calendar:time_t):Tdos_d;cdecl;external libc_nlm name 'calendar2dos';
+function ltime(calendar:Ptime_t):time_t;cdecl;external libc_nlm name 'ltime' + LIBC_SUFFIX ;
+function ltime(var calendar:Ttime_t):time_t;cdecl;external libc_nlm name 'ltime' + LIBC_SUFFIX ;
+function mkgmtime(gmtime:Ptm):time_t;cdecl;external libc_nlm name 'mkgmtime' + LIBC_SUFFIX ;
+function mkgmtime(var gmtime:Ttm):time_t;cdecl;external libc_nlm name 'mkgmtime' + LIBC_SUFFIX ;
+function dos2calendar(dostime:Tdos_d):time_t;cdecl;external libc_nlm name 'dos2calendar' + LIBC_SUFFIX ;
+function calendar2dos(calendar:time_t):Tdos_d;cdecl;external libc_nlm name 'calendar2dos' + LIBC_SUFFIX ;
 
 
 // sys/time.h
@@ -1278,8 +1291,8 @@ type
 ** realtime that has been elapsed.
  }
 
-function times(__buffer:Ptms):clock_t;cdecl;external libc_nlm name 'times';
-function times(var __buffer:Ttms):clock_t;cdecl;external libc_nlm name 'times';
+function times(__buffer:Ptms):clock_t;cdecl;external libc_nlm name 'times' + LIBC_SUFFIX ;
+function times(var __buffer:Ttms):clock_t;cdecl;external libc_nlm name 'times' + LIBC_SUFFIX ;
 { turn on 1-byte packing...  }
 
 { this structure is returned by gettimeofday() and used in select()...  }
@@ -1294,13 +1307,13 @@ type
 (** unsupported pragma#pragma pack()*)
 { operations on struct timeval; note timercmp() does not work for >= or <=  }
 
-function gettimeofday(tp:Ptimeval; tpz:Ptimezone):longint;cdecl;external libc_nlm name 'gettimeofday';
-function Fpgettimeofday(tp:Ptimeval; tpz:Ptimezone):longint;cdecl;external libc_nlm name 'gettimeofday';
-function settimeofday(tp:Ptimeval; tpz:Ptimezone):longint;cdecl;external libc_nlm name 'settimeofday';
-function gettimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'gettimeofday';
-function settimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'settimeofday';
-function Fpgettimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'gettimeofday';
-function Fpsettimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'settimeofday';
+function gettimeofday(tp:Ptimeval; tpz:Ptimezone):longint;cdecl;external libc_nlm name 'gettimeofday' + LIBC_SUFFIX ;
+function Fpgettimeofday(tp:Ptimeval; tpz:Ptimezone):longint;cdecl;external libc_nlm name 'gettimeofday' + LIBC_SUFFIX ;
+function settimeofday(tp:Ptimeval; tpz:Ptimezone):longint;cdecl;external libc_nlm name 'settimeofday' + LIBC_SUFFIX ;
+function gettimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'gettimeofday' + LIBC_SUFFIX ;
+function settimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'settimeofday' + LIBC_SUFFIX ;
+function Fpgettimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'gettimeofday' + LIBC_SUFFIX ;
+function Fpsettimeofday(var tp:Ttimeval; var tpz:Ttimezone):longint;cdecl;external libc_nlm name 'settimeofday' + LIBC_SUFFIX ;
 
 { turn on 1-byte packing...  }
 type
@@ -1340,19 +1353,19 @@ type
 (** unsupported pragma#pragma pack()*)
 
 
-function Fpchmod(path:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'chmod';
-function Fpfchmod(fildes:longint; mode:mode_t):longint;cdecl;external libc_nlm name 'fchmod';
-function Fpfstat(fildes:longint; buf:Pstat):longint;cdecl;external libc_nlm name 'fstat';
-function Fpfstat(fildes:longint; var buf:Tstat):longint;cdecl;external libc_nlm name 'fstat';
-function Fplstat(path:Pchar; buf:Pstat):longint;cdecl;external libc_nlm name 'lstat';
-function Fplstat(path:Pchar; var buf:Tstat):longint;cdecl;external libc_nlm name 'lstat';
-function Fpmkdir(pathname:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'mkdir';
-function Fpmkfifo(pathname:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'mkfifo';
-function Fpmknod(path:Pchar; mode:mode_t; dev:dev_t):longint;cdecl;external libc_nlm name 'mknod';
-function Fprealname(pathname:Pchar; name:Pchar):longint;cdecl;external libc_nlm name 'realname';
-function Fpstat(path:Pchar; buf:Pstat):longint;cdecl;external libc_nlm name 'stat';
-function Fpstat(path:Pchar; var buf:Tstat):longint;cdecl;external libc_nlm name 'stat';
-function Fpumask(cmask:mode_t):mode_t;cdecl;external libc_nlm name 'umask';
+function Fpchmod(path:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'chmod' + LIBC_SUFFIX ;
+function Fpfchmod(fildes:longint; mode:mode_t):longint;cdecl;external libc_nlm name 'fchmod' + LIBC_SUFFIX ;
+function Fpfstat(fildes:longint; buf:Pstat):longint;cdecl;external libc_nlm name 'fstat' + LIBC_SUFFIX ;
+function Fpfstat(fildes:longint; var buf:Tstat):longint;cdecl;external libc_nlm name 'fstat' + LIBC_SUFFIX ;
+function Fplstat(path:Pchar; buf:Pstat):longint;cdecl;external libc_nlm name 'lstat' + LIBC_SUFFIX ;
+function Fplstat(path:Pchar; var buf:Tstat):longint;cdecl;external libc_nlm name 'lstat' + LIBC_SUFFIX ;
+function Fpmkdir(pathname:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'mkdir' + LIBC_SUFFIX ;
+function Fpmkfifo(pathname:Pchar; mode:mode_t):longint;cdecl;external libc_nlm name 'mkfifo' + LIBC_SUFFIX ;
+function Fpmknod(path:Pchar; mode:mode_t; dev:dev_t):longint;cdecl;external libc_nlm name 'mknod' + LIBC_SUFFIX ;
+function Fprealname(pathname:Pchar; name:Pchar):longint;cdecl;external libc_nlm name 'realname' + LIBC_SUFFIX ;
+function Fpstat(path:Pchar; buf:Pstat):longint;cdecl;external libc_nlm name 'stat' + LIBC_SUFFIX ;
+function Fpstat(path:Pchar; var buf:Tstat):longint;cdecl;external libc_nlm name 'stat' + LIBC_SUFFIX ;
+function Fpumask(cmask:mode_t):mode_t;cdecl;external libc_nlm name 'umask' + LIBC_SUFFIX ;
 {
 ** The following value is not really correct, but it is a value that has been
 ** used for a long time seems to be usable. Normally, NOFILE should not be used
@@ -1380,15 +1393,15 @@ type
 { heterogeneous select calls (socket+pipe) unsupported on NetWare...  }
 
 
-function Fppipe_select(nfds:longint; readfds, writefds, exceptfds:Pfd_set; timeout:Ptimeval):longint;cdecl;external libc_nlm name 'pipe_select';
-function Fppipe_select(nfds:longint; var readfds, writefds, exceptfds:Tfd_set; var timeout:Ttimeval):longint;cdecl;external libc_nlm name 'pipe_select';
+function Fppipe_select(nfds:longint; readfds, writefds, exceptfds:Pfd_set; timeout:Ptimeval):longint;cdecl;external libc_nlm name 'pipe_select' + LIBC_SUFFIX ;
+function Fppipe_select(nfds:longint; var readfds, writefds, exceptfds:Tfd_set; var timeout:Ttimeval):longint;cdecl;external libc_nlm name 'pipe_select' + LIBC_SUFFIX ;
 
-//function select(nfds:longint; readfds:Pfd_set; writefds:Pfd_set; exceptfds:Pfd_set; timeout:Ptimeval):longint;cdecl;external libc_nlm name 'select';
-//function select(nfds:longint; var readfds, writefds, exceptfds:Tfd_set; var timeout:Ttimeval):longint;cdecl;external libc_nlm name 'select';
-function FpSelect(nfds:longint; readfds:Pfd_set; writefds:Pfd_set; exceptfds:Pfd_set; timeout:Ptimeval):longint;cdecl;external libc_nlm name 'select';
-function FpSelect(nfds:longint; var readfds, writefds, exceptfds:Tfd_set; var timeout:Ttimeval):longint;cdecl;external libc_nlm name 'select';
-function ___fd_isset(fd:longint; _set:Pfd_set):longint;cdecl;external libc_nlm name '___fd_isset';
-function ___fd_isset(fd:longint; var _set:Tfd_set):longint;cdecl;external libc_nlm name '___fd_isset';
+//function select(nfds:longint; readfds:Pfd_set; writefds:Pfd_set; exceptfds:Pfd_set; timeout:Ptimeval):longint;cdecl;external libc_nlm name 'select' + LIBC_SUFFIX ;
+//function select(nfds:longint; var readfds, writefds, exceptfds:Tfd_set; var timeout:Ttimeval):longint;cdecl;external libc_nlm name 'select' + LIBC_SUFFIX ;
+function FpSelect(nfds:longint; readfds:Pfd_set; writefds:Pfd_set; exceptfds:Pfd_set; timeout:Ptimeval):longint;cdecl;external libc_nlm name 'select' + LIBC_SUFFIX ;
+function FpSelect(nfds:longint; var readfds, writefds, exceptfds:Tfd_set; var timeout:Ttimeval):longint;cdecl;external libc_nlm name 'select' + LIBC_SUFFIX ;
+function ___fd_isset(fd:longint; _set:Pfd_set):longint;cdecl;external libc_nlm name '___fd_isset' + LIBC_SUFFIX ;
+function ___fd_isset(fd:longint; var _set:Tfd_set):longint;cdecl;external libc_nlm name '___fd_isset' + LIBC_SUFFIX ;
 
 
 // sys/sem.h
@@ -1438,18 +1451,18 @@ type
        end;
 
 {$ifndef DisableArrayOfConst}
-function semctl(semid:longint; semnum:longint; cmd:longint; args:array of const):longint;cdecl;external libc_nlm name 'semctl';
+function semctl(semid:longint; semnum:longint; cmd:longint; args:array of const):longint;cdecl;external libc_nlm name 'semctl' + LIBC_SUFFIX ;
 {$endif}
-function semctl(semid:longint; semnum:longint; cmd:longint):longint;cdecl;external libc_nlm name 'semctl';
-function semget(key:key_t; nsems:longint; semflag:longint):longint;cdecl;external libc_nlm name 'semget';
-function semop(semid:longint; sops:Psembuf; nsops:size_t):longint;cdecl;external libc_nlm name 'semop';
-function semop(semid:longint; var sops:Tsembuf; nsops:size_t):longint;cdecl;external libc_nlm name 'semop';
+function semctl(semid:longint; semnum:longint; cmd:longint):longint;cdecl;external libc_nlm name 'semctl' + LIBC_SUFFIX ;
+function semget(key:key_t; nsems:longint; semflag:longint):longint;cdecl;external libc_nlm name 'semget' + LIBC_SUFFIX ;
+function semop(semid:longint; sops:Psembuf; nsops:size_t):longint;cdecl;external libc_nlm name 'semop' + LIBC_SUFFIX ;
+function semop(semid:longint; var sops:Tsembuf; nsops:size_t):longint;cdecl;external libc_nlm name 'semop' + LIBC_SUFFIX ;
 
 
 // sys/sendfile.h
 
-function sendfile(out_fd,in_fd:longint; offset:Poff_t; count:size_t):ssize_t;cdecl;external libc_nlm name 'sendfile';
-function sendfile64(out_fd,in_fd:longint; offset:Poff64_t; count:size_t):ssize_t;cdecl;external libc_nlm name 'sendfile64';
+function sendfile(out_fd,in_fd:longint; offset:Poff_t; count:size_t):ssize_t;cdecl;external libc_nlm name 'sendfile' + LIBC_SUFFIX ;
+function sendfile64(out_fd,in_fd:longint; offset:Poff64_t; count:size_t):ssize_t;cdecl;external libc_nlm name 'sendfile64' + LIBC_SUFFIX ;
 
 
 // sys/shm.h
@@ -1486,11 +1499,11 @@ type
 (** unsupported pragma#pragma pack()*)
 
 
-function shmat(shmid:longint; shmaddr:pointer; shmflag:longint):pointer;cdecl;external libc_nlm name 'shmat';
-function shmctl(shmid:longint; cmd:longint; buf:Pshmid_ds):longint;cdecl;external libc_nlm name 'shmctl';
+function shmat(shmid:longint; shmaddr:pointer; shmflag:longint):pointer;cdecl;external libc_nlm name 'shmat' + LIBC_SUFFIX ;
+function shmctl(shmid:longint; cmd:longint; buf:Pshmid_ds):longint;cdecl;external libc_nlm name 'shmctl' + LIBC_SUFFIX ;
 
-function shmdt(shmaddr:pointer):longint;cdecl;external libc_nlm name 'shmdt';
-function shmget(key:key_t; size:size_t; shmflag:longint):longint;cdecl;external libc_nlm name 'shmget';
+function shmdt(shmaddr:pointer):longint;cdecl;external libc_nlm name 'shmdt' + LIBC_SUFFIX ;
+function shmget(key:key_t; size:size_t; shmflag:longint):longint;cdecl;external libc_nlm name 'shmget' + LIBC_SUFFIX ;
 
 // signal.h
 
@@ -1549,22 +1562,22 @@ type
      end;
 
 type TCDeclProc1LIntPara = procedure (_para1:longint); cdecl;
-function Fpraise(_para1:longint):longint;cdecl;external libc_nlm name 'raise';
-function Fpsignal(sig:longint; func:TCDeclProc1LIntPara):TCDeclProc1LIntPara;cdecl;external libc_nlm name 'signal';
-function Fpsigwait(_set:Psigset_t; sig:Plongint):longint;cdecl;external libc_nlm name 'sigwait';
+function Fpraise(_para1:longint):longint;cdecl;external libc_nlm name 'raise' + LIBC_SUFFIX ;
+function Fpsignal(sig:longint; func:TCDeclProc1LIntPara):TCDeclProc1LIntPara;cdecl;external libc_nlm name 'signal' + LIBC_SUFFIX ;
+function Fpsigwait(_set:Psigset_t; sig:Plongint):longint;cdecl;external libc_nlm name 'sigwait' + LIBC_SUFFIX ;
 { signal vector functions...  }
 
-//!! function sigaction(sig:longint; act:Psigaction; oact:Psigaction):longint;cdecl;external libc_nlm name 'sigaction';
+//!! function sigaction(sig:longint; act:Psigaction; oact:Psigaction):longint;cdecl;external libc_nlm name 'sigaction' + LIBC_SUFFIX ;
 
-function Fpsigaddset(_para1:Psigset_t; _para2:longint):longint;cdecl;external libc_nlm name 'sigaddset';
-function Fpsigdelset(_para1:Psigset_t; _para2:longint):longint;cdecl;external libc_nlm name 'sigdelset';
-function Fpsigismember(_para1:Psigset_t; _para2:longint):longint;cdecl;external libc_nlm name 'sigismember';
-function Fpsigfillset(_para1:Psigset_t):longint;cdecl;external libc_nlm name 'sigfillset';
-function Fpsigemptyset(_para1:Psigset_t):longint;cdecl;external libc_nlm name 'sigemptyset';
-function Fpsigpending(_set:Psigset_t):longint;cdecl;external libc_nlm name 'sigpending';
-function Fpsigsuspend(mask:Psigset_t):longint;cdecl;external libc_nlm name 'sigsuspend';
-function Fpsigprocmask(how:longint; act:Psigset_t; oldact:Psigset_t):longint;cdecl;external libc_nlm name 'sigprocmask';
-function Fpkill(pid:pid_t; sig:longint):longint;cdecl;external libc_nlm name 'kill';
+function Fpsigaddset(_para1:Psigset_t; _para2:longint):longint;cdecl;external libc_nlm name 'sigaddset' + LIBC_SUFFIX ;
+function Fpsigdelset(_para1:Psigset_t; _para2:longint):longint;cdecl;external libc_nlm name 'sigdelset' + LIBC_SUFFIX ;
+function Fpsigismember(_para1:Psigset_t; _para2:longint):longint;cdecl;external libc_nlm name 'sigismember' + LIBC_SUFFIX ;
+function Fpsigfillset(_para1:Psigset_t):longint;cdecl;external libc_nlm name 'sigfillset' + LIBC_SUFFIX ;
+function Fpsigemptyset(_para1:Psigset_t):longint;cdecl;external libc_nlm name 'sigemptyset' + LIBC_SUFFIX ;
+function Fpsigpending(_set:Psigset_t):longint;cdecl;external libc_nlm name 'sigpending' + LIBC_SUFFIX ;
+function Fpsigsuspend(mask:Psigset_t):longint;cdecl;external libc_nlm name 'sigsuspend' + LIBC_SUFFIX ;
+function Fpsigprocmask(how:longint; act:Psigset_t; oldact:Psigset_t):longint;cdecl;external libc_nlm name 'sigprocmask' + LIBC_SUFFIX ;
+function Fpkill(pid:pid_t; sig:longint):longint;cdecl;external libc_nlm name 'kill' + LIBC_SUFFIX ;
 
 
 // sys/socket.h
@@ -1583,8 +1596,8 @@ type
 (** unsupported pragma#pragma pack()*)
 
 
-function Fpreadv(fildes:longint; iov:Piovec; iovcnt:longint):ssize_t;cdecl;external libc_nlm name 'readv';
-function Fpwritev(fildes:longint; iov:Piovec; iovcnt:longint):ssize_t;cdecl;external libc_nlm name 'writev';
+function Fpreadv(fildes:longint; iov:Piovec; iovcnt:longint):ssize_t;cdecl;external libc_nlm name 'readv' + LIBC_SUFFIX ;
+function Fpwritev(fildes:longint; iov:Piovec; iovcnt:longint):ssize_t;cdecl;external libc_nlm name 'writev' + LIBC_SUFFIX ;
 { socket types...  }
 { option flags per-socket...  }
 { additional options, not kept in so_options...  }
@@ -1679,24 +1692,25 @@ type
 
 (** unsupported pragma#pragma pack()*)
 
-function Fpaccept(s:longint; addr:Psockaddr; len:Psize_t):longint;cdecl;external libc_nlm name 'accept';
-function Fpbind(s:longint; addr:Psockaddr; _para3:size_t):longint;cdecl;external libc_nlm name 'bind';
-function Fpconnect(s:longint; addr:Psockaddr; len:size_t):longint;cdecl;external libc_nlm name 'connect';
-function Fpgetpeername(s:longint; addr:Psockaddr; len:Psize_t):longint;cdecl;external libc_nlm name 'getpeername';
-function Fpgetsockname(s:longint; addr:Psockaddr; len:Psize_t):longint;cdecl;external libc_nlm name 'getsockname';
-function Fpgetsockopt(s:longint; level:longint; optname:longint; optval:pointer; optlen:Psize_t):longint;cdecl;external libc_nlm name 'getsockopt';
-function Fplisten(s:longint; backlog:longint):longint;cdecl;external libc_nlm name 'listen';
-function Fprecv(s:longint; buf:pointer; len:size_t; flags:longint):ssize_t;cdecl;external libc_nlm name 'recv';
+function Fpaccept(s:longint; addr:Psockaddr; len:Psize_t):longint;cdecl;external libc_nlm name 'accept' + LIBC_SUFFIX ;
+function Fpbind(s:longint; addr:Psockaddr; _para3:size_t):longint;cdecl;external libc_nlm name 'bind' + LIBC_SUFFIX ;
+function Fpconnect(s:longint; addr:Psockaddr; len:size_t):longint;cdecl;external libc_nlm name 'connect' + LIBC_SUFFIX ;
+function Fpgetpeername(s:longint; addr:Psockaddr; len:Psize_t):longint;cdecl;external libc_nlm name 'getpeername' + LIBC_SUFFIX ;
+function Fpgetsockname(s:longint; addr:Psockaddr; len:Psize_t):longint;cdecl;external libc_nlm name 'getsockname' + LIBC_SUFFIX ;
+function Fpgetsockopt(s:longint; level:longint; optname:longint; optval:pointer; optlen:Psize_t):longint;cdecl;external libc_nlm name 'getsockopt' + LIBC_SUFFIX ;
+function Fplisten(s:longint; backlog:longint):longint;cdecl;external libc_nlm name 'listen' + LIBC_SUFFIX ;
+function Fprecv(s:longint; buf:pointer; len:size_t; flags:longint):ssize_t;cdecl;external libc_nlm name 'recv' + LIBC_SUFFIX ;
 function Fprecvfrom(s:longint; buf:pointer; len:size_t; flags:longint; from:Psockaddr;
-           fromlen:Psize_t):ssize_t;cdecl;external libc_nlm name 'recvfrom';
-function Fprecvmsg(s:longint; msg:Pmsghdr; flags:longint):ssize_t;cdecl;external libc_nlm name 'recvmsg';
-function Fpsend(s:longint; msg:pointer; len:size_t; flags:longint):ssize_t;cdecl;external libc_nlm name 'send';
-function Fpsendmsg(s:longint; _para2:Pmsghdr; flags:longint):ssize_t;cdecl;external libc_nlm name 'sendmsg';
+           fromlen:Psize_t):ssize_t;cdecl;external libc_nlm name 'recvfrom' + LIBC_SUFFIX ;
+function Fprecvmsg(s:longint; msg:Pmsghdr; flags:longint):ssize_t;cdecl;external libc_nlm name 'recvmsg' + LIBC_SUFFIX ;
+function Fpsend(s:longint; msg:pointer; len:size_t; flags:longint):ssize_t;cdecl;external libc_nlm name 'send' + LIBC_SUFFIX ;
+function Fpsendmsg(s:longint; _para2:Pmsghdr; flags:longint):ssize_t;cdecl;external libc_nlm name 'sendmsg' + LIBC_SUFFIX ;
 function Fpsendto(s:longint; msg:pointer; len:size_t; flags:longint; _to:Psockaddr;
-           tolen:size_t):ssize_t;cdecl;external libc_nlm name 'sendto';
-function Fpsetsockopt(s:longint; level:longint; optname:longint; optval:pointer; optlen:size_t):longint;cdecl;external libc_nlm name 'setsockopt';
-function Fpshutdown(s:longint; how:longint):longint;cdecl;external libc_nlm name 'shutdown';
-function Fpsocket(domain:longint; _type:longint; protocol:longint):longint;cdecl;external libc_nlm name 'socket';
+           tolen:size_t):ssize_t;cdecl;external libc_nlm name 'sendto' + LIBC_SUFFIX ;
+function Fpsetsockopt(s:longint; level:longint; optname:longint; optval:pointer; optlen:size_t):longint;cdecl;external libc_nlm name 'setsockopt' + LIBC_SUFFIX ;
+function Fpshutdown(s:longint; how:longint):longint;cdecl;external libc_nlm name 'shutdown' + LIBC_SUFFIX ;
+function Fpsocket(domain:longint; _type:longint; protocol:longint):longint;cdecl;external libc_nlm name 'socket' + LIBC_SUFFIX ;
+
 
 
 // sys/sockio.h
@@ -2823,51 +2837,51 @@ type
 (** unsupported pragma#pragma pack()*)
 { File I/O...  }
 
-function NXClose(handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXClose';
-function NXFileAllocExtentWithHandle(fileHandle:NXHandle_t; offset:NXOffset_t; length:NXOffset_t; flags:dword):longint;cdecl;external libc_nlm name 'NXFileAllocExtentWithHandle';
-function NXFileCancelIo(async_id:NXAsyncId_t; wait:NXBool_t; status:PNXBool_t):longint;cdecl;external libc_nlm name 'NXFileCancelIo';
-function NXFileFlushBuffers(fileHandle:NXHandle_t; flags:dword; offset:NXOffset_t; length:NXOffset_t):longint;cdecl;external libc_nlm name 'NXFileFlushBuffers';
+function NXClose(handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXClose' + LIBC_SUFFIX ;
+function NXFileAllocExtentWithHandle(fileHandle:NXHandle_t; offset:NXOffset_t; length:NXOffset_t; flags:dword):longint;cdecl;external libc_nlm name 'NXFileAllocExtentWithHandle' + LIBC_SUFFIX ;
+function NXFileCancelIo(async_id:NXAsyncId_t; wait:NXBool_t; status:PNXBool_t):longint;cdecl;external libc_nlm name 'NXFileCancelIo' + LIBC_SUFFIX ;
+function NXFileFlushBuffers(fileHandle:NXHandle_t; flags:dword; offset:NXOffset_t; length:NXOffset_t):longint;cdecl;external libc_nlm name 'NXFileFlushBuffers' + LIBC_SUFFIX ;
 
-function NXFileGetLength(pathCtx:NXPathCtx_t; pathname:pointer; length:PNXOffset_t):longint;cdecl;external libc_nlm name 'NXFileGetLength';
-function NXFileGetLengthWithHandle(fileHandle:NXHandle_t; length:PNXOffset_t):longint;cdecl;external libc_nlm name 'NXFileGetLengthWithHandle';
+function NXFileGetLength(pathCtx:NXPathCtx_t; pathname:pointer; length:PNXOffset_t):longint;cdecl;external libc_nlm name 'NXFileGetLength' + LIBC_SUFFIX ;
+function NXFileGetLengthWithHandle(fileHandle:NXHandle_t; length:PNXOffset_t):longint;cdecl;external libc_nlm name 'NXFileGetLengthWithHandle' + LIBC_SUFFIX ;
 
-function NXFileOpen(pathCtx:NXPathCtx_t; pathname:pointer; mode:NXMode_t; fileHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXFileOpen';
-function NXFileOpenEx(openSpec:PNXFileOpenSpec_t; fileHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXFileOpenEx';
-function NXFileRangeLock(fileHandle:NXHandle_t; flags:dword; offset:NXOffset_t; length:NXSOffset_t):longint;cdecl;external libc_nlm name 'NXFileRangeLock';
-function NXFileRangeLockEx(lockSpec:NXFileRangeLockSpec_t):longint;cdecl;external libc_nlm name 'NXFileRangeLockEx';
-function NXFileRangeUnlock(fileHandle:NXHandle_t; flags:dword; offset:NXOffset_t; length:NXSOffset_t):longint;cdecl;external libc_nlm name 'NXFileRangeUnlock';
-function NXFileRangeUnlockEx(lockSpec:NXFileRangeLockSpec_t):longint;cdecl;external libc_nlm name 'NXFileRangeUnlockEx';
-function NXFileRemoveWithHandle(handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXFileRemoveWithHandle';
+function NXFileOpen(pathCtx:NXPathCtx_t; pathname:pointer; mode:NXMode_t; fileHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXFileOpen' + LIBC_SUFFIX ;
+function NXFileOpenEx(openSpec:PNXFileOpenSpec_t; fileHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXFileOpenEx' + LIBC_SUFFIX ;
+function NXFileRangeLock(fileHandle:NXHandle_t; flags:dword; offset:NXOffset_t; length:NXSOffset_t):longint;cdecl;external libc_nlm name 'NXFileRangeLock' + LIBC_SUFFIX ;
+function NXFileRangeLockEx(lockSpec:NXFileRangeLockSpec_t):longint;cdecl;external libc_nlm name 'NXFileRangeLockEx' + LIBC_SUFFIX ;
+function NXFileRangeUnlock(fileHandle:NXHandle_t; flags:dword; offset:NXOffset_t; length:NXSOffset_t):longint;cdecl;external libc_nlm name 'NXFileRangeUnlock' + LIBC_SUFFIX ;
+function NXFileRangeUnlockEx(lockSpec:NXFileRangeLockSpec_t):longint;cdecl;external libc_nlm name 'NXFileRangeUnlockEx' + LIBC_SUFFIX ;
+function NXFileRemoveWithHandle(handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXFileRemoveWithHandle' + LIBC_SUFFIX ;
 
-function NXFileRenameWithHandle(fileHandle:NXHandle_t; targetPathCtx:NXPathCtx_t; newname:pointer; overwrite:NXBool_t):longint;cdecl;external libc_nlm name 'NXFileRenameWithHandle';
-function NXFileSetLength(pathCtx:NXPathCtx_t; pathname:pointer; length:NXOffset_t; flags:dword):longint;cdecl;external libc_nlm name 'NXFileSetLength';
-function NXFileSetLengthWithHandle(fileHandle:NXHandle_t; length:NXOffset_t; flags:dword):longint;cdecl;external libc_nlm name 'NXFileSetLengthWithHandle';
+function NXFileRenameWithHandle(fileHandle:NXHandle_t; targetPathCtx:NXPathCtx_t; newname:pointer; overwrite:NXBool_t):longint;cdecl;external libc_nlm name 'NXFileRenameWithHandle' + LIBC_SUFFIX ;
+function NXFileSetLength(pathCtx:NXPathCtx_t; pathname:pointer; length:NXOffset_t; flags:dword):longint;cdecl;external libc_nlm name 'NXFileSetLength' + LIBC_SUFFIX ;
+function NXFileSetLengthWithHandle(fileHandle:NXHandle_t; length:NXOffset_t; flags:dword):longint;cdecl;external libc_nlm name 'NXFileSetLengthWithHandle' + LIBC_SUFFIX ;
 function NXRead(handle:NXHandle_t; offset:NXOffset_t; length:size_t; address:pointer; flags:dword;
-           bytesRead:Psize_t):longint;cdecl;external libc_nlm name 'NXRead';
-function NXReadEx(ioInfo:PNXIo_t; ioAsyncId:PNXAsyncId_t):longint;cdecl;external libc_nlm name 'NXReadEx';
+           bytesRead:Psize_t):longint;cdecl;external libc_nlm name 'NXRead' + LIBC_SUFFIX ;
+function NXReadEx(ioInfo:PNXIo_t; ioAsyncId:PNXAsyncId_t):longint;cdecl;external libc_nlm name 'NXReadEx' + LIBC_SUFFIX ;
 
-function NXRemove(pathCtx:NXPathCtx_t; pathname:pointer):longint;cdecl;external libc_nlm name 'NXRemove';
+function NXRemove(pathCtx:NXPathCtx_t; pathname:pointer):longint;cdecl;external libc_nlm name 'NXRemove' + LIBC_SUFFIX ;
 
 
-function NXRename(sourcePathCtx:NXPathCtx_t; oldname:pointer; targetPathCtx:NXPathCtx_t; newname:pointer; overwrite:NXBool_t):longint;cdecl;external libc_nlm name 'NXRename';
+function NXRename(sourcePathCtx:NXPathCtx_t; oldname:pointer; targetPathCtx:NXPathCtx_t; newname:pointer; overwrite:NXBool_t):longint;cdecl;external libc_nlm name 'NXRename' + LIBC_SUFFIX ;
 
 function NXWrite(handle:NXHandle_t; offset:NXOffset_t; length:size_t; address:pointer; flags:dword;
-           bytesWritten:Psize_t):longint;cdecl;external libc_nlm name 'NXWrite';
-function NXWriteEx(ioInfo:PNXIo_t; ioAsyncId:PNXAsyncId_t):longint;cdecl;external libc_nlm name 'NXWriteEx';
+           bytesWritten:Psize_t):longint;cdecl;external libc_nlm name 'NXWrite' + LIBC_SUFFIX ;
+function NXWriteEx(ioInfo:PNXIo_t; ioAsyncId:PNXAsyncId_t):longint;cdecl;external libc_nlm name 'NXWriteEx' + LIBC_SUFFIX ;
 { Additional I/O (including FIFOs, devices, etc.)...  }
 
 function NXDeviceOpen(pathCtx:NXPathCtx_t; name:pointer; mode:NXMode_t; shareMode:NXShareMode_t; flags:dword;
-           ioBlockSize:Psize_t; deviceHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXDeviceOpen';
+           ioBlockSize:Psize_t; deviceHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXDeviceOpen' + LIBC_SUFFIX ;
 
-function NXFifoOpen(pathCtx:NXPathCtx_t; pathname:pointer; mode:NXMode_t; fifoSize:size_t; fifoHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXFifoOpen';
-function NXIoSetBlockingState(handle:NXHandle_t; blocking:NXBool_t):longint;cdecl;external libc_nlm name 'NXIoSetBlockingState';
-function NXIoGetOpenMode(handle:NXHandle_t; mode:PNXMode_t):longint;cdecl;external libc_nlm name 'NXIoGetOpenMode';
-
-
-function NXLinkCreate(srcPathCtx:NXPathCtx_t; source:pointer; tgtPathCtx:PNXPathCtx_t; target:pointer; _type:longint):longint;cdecl;external libc_nlm name 'NXLinkCreate';
+function NXFifoOpen(pathCtx:NXPathCtx_t; pathname:pointer; mode:NXMode_t; fifoSize:size_t; fifoHandle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXFifoOpen' + LIBC_SUFFIX ;
+function NXIoSetBlockingState(handle:NXHandle_t; blocking:NXBool_t):longint;cdecl;external libc_nlm name 'NXIoSetBlockingState' + LIBC_SUFFIX ;
+function NXIoGetOpenMode(handle:NXHandle_t; mode:PNXMode_t):longint;cdecl;external libc_nlm name 'NXIoGetOpenMode' + LIBC_SUFFIX ;
 
 
-function NXLinkCreateSymbolic(srcPathCtx:NXPathCtx_t; linkname:pointer; target:pointer):longint;cdecl;external libc_nlm name 'NXLinkCreateSymbolic';
+function NXLinkCreate(srcPathCtx:NXPathCtx_t; source:pointer; tgtPathCtx:PNXPathCtx_t; target:pointer; _type:longint):longint;cdecl;external libc_nlm name 'NXLinkCreate' + LIBC_SUFFIX ;
+
+
+function NXLinkCreateSymbolic(srcPathCtx:NXPathCtx_t; linkname:pointer; target:pointer):longint;cdecl;external libc_nlm name 'NXLinkCreateSymbolic' + LIBC_SUFFIX ;
 { macro for useful alias...  }
 { basic change bits for NXSetAttr()...  }
 { flag values for NXDirAttr_t and NXDeEnum_t, etc...  }
@@ -3039,36 +3053,36 @@ type
 (** unsupported pragma#pragma pack()*)
 { Path context...  }
 
-function NXFreePathContext(pathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'NXFreePathContext';
+function NXFreePathContext(pathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'NXFreePathContext' + LIBC_SUFFIX ;
 
-function NXCreatePathContext(pathCtx:NXPathCtx_t; pathname:pchar; format:NXPathFormat_t; securityBadge:pointer; newPathCtx:PNXPathCtx_t):longint;cdecl;external libc_nlm name 'NXCreatePathContext';
-function NXCreatePathContext(pathCtx:NXPathCtx_t; pathname:pchar; format:NXPathFormat_t; securityBadge:pointer; var newPathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'NXCreatePathContext';
-function NXCreatePathContextWithFid(fid:NXFid_t; format:NXPathFormat_t; securityBadge:pointer; newPathCtx:PNXPathCtx_t):longint;cdecl;external libc_nlm name 'NXCreatePathContextWithFid';
+function NXCreatePathContext(pathCtx:NXPathCtx_t; pathname:pchar; format:NXPathFormat_t; securityBadge:pointer; newPathCtx:PNXPathCtx_t):longint;cdecl;external libc_nlm name 'NXCreatePathContext' + LIBC_SUFFIX ;
+function NXCreatePathContext(pathCtx:NXPathCtx_t; pathname:pchar; format:NXPathFormat_t; securityBadge:pointer; var newPathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'NXCreatePathContext' + LIBC_SUFFIX ;
+function NXCreatePathContextWithFid(fid:NXFid_t; format:NXPathFormat_t; securityBadge:pointer; newPathCtx:PNXPathCtx_t):longint;cdecl;external libc_nlm name 'NXCreatePathContextWithFid' + LIBC_SUFFIX ;
 { Directory I/O...  }
 
-function NXDirCreate(pathCtx:NXPathCtx_t; pathname:pointer; reserved:pointer; newPathCtx:PNXPathCtx_t):longint;cdecl;external libc_nlm name 'NXDirCreate';
+function NXDirCreate(pathCtx:NXPathCtx_t; pathname:pointer; reserved:pointer; newPathCtx:PNXPathCtx_t):longint;cdecl;external libc_nlm name 'NXDirCreate' + LIBC_SUFFIX ;
 
-function NXDirRemove(pathCtx:NXPathCtx_t; pathname:pointer):longint;cdecl;external libc_nlm name 'NXDirRemove';
+function NXDirRemove(pathCtx:NXPathCtx_t; pathname:pointer):longint;cdecl;external libc_nlm name 'NXDirRemove' + LIBC_SUFFIX ;
 { Directory entry attributes...  }
 
 function NXGetAttr(pathCtx:NXPathCtx_t; pathname:pointer; level:NXDeLevel_t; buffer:pointer; length:size_t;
-           flags:dword):longint;cdecl;external libc_nlm name 'NXGetAttr';
+           flags:dword):longint;cdecl;external libc_nlm name 'NXGetAttr' + LIBC_SUFFIX ;
 function NXGetAttrWithHandle(handle:NXHandle_t; format:NXPathFormat_t; level:NXDeLevel_t; buffer:pointer; length:size_t;
-           flags:dword):longint;cdecl;external libc_nlm name 'NXGetAttrWithHandle';
+           flags:dword):longint;cdecl;external libc_nlm name 'NXGetAttrWithHandle' + LIBC_SUFFIX ;
 
 
-function NXSetAttr(pathCtx:NXPathCtx_t; pathname:pointer; level:NXDeLevel_t; buffer:pointer; changeBits:NXChangeBits_t):longint;cdecl;external libc_nlm name 'NXSetAttr';
+function NXSetAttr(pathCtx:NXPathCtx_t; pathname:pointer; level:NXDeLevel_t; buffer:pointer; changeBits:NXChangeBits_t):longint;cdecl;external libc_nlm name 'NXSetAttr' + LIBC_SUFFIX ;
 
-function NXSetAttrWithHandle(handle:NXHandle_t; format:NXPathFormat_t; level:NXDeLevel_t; buffer:pointer; changeBits:NXChangeBits_t):longint;cdecl;external libc_nlm name 'NXSetAttrWithHandle';
+function NXSetAttrWithHandle(handle:NXHandle_t; format:NXPathFormat_t; level:NXDeLevel_t; buffer:pointer; changeBits:NXChangeBits_t):longint;cdecl;external libc_nlm name 'NXSetAttrWithHandle' + LIBC_SUFFIX ;
 { Subdirectory enumeration...  }
-function NXDirMarkInit(handle:NXHandle_t; dirMark:PNXDirMark_t):longint;cdecl;external libc_nlm name 'NXDirMarkInit';
-function NXDirMarkInit(handle:NXHandle_t; var dirMark:NXDirMark_t):longint;cdecl;external libc_nlm name 'NXDirMarkInit';
-function NXDirEnumEnd(handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXDirEnumEnd';
+function NXDirMarkInit(handle:NXHandle_t; dirMark:PNXDirMark_t):longint;cdecl;external libc_nlm name 'NXDirMarkInit' + LIBC_SUFFIX ;
+function NXDirMarkInit(handle:NXHandle_t; var dirMark:NXDirMark_t):longint;cdecl;external libc_nlm name 'NXDirMarkInit' + LIBC_SUFFIX ;
+function NXDirEnumEnd(handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXDirEnumEnd' + LIBC_SUFFIX ;
 function NXDirEnumGetEntries(handle:NXHandle_t; start:PNXDirMark_t; buffer:pointer; length:size_t; entriesReturned:Psize_t;
-           next:PNXDirMark_t; sequenceGuarantee:PNXBool_t):longint;cdecl;external libc_nlm name 'NXDirEnumGetEntries';
+           next:PNXDirMark_t; sequenceGuarantee:PNXBool_t):longint;cdecl;external libc_nlm name 'NXDirEnumGetEntries' + LIBC_SUFFIX ;
 
-function NXDirEnumStart(pathCtx:NXPathCtx_t; pathname:pchar; level:NXDeLevel_t; handle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXDirEnumStart';
-function NXDirEnumStart(pathCtx:NXPathCtx_t; pathname:pchar; level:NXDeLevel_t; var handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXDirEnumStart';
+function NXDirEnumStart(pathCtx:NXPathCtx_t; pathname:pchar; level:NXDeLevel_t; handle:PNXHandle_t):longint;cdecl;external libc_nlm name 'NXDirEnumStart' + LIBC_SUFFIX ;
+function NXDirEnumStart(pathCtx:NXPathCtx_t; pathname:pchar; level:NXDeLevel_t; var handle:NXHandle_t):longint;cdecl;external libc_nlm name 'NXDirEnumStart' + LIBC_SUFFIX ;
 
 
 // nks/doswin.h
@@ -3089,120 +3103,120 @@ type
 (** unsupported pragma#pragma pack()*)
 
 
-function mbsrtowcs(__restrict:Pwchar_t; __restrict1:PPchar; _para3:size_t; __restrict2:Pmbstate_t):size_t;cdecl;external libc_nlm name 'mbsrtowcs';
+function mbsrtowcs(__restrict:Pwchar_t; __restrict1:PPchar; _para3:size_t; __restrict2:Pmbstate_t):size_t;cdecl;external libc_nlm name 'mbsrtowcs' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function fwprintf(__restrict:P_iobuf; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'fwprintf';
+function fwprintf(__restrict:P_iobuf; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'fwprintf' + LIBC_SUFFIX ;
 {$endif}
-function fwprintf(__restrict:P_iobuf; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'fwprintf';
+function fwprintf(__restrict:P_iobuf; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'fwprintf' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function fwscanf(__restrict:P_iobuf; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'fwscanf';
+function fwscanf(__restrict:P_iobuf; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'fwscanf' + LIBC_SUFFIX ;
 {$endif}
-function fwscanf(__restrict:P_iobuf; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'fwscanf';
+function fwscanf(__restrict:P_iobuf; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'fwscanf' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function swprintf(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'swprintf';
+function swprintf(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'swprintf' + LIBC_SUFFIX ;
 {$endif}
-function swprintf(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'swprintf';
+function swprintf(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'swprintf' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function swscanf(__restrict:Pwchar_t; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'swscanf';
+function swscanf(__restrict:Pwchar_t; __restrict1:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'swscanf' + LIBC_SUFFIX ;
 {$endif}
-function swscanf(__restrict:Pwchar_t; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'swscanf';
+function swscanf(__restrict:Pwchar_t; __restrict1:Pwchar_t):longint;cdecl;external libc_nlm name 'swscanf' + LIBC_SUFFIX ;
 
-function vfwprintf(__restrict:P_iobuf; __restrict1:Pwchar_t; _para3:va_list):longint;cdecl;external libc_nlm name 'vfwprintf';
+function vfwprintf(__restrict:P_iobuf; __restrict1:Pwchar_t; _para3:va_list):longint;cdecl;external libc_nlm name 'vfwprintf' + LIBC_SUFFIX ;
 
-function vfwscanf(_para1:P_iobuf; _para2:Pwchar_t; _para3:va_list):longint;cdecl;external libc_nlm name 'vfwscanf';
+function vfwscanf(_para1:P_iobuf; _para2:Pwchar_t; _para3:va_list):longint;cdecl;external libc_nlm name 'vfwscanf' + LIBC_SUFFIX ;
 
-function vwscanf(_para1:Pwchar_t; _para2:va_list):longint;cdecl;external libc_nlm name 'vwscanf';
-function vswscanf(_para1:Pwchar_t; _para2:Pwchar_t; _para3:va_list):longint;cdecl;external libc_nlm name 'vswscanf';
-function wcrtomb(__restrict:Pchar; _para2:wchar_t; __restrict1:Pmbstate_t):size_t;cdecl;external libc_nlm name 'wcrtomb';
-function wcscat(__restrict:Pwchar_t; __restrict1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcscat';
-function wcschr(_para1:Pwchar_t; _para2:wchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcschr';
-function wcscmp(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcscmp';
-function wcscoll(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcscoll';
-function wcscpy(__restrict:Pwchar_t; __restrict1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcscpy';
-function wcscspn(_para1:Pwchar_t; _para2:Pwchar_t):size_t;cdecl;external libc_nlm name 'wcscspn';
-function wcsftime(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t; __restrict2:Ptm):size_t;cdecl;external libc_nlm name 'wcsftime';
-function wcslen(_para1:Pwchar_t):size_t;cdecl;external libc_nlm name 'wcslen';
-function wcsncat(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsncat';
-function wcsncmp(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsncmp';
-function wcsncpy(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsncpy';
-function wcspbrk(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcspbrk';
-function wcsrchr(_para1:Pwchar_t; _para2:wchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsrchr';
-function wcsrtombs(__restrict:Pchar; __restrict1:PPwchar_t; _para3:size_t; __restrict2:Pmbstate_t):size_t;cdecl;external libc_nlm name 'wcsrtombs';
-function wcsspn(_para1:Pwchar_t; _para2:Pwchar_t):size_t;cdecl;external libc_nlm name 'wcsspn';
-function wcsstr(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsstr';
-function wcstod(__restrict:Pwchar_t; __restrict1:PPwchar_t):double;cdecl;external libc_nlm name 'wcstod';
-function wcstof(__restrict:Pwchar_t; __restrict1:PPwchar_t):double;cdecl;external libc_nlm name 'wcstof';
-function wcstok(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcstok';
-function wcstok_r(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcstok_r';
-function wcstol(__restrict:Pwchar_t; __restrict1:PPwchar_t; xx:longint):longint;cdecl;external libc_nlm name 'wcstol';
+function vwscanf(_para1:Pwchar_t; _para2:va_list):longint;cdecl;external libc_nlm name 'vwscanf' + LIBC_SUFFIX ;
+function vswscanf(_para1:Pwchar_t; _para2:Pwchar_t; _para3:va_list):longint;cdecl;external libc_nlm name 'vswscanf' + LIBC_SUFFIX ;
+function wcrtomb(__restrict:Pchar; _para2:wchar_t; __restrict1:Pmbstate_t):size_t;cdecl;external libc_nlm name 'wcrtomb' + LIBC_SUFFIX ;
+function wcscat(__restrict:Pwchar_t; __restrict1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcscat' + LIBC_SUFFIX ;
+function wcschr(_para1:Pwchar_t; _para2:wchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcschr' + LIBC_SUFFIX ;
+function wcscmp(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcscmp' + LIBC_SUFFIX ;
+function wcscoll(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcscoll' + LIBC_SUFFIX ;
+function wcscpy(__restrict:Pwchar_t; __restrict1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcscpy' + LIBC_SUFFIX ;
+function wcscspn(_para1:Pwchar_t; _para2:Pwchar_t):size_t;cdecl;external libc_nlm name 'wcscspn' + LIBC_SUFFIX ;
+function wcsftime(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t; __restrict2:Ptm):size_t;cdecl;external libc_nlm name 'wcsftime' + LIBC_SUFFIX ;
+function wcslen(_para1:Pwchar_t):size_t;cdecl;external libc_nlm name 'wcslen' + LIBC_SUFFIX ;
+function wcsncat(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsncat' + LIBC_SUFFIX ;
+function wcsncmp(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsncmp' + LIBC_SUFFIX ;
+function wcsncpy(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsncpy' + LIBC_SUFFIX ;
+function wcspbrk(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcspbrk' + LIBC_SUFFIX ;
+function wcsrchr(_para1:Pwchar_t; _para2:wchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsrchr' + LIBC_SUFFIX ;
+function wcsrtombs(__restrict:Pchar; __restrict1:PPwchar_t; _para3:size_t; __restrict2:Pmbstate_t):size_t;cdecl;external libc_nlm name 'wcsrtombs' + LIBC_SUFFIX ;
+function wcsspn(_para1:Pwchar_t; _para2:Pwchar_t):size_t;cdecl;external libc_nlm name 'wcsspn' + LIBC_SUFFIX ;
+function wcsstr(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsstr' + LIBC_SUFFIX ;
+function wcstod(__restrict:Pwchar_t; __restrict1:PPwchar_t):double;cdecl;external libc_nlm name 'wcstod' + LIBC_SUFFIX ;
+function wcstof(__restrict:Pwchar_t; __restrict1:PPwchar_t):double;cdecl;external libc_nlm name 'wcstof' + LIBC_SUFFIX ;
+function wcstok(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcstok' + LIBC_SUFFIX ;
+function wcstok_r(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcstok_r' + LIBC_SUFFIX ;
+function wcstol(__restrict:Pwchar_t; __restrict1:PPwchar_t; xx:longint):longint;cdecl;external libc_nlm name 'wcstol' + LIBC_SUFFIX ;
 
 // long double wcstold(const wchar_t * __restrict1, wchar_t ** __restrict);
 // long double wcstold(const wchar_t * __restrict1, wchar_t ** __restrict);
 
-function wcstoll(__restrict:Pwchar_t; __restrict1:PPwchar_t; xx:longint):Tint64;cdecl;external libc_nlm name 'wcstoll';
-function wcstoul(__restrict:Pwchar_t; __restrict1:PPwchar_t; _para3:longint):dword;cdecl;external libc_nlm name 'wcstoul';
-function wcstoull(__restrict:Pwchar_t; __restrict1:PPwchar_t; _para3:longint):Tuint64;cdecl;external libc_nlm name 'wcstoull';
-function wcsxfrm(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):size_t;cdecl;external libc_nlm name 'wcsxfrm';
-function wctob(_para1:wint_t):longint;cdecl;external libc_nlm name 'wctob';
-function wmemchr(ws:Pwchar_t; wc:wchar_t; n:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemchr';
-function wmemcmp(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wmemcmp';
-function wmemcpy(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemcpy';
-function wmemmove(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemmove';
-function wmemset(ws:Pwchar_t; wc:wchar_t; n:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemset';
-function putwc(_para1:wchar_t; _para2:P_iobuf):wint_t;cdecl;external libc_nlm name 'putwc';
-function putwchar(_para1:wchar_t):wint_t;cdecl;external libc_nlm name 'putwchar';
-function fwide(_para1:P_iobuf; _para2:longint):longint;cdecl;external libc_nlm name 'fwide';
-function fputwc(_para1:wchar_t; _para2:P_iobuf):wint_t;cdecl;external libc_nlm name 'fputwc';
-function fputws(__restrict:Pwchar_t; __restrict1:P_iobuf):longint;cdecl;external libc_nlm name 'fputws';
-function fgetwc(_para1:P_iobuf):wint_t;cdecl;external libc_nlm name 'fgetwc';
-function fgetws(__restrict:Pwchar_t; _para2:longint; __restrict1:P_iobuf):Pwchar_t;cdecl;external libc_nlm name 'fgetws';
-function getwc(_para1:P_iobuf):wint_t;cdecl;external libc_nlm name 'getwc';
-function getwchar:wint_t;cdecl;external libc_nlm name 'getwchar';
-function ungetwc(_para1:wint_t; __restrict:P_iobuf):wint_t;cdecl;external libc_nlm name 'ungetwc';
+function wcstoll(__restrict:Pwchar_t; __restrict1:PPwchar_t; xx:longint):Tint64;cdecl;external libc_nlm name 'wcstoll' + LIBC_SUFFIX ;
+function wcstoul(__restrict:Pwchar_t; __restrict1:PPwchar_t; _para3:longint):dword;cdecl;external libc_nlm name 'wcstoul' + LIBC_SUFFIX ;
+function wcstoull(__restrict:Pwchar_t; __restrict1:PPwchar_t; _para3:longint):Tuint64;cdecl;external libc_nlm name 'wcstoull' + LIBC_SUFFIX ;
+function wcsxfrm(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):size_t;cdecl;external libc_nlm name 'wcsxfrm' + LIBC_SUFFIX ;
+function wctob(_para1:wint_t):longint;cdecl;external libc_nlm name 'wctob' + LIBC_SUFFIX ;
+function wmemchr(ws:Pwchar_t; wc:wchar_t; n:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemchr' + LIBC_SUFFIX ;
+function wmemcmp(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wmemcmp' + LIBC_SUFFIX ;
+function wmemcpy(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemcpy' + LIBC_SUFFIX ;
+function wmemmove(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemmove' + LIBC_SUFFIX ;
+function wmemset(ws:Pwchar_t; wc:wchar_t; n:size_t):Pwchar_t;cdecl;external libc_nlm name 'wmemset' + LIBC_SUFFIX ;
+function putwc(_para1:wchar_t; _para2:P_iobuf):wint_t;cdecl;external libc_nlm name 'putwc' + LIBC_SUFFIX ;
+function putwchar(_para1:wchar_t):wint_t;cdecl;external libc_nlm name 'putwchar' + LIBC_SUFFIX ;
+function fwide(_para1:P_iobuf; _para2:longint):longint;cdecl;external libc_nlm name 'fwide' + LIBC_SUFFIX ;
+function fputwc(_para1:wchar_t; _para2:P_iobuf):wint_t;cdecl;external libc_nlm name 'fputwc' + LIBC_SUFFIX ;
+function fputws(__restrict:Pwchar_t; __restrict1:P_iobuf):longint;cdecl;external libc_nlm name 'fputws' + LIBC_SUFFIX ;
+function fgetwc(_para1:P_iobuf):wint_t;cdecl;external libc_nlm name 'fgetwc' + LIBC_SUFFIX ;
+function fgetws(__restrict:Pwchar_t; _para2:longint; __restrict1:P_iobuf):Pwchar_t;cdecl;external libc_nlm name 'fgetws' + LIBC_SUFFIX ;
+function getwc(_para1:P_iobuf):wint_t;cdecl;external libc_nlm name 'getwc' + LIBC_SUFFIX ;
+function getwchar:wint_t;cdecl;external libc_nlm name 'getwchar' + LIBC_SUFFIX ;
+function ungetwc(_para1:wint_t; __restrict:P_iobuf):wint_t;cdecl;external libc_nlm name 'ungetwc' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function wprintf(__restrict:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'wprintf';
+function wprintf(__restrict:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'wprintf' + LIBC_SUFFIX ;
 {$endif}
-function wprintf(__restrict:Pwchar_t):longint;cdecl;external libc_nlm name 'wprintf';
+function wprintf(__restrict:Pwchar_t):longint;cdecl;external libc_nlm name 'wprintf' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function wscanf(__restrict:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'wscanf';
+function wscanf(__restrict:Pwchar_t; args:array of const):longint;cdecl;external libc_nlm name 'wscanf' + LIBC_SUFFIX ;
 {$endif}
-function wscanf(__restrict:Pwchar_t):longint;cdecl;external libc_nlm name 'wscanf';
-function vwprintf(__restrict:Pwchar_t; _para2:va_list):longint;cdecl;external libc_nlm name 'vwprintf';
-function vswprintf(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t; _para4:va_list):longint;cdecl;external libc_nlm name 'vswprintf';
-function wcscasecmp(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcscasecmp';
-function wcserror(_para1:longint):Pwchar_t;cdecl;external libc_nlm name 'wcserror';
-function wcsicmp(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcsicmp';
-function wcsindex(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsindex';
+function wscanf(__restrict:Pwchar_t):longint;cdecl;external libc_nlm name 'wscanf' + LIBC_SUFFIX ;
+function vwprintf(__restrict:Pwchar_t; _para2:va_list):longint;cdecl;external libc_nlm name 'vwprintf' + LIBC_SUFFIX ;
+function vswprintf(__restrict:Pwchar_t; _para2:size_t; __restrict1:Pwchar_t; _para4:va_list):longint;cdecl;external libc_nlm name 'vswprintf' + LIBC_SUFFIX ;
+function wcscasecmp(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcscasecmp' + LIBC_SUFFIX ;
+function wcserror(_para1:longint):Pwchar_t;cdecl;external libc_nlm name 'wcserror' + LIBC_SUFFIX ;
+function wcsicmp(_para1:Pwchar_t; _para2:Pwchar_t):longint;cdecl;external libc_nlm name 'wcsicmp' + LIBC_SUFFIX ;
+function wcsindex(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsindex' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function wcslist(_para1:Pwchar_t; _para2:Pwchar_t; args:array of const):Pwchar_t;cdecl;external libc_nlm name 'wcslist';
+function wcslist(_para1:Pwchar_t; _para2:Pwchar_t; args:array of const):Pwchar_t;cdecl;external libc_nlm name 'wcslist' + LIBC_SUFFIX ;
 {$endif}
-function wcslist(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcslist';
-function wcslwr(_para1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcslwr';
-function wcsmemcmp(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsmemcmp';
-function wcsmemcpy(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsmemcpy';
-function wcsmemmove(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsmemmove';
-function wcsncasecmp(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsncasecmp';
-function wcsnicmp(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsnicmp';
-function wcsnset(_para1:Pwchar_t; _para2:longint; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsnset';
-function wcsrev(_para1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsrev';
-function wcsrindex(_para1:Pwchar_t; _para2:size_t; _para3:longint):Pwchar_t;cdecl;external libc_nlm name 'wcsrindex';
-function wcsset(_para1:Pwchar_t; _para2:longint):Pwchar_t;cdecl;external libc_nlm name 'wcsset';
-function wcsupr(_para1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsupr';
-procedure wungettok(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t);cdecl;external libc_nlm name 'wungettok';
-procedure wungettok_r(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t);cdecl;external libc_nlm name 'wungettok_r';
-function btowc(_para1:longint):wint_t;cdecl;external libc_nlm name 'btowc';
-function mbrlen(__restrict:Pchar; _para2:size_t; __restrict1:Pmbstate_t):longint;cdecl;external libc_nlm name 'mbrlen';
-function mbrtowc(__restrict:Pwchar_t; __restrict1:Pchar; _para3:size_t; __restrict2:Pmbstate_t):longint;cdecl;external libc_nlm name 'mbrtowc';
-function mbsinit(_para1:Pmbstate_t):longint;cdecl;external libc_nlm name 'mbsinit';
-function wcwidth(_para1:wchar_t):longint;cdecl;external libc_nlm name 'wcwidth';
-function wcswidth(_para1:Pwchar_t; _para2:size_t):longint;cdecl;external libc_nlm name 'wcswidth';
+function wcslist(_para1:Pwchar_t; _para2:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcslist' + LIBC_SUFFIX ;
+function wcslwr(_para1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcslwr' + LIBC_SUFFIX ;
+function wcsmemcmp(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsmemcmp' + LIBC_SUFFIX ;
+function wcsmemcpy(__restrict:Pwchar_t; __restrict1:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsmemcpy' + LIBC_SUFFIX ;
+function wcsmemmove(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsmemmove' + LIBC_SUFFIX ;
+function wcsncasecmp(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsncasecmp' + LIBC_SUFFIX ;
+function wcsnicmp(_para1:Pwchar_t; _para2:Pwchar_t; _para3:size_t):longint;cdecl;external libc_nlm name 'wcsnicmp' + LIBC_SUFFIX ;
+function wcsnset(_para1:Pwchar_t; _para2:longint; _para3:size_t):Pwchar_t;cdecl;external libc_nlm name 'wcsnset' + LIBC_SUFFIX ;
+function wcsrev(_para1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsrev' + LIBC_SUFFIX ;
+function wcsrindex(_para1:Pwchar_t; _para2:size_t; _para3:longint):Pwchar_t;cdecl;external libc_nlm name 'wcsrindex' + LIBC_SUFFIX ;
+function wcsset(_para1:Pwchar_t; _para2:longint):Pwchar_t;cdecl;external libc_nlm name 'wcsset' + LIBC_SUFFIX ;
+function wcsupr(_para1:Pwchar_t):Pwchar_t;cdecl;external libc_nlm name 'wcsupr' + LIBC_SUFFIX ;
+procedure wungettok(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t);cdecl;external libc_nlm name 'wungettok' + LIBC_SUFFIX ;
+procedure wungettok_r(__restrict:Pwchar_t; __restrict1:Pwchar_t; __restrict2:PPwchar_t);cdecl;external libc_nlm name 'wungettok_r' + LIBC_SUFFIX ;
+function btowc(_para1:longint):wint_t;cdecl;external libc_nlm name 'btowc' + LIBC_SUFFIX ;
+function mbrlen(__restrict:Pchar; _para2:size_t; __restrict1:Pmbstate_t):longint;cdecl;external libc_nlm name 'mbrlen' + LIBC_SUFFIX ;
+function mbrtowc(__restrict:Pwchar_t; __restrict1:Pchar; _para3:size_t; __restrict2:Pmbstate_t):longint;cdecl;external libc_nlm name 'mbrtowc' + LIBC_SUFFIX ;
+function mbsinit(_para1:Pmbstate_t):longint;cdecl;external libc_nlm name 'mbsinit' + LIBC_SUFFIX ;
+function wcwidth(_para1:wchar_t):longint;cdecl;external libc_nlm name 'wcwidth' + LIBC_SUFFIX ;
+function wcswidth(_para1:Pwchar_t; _para2:size_t):longint;cdecl;external libc_nlm name 'wcswidth' + LIBC_SUFFIX ;
 { macros that overcome implementation's function call overhead...  }
 { attributes for NXDirAttrDos_t 'attrib' field...  }
 
@@ -3326,22 +3340,22 @@ type
      SCROLL_LOCK_IS_ON = $10;
      _PASSWORD_LEN     = 128;  // suggested 'maxlen' argument for getpassword()...
   { string-embeddable color representations...  }
-     COLOR_STR_BLACK   = '\x1B[0;30m';
-     COLOR_STR_MAROON  = '\x1B[0;31m';
-     COLOR_STR_GREEN   = '\x1B[0;32m';
-     COLOR_STR_OLIVE   = '\x1B[0;33m';
-     COLOR_STR_NAVY    = '\x1B[0;34m';
-     COLOR_STR_PURPLE  = '\x1B[0;35m';
-     COLOR_STR_TEAL    = '\x1B[0;36m';
-     COLOR_STR_SILVER  = '\x1B[0;37m';
-     COLOR_STR_GREY    = '\x1B[1;30m';
-     COLOR_STR_RED     = '\x1B[1;31m';
-     COLOR_STR_LIME    = '\x1B[1;32m';
-     COLOR_STR_YELLOW  = '\x1B[1;33m';
-     COLOR_STR_BLUE    = '\x1B[1;34m';
-     COLOR_STR_MAGENTA = '\x1B[1;35m';
-     COLOR_STR_CYAN    = '\x1B[1;36m';
-     COLOR_STR_WHITE   = '\x1B[1;37m';
+     COLOR_STR_BLACK   = '\x1B[0;30m' + LIBC_SUFFIX ;
+     COLOR_STR_MAROON  = '\x1B[0;31m' + LIBC_SUFFIX ;
+     COLOR_STR_GREEN   = '\x1B[0;32m' + LIBC_SUFFIX ;
+     COLOR_STR_OLIVE   = '\x1B[0;33m' + LIBC_SUFFIX ;
+     COLOR_STR_NAVY    = '\x1B[0;34m' + LIBC_SUFFIX ;
+     COLOR_STR_PURPLE  = '\x1B[0;35m' + LIBC_SUFFIX ;
+     COLOR_STR_TEAL    = '\x1B[0;36m' + LIBC_SUFFIX ;
+     COLOR_STR_SILVER  = '\x1B[0;37m' + LIBC_SUFFIX ;
+     COLOR_STR_GREY    = '\x1B[1;30m' + LIBC_SUFFIX ;
+     COLOR_STR_RED     = '\x1B[1;31m' + LIBC_SUFFIX ;
+     COLOR_STR_LIME    = '\x1B[1;32m' + LIBC_SUFFIX ;
+     COLOR_STR_YELLOW  = '\x1B[1;33m' + LIBC_SUFFIX ;
+     COLOR_STR_BLUE    = '\x1B[1;34m' + LIBC_SUFFIX ;
+     COLOR_STR_MAGENTA = '\x1B[1;35m' + LIBC_SUFFIX ;
+     COLOR_STR_CYAN    = '\x1B[1;36m' + LIBC_SUFFIX ;
+     COLOR_STR_WHITE   = '\x1B[1;37m' + LIBC_SUFFIX ;
 
      COLOR_STR_NORMAL  = COLOR_STR_SILVER;  // dim/unhighlighted white
      COLOR_STR_GRAY    = COLOR_STR_GREY;
@@ -3403,61 +3417,61 @@ type
      SCREEN_DUMMY            = $00000100;
      SCREEN_HIDDEN           = $00000200;
 
-procedure clearscreen;cdecl;external libc_nlm name 'clearscreen';
+procedure clearscreen;cdecl;external libc_nlm name 'clearscreen' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function consoleprintf(txt:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'consoleprintf';
-function consoleprintf(txt:Pchar):longint;cdecl;external libc_nlm name 'consoleprintf';
+function consoleprintf(txt:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'consoleprintf' + LIBC_SUFFIX ;
+function consoleprintf(txt:Pchar):longint;cdecl;external libc_nlm name 'consoleprintf' + LIBC_SUFFIX ;
 {$endif}
-function __consoleprintfl1(txt:Pchar;p1:longint):longint;cdecl;external libc_nlm name 'consoleprintf';
-function __consoleprintfl2(txt:Pchar;p1,p2:longint):longint;cdecl;external libc_nlm name 'consoleprintf';
-function __consoleprintfl3(txt:Pchar;p1,p2,p3:longint):longint;cdecl;external libc_nlm name 'consoleprintf';
-function getscreenmode(mode:Pdword):longint;cdecl;external libc_nlm name 'getscreenmode';
-function getscreenmode(var mode:dword):longint;cdecl;external libc_nlm name 'getscreenmode';
-function getcharacter:longint;cdecl;external libc_nlm name 'getcharacter';
-function getkey(keytype,modifer,scancode:Plongint):longint;cdecl;external libc_nlm name 'getkey';
-function getkey(var keytype, modifer, scancode:longint):longint;cdecl;external libc_nlm name 'getkey';
-function getalternateconsole:scr_t;cdecl;external libc_nlm name 'getalternateconsole';
-function getnetwareconsole:scr_t;cdecl;external libc_nlm name 'getnetwareconsole';
-function getnetwarelogger:scr_t;cdecl;external libc_nlm name 'getnetwarelogger';
+function __consoleprintfl1(txt:Pchar;p1:longint):longint;cdecl;external libc_nlm name 'consoleprintf' + LIBC_SUFFIX ;
+function __consoleprintfl2(txt:Pchar;p1,p2:longint):longint;cdecl;external libc_nlm name 'consoleprintf' + LIBC_SUFFIX ;
+function __consoleprintfl3(txt:Pchar;p1,p2,p3:longint):longint;cdecl;external libc_nlm name 'consoleprintf' + LIBC_SUFFIX ;
+function getscreenmode(mode:Pdword):longint;cdecl;external libc_nlm name 'getscreenmode' + LIBC_SUFFIX ;
+function getscreenmode(var mode:dword):longint;cdecl;external libc_nlm name 'getscreenmode' + LIBC_SUFFIX ;
+function getcharacter:longint;cdecl;external libc_nlm name 'getcharacter' + LIBC_SUFFIX ;
+function getkey(keytype,modifer,scancode:Plongint):longint;cdecl;external libc_nlm name 'getkey' + LIBC_SUFFIX ;
+function getkey(var keytype, modifer, scancode:longint):longint;cdecl;external libc_nlm name 'getkey' + LIBC_SUFFIX ;
+function getalternateconsole:scr_t;cdecl;external libc_nlm name 'getalternateconsole' + LIBC_SUFFIX ;
+function getnetwareconsole:scr_t;cdecl;external libc_nlm name 'getnetwareconsole' + LIBC_SUFFIX ;
+function getnetwarelogger:scr_t;cdecl;external libc_nlm name 'getnetwarelogger' + LIBC_SUFFIX ;
 
-function getpassword(prompt,password:Pchar; maxlen:size_t):Pchar;cdecl;external libc_nlm name 'getpassword';
-function getscreenhandle:scr_t;cdecl;external libc_nlm name 'getscreenhandle';
-function getstring(_string:Pchar; max:size_t; display:longint):Pchar;cdecl;external libc_nlm name 'getstring';
-function gotorowcol(row, col:longint):longint;cdecl;external libc_nlm name 'gotorowcol';
-function kbhit:longint;cdecl;external libc_nlm name 'kbhit';
-function pressanykey:longint;cdecl;external libc_nlm name 'pressanykey';
-function pressanykeytocontinue:longint;cdecl;external libc_nlm name 'pressanykey';
-function pressescape:longint;cdecl;external libc_nlm name 'pressescape';
-function pressenter:longint;cdecl;external libc_nlm name 'pressenter';
-function putcharacter(ch:longint):longint;cdecl;external libc_nlm name 'putcharacter';
+function getpassword(prompt,password:Pchar; maxlen:size_t):Pchar;cdecl;external libc_nlm name 'getpassword' + LIBC_SUFFIX ;
+function getscreenhandle:scr_t;cdecl;external libc_nlm name 'getscreenhandle' + LIBC_SUFFIX ;
+function getstring(_string:Pchar; max:size_t; display:longint):Pchar;cdecl;external libc_nlm name 'getstring' + LIBC_SUFFIX ;
+function gotorowcol(row, col:longint):longint;cdecl;external libc_nlm name 'gotorowcol' + LIBC_SUFFIX ;
+function kbhit:longint;cdecl;external libc_nlm name 'kbhit' + LIBC_SUFFIX ;
+function pressanykey:longint;cdecl;external libc_nlm name 'pressanykey' + LIBC_SUFFIX ;
+function pressanykeytocontinue:longint;cdecl;external libc_nlm name 'pressanykey' + LIBC_SUFFIX ;
+function pressescape:longint;cdecl;external libc_nlm name 'pressescape' + LIBC_SUFFIX ;
+function pressenter:longint;cdecl;external libc_nlm name 'pressenter' + LIBC_SUFFIX ;
+function putcharacter(ch:longint):longint;cdecl;external libc_nlm name 'putcharacter' + LIBC_SUFFIX ;
 
-function putstring(_string:Pchar):longint;cdecl;external libc_nlm name 'putstring';
+function putstring(_string:Pchar):longint;cdecl;external libc_nlm name 'putstring' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-function screenprintf(_para1:scr_t; _para2:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'screenprintf';
+function screenprintf(_para1:scr_t; _para2:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'screenprintf' + LIBC_SUFFIX ;
 {$endif}
-function screenprintf(_para1:scr_t; _para2:Pchar):longint;cdecl;external libc_nlm name 'screenprintf';
-function screenprintf(_para1:scr_t; _para2:Pchar; l1:longint):longint;cdecl;external libc_nlm name 'screenprintf';
-function screenprintf(_para1:scr_t; _para2:Pchar; l1,l2:longint):longint;cdecl;external libc_nlm name 'screenprintf';
-function screenprintf(_para1:scr_t; _para2:Pchar; l1,l2,l3:longint):longint;cdecl;external libc_nlm name 'screenprintf';
+function screenprintf(_para1:scr_t; _para2:Pchar):longint;cdecl;external libc_nlm name 'screenprintf' + LIBC_SUFFIX ;
+function screenprintf(_para1:scr_t; _para2:Pchar; l1:longint):longint;cdecl;external libc_nlm name 'screenprintf' + LIBC_SUFFIX ;
+function screenprintf(_para1:scr_t; _para2:Pchar; l1,l2:longint):longint;cdecl;external libc_nlm name 'screenprintf' + LIBC_SUFFIX ;
+function screenprintf(_para1:scr_t; _para2:Pchar; l1,l2,l3:longint):longint;cdecl;external libc_nlm name 'screenprintf' + LIBC_SUFFIX ;
 
-function setscreenmode(mode:dword):longint;cdecl;external libc_nlm name 'setscreenmode';
+function setscreenmode(mode:dword):longint;cdecl;external libc_nlm name 'setscreenmode' + LIBC_SUFFIX ;
 
-function renamescreen(name:Pchar):longint;cdecl;external libc_nlm name 'renamescreen';
-procedure ringbell;cdecl;external libc_nlm name 'ringbell';
-function ungetcharacter(ch:longint):longint;cdecl;external libc_nlm name 'ungetcharacter';
-function ungetkey(keytype:longint; modifer:longint; scancode:longint):longint;cdecl;external libc_nlm name 'ungetkey';
+function renamescreen(name:Pchar):longint;cdecl;external libc_nlm name 'renamescreen' + LIBC_SUFFIX ;
+procedure ringbell;cdecl;external libc_nlm name 'ringbell' + LIBC_SUFFIX ;
+function ungetcharacter(ch:longint):longint;cdecl;external libc_nlm name 'ungetcharacter' + LIBC_SUFFIX ;
+function ungetkey(keytype:longint; modifer:longint; scancode:longint):longint;cdecl;external libc_nlm name 'ungetkey' + LIBC_SUFFIX ;
 
-function vconsoleprintf(_para1:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vconsoleprintf';
+function vconsoleprintf(_para1:Pchar; _para2:va_list):longint;cdecl;external libc_nlm name 'vconsoleprintf' + LIBC_SUFFIX ;
 
-function vscreenprintf(_para1:scr_t; _para2:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vscreenprintf';
-function wherecol:longint;cdecl;external libc_nlm name 'wherecol';
-function whererow:longint;cdecl;external libc_nlm name 'whererow';
-function whererowcol(row,col:Plongint):longint;cdecl;external libc_nlm name 'whererowcol';
-function whererowcol(var row,col:longint):longint;cdecl;external libc_nlm name 'whererowcol';
+function vscreenprintf(_para1:scr_t; _para2:Pchar; _para3:va_list):longint;cdecl;external libc_nlm name 'vscreenprintf' + LIBC_SUFFIX ;
+function wherecol:longint;cdecl;external libc_nlm name 'wherecol' + LIBC_SUFFIX ;
+function whererow:longint;cdecl;external libc_nlm name 'whererow' + LIBC_SUFFIX ;
+function whererowcol(row,col:Plongint):longint;cdecl;external libc_nlm name 'whererowcol' + LIBC_SUFFIX ;
+function whererowcol(var row,col:longint):longint;cdecl;external libc_nlm name 'whererowcol' + LIBC_SUFFIX ;
 { obsolete...  }
-function getconsolehandle:scr_t;cdecl;external libc_nlm name 'getconsolehandle';
+function getconsolehandle:scr_t;cdecl;external libc_nlm name 'getconsolehandle' + LIBC_SUFFIX ;
 { direct NetWare OS interfaces...  }
 type
 
@@ -3469,28 +3483,36 @@ type
      SCROLL_NONE = 2147483647;
 
 
-procedure ActivatePopUpScreen(scrID:scr_t);cdecl;external libc_nlm name 'ActivatePopUpScreen';
-procedure ActivateScreen(scrID:scr_t);cdecl;external libc_nlm name 'ActivateScreen';
-procedure ChangeToSystemConsoleScreen;cdecl;external libc_nlm name 'ChangeToSystemConsoleScreen';
-function CheckIfScreenActive(scrID:scr_t; waitFlag:dword):longint;cdecl;external libc_nlm name 'CheckIfScreenActive';
-function CheckKeyStatus(scrID:scr_t):longint;cdecl;external libc_nlm name 'CheckKeyStatus';
-procedure ClearScreen(scrID:scr_t);cdecl;external libc_nlm name 'ClearScreen';
-procedure CloseScreen(scrID:scr_t);cdecl;external libc_nlm name 'CloseScreen';
-procedure ConsoleHungMenu;cdecl;external libc_nlm name 'ConsoleHungMenu';
-procedure DisableInputCursor(scrID:scr_t);cdecl;external libc_nlm name 'DisableInputCursor';
-function DisplayScreenLine(scrID:scr_t; line:dword; col:dword; length:dword; textAndAttr:Pbyte):longint;cdecl;external libc_nlm name 'DisplayScreenLine';
-function DisplayScreenText(scrID:scr_t; line:dword; col:dword; length:dword; text:Pchar):longint;cdecl;external libc_nlm name 'DisplayScreenText';
+procedure ActivatePopUpScreen(scrID:scr_t);cdecl;external libc_nlm name 'ActivatePopUpScreen' + LIBC_SUFFIX ;
+procedure ActivateScreen(scrID:scr_t);cdecl;external libc_nlm name 'ActivateScreen' + LIBC_SUFFIX ;
+procedure ChangeToSystemConsoleScreen;cdecl;external libc_nlm name 'ChangeToSystemConsoleScreen' + LIBC_SUFFIX ;
+function CheckIfScreenActive(scrID:scr_t; waitFlag:dword):longint;cdecl;external libc_nlm name 'CheckIfScreenActive' + LIBC_SUFFIX ;
+function CheckKeyStatus(scrID:scr_t):longint;cdecl;external libc_nlm name 'CheckKeyStatus' + LIBC_SUFFIX ;
+procedure ClearScreen(scrID:scr_t);cdecl;external libc_nlm name 'ClearScreen' + LIBC_SUFFIX ;
+procedure CloseScreen(scrID:scr_t);cdecl;external libc_nlm name 'CloseScreen' + LIBC_SUFFIX ;
+procedure ConsoleHungMenu;cdecl;external libc_nlm name 'ConsoleHungMenu' + LIBC_SUFFIX ;
+procedure DisableInputCursor(scrID:scr_t);cdecl;external libc_nlm name 'DisableInputCursor' + LIBC_SUFFIX ;
+function DisplayScreenLine(scrID:scr_t; line:dword; col:dword; length:dword; textAndAttr:Pbyte):longint;cdecl;external libc_nlm name 'DisplayScreenLine' + LIBC_SUFFIX ;
+function DisplayScreenText(scrID:scr_t; line:dword; col:dword; length:dword; text:Pchar):longint;cdecl;external libc_nlm name 'DisplayScreenText' + LIBC_SUFFIX ;
 function DisplayScreenTextWithAttribute(scrID:scr_t; line:dword; col:dword; length:dword; lineAttr:byte;
-           text:Pchar):longint;cdecl;external libc_nlm name 'DisplayScreenTextWithAttribute';
-procedure EnableInputCursor(scrID:scr_t);cdecl;external libc_nlm name 'EnableInputCursor';
-procedure EndPopUpScreen(scr:scr_t);cdecl;external libc_nlm name 'EndPopUpScreen';
+           text:Pchar):longint;cdecl;external libc_nlm name 'DisplayScreenTextWithAttribute' + LIBC_SUFFIX ;
+procedure EnableInputCursor(scrID:scr_t);cdecl;external libc_nlm name 'EnableInputCursor' + LIBC_SUFFIX ;
+procedure EndPopUpScreen(scr:scr_t);cdecl;external libc_nlm name 'EndPopUpScreen' + LIBC_SUFFIX ;
 function FillScreenArea(scrID:scr_t; line:dword; col:dword; height:dword; width:dword;
-           character:char; attr:byte):longint;cdecl;external libc_nlm name 'FillScreenArea';
+           character:char; attr:byte):longint;cdecl;external libc_nlm name 'FillScreenArea' + LIBC_SUFFIX ;
 function FillScreenAreaAttribute(scrID:scr_t; line:dword; col:dword; height:dword; width:dword;
-           attr:byte):longint;cdecl;external libc_nlm name 'FillScreenAreaAttribute';
+           attr:byte):longint;cdecl;external libc_nlm name 'FillScreenAreaAttribute' + LIBC_SUFFIX ;
+
+function GetConsoleSecuredFlag:longint;cdecl;external libc_nlm name 'GetConsoleSecuredFlag';
+function GetRawKeyWithScreen(scrID:scr_t; _type,value,status,scancode:Pbyte):longint;cdecl;external libc_nlm name 'GetRawKeyWithScreen';           
+function GetRawKeyWithScreen(scrID:scr_t; _type,value,status,scancode:Pbyte):longint;cdecl;external libc_nlm name 'GetRawKeyWithScreen';
+function GetRawKeyWithScreen(scrID:scr_t; var _type,value,status,scancode:byte):longint;cdecl;external libc_nlm name 'GetRawKeyWithScreen';
+function GetScreenPhysicalAddress:pointer;cdecl;external libc_nlm name 'GetScreenPhysicalAddress';
+           
+// system_nlm
+           
 function GetActiveScreen:scr_t;cdecl;external system_nlm name 'GetActiveScreen';
 function GetActualScreenSize(scrID:scr_t; height:Pdword; width:Pdword; bufferSize:Psize_t):longint;cdecl;external system_nlm name 'GetActualScreenSize';
-function GetConsoleSecuredFlag:longint;cdecl;external libc_nlm name 'GetConsoleSecuredFlag';
 procedure GetCursorStyle(scrID:scr_t; cursorStyle:Pword);cdecl;external system_nlm name 'GetCursorStyle';
 procedure GetCursorStyle(scrID:scr_t; var cursorStyle:word);cdecl;external system_nlm name 'GetCursorStyle';
 procedure GetInputCursorPosition(scrID:scr_t; row:Pword; col:Pword);cdecl;external system_nlm name 'GetInputCursorPosition';
@@ -3498,11 +3520,8 @@ procedure GetKey(scrID:scr_t; _type,value,status,scancode:Pbyte;linesToProtect:s
 procedure GetKey(scrID:scr_t; var _type,value,status,scancode:byte;linesToProtect:size_t);cdecl;external system_nlm name 'GetKey';
 procedure GetOutputCursorPosition(scrID:scr_t; row,col:Pword);cdecl;external system_nlm name 'GetOutputCursorPosition';
 procedure GetOutputCursorPosition(scrID:scr_t; var row,col:word);cdecl;external system_nlm name 'GetOutputCursorPosition';
-function GetRawKeyWithScreen(scrID:scr_t; _type,value,status,scancode:Pbyte):longint;cdecl;external libc_nlm name 'GetRawKeyWithScreen';
-function GetRawKeyWithScreen(scrID:scr_t; var _type,value,status,scancode:byte):longint;cdecl;external libc_nlm name 'GetRawKeyWithScreen';
 function GetScreenAddress:pointer;cdecl;external system_nlm name 'GetScreenAddress';  // not in protected mode
 function GetScreenName(scrID:scr_t; nameBuffer:Pchar):longint;cdecl;external system_nlm name 'GetScreenName';
-function GetScreenPhysicalAddress:pointer;cdecl;external libc_nlm name 'GetScreenPhysicalAddress';
 procedure GetScreenSize(height,width:Pword);cdecl;external system_nlm name 'GetScreenSize';
 procedure GetScreenSize(var height,width:word);cdecl;external system_nlm name 'GetScreenSize';
 
@@ -4894,48 +4913,48 @@ type
 
 
 function deconstruct(path:Pchar; server:Pchar; volume:Pchar; directory:Pchar; name:Pchar;
-           extension:Pchar; elements:Plongint; flags:Plongint):longint;cdecl;external libc_nlm name 'deconstruct';
+           extension:Pchar; elements:Plongint; flags:Plongint):longint;cdecl;external libc_nlm name 'deconstruct' + LIBC_SUFFIX ;
 function construct(path:Pchar; server:Pchar; volume:Pchar; directory:Pchar; name:Pchar;
-           extension:Pchar; flags:longint):longint;cdecl;external libc_nlm name 'construct';
+           extension:Pchar; flags:longint):longint;cdecl;external libc_nlm name 'construct' + LIBC_SUFFIX ;
 { extensions of client.h identity functions...  }
-function get_identity(pathctx:NXPathCtx_t; identity:Plongint):longint;cdecl;external libc_nlm name 'get_identity';
+function get_identity(pathctx:NXPathCtx_t; identity:Plongint):longint;cdecl;external libc_nlm name 'get_identity' + LIBC_SUFFIX ;
 { extensions of unistd.h current working directory I/O functions...  }
-function getcwdpath(buf:Pchar; pathCtx:PNXPathCtx_t; flags:dword):Pchar;cdecl;external libc_nlm name 'getcwdpath';
+function getcwdpath(buf:Pchar; pathCtx:PNXPathCtx_t; flags:dword):Pchar;cdecl;external libc_nlm name 'getcwdpath' + LIBC_SUFFIX ;
 
-function chdir2(path:Pchar):longint;cdecl;external libc_nlm name 'chdir2';
-function setcwd(pathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'setcwd';
-function setcwd2(pathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'setcwd2';
+function chdir2(path:Pchar):longint;cdecl;external libc_nlm name 'chdir2' + LIBC_SUFFIX ;
+function setcwd(pathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'setcwd' + LIBC_SUFFIX ;
+function setcwd2(pathCtx:NXPathCtx_t):longint;cdecl;external libc_nlm name 'setcwd2' + LIBC_SUFFIX ;
 { extensions of unistd.h file I/O functions...  }
-function Fpeof(fildes:longint):longint;cdecl;external libc_nlm name 'eof';
-function tell(fildes:longint):off_t;cdecl;external libc_nlm name 'tell';
-function Fptell(fildes:longint):off_t;cdecl;external libc_nlm name 'tell';
+function Fpeof(fildes:longint):longint;cdecl;external libc_nlm name 'eof' + LIBC_SUFFIX ;
+function tell(fildes:longint):off_t;cdecl;external libc_nlm name 'tell' + LIBC_SUFFIX ;
+function Fptell(fildes:longint):off_t;cdecl;external libc_nlm name 'tell' + LIBC_SUFFIX ;
 { extensions of sys/stat.h functions...  }
-function fgetstat(fildes:longint; buf:Pstat; requestmap:dword):longint;cdecl;external libc_nlm name 'fgetstat';
+function fgetstat(fildes:longint; buf:Pstat; requestmap:dword):longint;cdecl;external libc_nlm name 'fgetstat' + LIBC_SUFFIX ;
 
-function getstat(ctx:NXPathCtx_t; path:Pchar; buf:Pstat; requestmap:dword):longint;cdecl;external libc_nlm name 'getstat';
-function fgetstat_with_namespace(fildes:longint; buf:Pstat; requestmap:dword; _namespace:longint):longint;cdecl;external libc_nlm name 'fgetstat_with_namespace';
+function getstat(ctx:NXPathCtx_t; path:Pchar; buf:Pstat; requestmap:dword):longint;cdecl;external libc_nlm name 'getstat' + LIBC_SUFFIX ;
+function fgetstat_with_namespace(fildes:longint; buf:Pstat; requestmap:dword; _namespace:longint):longint;cdecl;external libc_nlm name 'fgetstat_with_namespace' + LIBC_SUFFIX ;
 
-function getstat_with_namespace(ctx:NXPathCtx_t; path:Pchar; buf:Pstat; requestmap:dword; _namespace:longint):longint;cdecl;external libc_nlm name 'getstat_with_namespace';
+function getstat_with_namespace(ctx:NXPathCtx_t; path:Pchar; buf:Pstat; requestmap:dword; _namespace:longint):longint;cdecl;external libc_nlm name 'getstat_with_namespace' + LIBC_SUFFIX ;
 { pathname format (namespace) state...  }
-function set_pathname_format(newformat:longint; oldformat:Plongint):longint;cdecl;external libc_nlm name 'set_pathname_format';
+function set_pathname_format(newformat:longint; oldformat:Plongint):longint;cdecl;external libc_nlm name 'set_pathname_format' + LIBC_SUFFIX ;
 { for use with Novell Clustering...  }
 
-function isclusteredvirtualserver(servername:Pchar):longint;cdecl;external libc_nlm name 'isclusteredvirtualserver';
+function isclusteredvirtualserver(servername:Pchar):longint;cdecl;external libc_nlm name 'isclusteredvirtualserver' + LIBC_SUFFIX ;
 { equivalent to CLib's FileServerFileCopy()...  }
 function fscopy(fildes1:longint; fildes2:longint; offset1:off64_t; offset2:off64_t; length:size_t;
-           nbytes:Psize_t):longint;cdecl;external libc_nlm name 'fscopy';
+           nbytes:Psize_t):longint;cdecl;external libc_nlm name 'fscopy' + LIBC_SUFFIX ;
 { equivalent to similarly named calls in CLib...  }
 
-function purgeerasedfile(path:Pchar; sequence:longint):longint;cdecl;external libc_nlm name 'purgeerasedfile';
+function purgeerasedfile(path:Pchar; sequence:longint):longint;cdecl;external libc_nlm name 'purgeerasedfile' + LIBC_SUFFIX ;
 
 
-function salvageerasedfile(pathName:Pchar; sequence:longint; newFileName:Pchar):longint;cdecl;external libc_nlm name 'salvageerasedfile';
+function salvageerasedfile(pathName:Pchar; sequence:longint; newFileName:Pchar):longint;cdecl;external libc_nlm name 'salvageerasedfile' + LIBC_SUFFIX ;
 
-function scanerasedfiles(path:Pchar; nextEntryNumber:Plongint; deletedFileInfo:PNWDIR):longint;cdecl;external libc_nlm name 'scanerasedfiles';
-function _fs_type(fildes:longint):longint;cdecl;external libc_nlm name '_fs_type';
-function _fildes_type(fildes:longint):longint;cdecl;external libc_nlm name '_fildes_type';
-function _fildes_from_nsskey(key:Tuint64; oflag:longint):longint;cdecl;external libc_nlm name '_fildes_from_nsskey';
-function _key_from_fildes(fildes:longint; _type:Plongint; err:Plongint):Tuint64;cdecl;external libc_nlm name '_key_from_fildes';
+function scanerasedfiles(path:Pchar; nextEntryNumber:Plongint; deletedFileInfo:PNWDIR):longint;cdecl;external libc_nlm name 'scanerasedfiles' + LIBC_SUFFIX ;
+function _fs_type(fildes:longint):longint;cdecl;external libc_nlm name '_fs_type' + LIBC_SUFFIX ;
+function _fildes_type(fildes:longint):longint;cdecl;external libc_nlm name '_fildes_type' + LIBC_SUFFIX ;
+function _fildes_from_nsskey(key:Tuint64; oflag:longint):longint;cdecl;external libc_nlm name '_fildes_from_nsskey' + LIBC_SUFFIX ;
+function _key_from_fildes(fildes:longint; _type:Plongint; err:Plongint):Tuint64;cdecl;external libc_nlm name '_key_from_fildes' + LIBC_SUFFIX ;
 { fast type of a file descriptor--st_mode in fstat()...  }
 { equates to move between NKS file handles and POSIX descriptors...  }
 { derivation of POSIX descriptor from NSS open file key...  }
@@ -5127,9 +5146,9 @@ type
      //NX_ENORESOURCE = NX_BADIDENT;
 
 
-procedure NXGetNKSVersion(major:Plongint; minor:Plongint; revision:Plongint; platformName:pointer; maxNameLength:size_t);cdecl;external libc_nlm name 'NXGetNKSVersion';
-procedure NXGetNKSVersion(var major, minor, revision:longint; platformName:pchar; maxNameLength:size_t);cdecl;external libc_nlm name 'NXGetNKSVersion';
-function NXStrError(errornumber:longint):Pchar;cdecl;external libc_nlm name 'NXStrError';
+procedure NXGetNKSVersion(major:Plongint; minor:Plongint; revision:Plongint; platformName:pointer; maxNameLength:size_t);cdecl;external libc_nlm name 'NXGetNKSVersion' + LIBC_SUFFIX ;
+procedure NXGetNKSVersion(var major, minor, revision:longint; platformName:pchar; maxNameLength:size_t);cdecl;external libc_nlm name 'NXGetNKSVersion' + LIBC_SUFFIX ;
+function NXStrError(errornumber:longint):Pchar;cdecl;external libc_nlm name 'NXStrError' + LIBC_SUFFIX ;
 
 
 // nks/mac.h
@@ -5331,12 +5350,12 @@ type
      NX_MEM_COMMIT        = $00000040;
      NX_MEM_RESERVE       = $00000100;
 
-function NXMemAlloc(size:size_t; alignment:size_t):pointer;cdecl;external libc_nlm name 'NXMemAlloc';
-function NXMemCtl(start:pointer; size:size_t; flags:dword):longint;cdecl;external libc_nlm name 'NXMemCtl';
-procedure NXMemFree(memory:pointer);cdecl;external libc_nlm name 'NXMemFree';
-function NXMemRealloc(old:pointer; newSize:size_t; alignment:size_t):pointer;cdecl;external libc_nlm name 'NXMemRealloc';
-function NXPageAlloc(pageCount:size_t; flags:dword):pointer;cdecl;external libc_nlm name 'NXPageAlloc';
-procedure NXPageFree(memory:pointer);cdecl;external libc_nlm name 'NXPageFree';
+function NXMemAlloc(size:size_t; alignment:size_t):pointer;cdecl;external libc_nlm name 'NXMemAlloc' + LIBC_SUFFIX ;
+function NXMemCtl(start:pointer; size:size_t; flags:dword):longint;cdecl;external libc_nlm name 'NXMemCtl' + LIBC_SUFFIX ;
+procedure NXMemFree(memory:pointer);cdecl;external libc_nlm name 'NXMemFree' + LIBC_SUFFIX ;
+function NXMemRealloc(old:pointer; newSize:size_t; alignment:size_t):pointer;cdecl;external libc_nlm name 'NXMemRealloc' + LIBC_SUFFIX ;
+function NXPageAlloc(pageCount:size_t; flags:dword):pointer;cdecl;external libc_nlm name 'NXPageAlloc' + LIBC_SUFFIX ;
+procedure NXPageFree(memory:pointer);cdecl;external libc_nlm name 'NXPageFree' + LIBC_SUFFIX ;
 
 
 { nks/netware.h =============================================================}
@@ -5355,25 +5374,25 @@ type
  The following are unofficial NKS interfaces and can only be used on NetWare.
  ----------------------------------------------------------------------------}
 
-procedure nxCancelCheck;cdecl;external libc_nlm name 'nxCancelCheck';
-procedure nxCancelDisable;cdecl;external libc_nlm name 'nxCancelDisable';
-procedure nxCancelEnable;cdecl;external libc_nlm name 'nxCancelEnable';
-function nxContextFlushName(context:PNXContext_t):longint;cdecl;external libc_nlm name 'nxContextFlushName';
+procedure nxCancelCheck;cdecl;external libc_nlm name 'nxCancelCheck' + LIBC_SUFFIX ;
+procedure nxCancelDisable;cdecl;external libc_nlm name 'nxCancelDisable' + LIBC_SUFFIX ;
+procedure nxCancelEnable;cdecl;external libc_nlm name 'nxCancelEnable' + LIBC_SUFFIX ;
+function nxContextFlushName(context:PNXContext_t):longint;cdecl;external libc_nlm name 'nxContextFlushName' + LIBC_SUFFIX ;
 
-function nxExportInterface(funcAddr:pointer; funcName:Pchar):longint;cdecl;external libc_nlm name 'nxExportInterface';
+function nxExportInterface(funcAddr:pointer; funcName:Pchar):longint;cdecl;external libc_nlm name 'nxExportInterface' + LIBC_SUFFIX ;
 
-function nxExportInterfaceWrapped(funcAddr:pointer; stackWords:longint; funcName:Pchar; reference:Ppointer):longint;cdecl;external libc_nlm name 'nxExportInterfaceWrapped';
-function nxGetEnviron:PPchar;cdecl;external libc_nlm name 'nxGetEnviron';
-function nxIsLoadedProtected:NXBool_t;cdecl;external libc_nlm name 'nxIsLoadedProtected';
-function nxIsProtectedAddress(_para1:pointer):NXBool_t;cdecl;external libc_nlm name 'nxIsProtectedAddress';
-function nxMemGetSize(block:pointer):size_t;cdecl;external libc_nlm name 'nxMemGetSize';
-procedure nxUnexportInterfaceWrapped(reference:pointer);cdecl;external libc_nlm name 'nxUnexportInterfaceWrapped';
+function nxExportInterfaceWrapped(funcAddr:pointer; stackWords:longint; funcName:Pchar; reference:Ppointer):longint;cdecl;external libc_nlm name 'nxExportInterfaceWrapped' + LIBC_SUFFIX ;
+function nxGetEnviron:PPchar;cdecl;external libc_nlm name 'nxGetEnviron' + LIBC_SUFFIX ;
+function nxIsLoadedProtected:NXBool_t;cdecl;external libc_nlm name 'nxIsLoadedProtected' + LIBC_SUFFIX ;
+function nxIsProtectedAddress(_para1:pointer):NXBool_t;cdecl;external libc_nlm name 'nxIsProtectedAddress' + LIBC_SUFFIX ;
+function nxMemGetSize(block:pointer):size_t;cdecl;external libc_nlm name 'nxMemGetSize' + LIBC_SUFFIX ;
+procedure nxUnexportInterfaceWrapped(reference:pointer);cdecl;external libc_nlm name 'nxUnexportInterfaceWrapped' + LIBC_SUFFIX ;
 { NetWare trustees...  }
 
-function nxAddTrustee(pathCtx:NXPathCtx_t; pathname:Pchar; objectID:dword; rights:dword):longint;cdecl;external libc_nlm name 'nxAddTrustee';
-function nxDeleteTrustee(pathCtx:NXPathCtx_t; pathname:Pchar; objectID:dword):longint;cdecl;external libc_nlm name 'nxDeleteTrustee';
+function nxAddTrustee(pathCtx:NXPathCtx_t; pathname:Pchar; objectID:dword; rights:dword):longint;cdecl;external libc_nlm name 'nxAddTrustee' + LIBC_SUFFIX ;
+function nxDeleteTrustee(pathCtx:NXPathCtx_t; pathname:Pchar; objectID:dword):longint;cdecl;external libc_nlm name 'nxDeleteTrustee' + LIBC_SUFFIX ;
 function nxScanTrustees(pathCtx:NXPathCtx_t; pathname:Pchar; sequence:dword; count:Pdword; trusteeVector:PnxTrustees_t;
-           nextSequence:Pdword):longint;cdecl;external libc_nlm name 'nxScanTrustees';
+           nextSequence:Pdword):longint;cdecl;external libc_nlm name 'nxScanTrustees' + LIBC_SUFFIX ;
 { wrap/unwrap sobriquets...  }
 // nks/synch.h
 
@@ -5418,55 +5437,52 @@ type
 { Mutexes...  }
 
 
-function NXMutexAlloc(flags:dword; hierarchy:NXHierarchy_t; info:PNXLockInfo_t):PNXMutex_t;cdecl;external libc_nlm name 'NXMutexAlloc';
-procedure NXMutexDeinit(mutex:PNXMutex_t);cdecl;external libc_nlm name 'NXMutexDeinit';
-function NXMutexDepth(mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXMutexDepth';
-procedure NXMutexFree(mutex:PNXMutex_t);cdecl;external libc_nlm name 'NXMutexFree';
-function NXMutexInit(mutex:PNXMutex_t; flags:dword; hierarchy:NXHierarchy_t; info:PNXLockInfo_t):longint;cdecl;external libc_nlm name 'NXMutexInit';
-function NXMutexIsOwned(mutex:PNXMutex_t):NXBool_t;cdecl;external libc_nlm name 'NXMutexIsOwned';
-function NXMutexTestFlag(mutex:PNXMutex_t; flag:dword):NXBool_t;cdecl;external libc_nlm name 'NXMutexTestFlag';
-function NXLock(mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXLock';
-function NXTryLock(mutex:PNXMutex_t):NXBool_t;cdecl;external libc_nlm name 'NXTryLock';
-function NXUnlock(mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXUnlock';
+function NXMutexAlloc(flags:dword; hierarchy:NXHierarchy_t; info:PNXLockInfo_t):PNXMutex_t;cdecl;external libc_nlm name 'NXMutexAlloc' + LIBC_SUFFIX ;
+procedure NXMutexDeinit(mutex:PNXMutex_t);cdecl;external libc_nlm name 'NXMutexDeinit' + LIBC_SUFFIX ;
+function NXMutexDepth(mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXMutexDepth' + LIBC_SUFFIX ;
+procedure NXMutexFree(mutex:PNXMutex_t);cdecl;external libc_nlm name 'NXMutexFree' + LIBC_SUFFIX ;
+function NXMutexInit(mutex:PNXMutex_t; flags:dword; hierarchy:NXHierarchy_t; info:PNXLockInfo_t):longint;cdecl;external libc_nlm name 'NXMutexInit' + LIBC_SUFFIX ;
+function NXMutexIsOwned(mutex:PNXMutex_t):NXBool_t;cdecl;external libc_nlm name 'NXMutexIsOwned' + LIBC_SUFFIX ;
+function NXMutexTestFlag(mutex:PNXMutex_t; flag:dword):NXBool_t;cdecl;external libc_nlm name 'NXMutexTestFlag' + LIBC_SUFFIX ;
+function NXLock(mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXLock' + LIBC_SUFFIX ;
+function NXTryLock(mutex:PNXMutex_t):NXBool_t;cdecl;external libc_nlm name 'NXTryLock' + LIBC_SUFFIX ;
+function NXUnlock(mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXUnlock' + LIBC_SUFFIX ;
 
 { Reader-writer locks...  }
-function NXRwLockAlloc(hierarchy:NXHierarchy_t; info:PNXLockInfo_t):PNXRwLock_t;cdecl;external libc_nlm name 'NXRwLockAlloc';
-procedure NXRwLockDeinit(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRwLockDeinit';
-procedure NXRwLockFree(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRwLockFree';
-function NXRwLockInit(lock:PNXRwLock_t; hierarchy:NXHierarchy_t; info:PNXLockInfo_t):longint;cdecl;external libc_nlm name 'NXRwLockInit';
-function NXRwLockIsOwned(lock:PNXRwLock_t; mode:dword):NXBool_t;cdecl;external libc_nlm name 'NXRwLockIsOwned';
-procedure NXRdLock(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRdLock';
-procedure NXWrLock(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXWrLock';
-function NXTryRdLock(lock:PNXRwLock_t):NXBool_t;cdecl;external libc_nlm name 'NXTryRdLock';
-function NXTryWrLock(lock:PNXRwLock_t):NXBool_t;cdecl;external libc_nlm name 'NXTryWrLock';
-procedure NXRwUnlock(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRwUnlock';
-function NXRwLockUpgrade(lock:PNXRwLock_t):longint;cdecl;external libc_nlm name 'NXRwLockUpgrade';
-function NXRwLockDowngrade(lock:PNXRwLock_t):longint;cdecl;external libc_nlm name 'NXRwLockDowngrade';
+function NXRwLockAlloc(hierarchy:NXHierarchy_t; info:PNXLockInfo_t):PNXRwLock_t;cdecl;external libc_nlm name 'NXRwLockAlloc' + LIBC_SUFFIX ;
+procedure NXRwLockDeinit(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRwLockDeinit' + LIBC_SUFFIX ;
+procedure NXRwLockFree(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRwLockFree' + LIBC_SUFFIX ;
+function NXRwLockInit(lock:PNXRwLock_t; hierarchy:NXHierarchy_t; info:PNXLockInfo_t):longint;cdecl;external libc_nlm name 'NXRwLockInit' + LIBC_SUFFIX ;
+function NXRwLockIsOwned(lock:PNXRwLock_t; mode:dword):NXBool_t;cdecl;external libc_nlm name 'NXRwLockIsOwned' + LIBC_SUFFIX ;
+procedure NXRdLock(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRdLock' + LIBC_SUFFIX ;
+procedure NXWrLock(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXWrLock' + LIBC_SUFFIX ;
+function NXTryRdLock(lock:PNXRwLock_t):NXBool_t;cdecl;external libc_nlm name 'NXTryRdLock' + LIBC_SUFFIX ;
+function NXTryWrLock(lock:PNXRwLock_t):NXBool_t;cdecl;external libc_nlm name 'NXTryWrLock' + LIBC_SUFFIX ;
+procedure NXRwUnlock(lock:PNXRwLock_t);cdecl;external libc_nlm name 'NXRwUnlock' + LIBC_SUFFIX ;
+function NXRwLockUpgrade(lock:PNXRwLock_t):longint;cdecl;external libc_nlm name 'NXRwLockUpgrade' + LIBC_SUFFIX ;
+function NXRwLockDowngrade(lock:PNXRwLock_t):longint;cdecl;external libc_nlm name 'NXRwLockDowngrade' + LIBC_SUFFIX ;
 { Semaphores...  }
-function NXSemaAlloc(count:dword; arg:pointer):PNXSema_t;cdecl;external libc_nlm name 'NXSemaAlloc';
-procedure NXSemaDeinit(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaDeinit';
-procedure NXSemaFree(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaFree';
-function NXSemaInit(sema:PNXSema_t; count:dword; arg:pointer):longint;cdecl;external libc_nlm name 'NXSemaInit';
-procedure NXSemaPost(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaPost';
-function NXSemaTryWait(sema:PNXSema_t):NXBool_t;cdecl;external libc_nlm name 'NXSemaTryWait';
-procedure NXSemaWait(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaWait';
+function NXSemaAlloc(count:dword; arg:pointer):PNXSema_t;cdecl;external libc_nlm name 'NXSemaAlloc' + LIBC_SUFFIX ;
+procedure NXSemaDeinit(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaDeinit' + LIBC_SUFFIX ;
+procedure NXSemaFree(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaFree' + LIBC_SUFFIX ;
+function NXSemaInit(sema:PNXSema_t; count:dword; arg:pointer):longint;cdecl;external libc_nlm name 'NXSemaInit' + LIBC_SUFFIX ;
+procedure NXSemaPost(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaPost' + LIBC_SUFFIX ;
+function NXSemaTryWait(sema:PNXSema_t):NXBool_t;cdecl;external libc_nlm name 'NXSemaTryWait' + LIBC_SUFFIX ;
+procedure NXSemaWait(sema:PNXSema_t);cdecl;external libc_nlm name 'NXSemaWait' + LIBC_SUFFIX ;
 { Condition variables...  }
-function NXCondAlloc(arg:pointer):PNXCond_t;cdecl;external libc_nlm name 'NXCondAlloc';
-procedure NXCondBroadcast(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondBroadcast';
-procedure NXCondDeinit(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondDeinit';
-procedure NXCondFree(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondFree';
-function NXCondInit(cond:PNXCond_t; arg:pointer):longint;cdecl;external libc_nlm name 'NXCondInit';
-procedure NXCondSignal(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondSignal';
-function NXCondWait(cond:PNXCond_t; mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXCondWait';
-function NXCondTimedWait(cond:PNXCond_t; mutex:PNXMutex_t; interval:dword):longint;cdecl;external libc_nlm name 'NXCondTimedWait';
-
-
-
+function NXCondAlloc(arg:pointer):PNXCond_t;cdecl;external libc_nlm name 'NXCondAlloc' + LIBC_SUFFIX ;
+procedure NXCondBroadcast(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondBroadcast' + LIBC_SUFFIX ;
+procedure NXCondDeinit(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondDeinit' + LIBC_SUFFIX ;
+procedure NXCondFree(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondFree' + LIBC_SUFFIX ;
+function NXCondInit(cond:PNXCond_t; arg:pointer):longint;cdecl;external libc_nlm name 'NXCondInit' + LIBC_SUFFIX ;
+procedure NXCondSignal(cond:PNXCond_t);cdecl;external libc_nlm name 'NXCondSignal' + LIBC_SUFFIX ;
+function NXCondWait(cond:PNXCond_t; mutex:PNXMutex_t):longint;cdecl;external libc_nlm name 'NXCondWait' + LIBC_SUFFIX ;
+function NXCondTimedWait(cond:PNXCond_t; mutex:PNXMutex_t; interval:dword):longint;cdecl;external libc_nlm name 'NXCondTimedWait' + LIBC_SUFFIX ;
 
 //  assert.h
 
-procedure _assert(_para1,_para2, _para3:Pchar; ActionCode:longint);cdecl;external libc_nlm name '_assert';
-procedure FpAssert(_para1,_para2, _para3:Pchar; ActionCode:longint);cdecl;external libc_nlm name '_assert';
+procedure _assert(_para1,_para2, _para3:Pchar; ActionCode:longint);cdecl;external libc_nlm name '_assert' + LIBC_SUFFIX ;
+procedure FpAssert(_para1,_para2, _para3:Pchar; ActionCode:longint);cdecl;external libc_nlm name '_assert' + LIBC_SUFFIX ;
 
 type
    Taction_code =  Longint;
@@ -5476,8 +5492,8 @@ Const                         // modifications to behavior of assert()
   __ABORT = 1;                // assert() aborts (normal, default action)
   __DEBUGGER = 2;             // assert() prints and drops into the debugger
 
-function assert_action(_para1:Taction_code):longint;cdecl;external libc_nlm name 'assert_action';
-function _assert_expr(_para1:longint; _para2,_para3,_para4:Pchar; _para5:longint):longint;cdecl;external libc_nlm name '_assert_expr';
+function assert_action(_para1:Taction_code):longint;cdecl;external libc_nlm name 'assert_action' + LIBC_SUFFIX ;
+function _assert_expr(_para1:longint; _para2,_para3,_para4:Pchar; _para5:longint):longint;cdecl;external libc_nlm name '_assert_expr' + LIBC_SUFFIX ;
 
 // nks/unix.h
 
@@ -5602,16 +5618,16 @@ type
 (** unsupported pragma#pragma pack()*)
 { Virtual machine management...  }
 
-function  NXVmDestroy(id:NXVmId_t):longint;cdecl;external libc_nlm name 'NXVmDestroy';
-procedure NXVmExit(status:longint);cdecl;external libc_nlm name 'NXVmExit';
-function  NXVmGetId:NXVmId_t;cdecl;external libc_nlm name 'NXVmGetId';
-function  NXVmGetWorkerThreadConfig(reserved:pointer; config:PNXVmWorkerThreadConfig_t):longint;cdecl;external libc_nlm name 'NXVmGetWorkerThreadConfig';
-function  NXVmGetStringType(_type:PNXStrType_t):longint;cdecl;external libc_nlm name 'NXVmGetStringType';
-function  NXVmJoin(wait_for:NXVmId_t; departed_vm:PNXVmId_t; status:Plongint):longint;cdecl;external libc_nlm name 'NXVmJoin';
-function  NXVmRegisterExitHandler(cleanup:TCDeclProc1PtrArg; arg:pointer):longint;cdecl;external libc_nlm name 'NXVmRegisterExitHandler';
-function  NXVmSetWorkerThreadConfig(reserved:pointer; config:PNXVmWorkerThreadConfig_t):longint;cdecl;external libc_nlm name 'NXVmSetWorkerThreadConfig';
-function  NXVmSpawn(name:PNXNameSpec_t; envSpec:PNXExecEnvSpec_t; flags:dword; newVm:PNXVmId_t):longint;cdecl;external libc_nlm name 'NXVmSpawn';
-function  NXVmUnregisterExitHandler(func:TCDeclProc1PtrArg; arg:pointer):longint;cdecl;external libc_nlm name 'NXVmUnregisterExitHandler';
+function  NXVmDestroy(id:NXVmId_t):longint;cdecl;external libc_nlm name 'NXVmDestroy' + LIBC_SUFFIX ;
+procedure NXVmExit(status:longint);cdecl;external libc_nlm name 'NXVmExit' + LIBC_SUFFIX ;
+function  NXVmGetId:NXVmId_t;cdecl;external libc_nlm name 'NXVmGetId' + LIBC_SUFFIX ;
+function  NXVmGetWorkerThreadConfig(reserved:pointer; config:PNXVmWorkerThreadConfig_t):longint;cdecl;external libc_nlm name 'NXVmGetWorkerThreadConfig' + LIBC_SUFFIX ;
+function  NXVmGetStringType(_type:PNXStrType_t):longint;cdecl;external libc_nlm name 'NXVmGetStringType' + LIBC_SUFFIX ;
+function  NXVmJoin(wait_for:NXVmId_t; departed_vm:PNXVmId_t; status:Plongint):longint;cdecl;external libc_nlm name 'NXVmJoin' + LIBC_SUFFIX ;
+function  NXVmRegisterExitHandler(cleanup:TCDeclProc1PtrArg; arg:pointer):longint;cdecl;external libc_nlm name 'NXVmRegisterExitHandler' + LIBC_SUFFIX ;
+function  NXVmSetWorkerThreadConfig(reserved:pointer; config:PNXVmWorkerThreadConfig_t):longint;cdecl;external libc_nlm name 'NXVmSetWorkerThreadConfig' + LIBC_SUFFIX ;
+function  NXVmSpawn(name:PNXNameSpec_t; envSpec:PNXExecEnvSpec_t; flags:dword; newVm:PNXVmId_t):longint;cdecl;external libc_nlm name 'NXVmSpawn' + LIBC_SUFFIX ;
+function  NXVmUnregisterExitHandler(func:TCDeclProc1PtrArg; arg:pointer):longint;cdecl;external libc_nlm name 'NXVmUnregisterExitHandler' + LIBC_SUFFIX ;
 
 
 // alloca.h
@@ -5683,22 +5699,22 @@ type
 
 
 {$ifndef DisableArrayOfConst}
-function build_username(max:size_t; flags:dword; username:Pchar; user:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'build_username';
+function build_username(max:size_t; flags:dword; username:Pchar; user:Pchar; args:array of const):longint;cdecl;external libc_nlm name 'build_username' + LIBC_SUFFIX ;
 {$endif}
-function build_username(max:size_t; flags:dword; username:Pchar; user:Pchar):longint;cdecl;external libc_nlm name 'build_username';
+function build_username(max:size_t; flags:dword; username:Pchar; user:Pchar):longint;cdecl;external libc_nlm name 'build_username' + LIBC_SUFFIX ;
 
 
 function create_identity(treename:Pchar; username:pointer; password:Pchar; nmas_sequence:pointer; flags:dword;
-           identity:Plongint):longint;cdecl;external libc_nlm name 'create_identity';
-function create_server_identity(identity:Plongint):longint;cdecl;external libc_nlm name 'create_server_identity';
-function is_valid_identity(identity:longint; error:Plongint):longint;cdecl;external libc_nlm name 'is_valid_identity';
-procedure delete_identity(identity:longint);cdecl;external libc_nlm name 'delete_identity';
+           identity:Plongint):longint;cdecl;external libc_nlm name 'create_identity' + LIBC_SUFFIX ;
+function create_server_identity(identity:Plongint):longint;cdecl;external libc_nlm name 'create_server_identity' + LIBC_SUFFIX ;
+function is_valid_identity(identity:longint; error:Plongint):longint;cdecl;external libc_nlm name 'is_valid_identity' + LIBC_SUFFIX ;
+procedure delete_identity(identity:longint);cdecl;external libc_nlm name 'delete_identity' + LIBC_SUFFIX ;
 { managing NCP sessions with a remote server...  }
 
-function open_ncp_session(identity:longint; flags:dword; servername:Pchar; session:Plongint):longint;cdecl;external libc_nlm name 'open_ncp_session';
-function close_ncp_session(session:longint):longint;cdecl;external libc_nlm name 'close_ncp_session';
+function open_ncp_session(identity:longint; flags:dword; servername:Pchar; session:Plongint):longint;cdecl;external libc_nlm name 'open_ncp_session' + LIBC_SUFFIX ;
+function close_ncp_session(session:longint):longint;cdecl;external libc_nlm name 'close_ncp_session' + LIBC_SUFFIX ;
 function send_ncp(session:longint; requestCode:longint; sendFragCount:longint; sendFrags:array of frag_t; replyFragCount:longint;
-           replyFrags:array of frag_t; replyFragsUsed:Plongint; ncp_error:Plongint):longint;cdecl;external libc_nlm name 'send_ncp';
+           replyFrags:array of frag_t; replyFragsUsed:Plongint; ncp_error:Plongint):longint;cdecl;external libc_nlm name 'send_ncp' + LIBC_SUFFIX ;
 
 // complex.h
 
@@ -5824,10 +5840,10 @@ type
      MAX_SYMNAME_LEN = 255;        { maximim length of 'name' in dlsym()...  }
 
 
-function dlopen(path:Pchar; mode:longint):pointer;cdecl;external libc_nlm name 'dlopen';
-function dlsym(handle:pointer; name:Pchar):pointer;cdecl;external libc_nlm name 'dlsym';
-function dlclose(handle:pointer):longint;cdecl;external libc_nlm name 'dlclose';
-function dlerror:Pchar;cdecl;external libc_nlm name 'dlerror';
+function dlopen(path:Pchar; mode:longint):pointer;cdecl;external libc_nlm name 'dlopen' + LIBC_SUFFIX;
+function dlsym(handle:pointer; name:Pchar):pointer;cdecl;external libc_nlm name 'dlsym' + LIBC_SUFFIX;
+function dlclose(handle:pointer):longint;cdecl;external libc_nlm name 'dlclose' + LIBC_SUFFIX;
+function dlerror:Pchar;cdecl;external libc_nlm name 'dlerror' + LIBC_SUFFIX;
 
 
 // endian.h
@@ -5851,28 +5867,28 @@ function dlerror:Pchar;cdecl;external libc_nlm name 'dlerror';
 // err.h
 
 {$ifndef DisableArrayOfConst}
-procedure err(_para1:longint; _para2:Pchar; args:array of const);cdecl;external libc_nlm name 'err';
+procedure err(_para1:longint; _para2:Pchar; args:array of const);cdecl;external libc_nlm name 'err' + LIBC_SUFFIX ;
 {$endif}
-procedure err(_para1:longint; _para2:Pchar);cdecl;external libc_nlm name 'err';
-procedure verr(_para1:longint; _para2:Pchar; _para3:va_list);cdecl;external libc_nlm name 'verr';
+procedure err(_para1:longint; _para2:Pchar);cdecl;external libc_nlm name 'err' + LIBC_SUFFIX ;
+procedure verr(_para1:longint; _para2:Pchar; _para3:va_list);cdecl;external libc_nlm name 'verr' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-procedure errx(_para1:longint; _para2:Pchar; args:array of const);cdecl;external libc_nlm name 'errx';
+procedure errx(_para1:longint; _para2:Pchar; args:array of const);cdecl;external libc_nlm name 'errx' + LIBC_SUFFIX ;
 {$endif}
-procedure errx(_para1:longint; _para2:Pchar);cdecl;external libc_nlm name 'errx';
-procedure verrx(_para1:longint; _para2:Pchar; _para3:va_list);cdecl;external libc_nlm name 'verrx';
+procedure errx(_para1:longint; _para2:Pchar);cdecl;external libc_nlm name 'errx' + LIBC_SUFFIX ;
+procedure verrx(_para1:longint; _para2:Pchar; _para3:va_list);cdecl;external libc_nlm name 'verrx' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-procedure warn(_para1:Pchar; args:array of const);cdecl;external libc_nlm name 'warn';
+procedure warn(_para1:Pchar; args:array of const);cdecl;external libc_nlm name 'warn' + LIBC_SUFFIX ;
 {$endif}
-procedure warn(_para1:Pchar);cdecl;external libc_nlm name 'warn';
-procedure vwarn(_para1:Pchar; _para2:va_list);cdecl;external libc_nlm name 'vwarn';
+procedure warn(_para1:Pchar);cdecl;external libc_nlm name 'warn' + LIBC_SUFFIX ;
+procedure vwarn(_para1:Pchar; _para2:va_list);cdecl;external libc_nlm name 'vwarn' + LIBC_SUFFIX ;
 
 {$ifndef DisableArrayOfConst}
-procedure warnx(_para1:Pchar; args:array of const);cdecl;external libc_nlm name 'warnx';
+procedure warnx(_para1:Pchar; args:array of const);cdecl;external libc_nlm name 'warnx' + LIBC_SUFFIX ;
 {$endif}
-procedure warnx(_para1:Pchar);cdecl;external libc_nlm name 'warnx';
-procedure vwarnx(_para1:Pchar; _para2:va_list);cdecl;external libc_nlm name 'vwarnx';
+procedure warnx(_para1:Pchar);cdecl;external libc_nlm name 'warnx' + LIBC_SUFFIX ;
+procedure vwarnx(_para1:Pchar; _para2:va_list);cdecl;external libc_nlm name 'vwarnx' + LIBC_SUFFIX ;
 
 
 
@@ -5998,10 +6014,10 @@ procedure vwarnx(_para1:Pchar; _para2:va_list);cdecl;external libc_nlm name 'vwa
      ELASTERR = ELOOKUP;
 
 
-function ___errno:Plongint;cdecl;external libc_nlm name '___errno';
-function __errno_location:Plongint;cdecl;external libc_nlm name '___errno';
-function ___lastClientErrno:Plongint;cdecl;external libc_nlm name '___lastClientErrno';
-function ___lastFileSysErrno:Plongint;cdecl;external libc_nlm name '___lastFileSysErrno';
+function ___errno:Plongint;cdecl;external libc_nlm name '___errno' + LIBC_SUFFIX ;
+function __errno_location:Plongint;cdecl;external libc_nlm name '___errno' + LIBC_SUFFIX ;
+function ___lastClientErrno:Plongint;cdecl;external libc_nlm name '___lastClientErrno' + LIBC_SUFFIX ;
+function ___lastFileSysErrno:Plongint;cdecl;external libc_nlm name '___lastFileSysErrno' + LIBC_SUFFIX ;
 
 
 // esm.h
@@ -6032,14 +6048,14 @@ type
         TotalMemoryBelow4G : size_t;
      end;
 
-function ESMAlloc(size:size64_t; options:dword; esmAddress:Paddr64_t):longint;cdecl;external libc_nlm name 'ESMAlloc';
-function ESMAllocWindow(size:size_t; logicalAddress:Ppointer; callerID:pointer):longint;cdecl;external libc_nlm name 'ESMAllocWindow';
-function ESMCopy(source:addr64_t; destination:addr64_t; length:size64_t):longint;cdecl;external libc_nlm name 'ESMCopy';
-function ESMFill(pattern:dword; destination:addr64_t; length:size64_t):longint;cdecl;external libc_nlm name 'ESMFill';
-function ESMFree(esmAddress:addr64_t):longint;cdecl;external libc_nlm name 'ESMFree';
-function ESMFreeWindow(logicalAddress:pointer; callerID:pointer):longint;cdecl;external libc_nlm name 'ESMFreeWindow';
-function ESMMapMemory(windowAddress:pointer; memoryAddress:addr64_t; size:size_t):longint;cdecl;external libc_nlm name 'ESMMapMemory';
-function ESMQuery(bufferSize:size_t; buffer:PESMQueryInfo_t):longint;cdecl;external libc_nlm name 'ESMQuery';
+function ESMAlloc(size:size64_t; options:dword; esmAddress:Paddr64_t):longint;cdecl;external libc_nlm name 'ESMAlloc' + LIBC_SUFFIX ;
+function ESMAllocWindow(size:size_t; logicalAddress:Ppointer; callerID:pointer):longint;cdecl;external libc_nlm name 'ESMAllocWindow' + LIBC_SUFFIX ;
+function ESMCopy(source:addr64_t; destination:addr64_t; length:size64_t):longint;cdecl;external libc_nlm name 'ESMCopy' + LIBC_SUFFIX ;
+function ESMFill(pattern:dword; destination:addr64_t; length:size64_t):longint;cdecl;external libc_nlm name 'ESMFill' + LIBC_SUFFIX ;
+function ESMFree(esmAddress:addr64_t):longint;cdecl;external libc_nlm name 'ESMFree' + LIBC_SUFFIX ;
+function ESMFreeWindow(logicalAddress:pointer; callerID:pointer):longint;cdecl;external libc_nlm name 'ESMFreeWindow' + LIBC_SUFFIX ;
+function ESMMapMemory(windowAddress:pointer; memoryAddress:addr64_t; size:size_t):longint;cdecl;external libc_nlm name 'ESMMapMemory' + LIBC_SUFFIX ;
+function ESMQuery(bufferSize:size_t; buffer:PESMQueryInfo_t):longint;cdecl;external libc_nlm name 'ESMQuery' + LIBC_SUFFIX ;
 
 
 
@@ -6113,17 +6129,17 @@ type
 (** unsupported pragma#pragma pack()*)
 { not presently supported...  }
 
-procedure feclearexcept(excepts:longint);cdecl;external libc_nlm name 'feclearexcept';
-procedure fegetexceptflag(flagp:Pfexcept_t; excepts:longint);cdecl;external libc_nlm name 'fegetexceptflag';
-procedure feraiseexceptflag(flagp:Pfexcept_t; excepts:longint);cdecl;external libc_nlm name 'feraiseexceptflag';
-procedure fesetexceptflag(flagp:Pfexcept_t; excepts:longint);cdecl;external libc_nlm name 'fesetexceptflag';
-function fetestexcept(excepts:longint):longint;cdecl;external libc_nlm name 'fetestexcept';
-function fegetround(round:longint):longint;cdecl;external libc_nlm name 'fegetround';
-function fesetround:longint;cdecl;external libc_nlm name 'fesetround';
-function fegetenv(envp:Pfenv_t):longint;cdecl;external libc_nlm name 'fegetenv';
-function feholdexcept(envp:Pfenv_t):longint;cdecl;external libc_nlm name 'feholdexcept';
-procedure fesetenv(envp:Pfenv_t);cdecl;external libc_nlm name 'fesetenv';
-procedure feupdateenv(envp:Pfenv_t);cdecl;external libc_nlm name 'feupdateenv';
+procedure feclearexcept(excepts:longint);cdecl;external libc_nlm name 'feclearexcept' + LIBC_SUFFIX ;
+procedure fegetexceptflag(flagp:Pfexcept_t; excepts:longint);cdecl;external libc_nlm name 'fegetexceptflag' + LIBC_SUFFIX ;
+procedure feraiseexceptflag(flagp:Pfexcept_t; excepts:longint);cdecl;external libc_nlm name 'feraiseexceptflag' + LIBC_SUFFIX ;
+procedure fesetexceptflag(flagp:Pfexcept_t; excepts:longint);cdecl;external libc_nlm name 'fesetexceptflag' + LIBC_SUFFIX ;
+function fetestexcept(excepts:longint):longint;cdecl;external libc_nlm name 'fetestexcept' + LIBC_SUFFIX ;
+function fegetround(round:longint):longint;cdecl;external libc_nlm name 'fegetround' + LIBC_SUFFIX ;
+function fesetround:longint;cdecl;external libc_nlm name 'fesetround' + LIBC_SUFFIX ;
+function fegetenv(envp:Pfenv_t):longint;cdecl;external libc_nlm name 'fegetenv' + LIBC_SUFFIX ;
+function feholdexcept(envp:Pfenv_t):longint;cdecl;external libc_nlm name 'feholdexcept' + LIBC_SUFFIX ;
+procedure fesetenv(envp:Pfenv_t);cdecl;external libc_nlm name 'fesetenv' + LIBC_SUFFIX ;
+procedure feupdateenv(envp:Pfenv_t);cdecl;external libc_nlm name 'feupdateenv' + LIBC_SUFFIX ;
 
 
 
@@ -6142,7 +6158,7 @@ procedure feupdateenv(envp:Pfenv_t);cdecl;external libc_nlm name 'feupdateenv';
 
 
 
-function fnmatch(pattern, _string:Pchar; flags:longint):longint;cdecl;external libc_nlm name 'fnmatch';
+function fnmatch(pattern, _string:Pchar; flags:longint):longint;cdecl;external libc_nlm name 'fnmatch' + LIBC_SUFFIX ;
 
 
 

@@ -18,6 +18,18 @@
    *)
 
   { Values for attributes.   }
+  
+const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}  
 
 Const
   LibThreads = 'pthread';
@@ -205,107 +217,110 @@ type
   ---------------------------------------------------------------------}
 
 
-  function pthread_create(__thread:Ppthread_t; __attr:Ppthread_attr_t; __start_routine:TStartRoutine; __arg:pointer):cint;cdecl; external libthreads;
-  function pthread_self:pthread_t;cdecl; external libthreads;
-  function pthread_equal(__thread1:pthread_t; __thread2:pthread_t):cint;cdecl; external libthreads;
-  procedure pthread_exit(__retval:pointer);cdecl; external libthreads;
-  function pthread_join(__th:pthread_t; __thread_return:Ppointer):cint;cdecl; external libthreads;
-  function pthread_detach(__th:pthread_t):cint;cdecl; external libthreads;
-  function pthread_attr_init(__attr:Ppthread_attr_t):cint;cdecl; external libthreads;
-  function pthread_attr_destroy(__attr:Ppthread_attr_t):cint;cdecl; external libthreads;
-  function pthread_attr_setdetachstate(__attr:Ppthread_attr_t; __detachstate:cint):cint;cdecl; external libthreads;
-  function pthread_attr_getdetachstate(__attr:Ppthread_attr_t; __detachstate:pcint):cint;cdecl; external libthreads;
-  function pthread_attr_setschedparam(__attr:Ppthread_attr_t; __param:Psched_param):cint;cdecl; external libthreads;
-  function pthread_attr_getschedparam(__attr:Ppthread_attr_t; __param:Psched_param):cint;cdecl; external libthreads;
-  function pthread_attr_setschedpolicy(__attr:Ppthread_attr_t; __policy:cint):cint;cdecl; external libthreads;
-  function pthread_attr_getschedpolicy(__attr:Ppthread_attr_t; __policy:pcint):cint;cdecl; external libthreads;
-  function pthread_attr_setinheritsched(__attr:Ppthread_attr_t; __inherit:cint):cint;cdecl; external libthreads;
-  function pthread_attr_getinheritsched(__attr:Ppthread_attr_t; __inherit:pcint):cint;cdecl; external libthreads;
-  function pthread_attr_setscope(__attr:Ppthread_attr_t; __scope:cint):cint;cdecl; external libthreads;
-  function pthread_attr_getscope(__attr:Ppthread_attr_t; __scope:pcint):cint;cdecl; external libthreads;
-  function pthread_attr_setstackaddr(__attr:Ppthread_attr_t; __stackaddr:pointer):cint;cdecl; external libthreads;
-  function pthread_attr_getstackaddr(__attr:Ppthread_attr_t; __stackaddr:Ppointer):cint;cdecl; external libthreads;
-  function pthread_attr_setstacksize(__attr:Ppthread_attr_t; __stacksize:size_t):cint;cdecl; external libthreads;
-  function pthread_attr_getstacksize(__attr:Ppthread_attr_t; __stacksize:Psize_t):cint;cdecl; external libthreads;
-  function pthread_attr_getguardsize(__attr:Ppthread_attr_t; Guardsize: Psize_t): cint; cdecl;external libthreads;
-  function pthread_attr_setguardsize(__attr:Ppthread_attr_t; Guardsize: Psize_t): cint; cdecl;external libthreads;
-  function pthread_setschedparam(__target_thread:pthread_t; __policy:cint; __param:Psched_param):cint;cdecl; external libthreads;
-  function pthread_getschedparam(__target_thread:pthread_t; __policy:pcint; __param:Psched_param):cint;cdecl; external libthreads;
-  function pthread_getconcurrency: cint; cdecl;external libthreads;
-  function pthread_setconcurrency(Level: cint): cint; cdecl;external libthreads;
-  function pthread_yield(): cint; cdecl;external libthreads;
-  function pthread_mutex_init(__mutex:Ppthread_mutex_t; __mutex_attr:Ppthread_mutexattr_t):cint;cdecl; external libthreads;
-  function pthread_mutex_destroy(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads;
-  function pthread_mutex_trylock(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads;
-  function pthread_mutex_lock(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads;
-  function pthread_mutex_unlock(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads;
-  function pthread_mutexattr_init(__attr:Ppthread_mutexattr_t):cint;cdecl; external libthreads;
-  function pthread_mutexattr_destroy(__attr:Ppthread_mutexattr_t):cint;cdecl; external libthreads;
-  function pthread_mutexattr_getpshared(__attr:Ppthread_mutexattr_t; __pshared:pcint):cint;cdecl; external libthreads;
-  function pthread_mutexattr_setpshared(__attr:Ppthread_mutexattr_t; __pshared:cint):cint;cdecl; external libthreads;
-  function pthread_mutexattr_settype(__attr: Ppthread_mutexattr_t; Kind: cint): cint; cdecl;external libthreads;
-  function pthread_mutexattr_gettype(__attr: Ppthread_mutexattr_t; var Kind: cint): cint; cdecl;external libthreads;
-  function pthread_cond_init(__cond:Ppthread_cond_t; __cond_attr:Ppthread_condattr_t):cint;cdecl; external libthreads;
-  function pthread_cond_destroy(__cond:Ppthread_cond_t):cint;cdecl; external libthreads;
-  function pthread_cond_signal(__cond:Ppthread_cond_t):cint;cdecl; external libthreads;
-  function pthread_cond_broadcast(__cond:Ppthread_cond_t):cint;cdecl; external libthreads;
-  function pthread_cond_wait(__cond:Ppthread_cond_t; __mutex:Ppthread_mutex_t):cint;cdecl; external libthreads;
-  function pthread_cond_timedwait(__cond:Ppthread_cond_t; __mutex:Ppthread_mutex_t; __abstime:Ptimespec):cint;cdecl; external libthreads;
-  function pthread_condattr_init(__attr:Ppthread_condattr_t):cint;cdecl; external libthreads;
-  function pthread_condattr_destroy(__attr:Ppthread_condattr_t):cint;cdecl; external libthreads;
-  function pthread_condattr_getpshared(__attr:Ppthread_condattr_t; __pshared:pcint):cint;cdecl; external libthreads;
-  function pthread_condattr_setpshared(__attr:Ppthread_condattr_t; __pshared:cint):cint;cdecl; external libthreads;
-  function pthread_rwlock_init(__rwlock:Ppthread_rwlock_t; __attr:Ppthread_rwlockattr_t):cint;cdecl; external libthreads;
-  function pthread_rwlock_destroy(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads;
-  function pthread_rwlock_rdlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads;
-  function pthread_rwlock_tryrdlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads;
-  function pthread_rwlock_timedrdlock(__rwlock:Ppthread_rwlock_t; __abstime:Ptimespec):cint;cdecl;external libthreads;
-  function pthread_rwlock_wrlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads;
-  function pthread_rwlock_trywrlock(__rwlock:Ppthread_rwlock_t):cint;cdecl; external libthreads;
-  function pthread_rwlock_timedwrlock(__rwlock:Ppthread_rwlock_t; __abstime:Ptimespec):cint;cdecl;external libthreads;
-  function pthread_rwlock_unlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads;
-  function pthread_rwlockattr_init(__attr:Ppthread_rwlockattr_t):cint;cdecl;external libthreads;
-  function pthread_rwlockattr_destroy(__attr:Ppthread_rwlockattr_t):cint;cdecl;external libthreads;
-  function pthread_rwlockattr_getpshared(__attr:Ppthread_rwlockattr_t; __pshared:pcint):cint;cdecl;external libthreads;
-  function pthread_rwlockattr_setpshared(__attr:Ppthread_rwlockattr_t; __pshared:cint):cint;cdecl;external libthreads;
-  function pthread_rwlockattr_getkind_np(__attr:Ppthread_rwlockattr_t; __pref:pcint):cint;cdecl;external libthreads;
-  function pthread_rwlockattr_setkind_np(__attr:Ppthread_rwlockattr_t; __pref:cint):cint;cdecl;external libthreads;
-  function pthread_spin_init(__lock:Ppthread_spinlock_t; __pshared:cint):cint;cdecl;external libthreads;
-  function pthread_spin_destroy(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads;
-  function pthread_spin_lock(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads;
-  function pthread_spin_trylock(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads;
-  function pthread_spin_unlock(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads;
-  function pthread_barrier_init(__barrier:Ppthread_barrier_t; __attr:Ppthread_barrierattr_t; __count:dword):cint;cdecl;external libthreads;
-  function pthread_barrier_destroy(__barrier:Ppthread_barrier_t):cint;cdecl;external libthreads;
-  function pthread_barrierattr_init(__attr:Ppthread_barrierattr_t):cint;cdecl;external libthreads;
-  function pthread_barrierattr_destroy(__attr:Ppthread_barrierattr_t):cint;cdecl;external libthreads;
-  function pthread_barrierattr_getpshared(__attr:Ppthread_barrierattr_t; __pshared:pcint):cint;cdecl;external libthreads;
-  function pthread_barrierattr_setpshared(__attr:Ppthread_barrierattr_t; __pshared:cint):cint;cdecl;external libthreads;
-  function pthread_barrier_wait(__barrier:Ppthread_barrier_t):cint;cdecl;external libthreads;
-  function pthread_key_create(__key:Ppthread_key_t; __destr_function :TKeyValueDestructor):cint;cdecl; external libthreads;
-  function pthread_key_delete(__key:pthread_key_t):cint;cdecl; external libthreads;
-  function pthread_setspecific(__key:pthread_key_t; __pointer:pointer):cint;cdecl; external libthreads;
-  function pthread_getspecific(__key:pthread_key_t):pointer;cdecl; external libthreads;
-  function pthread_once(__once_control:Ppthread_once_t; __init_routine:Tprocedure ):cint;cdecl; external libthreads;
-  function pthread_setcancelstate(__state:cint; __oldstate:pcint):cint;cdecl; external libthreads;
-  function pthread_setcanceltype(__type:cint; __oldtype:pcint):cint;cdecl; external libthreads;
-  function pthread_cancel(__thread:pthread_t):cint;cdecl; external libthreads;
-  procedure pthread_testcancel;cdecl; external libthreads;
-  procedure _pthread_cleanup_push(__buffer:P_pthread_cleanup_buffer; __routine:TPthreadCleanupRoutine; __arg:pointer);cdecl; external libthreads;
-  procedure _pthread_cleanup_pop(__buffer:P_pthread_cleanup_buffer; __execute:cint);cdecl; external libthreads;
-  function pthread_atfork(__prepare:TforkHandler ; __parent:TForkHandler ; __child: TForkHandler ):cint;cdecl; external libthreads;
-  procedure pthread_kill_other_threads_np;cdecl; external libthreads;
-  procedure __pthread_initialize; cdecl; external libthreads;
-  function pthread_sigmask(__how:cint; __newmask:P__sigset_t; __oldmask:P__sigset_t):cint;cdecl; external libthreads;
-  function pthread_kill(__thread:pthread_t; __signo:cint):cint;cdecl; external libthreads;
+  function pthread_create(__thread:Ppthread_t; __attr:Ppthread_attr_t;
+    __start_routine:TStartRoutine; __arg:pointer):cint;cdecl; external libthreads name 'pthread_create' + LIBC_SUFFIX;
+  function pthread_self:pthread_t;cdecl; external libthreads name 'pthread_self' + LIBC_SUFFIX;
+  function pthread_equal(__thread1:pthread_t; __thread2:pthread_t):cint;cdecl; external libthreads name 'pthread_equal' + LIBC_SUFFIX;
+  procedure pthread_exit(__retval:pointer);cdecl; external libthreads name 'pthread_exit' + LIBC_SUFFIX;
+  function pthread_join(__th:pthread_t; __thread_return:Ppointer):cint;cdecl; external libthreads name 'pthread_join' + LIBC_SUFFIX;
+  function pthread_detach(__th:pthread_t):cint;cdecl; external libthreads name 'pthread_detach' + LIBC_SUFFIX;
+  function pthread_attr_init(__attr:Ppthread_attr_t):cint;cdecl; external libthreads name 'pthread_attr_init' + LIBC_SUFFIX;
+  function pthread_attr_destroy(__attr:Ppthread_attr_t):cint;cdecl; external libthreads name 'pthread_attr_destroy' + LIBC_SUFFIX;
+  function pthread_attr_setdetachstate(__attr:Ppthread_attr_t; __detachstate:cint):cint;cdecl; external libthreads name 'pthread_attr_setdetachstate' + LIBC_SUFFIX;
+  function pthread_attr_getdetachstate(__attr:Ppthread_attr_t; __detachstate:pcint):cint;cdecl; external libthreads name 'pthread_attr_getdetachstate' + LIBC_SUFFIX;
+  function pthread_attr_setschedparam(__attr:Ppthread_attr_t; __param:Psched_param):cint;cdecl; external libthreads name 'pthread_attr_setschedparam' + LIBC_SUFFIX;
+  function pthread_attr_getschedparam(__attr:Ppthread_attr_t; __param:Psched_param):cint;cdecl; external libthreads name 'pthread_attr_getschedparam' + LIBC_SUFFIX;
+  function pthread_attr_setschedpolicy(__attr:Ppthread_attr_t; __policy:cint):cint;cdecl; external libthreads name 'pthread_attr_setschedpolicy' + LIBC_SUFFIX;
+  function pthread_attr_getschedpolicy(__attr:Ppthread_attr_t; __policy:pcint):cint;cdecl; external libthreads name 'pthread_attr_getschedpolicy' + LIBC_SUFFIX;
+  function pthread_attr_setinheritsched(__attr:Ppthread_attr_t; __inherit:cint):cint;cdecl; external libthreads name 'pthread_attr_setinheritsched' + LIBC_SUFFIX;
+  function pthread_attr_getinheritsched(__attr:Ppthread_attr_t; __inherit:pcint):cint;cdecl; external libthreads name 'pthread_attr_getinheritsched' + LIBC_SUFFIX;
+  function pthread_attr_setscope(__attr:Ppthread_attr_t; __scope:cint):cint;cdecl; external libthreads name 'pthread_attr_setscope' + LIBC_SUFFIX;
+  function pthread_attr_getscope(__attr:Ppthread_attr_t; __scope:pcint):cint;cdecl; external libthreads name 'pthread_attr_getscope' + LIBC_SUFFIX;
+  
+  
+  function pthread_attr_setstackaddr(__attr:Ppthread_attr_t; __stackaddr:pointer):cint;cdecl; external libthreads name 'pthread_attr_setstackaddr' + LIBC_SUFFIX;
+  function pthread_attr_getstackaddr(__attr:Ppthread_attr_t; __stackaddr:Ppointer):cint;cdecl; external libthreads name 'pthread_attr_getstackaddr' + LIBC_SUFFIX;
+  function pthread_attr_setstacksize(__attr:Ppthread_attr_t; __stacksize:size_t):cint;cdecl; external libthreads name 'pthread_attr_setstacksize' + LIBC_SUFFIX;
+  function pthread_attr_getstacksize(__attr:Ppthread_attr_t; __stacksize:Psize_t):cint;cdecl; external libthreads name 'pthread_attr_getstacksize' + LIBC_SUFFIX;
+  function pthread_attr_getguardsize(__attr:Ppthread_attr_t; Guardsize: Psize_t): cint; cdecl;external libthreads name 'pthread_attr_getguardsize' + LIBC_SUFFIX;
+  function pthread_attr_setguardsize(__attr:Ppthread_attr_t; Guardsize: Psize_t): cint; cdecl;external libthreads name 'pthread_attr_setguardsize ' + LIBC_SUFFIX;
+  function pthread_setschedparam(__target_thread:pthread_t; __policy:cint; __param:Psched_param):cint;cdecl; external libthreads name 'pthread_setschedparam' + LIBC_SUFFIX;
+  function pthread_getschedparam(__target_thread:pthread_t; __policy:pcint; __param:Psched_param):cint;cdecl; external libthreads name 'pthread_getschedparam' + LIBC_SUFFIX;
+  function pthread_getconcurrency: cint; cdecl;external libthreads name 'pthread_getconcurrency' + LIBC_SUFFIX;
+  function pthread_setconcurrency(Level: cint): cint; cdecl;external libthreads name 'pthread_setconcurrency' + LIBC_SUFFIX;
+  function pthread_yield(): cint; cdecl;external libthreads name 'pthread_yield' + LIBC_SUFFIX;
+  function pthread_mutex_init(__mutex:Ppthread_mutex_t; __mutex_attr:Ppthread_mutexattr_t):cint;cdecl; external libthreads name 'pthread_mutex_init' + LIBC_SUFFIX;
+  function pthread_mutex_destroy(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads name 'pthread_mutex_destroy' + LIBC_SUFFIX;
+  function pthread_mutex_trylock(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads name 'pthread_mutex_trylock' + LIBC_SUFFIX;
+  function pthread_mutex_lock(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads name 'pthread_mutex_lock' + LIBC_SUFFIX;
+  function pthread_mutex_unlock(__mutex:Ppthread_mutex_t):cint;cdecl; external libthreads name 'pthread_mutex_unlock' + LIBC_SUFFIX;
+  function pthread_mutexattr_init(__attr:Ppthread_mutexattr_t):cint;cdecl; external libthreads name 'pthread_mutexattr_init' + LIBC_SUFFIX;
+  function pthread_mutexattr_destroy(__attr:Ppthread_mutexattr_t):cint;cdecl; external libthreads name 'pthread_mutexattr_destroy' + LIBC_SUFFIX;
+  function pthread_mutexattr_getpshared(__attr:Ppthread_mutexattr_t; __pshared:pcint):cint;cdecl; external libthreads name 'pthread_mutexattr_getpshared' + LIBC_SUFFIX;
+  function pthread_mutexattr_setpshared(__attr:Ppthread_mutexattr_t; __pshared:cint):cint;cdecl; external libthreads name 'pthread_mutexattr_setpshared' + LIBC_SUFFIX;
+  function pthread_mutexattr_settype(__attr: Ppthread_mutexattr_t; Kind: cint): cint; cdecl;external libthreads name 'pthread_mutexattr_settype' + LIBC_SUFFIX;
+  function pthread_mutexattr_gettype(__attr: Ppthread_mutexattr_t; var Kind: cint): cint; cdecl;external libthreads name 'pthread_mutexattr_gettype' + LIBC_SUFFIX;
+  function pthread_cond_init(__cond:Ppthread_cond_t; __cond_attr:Ppthread_condattr_t):cint;cdecl; external libthreads name 'pthread_cond_init' + LIBC_SUFFIX;
+  function pthread_cond_destroy(__cond:Ppthread_cond_t):cint;cdecl; external libthreads name 'pthread_cond_destroy' + LIBC_SUFFIX;
+  function pthread_cond_signal(__cond:Ppthread_cond_t):cint;cdecl; external libthreads name 'pthread_cond_signal' + LIBC_SUFFIX;
+  function pthread_cond_broadcast(__cond:Ppthread_cond_t):cint;cdecl; external libthreads name 'pthread_cond_broadcast' + LIBC_SUFFIX;
+  function pthread_cond_wait(__cond:Ppthread_cond_t; __mutex:Ppthread_mutex_t):cint;cdecl; external libthreads name 'pthread_cond_wait' + LIBC_SUFFIX;
+  function pthread_cond_timedwait(__cond:Ppthread_cond_t; __mutex:Ppthread_mutex_t; __abstime:Ptimespec):cint;cdecl; external libthreads name 'pthread_cond_timedwait' + LIBC_SUFFIX;
+  function pthread_condattr_init(__attr:Ppthread_condattr_t):cint;cdecl; external libthreads name 'pthread_condattr_init' + LIBC_SUFFIX;
+  function pthread_condattr_destroy(__attr:Ppthread_condattr_t):cint;cdecl; external libthreads name 'pthread_condattr_destroy' + LIBC_SUFFIX;
+  function pthread_condattr_getpshared(__attr:Ppthread_condattr_t; __pshared:pcint):cint;cdecl; external libthreads name 'pthread_condattr_getpshared' + LIBC_SUFFIX;
+  function pthread_condattr_setpshared(__attr:Ppthread_condattr_t; __pshared:cint):cint;cdecl; external libthreads name 'pthread_condattr_setpshared' + LIBC_SUFFIX;
+  function pthread_rwlock_init(__rwlock:Ppthread_rwlock_t; __attr:Ppthread_rwlockattr_t):cint;cdecl; external libthreads name 'pthread_rwlock_init' + LIBC_SUFFIX;
+  function pthread_rwlock_destroy(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads name 'pthread_rwlock_destroy' + LIBC_SUFFIX;
+  function pthread_rwlock_rdlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads name 'pthread_rwlock_rdlock' + LIBC_SUFFIX;
+  function pthread_rwlock_tryrdlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads name 'pthread_rwlock_tryrdlock' + LIBC_SUFFIX;
+  function pthread_rwlock_timedrdlock(__rwlock:Ppthread_rwlock_t; __abstime:Ptimespec):cint;cdecl;external libthreads name 'pthread_rwlock_timedrdlock' + LIBC_SUFFIX;
+  function pthread_rwlock_wrlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads name 'pthread_rwlock_wrlock' + LIBC_SUFFIX;
+  function pthread_rwlock_trywrlock(__rwlock:Ppthread_rwlock_t):cint;cdecl; external libthreads name 'pthread_rwlock_trywrlock' + LIBC_SUFFIX;
+  function pthread_rwlock_timedwrlock(__rwlock:Ppthread_rwlock_t; __abstime:Ptimespec):cint;cdecl;external libthreads name 'pthread_rwlock_timedwrlock' + LIBC_SUFFIX;
+  function pthread_rwlock_unlock(__rwlock:Ppthread_rwlock_t):cint;cdecl;external libthreads name 'pthread_rwlock_unlock' + LIBC_SUFFIX;
+  function pthread_rwlockattr_init(__attr:Ppthread_rwlockattr_t):cint;cdecl;external libthreads name 'pthread_rwlockattr_init' + LIBC_SUFFIX;
+  function pthread_rwlockattr_destroy(__attr:Ppthread_rwlockattr_t):cint;cdecl;external libthreads name 'pthread_rwlockattr_destroy' + LIBC_SUFFIX;
+  function pthread_rwlockattr_getpshared(__attr:Ppthread_rwlockattr_t; __pshared:pcint):cint;cdecl;external libthreads name 'pthread_rwlockattr_getpshared' + LIBC_SUFFIX;
+  function pthread_rwlockattr_setpshared(__attr:Ppthread_rwlockattr_t; __pshared:cint):cint;cdecl;external libthreads name 'pthread_rwlockattr_setpshared' + LIBC_SUFFIX;
+  function pthread_rwlockattr_getkind_np(__attr:Ppthread_rwlockattr_t; __pref:pcint):cint;cdecl;external libthreads name 'pthread_rwlockattr_getkind_np' + LIBC_SUFFIX;
+  function pthread_rwlockattr_setkind_np(__attr:Ppthread_rwlockattr_t; __pref:cint):cint;cdecl;external libthreads name 'pthread_rwlockattr_setkind_np' + LIBC_SUFFIX;
+  function pthread_spin_init(__lock:Ppthread_spinlock_t; __pshared:cint):cint;cdecl;external libthreads name 'pthread_spin_init' + LIBC_SUFFIX;
+  function pthread_spin_destroy(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads name 'pthread_spin_destroy' + LIBC_SUFFIX;
+  function pthread_spin_lock(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads name 'pthread_spin_lock' + LIBC_SUFFIX;
+  function pthread_spin_trylock(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads name 'pthread_spin_trylock' + LIBC_SUFFIX;
+  function pthread_spin_unlock(__lock:Ppthread_spinlock_t):cint;cdecl;external libthreads name 'pthread_spin_unlock' + LIBC_SUFFIX;
+  function pthread_barrier_init(__barrier:Ppthread_barrier_t; __attr:Ppthread_barrierattr_t; __count:dword):cint;cdecl;external libthreads name 'pthread_barrier_init' + LIBC_SUFFIX;
+  function pthread_barrier_destroy(__barrier:Ppthread_barrier_t):cint;cdecl;external libthreads name 'pthread_barrier_destroy' + LIBC_SUFFIX;
+  function pthread_barrierattr_init(__attr:Ppthread_barrierattr_t):cint;cdecl;external libthreads name 'pthread_barrierattr_init' + LIBC_SUFFIX;
+  function pthread_barrierattr_destroy(__attr:Ppthread_barrierattr_t):cint;cdecl;external libthreads name 'pthread_barrierattr_destroy' + LIBC_SUFFIX;
+  function pthread_barrierattr_getpshared(__attr:Ppthread_barrierattr_t; __pshared:pcint):cint;cdecl;external libthreads name 'pthread_barrierattr_getpshared' + LIBC_SUFFIX;
+  function pthread_barrierattr_setpshared(__attr:Ppthread_barrierattr_t; __pshared:cint):cint;cdecl;external libthreads name ' ' + LIBC_SUFFIX;
+  function pthread_barrier_wait(__barrier:Ppthread_barrier_t):cint;cdecl;external libthreads name 'pthread_barrier_wait' + LIBC_SUFFIX;
+  function pthread_key_create(__key:Ppthread_key_t; __destr_function :TKeyValueDestructor):cint;cdecl; external libthreads name 'pthread_key_create' + LIBC_SUFFIX;
+  function pthread_key_delete(__key:pthread_key_t):cint;cdecl; external libthreads name 'pthread_key_delete' + LIBC_SUFFIX;
+  function pthread_setspecific(__key:pthread_key_t; __pointer:pointer):cint;cdecl; external libthreads name 'pthread_setspecific' + LIBC_SUFFIX;
+  function pthread_getspecific(__key:pthread_key_t):pointer;cdecl; external libthreads name 'pthread_getspecific' + LIBC_SUFFIX;
+  function pthread_once(__once_control:Ppthread_once_t; __init_routine:Tprocedure ):cint;cdecl; external libthreads name 'pthread_once' + LIBC_SUFFIX;
+  function pthread_setcancelstate(__state:cint; __oldstate:pcint):cint;cdecl; external libthreads name 'pthread_setcancelstate' + LIBC_SUFFIX;
+  function pthread_setcanceltype(__type:cint; __oldtype:pcint):cint;cdecl; external libthreads name 'pthread_setcanceltype' + LIBC_SUFFIX;
+  function pthread_cancel(__thread:pthread_t):cint;cdecl; external libthreads name 'pthread_cancel' + LIBC_SUFFIX;
+  procedure pthread_testcancel;cdecl; external libthreads name 'pthread_testcancel' + LIBC_SUFFIX;
+  procedure _pthread_cleanup_push(__buffer:P_pthread_cleanup_buffer; __routine:TPthreadCleanupRoutine; __arg:pointer);cdecl; external libthreads name '_pthread_cleanup_push' + LIBC_SUFFIX;
+  procedure _pthread_cleanup_pop(__buffer:P_pthread_cleanup_buffer; __execute:cint);cdecl; external libthreads name '_pthread_cleanup_pop' + LIBC_SUFFIX;
+  function pthread_atfork(__prepare:TforkHandler ; __parent:TForkHandler ; __child: TForkHandler ):cint;cdecl; external libthreads name 'pthread_atfork' + LIBC_SUFFIX;
+  procedure pthread_kill_other_threads_np;cdecl; external libthreads name 'pthread_kill_other_threads_np' + LIBC_SUFFIX;
+  procedure __pthread_initialize; cdecl; external libthreads name '__pthread_initialize' + LIBC_SUFFIX;
+  function pthread_sigmask(__how:cint; __newmask:P__sigset_t; __oldmask:P__sigset_t):cint;cdecl; external libthreads name 'pthread_sigmask' + LIBC_SUFFIX;
+  function pthread_kill(__thread:pthread_t; __signo:cint):cint;cdecl; external libthreads name 'pthread_kill' + LIBC_SUFFIX;
 
-  function sem_init(__sem:Psem_t; __pshared:cint; __value:dword):cint;cdecl;external libthreads;
-  function sem_destroy(__sem:Psem_t):cint;cdecl;external libthreads;
-  function sem_close(__sem:Psem_t):cint;cdecl;external libthreads;
-  function sem_unlink(__name:Pchar):cint;cdecl;external libthreads;
-  function sem_wait(__sem:Psem_t):cint;cdecl;external libthreads;
-  function sem_trywait(__sem:Psem_t):cint;cdecl;external libthreads;
-  function sem_post(__sem:Psem_t):cint;cdecl;external libthreads;
-  function sem_getvalue(__sem:Psem_t; __sval:pcint):cint;cdecl;external libthreads;
-  function sem_timedwait(__sem: Psem_t; __abstime: Ptimespec):cint;cdecl; external libthreads;
+  function sem_init(__sem:Psem_t; __pshared:cint; __value:dword):cint;cdecl;external libthreads name 'sem_init' + LIBC_SUFFIX;
+  function sem_destroy(__sem:Psem_t):cint;cdecl;external libthreads name 'sem_destroy' + LIBC_SUFFIX;
+  function sem_close(__sem:Psem_t):cint;cdecl;external libthreads name 'sem_close' + LIBC_SUFFIX;
+  function sem_unlink(__name:Pchar):cint;cdecl;external libthreads name 'sem_unlink' + LIBC_SUFFIX;
+  function sem_wait(__sem:Psem_t):cint;cdecl;external libthreads name 'sem_wait' + LIBC_SUFFIX;
+  function sem_trywait(__sem:Psem_t):cint;cdecl;external libthreads name 'sem_trywait' + LIBC_SUFFIX;
+  function sem_post(__sem:Psem_t):cint;cdecl;external libthreads name 'sem_post' + LIBC_SUFFIX;
+  function sem_getvalue(__sem:Psem_t; __sval:pcint):cint;cdecl;external libthreads name 'sem_getvalue' + LIBC_SUFFIX;
+  function sem_timedwait(__sem: Psem_t; __abstime: Ptimespec):cint;cdecl; external libthreads name 'sem_timedwait' + LIBC_SUFFIX;
 
