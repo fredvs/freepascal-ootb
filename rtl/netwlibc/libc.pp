@@ -8414,102 +8414,102 @@ type
 
 type TPTThreadStartFunction = function (_para1:pointer):pointer; cdecl;
 
-function pthread_create(thread:Ppthread_t; attr:Ppthread_attr_t; start_routine:TPTThreadStartFunction; arg:pointer):longint;cdecl;external libc_nlm name 'pthread_create';
-function pthread_cancel(thread:pthread_t):longint;cdecl;external libc_nlm name 'pthread_cancel';
-function pthread_join(thread:pthread_t; status:Ppointer):longint;cdecl;external libc_nlm name 'pthread_join';
-procedure pthread_exit(status:pointer);cdecl;external libc_nlm name 'pthread_exit';
-function pthread_equal(t1:pthread_t; t2:pthread_t):longint;cdecl;external libc_nlm name 'pthread_equal';
-procedure pthread_yield;cdecl;external libc_nlm name 'pthread_yield';
-function pthread_kill(thread:pthread_t; sig:longint):longint;cdecl;external libc_nlm name 'pthread_kill';
-function pthread_detach(thread:pthread_t):longint;cdecl;external libc_nlm name 'pthread_detach';
+function pthread_create(thread:Ppthread_t; attr:Ppthread_attr_t; start_routine:TPTThreadStartFunction; arg:pointer):longint;cdecl;external libc_nlm name 'pthread_create' + LIBC_SUFFIX ;
+function pthread_cancel(thread:pthread_t):longint;cdecl;external libc_nlm name 'pthread_cancel' + LIBC_SUFFIX ;
+function pthread_join(thread:pthread_t; status:Ppointer):longint;cdecl;external libc_nlm name 'pthread_join' + LIBC_SUFFIX ;
+procedure pthread_exit(status:pointer);cdecl;external libc_nlm name 'pthread_exit' + LIBC_SUFFIX ;
+function pthread_equal(t1:pthread_t; t2:pthread_t):longint;cdecl;external libc_nlm name 'pthread_equal' + LIBC_SUFFIX ;
+procedure pthread_yield;cdecl;external libc_nlm name 'pthread_yield' + LIBC_SUFFIX ;
+function pthread_kill(thread:pthread_t; sig:longint):longint;cdecl;external libc_nlm name 'pthread_kill' + LIBC_SUFFIX ;
+function pthread_detach(thread:pthread_t):longint;cdecl;external libc_nlm name 'pthread_detach' + LIBC_SUFFIX ;
 
-function pthread_once(once_control:Ppthread_once_t; init_routine:TCDeclProcedure ):longint;cdecl;external libc_nlm name 'pthread_once';
-function pthread_self:pthread_t;cdecl;external libc_nlm name 'pthread_self';
-function pthread_key_create(_para1:Ppthread_key_t; _destructor:TCDeclProc1PtrArg):longint;cdecl;external libc_nlm name 'pthread_key_create';
-function pthread_key_delete(key:pthread_key_t):longint;cdecl;external libc_nlm name 'pthread_key_delete';
-function pthread_getspecific(key:pthread_key_t):pointer;cdecl;external libc_nlm name 'pthread_getspecific';
+function pthread_once(once_control:Ppthread_once_t; init_routine:TCDeclProcedure ):longint;cdecl;external libc_nlm name 'pthread_once' + LIBC_SUFFIX ;
+function pthread_self:pthread_t;cdecl;external libc_nlm name 'pthread_self' + LIBC_SUFFIX ;
+function pthread_key_create(_para1:Ppthread_key_t; _destructor:TCDeclProc1PtrArg):longint;cdecl;external libc_nlm name 'pthread_key_create' + LIBC_SUFFIX ;
+function pthread_key_delete(key:pthread_key_t):longint;cdecl;external libc_nlm name 'pthread_key_delete' + LIBC_SUFFIX ;
+function pthread_getspecific(key:pthread_key_t):pointer;cdecl;external libc_nlm name 'pthread_getspecific' + LIBC_SUFFIX ;
 
-function pthread_setspecific(key:pthread_key_t; value:pointer):longint;cdecl;external libc_nlm name 'pthread_setspecific';
-function pthread_getschedparam(thread:pthread_t; policy:Plongint; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_getschedparam';
+function pthread_setspecific(key:pthread_key_t; value:pointer):longint;cdecl;external libc_nlm name 'pthread_setspecific' + LIBC_SUFFIX ;
+function pthread_getschedparam(thread:pthread_t; policy:Plongint; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_getschedparam' + LIBC_SUFFIX ;
 
-function pthread_setschedparam(thread:pthread_t; policy:longint; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_setschedparam';
-function pthread_setcancelstate(state:longint; oldstate:Plongint):longint;cdecl;external libc_nlm name 'pthread_setcancelstate';
-function pthread_setcanceltype(_type:longint; oldtype:Plongint):longint;cdecl;external libc_nlm name 'pthread_setcanceltype';
-procedure pthread_testcancel;cdecl;external libc_nlm name 'pthread_testcancel';
+function pthread_setschedparam(thread:pthread_t; policy:longint; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_setschedparam' + LIBC_SUFFIX ;
+function pthread_setcancelstate(state:longint; oldstate:Plongint):longint;cdecl;external libc_nlm name 'pthread_setcancelstate' + LIBC_SUFFIX ;
+function pthread_setcanceltype(_type:longint; oldtype:Plongint):longint;cdecl;external libc_nlm name 'pthread_setcanceltype' + LIBC_SUFFIX ;
+procedure pthread_testcancel;cdecl;external libc_nlm name 'pthread_testcancel' + LIBC_SUFFIX ;
 
-function pthread_sigmask(how:longint; _set:Psigset_t; oset:Psigset_t):longint;cdecl;external libc_nlm name 'pthread_sigmask';
-procedure pthread_cleanup_push(routine:TCDeclProc1PtrArg; arg:pointer);cdecl;external libc_nlm name 'pthread_cleanup_push';
-procedure pthread_cleanup_pop(execute:longint);cdecl;external libc_nlm name 'pthread_cleanup_pop';
+function pthread_sigmask(how:longint; _set:Psigset_t; oset:Psigset_t):longint;cdecl;external libc_nlm name 'pthread_sigmask' + LIBC_SUFFIX ;
+procedure pthread_cleanup_push(routine:TCDeclProc1PtrArg; arg:pointer);cdecl;external libc_nlm name 'pthread_cleanup_push' + LIBC_SUFFIX ;
+procedure pthread_cleanup_pop(execute:longint);cdecl;external libc_nlm name 'pthread_cleanup_pop' + LIBC_SUFFIX ;
 { pthread attribute functions...  }
-function pthread_attr_init(attr:Ppthread_attr_t):longint;cdecl;external libc_nlm name 'pthread_attr_init';
-function pthread_attr_destroy(attr:Ppthread_attr_t):longint;cdecl;external libc_nlm name 'pthread_attr_destroy';
+function pthread_attr_init(attr:Ppthread_attr_t):longint;cdecl;external libc_nlm name 'pthread_attr_init' + LIBC_SUFFIX ;
+function pthread_attr_destroy(attr:Ppthread_attr_t):longint;cdecl;external libc_nlm name 'pthread_attr_destroy' + LIBC_SUFFIX ;
 
-function pthread_attr_getdetachstate(attr:Ppthread_attr_t; detachstate:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getdetachstate';
-function pthread_attr_setdetachstate(attr:Ppthread_attr_t; detachstate:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setdetachstate';
+function pthread_attr_getdetachstate(attr:Ppthread_attr_t; detachstate:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getdetachstate' + LIBC_SUFFIX ;
+function pthread_attr_setdetachstate(attr:Ppthread_attr_t; detachstate:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setdetachstate' + LIBC_SUFFIX ;
 
-function pthread_attr_getinheritsched(attr:Ppthread_attr_t; inheritsched:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getinheritsched';
-function pthread_attr_setinheritsched(attr:Ppthread_attr_t; inheritsched:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setinheritsched';
-function pthread_attr_getschedparam(attr:Ppthread_attr_t; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_attr_getschedparam';
-function pthread_attr_setschedparam(attr:Ppthread_attr_t; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_attr_setschedparam';
-function pthread_attr_getschedpolicy(attr:Ppthread_attr_t; policy:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getschedpolicy';
-function pthread_attr_setschedpolicy(attr:Ppthread_attr_t; policy:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setschedpolicy';
-function pthread_attr_getscope(attr:Ppthread_attr_t; contentionscope:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getscope';
-function pthread_attr_setscope(attr:Ppthread_attr_t; contentionscope:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setscope';
-function pthread_attr_getstackaddr(attr:Ppthread_attr_t; stackaddr:Ppointer):longint;cdecl;external libc_nlm name 'pthread_attr_getstackaddr';
-function pthread_attr_setstackaddr(attr:Ppthread_attr_t; stackaddr:pointer):longint;cdecl;external libc_nlm name 'pthread_attr_setstackaddr';
-function pthread_attr_getstacksize(attr:Ppthread_attr_t; stacksize:Psize_t):longint;cdecl;external libc_nlm name 'pthread_attr_getstacksize';
-function pthread_attr_setstacksize(attr:Ppthread_attr_t; stacksize:size_t):longint;cdecl;external libc_nlm name 'pthread_attr_setstacksize';
-function pthread_attr_getname_np(attr:Ppthread_attr_t; name:Pchar; len:size_t; mbz:Ppointer):longint;cdecl;external libc_nlm name 'pthread_attr_getname_np';
-function pthread_attr_setname_np(attr:Ppthread_attr_t; name:Pchar; mbz:pointer):longint;cdecl;external libc_nlm name 'pthread_attr_setname_np';
+function pthread_attr_getinheritsched(attr:Ppthread_attr_t; inheritsched:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getinheritsched' + LIBC_SUFFIX ;
+function pthread_attr_setinheritsched(attr:Ppthread_attr_t; inheritsched:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setinheritsched' + LIBC_SUFFIX ;
+function pthread_attr_getschedparam(attr:Ppthread_attr_t; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_attr_getschedparam' + LIBC_SUFFIX ;
+function pthread_attr_setschedparam(attr:Ppthread_attr_t; param:Psched_param):longint;cdecl;external libc_nlm name 'pthread_attr_setschedparam' + LIBC_SUFFIX ;
+function pthread_attr_getschedpolicy(attr:Ppthread_attr_t; policy:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getschedpolicy' + LIBC_SUFFIX ;
+function pthread_attr_setschedpolicy(attr:Ppthread_attr_t; policy:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setschedpolicy' + LIBC_SUFFIX ;
+function pthread_attr_getscope(attr:Ppthread_attr_t; contentionscope:Plongint):longint;cdecl;external libc_nlm name 'pthread_attr_getscope' + LIBC_SUFFIX ;
+function pthread_attr_setscope(attr:Ppthread_attr_t; contentionscope:longint):longint;cdecl;external libc_nlm name 'pthread_attr_setscope' + LIBC_SUFFIX ;
+function pthread_attr_getstackaddr(attr:Ppthread_attr_t; stackaddr:Ppointer):longint;cdecl;external libc_nlm name 'pthread_attr_getstackaddr' + LIBC_SUFFIX ;
+function pthread_attr_setstackaddr(attr:Ppthread_attr_t; stackaddr:pointer):longint;cdecl;external libc_nlm name 'pthread_attr_setstackaddr' + LIBC_SUFFIX ;
+function pthread_attr_getstacksize(attr:Ppthread_attr_t; stacksize:Psize_t):longint;cdecl;external libc_nlm name 'pthread_attr_getstacksize' + LIBC_SUFFIX ;
+function pthread_attr_setstacksize(attr:Ppthread_attr_t; stacksize:size_t):longint;cdecl;external libc_nlm name 'pthread_attr_setstacksize' + LIBC_SUFFIX ;
+function pthread_attr_getname_np(attr:Ppthread_attr_t; name:Pchar; len:size_t; mbz:Ppointer):longint;cdecl;external libc_nlm name 'pthread_attr_getname_np' + LIBC_SUFFIX ;
+function pthread_attr_setname_np(attr:Ppthread_attr_t; name:Pchar; mbz:pointer):longint;cdecl;external libc_nlm name 'pthread_attr_setname_np' + LIBC_SUFFIX ;
 { condition variable functions...  }
 
-function pthread_cond_init(cond:Ppthread_cond_t; attr:Ppthread_condattr_t):longint;cdecl;external libc_nlm name 'pthread_cond_init';
-function pthread_cond_destroy(cond:Ppthread_cond_t):longint;cdecl;external libc_nlm name 'pthread_cond_destroy';
-function pthread_cond_signal(cond:Ppthread_cond_t):longint;cdecl;external libc_nlm name 'pthread_cond_signal';
-function pthread_cond_broadcast(cond:Ppthread_cond_t):longint;cdecl;external libc_nlm name 'pthread_cond_broadcast';
-function pthread_cond_wait(cond:Ppthread_cond_t; mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_cond_wait';
+function pthread_cond_init(cond:Ppthread_cond_t; attr:Ppthread_condattr_t):longint;cdecl;external libc_nlm name 'pthread_cond_init' + LIBC_SUFFIX ;
+function pthread_cond_destroy(cond:Ppthread_cond_t):longint;cdecl;external libc_nlm name 'pthread_cond_destroy' + LIBC_SUFFIX ;
+function pthread_cond_signal(cond:Ppthread_cond_t):longint;cdecl;external libc_nlm name 'pthread_cond_signal' + LIBC_SUFFIX ;
+function pthread_cond_broadcast(cond:Ppthread_cond_t):longint;cdecl;external libc_nlm name 'pthread_cond_broadcast' + LIBC_SUFFIX ;
+function pthread_cond_wait(cond:Ppthread_cond_t; mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_cond_wait' + LIBC_SUFFIX ;
 
-function pthread_cond_timedwait(cond:Ppthread_cond_t; mutex:Ppthread_mutex_t; abstime:Ptimespec):longint;cdecl;external libc_nlm name 'pthread_cond_timedwait';
+function pthread_cond_timedwait(cond:Ppthread_cond_t; mutex:Ppthread_mutex_t; abstime:Ptimespec):longint;cdecl;external libc_nlm name 'pthread_cond_timedwait' + LIBC_SUFFIX ;
 { condition variable attribute functions...  }
-function pthread_condattr_init(attr:Ppthread_condattr_t):longint;cdecl;external libc_nlm name 'pthread_condattr_init';
-function pthread_condattr_destroy(attr:Ppthread_condattr_t):longint;cdecl;external libc_nlm name 'pthread_condattr_destroy';
-function pthread_condattr_getpshared(attr:Ppthread_condattr_t; pshared:Plongint):longint;cdecl;external libc_nlm name 'pthread_condattr_getpshared';
-function pthread_condattr_setpshared(attr:Ppthread_condattr_t; pshared:longint):longint;cdecl;external libc_nlm name 'pthread_condattr_setpshared';
+function pthread_condattr_init(attr:Ppthread_condattr_t):longint;cdecl;external libc_nlm name 'pthread_condattr_init' + LIBC_SUFFIX ;
+function pthread_condattr_destroy(attr:Ppthread_condattr_t):longint;cdecl;external libc_nlm name 'pthread_condattr_destroy' + LIBC_SUFFIX ;
+function pthread_condattr_getpshared(attr:Ppthread_condattr_t; pshared:Plongint):longint;cdecl;external libc_nlm name 'pthread_condattr_getpshared' + LIBC_SUFFIX ;
+function pthread_condattr_setpshared(attr:Ppthread_condattr_t; pshared:longint):longint;cdecl;external libc_nlm name 'pthread_condattr_setpshared' + LIBC_SUFFIX ;
 { mutex functions...  }
 
-function pthread_mutex_init(mutex:Ppthread_mutex_t; attr:Ppthread_mutexattr_t):longint;cdecl;external libc_nlm name 'pthread_mutex_init';
-function pthread_mutex_destroy(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_destroy';
-function pthread_mutex_lock(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_lock';
-function pthread_mutex_trylock(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_trylock';
-function pthread_mutex_unlock(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_unlock';
+function pthread_mutex_init(mutex:Ppthread_mutex_t; attr:Ppthread_mutexattr_t):longint;cdecl;external libc_nlm name 'pthread_mutex_init' + LIBC_SUFFIX ;
+function pthread_mutex_destroy(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_destroy' + LIBC_SUFFIX ;
+function pthread_mutex_lock(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_lock' + LIBC_SUFFIX ;
+function pthread_mutex_trylock(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_trylock' + LIBC_SUFFIX ;
+function pthread_mutex_unlock(mutex:Ppthread_mutex_t):longint;cdecl;external libc_nlm name 'pthread_mutex_unlock' + LIBC_SUFFIX ;
 { mutex attribute functions...  }
-function pthread_mutexattr_init(attr:Ppthread_mutexattr_t):longint;cdecl;external libc_nlm name 'pthread_mutexattr_init';
-function pthread_mutexattr_destroy(attr:Ppthread_mutexattr_t):longint;cdecl;external libc_nlm name 'pthread_mutexattr_destroy';
-function pthread_mutexattr_getprioceiling(attr:Ppthread_mutexattr_t; prioceiling:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_getprioceiling';
-function pthread_mutexattr_setprioceiling(attr:Ppthread_mutexattr_t; prioceiling:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_setprioceiling';
-function pthread_mutexattr_getprotocol(attr:Ppthread_mutexattr_t; protocol:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_getprotocol';
-function pthread_mutexattr_setprotocol(attr:Ppthread_mutexattr_t; protocol:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_setprotocol';
-function pthread_mutexattr_getpshared(attr:Ppthread_mutexattr_t; pshared:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_getpshared';
-function pthread_mutexattr_setpshared(attr:Ppthread_mutexattr_t; pshared:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_setpshared';
-function pthread_mutexattr_gettype(attr:Ppthread_mutexattr_t; kind:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_gettype';
-function pthread_mutexattr_settype(attr:Ppthread_mutexattr_t; kind:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_settype';
+function pthread_mutexattr_init(attr:Ppthread_mutexattr_t):longint;cdecl;external libc_nlm name 'pthread_mutexattr_init' + LIBC_SUFFIX ;
+function pthread_mutexattr_destroy(attr:Ppthread_mutexattr_t):longint;cdecl;external libc_nlm name 'pthread_mutexattr_destroy' + LIBC_SUFFIX ;
+function pthread_mutexattr_getprioceiling(attr:Ppthread_mutexattr_t; prioceiling:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_getprioceiling' + LIBC_SUFFIX ;
+function pthread_mutexattr_setprioceiling(attr:Ppthread_mutexattr_t; prioceiling:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_setprioceiling' + LIBC_SUFFIX ;
+function pthread_mutexattr_getprotocol(attr:Ppthread_mutexattr_t; protocol:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_getprotocol' + LIBC_SUFFIX ;
+function pthread_mutexattr_setprotocol(attr:Ppthread_mutexattr_t; protocol:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_setprotocol' + LIBC_SUFFIX ;
+function pthread_mutexattr_getpshared(attr:Ppthread_mutexattr_t; pshared:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_getpshared' + LIBC_SUFFIX ;
+function pthread_mutexattr_setpshared(attr:Ppthread_mutexattr_t; pshared:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_setpshared' + LIBC_SUFFIX ;
+function pthread_mutexattr_gettype(attr:Ppthread_mutexattr_t; kind:Plongint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_gettype' + LIBC_SUFFIX ;
+function pthread_mutexattr_settype(attr:Ppthread_mutexattr_t; kind:longint):longint;cdecl;external libc_nlm name 'pthread_mutexattr_settype' + LIBC_SUFFIX ;
 { reader-writer lock functions...  }
-function pthread_rwlock_init(rwlp:Ppthread_rwlock_t; attr:Ppthread_rwlockattr_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_init';
-function pthread_rwlock_destroy(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_destroy';
-function pthread_rwlock_rdlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_rdlock';
-function pthread_rwlock_wrlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_wrlock';
-function pthread_rwlock_tryrdlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_tryrdlock';
-function pthread_rwlock_trywrlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_trywrlock';
-function pthread_rwlock_unlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_unlock';
-function pthread_rwlock_timedrdlock(rwlock:Ppthread_rwlock_t; abs_timeout:Ptimespec):longint;cdecl;external libc_nlm name 'pthread_rwlock_timedrdlock';
-function pthread_rwlock_timedwrlock(rwlock:Ppthread_rwlock_t; abs_timeout:Ptimespec):longint;cdecl;external libc_nlm name 'pthread_rwlock_timedwrlock';
+function pthread_rwlock_init(rwlp:Ppthread_rwlock_t; attr:Ppthread_rwlockattr_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_init' + LIBC_SUFFIX ;
+function pthread_rwlock_destroy(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_destroy' + LIBC_SUFFIX ;
+function pthread_rwlock_rdlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_rdlock' + LIBC_SUFFIX ;
+function pthread_rwlock_wrlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_wrlock' + LIBC_SUFFIX ;
+function pthread_rwlock_tryrdlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_tryrdlock' + LIBC_SUFFIX ;
+function pthread_rwlock_trywrlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_trywrlock' + LIBC_SUFFIX ;
+function pthread_rwlock_unlock(rwlp:Ppthread_rwlock_t):longint;cdecl;external libc_nlm name 'pthread_rwlock_unlock' + LIBC_SUFFIX ;
+function pthread_rwlock_timedrdlock(rwlock:Ppthread_rwlock_t; abs_timeout:Ptimespec):longint;cdecl;external libc_nlm name 'pthread_rwlock_timedrdlock' + LIBC_SUFFIX ;
+function pthread_rwlock_timedwrlock(rwlock:Ppthread_rwlock_t; abs_timeout:Ptimespec):longint;cdecl;external libc_nlm name 'pthread_rwlock_timedwrlock' + LIBC_SUFFIX ;
 { reader-writer lock attribute functions...  }
-function pthread_rwlockattr_init(attr:Ppthread_rwlockattr_t):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_init';
-function pthread_rwlockattr_destroy(attr:Ppthread_rwlockattr_t):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_destroy';
-function pthread_rwlockattr_getpshared(attr:Ppthread_rwlockattr_t; pshared:Plongint):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_getpshared';
-function pthread_rwlockattr_setpshared(attr:Ppthread_rwlockattr_t; pshared:longint):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_setpshared';
+function pthread_rwlockattr_init(attr:Ppthread_rwlockattr_t):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_init' + LIBC_SUFFIX ;
+function pthread_rwlockattr_destroy(attr:Ppthread_rwlockattr_t):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_destroy' + LIBC_SUFFIX ;
+function pthread_rwlockattr_getpshared(attr:Ppthread_rwlockattr_t; pshared:Plongint):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_getpshared' + LIBC_SUFFIX ;
+function pthread_rwlockattr_setpshared(attr:Ppthread_rwlockattr_t; pshared:longint):longint;cdecl;external libc_nlm name 'pthread_rwlockattr_setpshared' + LIBC_SUFFIX ;
 { registering functions to execute at call to fork()...  }
-function pthread_atfork(prepare, parent, child:TCDeclProcedure):longint;cdecl;external libc_nlm name 'pthread_atfork';
+function pthread_atfork(prepare, parent, child:TCDeclProcedure):longint;cdecl;external libc_nlm name 'pthread_atfork' + LIBC_SUFFIX ;
 
 
 type
@@ -8535,8 +8535,8 @@ type
 
 //!! function geteuid:uid_t;cdecl;external libc_nlm name 'geteuid';
 //!! function getuid:uid_t;cdecl;external libc_nlm name 'getuid';
-function posixlogin(host:Pchar; port:longint; name:Pchar; pwd:Pchar; ctx:Pchar):longint;cdecl;external libc_nlm name 'posixlogin';
-function posixlogout:longint;cdecl;external libc_nlm name 'posixlogout';
+function posixlogin(host:Pchar; port:longint; name:Pchar; pwd:Pchar; ctx:Pchar):longint;cdecl;external libc_nlm name 'posixlogin' + LIBC_SUFFIX ;
+function posixlogout:longint;cdecl;external libc_nlm name 'posixlogout' + LIBC_SUFFIX ;
 
 {$ifdef EnableLibcRegex}
 
@@ -8660,13 +8660,13 @@ type
         spares : array[0..5] of longint;
      end;
 
-function sem_init(sem:Psem_t; pshared:longint; value:dword):longint;cdecl;external libc_nlm name 'sem_init';
-function sem_destroy(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_destroy';
-function sem_getvalue(sem:Psem_t; sval:Plongint):longint;cdecl;external libc_nlm name 'sem_getvalue';
-function sem_post(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_post';
-function sem_wait(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_wait';
-function sem_trywait(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_trywait';
-function sem_timedwait(sem:Psem_t; abstime:Ptimespec):longint;cdecl;external libc_nlm name 'sem_timedwait';
+function sem_init(sem:Psem_t; pshared:longint; value:dword):longint;cdecl;external libc_nlm name 'sem_init' + LIBC_SUFFIX ;
+function sem_destroy(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_destroy' + LIBC_SUFFIX ;
+function sem_getvalue(sem:Psem_t; sval:Plongint):longint;cdecl;external libc_nlm name 'sem_getvalue' + LIBC_SUFFIX ;
+function sem_post(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_post' + LIBC_SUFFIX ;
+function sem_wait(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_wait' + LIBC_SUFFIX ;
+function sem_trywait(sem:Psem_t):longint;cdecl;external libc_nlm name 'sem_trywait' + LIBC_SUFFIX ;
+function sem_timedwait(sem:Psem_t; abstime:Ptimespec):longint;cdecl;external libc_nlm name 'sem_timedwait' + LIBC_SUFFIX ;
 
 
 // setjmp.h
@@ -8675,8 +8675,8 @@ type
    _Pjmp_buf = ^_jmp_buf;
    _jmp_buf = double;
 
-procedure __longjmp(_para1:_jmp_buf; _para2:longint);cdecl;external libc_nlm name '__longjmp';
-function __setjmp(_para1:_jmp_buf):longint;cdecl;external libc_nlm name '__setjmp';
+procedure __longjmp(_para1:_jmp_buf; _para2:longint);cdecl;external libc_nlm name '__longjmp' + LIBC_SUFFIX ;
+function __setjmp(_para1:_jmp_buf):longint;cdecl;external libc_nlm name '__setjmp' + LIBC_SUFFIX ;
 
 // synch.h
 
@@ -8706,34 +8706,34 @@ type
    Psema_t = ^sema_t;
    sema_t = sem_t;
 
-function barrier_init(bp:Pbarrier_t; threads:longint):longint;cdecl;external libc_nlm name 'barrier_init';
-procedure barrier_destroy(bp:Pbarrier_t);cdecl;external libc_nlm name 'barrier_destroy';
-function barrier_wait(bp:Pbarrier_t):longint;cdecl;external libc_nlm name 'barrier_wait';
-function barrier_inc(bp:Pbarrier_t):longint;cdecl;external libc_nlm name 'barrier_inc';
-function barrier_dec(bp:Pbarrier_t):longint;cdecl;external libc_nlm name 'barrier_dec';
-function cond_init(cvp:Pcond_t; _type:longint; arg:longint):longint;cdecl;external libc_nlm name 'cond_init';
-function cond_destroy(cvp:Pcond_t):longint;cdecl;external libc_nlm name 'cond_destroy';
-function cond_broadcast(cvp:Pcond_t):longint;cdecl;external libc_nlm name 'cond_broadcast';
-function cond_signal(cvp:Pcond_t):longint;cdecl;external libc_nlm name 'cond_signal';
-function cond_wait(cvp:Pcond_t; mp:Pmutex_t):longint;cdecl;external libc_nlm name 'cond_wait';
-//!! function cond_timedwait(cvp:Pcond_t; mp:Pmutex_t; abstime:Ptimestruc_t):longint;cdecl;external libc_nlm name 'cond_timedwait';
-function mutex_init(mp:Pmutex_t; _type:longint; arg:pointer):longint;cdecl;external libc_nlm name 'mutex_init';
-function mutex_destroy(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_destroy';
-function mutex_lock(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_lock';
-function mutex_trylock(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_trylock';
-function mutex_unlock(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_unlock';
-function rwlock_init(rwlp:Prwlock_t; _type:longint; arg:pointer):longint;cdecl;external libc_nlm name 'rwlock_init';
-function rwlock_destroy(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rwlock_destroy';
-function rw_rdlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_rdlock';
-function rw_wrlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_wrlock';
-function rw_tryrdlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_tryrdlock';
-function rw_trywrlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_trywrlock';
-function rw_unlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_unlock';
-function sema_init(sp:Psema_t; count:dword; _type:longint; arg:pointer):longint;cdecl;external libc_nlm name 'sema_init';
-function sema_destroy(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_destroy';
-function sema_post(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_post';
-function sema_trywait(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_trywait';
-function sema_wait(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_wait';
+function barrier_init(bp:Pbarrier_t; threads:longint):longint;cdecl;external libc_nlm name 'barrier_init' + LIBC_SUFFIX ;
+procedure barrier_destroy(bp:Pbarrier_t);cdecl;external libc_nlm name 'barrier_destroy' + LIBC_SUFFIX ;
+function barrier_wait(bp:Pbarrier_t):longint;cdecl;external libc_nlm name 'barrier_wait' + LIBC_SUFFIX ;
+function barrier_inc(bp:Pbarrier_t):longint;cdecl;external libc_nlm name 'barrier_inc' + LIBC_SUFFIX ;
+function barrier_dec(bp:Pbarrier_t):longint;cdecl;external libc_nlm name 'barrier_dec' + LIBC_SUFFIX ;
+function cond_init(cvp:Pcond_t; _type:longint; arg:longint):longint;cdecl;external libc_nlm name 'cond_init' + LIBC_SUFFIX ;
+function cond_destroy(cvp:Pcond_t):longint;cdecl;external libc_nlm name 'cond_destroy' + LIBC_SUFFIX ;
+function cond_broadcast(cvp:Pcond_t):longint;cdecl;external libc_nlm name 'cond_broadcast' + LIBC_SUFFIX ;
+function cond_signal(cvp:Pcond_t):longint;cdecl;external libc_nlm name 'cond_signal' + LIBC_SUFFIX ;
+function cond_wait(cvp:Pcond_t; mp:Pmutex_t):longint;cdecl;external libc_nlm name 'cond_wait' + LIBC_SUFFIX ;
+//!! function cond_timedwait(cvp:Pcond_t; mp:Pmutex_t; abstime:Ptimestruc_t):longint;cdecl;external libc_nlm name 'cond_timedwait' + LIBC_SUFFIX ;
+function mutex_init(mp:Pmutex_t; _type:longint; arg:pointer):longint;cdecl;external libc_nlm name 'mutex_init' + LIBC_SUFFIX ;
+function mutex_destroy(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_destroy' + LIBC_SUFFIX ;
+function mutex_lock(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_lock' + LIBC_SUFFIX ;
+function mutex_trylock(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_trylock' + LIBC_SUFFIX ;
+function mutex_unlock(mp:Pmutex_t):longint;cdecl;external libc_nlm name 'mutex_unlock' + LIBC_SUFFIX ;
+function rwlock_init(rwlp:Prwlock_t; _type:longint; arg:pointer):longint;cdecl;external libc_nlm name 'rwlock_init' + LIBC_SUFFIX ;
+function rwlock_destroy(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rwlock_destroy' + LIBC_SUFFIX ;
+function rw_rdlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_rdlock' + LIBC_SUFFIX ;
+function rw_wrlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_wrlock' + LIBC_SUFFIX ;
+function rw_tryrdlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_tryrdlock' + LIBC_SUFFIX ;
+function rw_trywrlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_trywrlock' + LIBC_SUFFIX ;
+function rw_unlock(rwlp:Prwlock_t):longint;cdecl;external libc_nlm name 'rw_unlock' + LIBC_SUFFIX ;
+function sema_init(sp:Psema_t; count:dword; _type:longint; arg:pointer):longint;cdecl;external libc_nlm name 'sema_init' + LIBC_SUFFIX ;
+function sema_destroy(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_destroy' + LIBC_SUFFIX ;
+function sema_post(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_post' + LIBC_SUFFIX ;
+function sema_trywait(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_trywait' + LIBC_SUFFIX ;
+function sema_wait(sp:Psema_t):longint;cdecl;external libc_nlm name 'sema_wait' + LIBC_SUFFIX ;
 
 // syslog.h
 
@@ -8947,13 +8947,13 @@ function tcsetattr(fildes:longint; optional_actions:longint; tp:Ptermios):longin
      LOG_DEBUG = $80000000;                  { message useful for debugging programs  }
      P_cfgfile = 'sys:/etc/syslog.conf';     { with no filename argument, syslogd.nlm uses this configuration file:  }
 
-  procedure closelog;cdecl;external libc_nlm name 'closelog';
+  procedure closelog;cdecl;external libc_nlm name 'closelog' + LIBC_SUFFIX ;
   procedure openlog(ident:Pchar; logopt:longint; facility:longint);cdecl;external libc_nlm;
-  function setlogmask(maskpri:longint):longint;cdecl;external libc_nlm name 'setlogmask';
+  function setlogmask(maskpri:longint):longint;cdecl;external libc_nlm name 'setlogmask' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-  procedure syslog(priority:longint; message:Pchar; args:array of const);cdecl;external libc_nlm name 'syslog';
+  procedure syslog(priority:longint; message:Pchar; args:array of const);cdecl;external libc_nlm name 'syslog' + LIBC_SUFFIX ;
 {$endif}
-  procedure syslog(priority:longint; message:Pchar);cdecl;external libc_nlm name 'syslog';
+  procedure syslog(priority:longint; message:Pchar);cdecl;external libc_nlm name 'syslog' + LIBC_SUFFIX ;
 
 
 
@@ -8980,24 +8980,24 @@ type
 type TThrStartRoutine = function (_para1:pointer):pointer; cdecl;
 function thr_create(stack_based:pointer; stack_size:size_t;
            start_routine:TThrStartRoutine; arg:pointer; flags:longint;
-           new_thr:Pthread_t):longint;cdecl;external libc_nlm name 'thr_create';
-function thr_self:thread_t;cdecl;external libc_nlm name 'thr_self';
-function thr_suspend(thr:thread_t):longint;cdecl;external libc_nlm name 'thr_suspend';
-function thr_continue(thr:thread_t):longint;cdecl;external libc_nlm name 'thr_continue';
-function thr_join(wait_for:thread_t; dead:Pthread_t; status:Ppointer):longint;cdecl;external libc_nlm name 'thr_join';
-procedure thr_yield;cdecl;external libc_nlm name 'thr_yield';
-procedure thr_exit(status:pointer);cdecl;external libc_nlm name 'thr_exit';
-function thr_minstack:size_t;cdecl;external libc_nlm name 'thr_minstack';
-function thr_kill(thr:thread_t; sig:longint):longint;cdecl;external libc_nlm name 'thr_kill';
+           new_thr:Pthread_t):longint;cdecl;external libc_nlm name 'thr_create' + LIBC_SUFFIX ;
+function thr_self:thread_t;cdecl;external libc_nlm name 'thr_self' + LIBC_SUFFIX ;
+function thr_suspend(thr:thread_t):longint;cdecl;external libc_nlm name 'thr_suspend' + LIBC_SUFFIX ;
+function thr_continue(thr:thread_t):longint;cdecl;external libc_nlm name 'thr_continue' + LIBC_SUFFIX ;
+function thr_join(wait_for:thread_t; dead:Pthread_t; status:Ppointer):longint;cdecl;external libc_nlm name 'thr_join' + LIBC_SUFFIX ;
+procedure thr_yield;cdecl;external libc_nlm name 'thr_yield' + LIBC_SUFFIX ;
+procedure thr_exit(status:pointer);cdecl;external libc_nlm name 'thr_exit' + LIBC_SUFFIX ;
+function thr_minstack:size_t;cdecl;external libc_nlm name 'thr_minstack' + LIBC_SUFFIX ;
+function thr_kill(thr:thread_t; sig:longint):longint;cdecl;external libc_nlm name 'thr_kill' + LIBC_SUFFIX ;
 
-function thr_sigsetmask(how:longint; _set:Psigset_t; oset:Psigset_t):longint;cdecl;external libc_nlm name 'thr_sigsetmask';
-function thr_getconcurrency:longint;cdecl;external libc_nlm name 'thr_getconcurrency';
-function thr_setconcurrency(new_level:longint):longint;cdecl;external libc_nlm name 'thr_setconcurrency';
-function thr_getprio(thr:thread_t; pri:Plongint):longint;cdecl;external libc_nlm name 'thr_getprio';
-function thr_setprio(thr:thread_t; pri:longint):longint;cdecl;external libc_nlm name 'thr_setprio';
-function thr_keycreate(key:Pthread_key_t; _destructor:TCDeclProc1PtrArg):longint;cdecl;external libc_nlm name 'thr_keycreate';
-function thr_getspecific(key:thread_key_t; value:Ppointer):longint;cdecl;external libc_nlm name 'thr_getspecific';
-function thr_setspecific(key:thread_key_t; value:pointer):longint;cdecl;external libc_nlm name 'thr_setspecific';
+function thr_sigsetmask(how:longint; _set:Psigset_t; oset:Psigset_t):longint;cdecl;external libc_nlm name 'thr_sigsetmask' + LIBC_SUFFIX ;
+function thr_getconcurrency:longint;cdecl;external libc_nlm name 'thr_getconcurrency' + LIBC_SUFFIX ;
+function thr_setconcurrency(new_level:longint):longint;cdecl;external libc_nlm name 'thr_setconcurrency' + LIBC_SUFFIX ;
+function thr_getprio(thr:thread_t; pri:Plongint):longint;cdecl;external libc_nlm name 'thr_getprio' + LIBC_SUFFIX ;
+function thr_setprio(thr:thread_t; pri:longint):longint;cdecl;external libc_nlm name 'thr_setprio' + LIBC_SUFFIX ;
+function thr_keycreate(key:Pthread_key_t; _destructor:TCDeclProc1PtrArg):longint;cdecl;external libc_nlm name 'thr_keycreate' + LIBC_SUFFIX ;
+function thr_getspecific(key:thread_key_t; value:Ppointer):longint;cdecl;external libc_nlm name 'thr_getspecific' + LIBC_SUFFIX ;
+function thr_setspecific(key:thread_key_t; value:pointer):longint;cdecl;external libc_nlm name 'thr_setspecific' + LIBC_SUFFIX ;
 
 // utf8.h
 
@@ -9009,45 +9009,45 @@ type
 { prototypes...  }
 
 
-function utf8width(ch:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8width';
-function utf8cat(tgt:Putf8_t; src:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8cat';
-function utf8chr(_string:Putf8_t; ch:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8chr';
-function utf8cmp(s1:Putf8_t; s2:Putf8_t):longint;cdecl;external libc_nlm name 'utf8cmp';
-function utf8cpy(tgt:Putf8_t; src:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8cpy';
-function utf8cspn(_string:Putf8_t; charset:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8cspn';
-function utf8dup(s:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8dup';
-function utf8index(_string:Putf8_t; search:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8index';
-function utf8len(_string:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8len';
+function utf8width(ch:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8width' + LIBC_SUFFIX ;
+function utf8cat(tgt:Putf8_t; src:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8cat' + LIBC_SUFFIX ;
+function utf8chr(_string:Putf8_t; ch:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8chr' + LIBC_SUFFIX ;
+function utf8cmp(s1:Putf8_t; s2:Putf8_t):longint;cdecl;external libc_nlm name 'utf8cmp' + LIBC_SUFFIX ;
+function utf8cpy(tgt:Putf8_t; src:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8cpy' + LIBC_SUFFIX ;
+function utf8cspn(_string:Putf8_t; charset:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8cspn' + LIBC_SUFFIX ;
+function utf8dup(s:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8dup' + LIBC_SUFFIX ;
+function utf8index(_string:Putf8_t; search:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8index' + LIBC_SUFFIX ;
+function utf8len(_string:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8len' + LIBC_SUFFIX ;
 {$ifndef DisableArrayOfConst}
-function utf8list(tgt:Putf8_t; s1:Putf8_t; args:array of const):Putf8_t;cdecl;external libc_nlm name 'utf8list';
+function utf8list(tgt:Putf8_t; s1:Putf8_t; args:array of const):Putf8_t;cdecl;external libc_nlm name 'utf8list' + LIBC_SUFFIX ;
 {$endif}
-function utf8list(tgt:Putf8_t; s1:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8list';
-function utf8lwr(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8lwr';
-function utf8ncat(tgt:Putf8_t; src:Putf8_t; n:size_t):Putf8_t;cdecl;external libc_nlm name 'utf8ncat';
-function utf8ncmp(s1:Putf8_t; s2:Putf8_t; n:size_t):longint;cdecl;external libc_nlm name 'utf8ncmp';
-function utf8ncpy(tgt:Putf8_t; src:Putf8_t; n:size_t):Putf8_t;cdecl;external libc_nlm name 'utf8ncpy';
-function utf8next(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8next';
-function utf8nlen(_string:Putf8_t; nbytes:size_t):size_t;cdecl;external libc_nlm name 'utf8nlen';
-function utf8nset(base:Putf8_t; ch:Putf8_t; n:size_t):Putf8_t;cdecl;external libc_nlm name 'utf8nset';
-function utf8pbrk(s1:Putf8_t; s2:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8pbrk';
-function utf8prev(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8prev';
-function utf8rchr(_string:Putf8_t; ch:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8rchr';
-function utf8rev(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8rev';
-function utf8size(_string:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8size';
-function utf8spn(_string:Putf8_t; charset:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8spn';
-function utf8str(as1:Putf8_t; as2:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8str';
-function utf8tolower(_string:Putf8_t; dest:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8tolower';
-function utf8tok_r(_string:Putf8_t; sepset:Putf8_t; lasts:PPutf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8tok_r';
-function utf8toupper(_string:Putf8_t; dest:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8toupper';
-function utf8upr(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8upr';
-function isutf8ascii(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8ascii';
-function isutf8digit(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8digit';
-function isutf8xdigit(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8xdigit';
-function isutf8space(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8space';
-function isutf8alnum(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8alnum';
-function isutf8alpha(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8alpha';
-function isutf8lower(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8lower';
-function isutf8upper(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8upper';
+function utf8list(tgt:Putf8_t; s1:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8list' + LIBC_SUFFIX ;
+function utf8lwr(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8lwr' + LIBC_SUFFIX ;
+function utf8ncat(tgt:Putf8_t; src:Putf8_t; n:size_t):Putf8_t;cdecl;external libc_nlm name 'utf8ncat' + LIBC_SUFFIX ;
+function utf8ncmp(s1:Putf8_t; s2:Putf8_t; n:size_t):longint;cdecl;external libc_nlm name 'utf8ncmp' + LIBC_SUFFIX ;
+function utf8ncpy(tgt:Putf8_t; src:Putf8_t; n:size_t):Putf8_t;cdecl;external libc_nlm name 'utf8ncpy' + LIBC_SUFFIX ;
+function utf8next(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8next' + LIBC_SUFFIX ;
+function utf8nlen(_string:Putf8_t; nbytes:size_t):size_t;cdecl;external libc_nlm name 'utf8nlen' + LIBC_SUFFIX ;
+function utf8nset(base:Putf8_t; ch:Putf8_t; n:size_t):Putf8_t;cdecl;external libc_nlm name 'utf8nset' + LIBC_SUFFIX ;
+function utf8pbrk(s1:Putf8_t; s2:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8pbrk' + LIBC_SUFFIX ;
+function utf8prev(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8prev' + LIBC_SUFFIX ;
+function utf8rchr(_string:Putf8_t; ch:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8rchr' + LIBC_SUFFIX ;
+function utf8rev(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8rev' + LIBC_SUFFIX ;
+function utf8size(_string:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8size' + LIBC_SUFFIX ;
+function utf8spn(_string:Putf8_t; charset:Putf8_t):size_t;cdecl;external libc_nlm name 'utf8spn' + LIBC_SUFFIX ;
+function utf8str(as1:Putf8_t; as2:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8str' + LIBC_SUFFIX ;
+function utf8tolower(_string:Putf8_t; dest:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8tolower' + LIBC_SUFFIX ;
+function utf8tok_r(_string:Putf8_t; sepset:Putf8_t; lasts:PPutf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8tok_r' + LIBC_SUFFIX ;
+function utf8toupper(_string:Putf8_t; dest:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8toupper' + LIBC_SUFFIX ;
+function utf8upr(_string:Putf8_t):Putf8_t;cdecl;external libc_nlm name 'utf8upr' + LIBC_SUFFIX ;
+function isutf8ascii(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8ascii' + LIBC_SUFFIX ;
+function isutf8digit(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8digit' + LIBC_SUFFIX ;
+function isutf8xdigit(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8xdigit' + LIBC_SUFFIX ;
+function isutf8space(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8space' + LIBC_SUFFIX ;
+function isutf8alnum(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8alnum' + LIBC_SUFFIX ;
+function isutf8alpha(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8alpha' + LIBC_SUFFIX ;
+function isutf8lower(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8lower' + LIBC_SUFFIX ;
+function isutf8upper(_string:Putf8_t):longint;cdecl;external libc_nlm name 'isutf8upper' + LIBC_SUFFIX ;
 
 
 // utime.h
@@ -9095,27 +9095,27 @@ type
    Pwctrans_t = ^wctrans_t;
    wctrans_t = wchar_t;
 
-function iswalnum(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswalnum';
-function iswalpha(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswalpha';
-function iswblank(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswblank';
-function iswcntrl(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswcntrl';
-function iswdigit(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswdigit';
-function iswgraph(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswgraph';
-function iswlower(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswlower';
-function iswprint(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswprint';
-function iswpunct(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswpunct';
-function iswspace(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswspace';
-function iswupper(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswupper';
-function iswxdigit(_para1:longint):longint;cdecl;external libc_nlm name 'iswxdigit';
-function towlower(_para1:wint_t):wint_t;cdecl;external libc_nlm name 'towlower';
-function towupper(_para1:wint_t):wint_t;cdecl;external libc_nlm name 'towupper';
-function iswctype(_para1:wint_t; _para2:wctype_t):longint;cdecl;external libc_nlm name 'iswctype';
+function iswalnum(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswalnum' + LIBC_SUFFIX ;
+function iswalpha(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswalpha' + LIBC_SUFFIX ;
+function iswblank(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswblank' + LIBC_SUFFIX ;
+function iswcntrl(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswcntrl' + LIBC_SUFFIX ;
+function iswdigit(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswdigit' + LIBC_SUFFIX ;
+function iswgraph(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswgraph' + LIBC_SUFFIX ;
+function iswlower(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswlower' + LIBC_SUFFIX ;
+function iswprint(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswprint' + LIBC_SUFFIX ;
+function iswpunct(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswpunct' + LIBC_SUFFIX ;
+function iswspace(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswspace' + LIBC_SUFFIX ;
+function iswupper(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswupper' + LIBC_SUFFIX ;
+function iswxdigit(_para1:longint):longint;cdecl;external libc_nlm name 'iswxdigit' + LIBC_SUFFIX ;
+function towlower(_para1:wint_t):wint_t;cdecl;external libc_nlm name 'towlower' + LIBC_SUFFIX ;
+function towupper(_para1:wint_t):wint_t;cdecl;external libc_nlm name 'towupper' + LIBC_SUFFIX ;
+function iswctype(_para1:wint_t; _para2:wctype_t):longint;cdecl;external libc_nlm name 'iswctype' + LIBC_SUFFIX ;
 
-function wctype(_para1:Pchar):wctype_t;cdecl;external libc_nlm name 'wctype';
-function towctrans(_para1:wint_t; _para2:wctrans_t):wint_t;cdecl;external libc_nlm name 'towctrans';
+function wctype(_para1:Pchar):wctype_t;cdecl;external libc_nlm name 'wctype' + LIBC_SUFFIX ;
+function towctrans(_para1:wint_t; _para2:wctrans_t):wint_t;cdecl;external libc_nlm name 'towctrans' + LIBC_SUFFIX ;
 
-function wctrans(_para1:Pchar):wctrans_t;cdecl;external libc_nlm name 'wctrans';
-function iswascii(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswascii';
+function wctrans(_para1:Pchar):wctrans_t;cdecl;external libc_nlm name 'wctrans' + LIBC_SUFFIX ;
+function iswascii(_para1:wint_t):longint;cdecl;external libc_nlm name 'iswascii' + LIBC_SUFFIX ;
 
 
 // windows.h
@@ -9151,24 +9151,24 @@ type
    _HINSTANCE = void;
 { Win32 DLL solutions for dynamic NLM libraries on NetWare...  }
 
-function GetLastError:dword;cdecl;external libc_nlm name 'GetLastError';
-procedure SetLastError(dwErrCode:dword);cdecl;external libc_nlm name 'SetLastError';
-function FreeLibrary(hModule:HMODULE):BOOL;cdecl;external libc_nlm name 'FreeLibrary';
-function LoadLibrary(lpFileName:LPCTSTR):HMODULE;cdecl;external libc_nlm name 'LoadLibrary';
+function GetLastError:dword;cdecl;external libc_nlm name 'GetLastError' + LIBC_SUFFIX ;
+procedure SetLastError(dwErrCode:dword);cdecl;external libc_nlm name 'SetLastError' + LIBC_SUFFIX ;
+function FreeLibrary(hModule:HMODULE):BOOL;cdecl;external libc_nlm name 'FreeLibrary' + LIBC_SUFFIX ;
+function LoadLibrary(lpFileName:LPCTSTR):HMODULE;cdecl;external libc_nlm name 'LoadLibrary' + LIBC_SUFFIX ;
 {
 ** Prototype for libraries writing their own start-up and shut-down code.
 ** This is not an interface, but only a prototype for code furnished by the
 ** NLM library.
  }
-function DllMain(hinstDLL:_HINSTANCE; fdwReason:dword; lpvReserve:LPVOID):BOOL;cdecl;external libc_nlm name 'DllMain';
+function DllMain(hinstDLL:_HINSTANCE; fdwReason:dword; lpvReserve:LPVOID):BOOL;cdecl;external libc_nlm name 'DllMain' + LIBC_SUFFIX ;
 
 
 // xmalloc.h
 
-function xcalloc(_para1,_para2:size_t):pointer;cdecl;external libc_nlm name 'xcalloc';
-procedure xfree(_para1:pointer);cdecl;external libc_nlm name 'xfree';
-function xmalloc(_para1:size_t):pointer;cdecl;external libc_nlm name 'xmalloc';
-function xrealloc(_para1:pointer; _para2:size_t):pointer;cdecl;external libc_nlm name 'xrealloc';
+function xcalloc(_para1,_para2:size_t):pointer;cdecl;external libc_nlm name 'xcalloc' + LIBC_SUFFIX ;
+procedure xfree(_para1:pointer);cdecl;external libc_nlm name 'xfree' + LIBC_SUFFIX ;
+function xmalloc(_para1:size_t):pointer;cdecl;external libc_nlm name 'xmalloc' + LIBC_SUFFIX ;
+function xrealloc(_para1:pointer; _para2:size_t):pointer;cdecl;external libc_nlm name 'xrealloc' + LIBC_SUFFIX ;
 
 
 {$ifndef INCLUDED_FROM_SYSTEM}
