@@ -1,9 +1,10 @@
 
-This is a fork from Free Pascal:
+This is a fork from Free Pascal.
+https://www.freepascal.org/
 
 Free Pascal OOTB works out of the box.
 
-The branch master is based on fpc 3.2.2 official release source.
+The branch main is based on fpc 3.2.2 official release source.
 https://gitlab.com/freepascal.org/fpc/source/-/tree/release_3_2_2/
 
 The branch fixes_3.0 is based on fpc 3.0.5.
@@ -34,7 +35,7 @@ NEW: Release OOTB-glibc20 for Linux 32 bit: with signed symbol GLIBC_2.0. for al
 This is to have binaries that run on system with older or newer version of glibc than the one on the system-compilation.
 Also fixed libc_csu_init and l_ibc_csu_fini_ error at linking on last Linux distros.
 
-There is binary release for Windows 64/32 bit, Linux 64/32 bit and Rasbian ARM Rpi:
+There is binary release for Windows 64/32 bit, Linux 64/32 bit and Rasbian ARM32/aarch64 Rpi:
 [EDIT] Added release for FreeBSD 64 bit.
 https://github.com/fredvs/freepascal-ootb/releases
 
