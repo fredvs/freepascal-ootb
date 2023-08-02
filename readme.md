@@ -13,7 +13,8 @@ The branch fixes_3.0 is based on fpc 3.0.5.
 https://svn.freepascal.org/svn/fpc/branches/fixes_3\_0
 
 With the possibility for Unix users to link libraries with so numbers,
-like libX11.so.6. This without the need to install dev package.
+like libX11.so.6 or libdl.so.2.
+This without the need to install dev package.
 
 For FreeBSD OS, the linker ld.bsd will be used, without any tweak of
 your system.
