@@ -1,6 +1,6 @@
 ![alt text](https://github.com/fredvs/attach/assets/3421249/04c74be5-c40f-4f6f-9908-e57e7f6e3d21)
 
-# fpc-ootb 3.2.2.
+# fpc-ootb.
 
 This is a fork from Free Pascal. https://www.freepascal.org/
 
