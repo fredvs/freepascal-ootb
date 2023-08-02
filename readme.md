@@ -7,10 +7,10 @@ This is a fork from Free Pascal. https://www.freepascal.org/
 Free Pascal OOTB works out of the box.
 
 The branch main is based on fpc 3.2.2 official release source.
-https://gitlab.com/freepascal.org/fpc/source/-/tree/release_3\_2_2/
+https://gitlab.com/freepascal.org/fpc/source/-/tree/release_3_2_2/
 
 The branch fixes_3.0 is based on fpc 3.0.5.
-https://svn.freepascal.org/svn/fpc/branches/fixes_3\_0
+https://svn.freepascal.org/svn/fpc/branches/fixes_3_0/
 
 With the possibility for Unix users to link libraries with so numbers,
 like libX11.so.6 or libdl.so.2.
@@ -47,7 +47,7 @@ than the one on the system-compilation. Also fixed libc_csu_init and
 l_ibc_csu_fini\_ error at linking on last Linux distros.
 
 There is binary release for Windows 64/32 bit, Linux 64/32 bit and
-Rasbian ARM32/aarch64 Rpi: \[EDIT\] Added release for FreeBSD 64 bit.
+Rasbian ARM32/aarch64 Rpi, FreeBSD 64 bit.
 https://github.com/fredvs/freepascal-ootb/releases
 
 Have lot of fun!
