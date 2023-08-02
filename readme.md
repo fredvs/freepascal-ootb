@@ -29,7 +29,10 @@ In your fpc.cfg file is allowed -Fu\$FPCBINDIR/thedirectory.
 
 Example:
 
--Fu\$FPCBINDIR/units/\$fpctarget -Fu\$FPCBINDIR/units/\$fpctarget/\*
+-Fu\$FPCBINDIR/units/\$fpctarget
+
+-Fu\$FPCBINDIR/units/\$fpctarget/\*
+
 -Fu\$FPCBINDIR/units/\$fpctarget/rtl
 
 NEW: Release OOTB-glibc255 for Linux 64 bit: with signed symbol
