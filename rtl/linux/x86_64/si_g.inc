@@ -49,9 +49,8 @@ procedure libc_exit; external name '__libc_exit@GLIBC_2.2.5';
 procedure libc_init; external name '__libc_init@GLIBC_2.2.5';
 procedure libc_setfpucw; external name '__setfpucw@GLIBC_2.2.5';
 procedure libc_start_main; external name '__libc_start_main@GLIBC_2.2.5';
-
-procedure gmon_monstartup; external name 'monstartup';
-procedure gmon_mcleanup; external name '_mcleanup';
+procedure gmon_monstartup; external name 'monstartup@GLIBC_2.2.5';
+procedure gmon_mcleanup; external name '_mcleanup@GLIBC_2.2.5';
 
 procedure _FPC_libc_start; forward;
 procedure _FPC_libc_haltproc(e:longint); forward;

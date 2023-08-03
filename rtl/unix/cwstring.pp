@@ -57,6 +57,21 @@ Uses
   initc,
   dynlibs,
   unixcp;
+  
+const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  LIBC_SUFFIX2 = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  LIBC_SUFFIX2 = '@GLIBC_2.1';
+  {$else}
+  LIBC_SUFFIX = '';
+  LIBC_SUFFIX2 = '';
+  {$endif}
+  {$endif}  
 
 Const
 {$ifndef useiconv}
@@ -78,22 +93,22 @@ Const
 {$endif}
 
 { helper functions from libc }
-function towlower(__wc:wint_t):wint_t;cdecl;external clib name 'towlower';
-function towupper(__wc:wint_t):wint_t;cdecl;external clib name 'towupper';
+function towlower(__wc:wint_t):wint_t;cdecl;external clib name 'towlower' + LIBC_SUFFIX ;
+function towupper(__wc:wint_t):wint_t;cdecl;external clib name 'towupper' + LIBC_SUFFIX ;
 
-function wcscoll (__s1:pwchar_t; __s2:pwchar_t):cint;cdecl;external clib name 'wcscoll';
-function strcoll (__s1:pchar; __s2:pchar):cint;cdecl;external clib name 'strcoll';
+function wcscoll (__s1:pwchar_t; __s2:pwchar_t):cint;cdecl;external clib name 'wcscoll' + LIBC_SUFFIX ;
+function strcoll (__s1:pchar; __s2:pchar):cint;cdecl;external clib name 'strcoll' + LIBC_SUFFIX ;
 {$ifdef netbsd}
   { NetBSD has a new setlocale function defined in /usr/include/locale.h
     that should be used }
-function setlocale(category: cint; locale: pchar): pchar; cdecl; external clib name '__setlocale_mb_len_max_32';
+function setlocale(category: cint; locale: pchar): pchar; cdecl; external clib name '__setlocale_mb_len_max_32' + LIBC_SUFFIX ;
 {$else}
-function setlocale(category: cint; locale: pchar): pchar; cdecl; external clib name 'setlocale';
+function setlocale(category: cint; locale: pchar): pchar; cdecl; external clib name 'setlocale' + LIBC_SUFFIX ;
 {$endif}
 {$if not(defined(beos) and not defined(haiku))}
-function mbrtowc(pwc: pwchar_t; const s: pchar; n: size_t; ps: pmbstate_t): size_t; cdecl; external clib name 'mbrtowc';
-function wcrtomb(s: pchar; wc: wchar_t; ps: pmbstate_t): size_t; cdecl; external clib name 'wcrtomb';
-function mbrlen(const s: pchar; n: size_t; ps: pmbstate_t): size_t; cdecl; external clib name 'mbrlen';
+function mbrtowc(pwc: pwchar_t; const s: pchar; n: size_t; ps: pmbstate_t): size_t; cdecl; external clib name 'mbrtowc' + LIBC_SUFFIX ;
+function wcrtomb(s: pchar; wc: wchar_t; ps: pmbstate_t): size_t; cdecl; external clib name 'wcrtomb' + LIBC_SUFFIX ;
+function mbrlen(const s: pchar; n: size_t; ps: pmbstate_t): size_t; cdecl; external clib name 'mbrlen' + LIBC_SUFFIX ;
 {$else beos}
 function mbtowc(pwc: pwchar_t; const s: pchar; n: size_t): size_t; cdecl; external clib name 'mbtowc';
 function wctomb(s: pchar; wc: wchar_t): size_t; cdecl; external clib name 'wctomb';
@@ -191,14 +206,14 @@ type
   function nl_langinfo(__item:nl_item):pchar;cdecl;external 'root' name 'nl_langinfo';
 {$else}
   {$ifndef beos}
-  function nl_langinfo(__item:nl_item):pchar;cdecl;external libiconvname name 'nl_langinfo';
+  function nl_langinfo(__item:nl_item):pchar;cdecl;external libiconvname name 'nl_langinfo' + LIBC_SUFFIX ;
   {$endif}
 {$endif}
 
 {$if (not defined(bsd) and not defined(beos)) or defined(iconv_is_in_libc) or (defined(darwin) and not defined(cpupowerpc32))}
-function iconv_open(__tocode:pchar; __fromcode:pchar):iconv_t;cdecl;external libiconvname name 'iconv_open';
-function iconv(__cd:iconv_t; __inbuf:ppchar; __inbytesleft:psize_t; __outbuf:ppchar; __outbytesleft:psize_t):size_t;cdecl;external libiconvname name 'iconv';
-function iconv_close(__cd:iconv_t):cint;cdecl;external libiconvname name 'iconv_close';
+function iconv_open(__tocode:pchar; __fromcode:pchar):iconv_t;cdecl;external libiconvname name 'iconv_open' + LIBC_SUFFIX2 ;
+function iconv(__cd:iconv_t; __inbuf:ppchar; __inbytesleft:psize_t; __outbuf:ppchar; __outbytesleft:psize_t):size_t;cdecl;external libiconvname name 'iconv' + LIBC_SUFFIX2 ;
+function iconv_close(__cd:iconv_t):cint;cdecl;external libiconvname name 'iconv_close' + LIBC_SUFFIX2 ;
 const
   iconvctlname='iconvctl';
 {$else}

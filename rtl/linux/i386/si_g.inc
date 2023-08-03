@@ -39,7 +39,6 @@ var
 
 procedure gmon_monstartup; external name 'monstartup@GLIBC_2.0';
 procedure gmon_mcleanup; external name '_mcleanup@GLIBC_2.0';
-
 procedure libc_atexit; external name '__libc_atexit@GLIBC_2.0';
 procedure libc_exit; external name '__libc_exit@GLIBC_2.0';
 procedure libc_init; external name '__libc_init@GLIBC_2.0';
