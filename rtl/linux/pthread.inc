@@ -51,6 +51,7 @@ Type
        THREAD_PRIORITY_HIGHEST, THREAD_PRIORITY_TIME_CRITICAL
      );
 }
+
   const
      _POSIX_THREAD_THREADS_MAX = 64;
      PTHREAD_THREADS_MAX = 512;
@@ -112,86 +113,89 @@ Type
      t_pthread_cleanup_push_defer_routine = procedure (_para1:pointer);}
 
 {$ifndef dynpthreads}
-    function pthread_create(__thread:ppthread_t; __attr:ppthread_attr_t;__start_routine: __start_routine_t;__arg:pointer):longint;cdecl;external;
-    function pthread_self:pthread_t;cdecl;external;
-    function pthread_equal(__thread1:pthread_t; __thread2:pthread_t):longint;cdecl;external;
-    procedure pthread_exit(__retval:pointer);cdecl;external;
-    function pthread_join(__th:pthread_t; __thread_return:ppointer):longint;cdecl;external;
-    function pthread_detach(__th:pthread_t):longint;cdecl;external;
-    function pthread_attr_init(__attr:ppthread_attr_t):longint;cdecl;external;
-    function pthread_attr_destroy(__attr:ppthread_attr_t):longint;cdecl;external;
-    function pthread_attr_setdetachstate(__attr:ppthread_attr_t; __detachstate:longint):longint;cdecl;external;
-    function pthread_attr_getdetachstate(__attr:ppthread_attr_t; __detachstate:plongint):longint;cdecl;external;
-    function pthread_attr_setschedparam(__attr:ppthread_attr_t; __param:psched_param):longint;cdecl;external;
-    function pthread_attr_getschedparam(__attr:ppthread_attr_t; __param:psched_param):longint;cdecl;external;
-    function pthread_attr_setschedpolicy(__attr:ppthread_attr_t; __policy:longint):longint;cdecl;external;
-    function pthread_attr_getschedpolicy(__attr:ppthread_attr_t; __policy:plongint):longint;cdecl;external;
+
+    function pthread_create(__thread:ppthread_t; __attr:ppthread_attr_t;__start_routine: __start_routine_t;__arg:pointer):
+             longint;cdecl;external c name 'pthread_create' + LIBC_SUFFIX;
+ 
+    function pthread_self:pthread_t;cdecl;external c name 'pthread_create' + LIBC_SUFFIX;
+    function pthread_equal(__thread1:pthread_t; __thread2:pthread_t):longint;cdecl;external c name 'pthread_equal' + LIBC_SUFFIX;
+    procedure pthread_exit(__retval:pointer);cdecl;external c name 'pthread_exit' + LIBC_SUFFIX;
+    function pthread_join(__th:pthread_t; __thread_return:ppointer):longint;cdecl;external c name 'pthread_join' + LIBC_SUFFIX;
+    function pthread_detach(__th:pthread_t):longint;cdecl;external c name 'pthread_detach' + LIBC_SUFFIX;
+    function pthread_attr_init(__attr:ppthread_attr_t):longint;cdecl;external c name 'pthread_attr_init' + LIBC_SUFFIX;
+    function pthread_attr_destroy(__attr:ppthread_attr_t):longint;cdecl;external c name 'pthread_attr_destroy' + LIBC_SUFFIX;
+    function pthread_attr_setdetachstate(__attr:ppthread_attr_t; __detachstate:longint):longint;cdecl;external c name 'pthread_attr_setdetachstate' + LIBC_SUFFIX;
+    function pthread_attr_getdetachstate(__attr:ppthread_attr_t; __detachstate:plongint):longint;cdecl;external c name 'pthread_attr_getdetachstate' + LIBC_SUFFIX;
+    function pthread_attr_setschedparam(__attr:ppthread_attr_t; __param:psched_param):longint;cdecl;external c name 'pthread_attr_setschedparam' + LIBC_SUFFIX;
+    function pthread_attr_getschedparam(__attr:ppthread_attr_t; __param:psched_param):longint;cdecl;external c name 'pthread_attr_getschedparam' + LIBC_SUFFIX;
+    function pthread_attr_setschedpolicy(__attr:ppthread_attr_t; __policy:longint):longint;cdecl;external c name 'pthread_attr_setschedpolicy' + LIBC_SUFFIX;
+    function pthread_attr_getschedpolicy(__attr:ppthread_attr_t; __policy:plongint):longint;cdecl;external c name 'pthread_attr_getschedpolicy' + LIBC_SUFFIX;
 {$ifndef ANDROID}
-    function pthread_attr_setinheritsched(__attr:ppthread_attr_t; __inherit:longint):longint;cdecl;external;
-    function pthread_attr_getinheritsched(__attr:ppthread_attr_t; __inherit:plongint):longint;cdecl;external;
+    function pthread_attr_setinheritsched(__attr:ppthread_attr_t; __inherit:longint):longint;cdecl;external c name 'pthread_attr_setinheritsched' + LIBC_SUFFIX;
+    function pthread_attr_getinheritsched(__attr:ppthread_attr_t; __inherit:plongint):longint;cdecl;external c name 'pthread_attr_getinheritsched' + LIBC_SUFFIX;
 {$endif}
-    function pthread_attr_setstacksize(p: ppthread_attr_t;s:size_t):cint;cdecl;external;
-    function pthread_attr_getstacksize(p: ppthread_attr_t;s:psize_t):cint;cdecl;external;
-    function pthread_attr_setscope(__attr:ppthread_attr_t; __scope:longint):longint;cdecl;external;
-    function pthread_attr_getscope(__attr:ppthread_attr_t; __scope:plongint):longint;cdecl;external;
-    function pthread_setschedparam(__target_thread:pthread_t; __policy:longint; __param:psched_param):longint;cdecl;external;
-    function pthread_getschedparam(__target_thread:pthread_t; __policy:plongint; __param:psched_param):longint;cdecl;external;
-    function pthread_mutex_init(__mutex:ppthread_mutex_t; __mutex_attr:ppthread_mutexattr_t):longint;cdecl;external;
-    function pthread_mutex_destroy(__mutex:ppthread_mutex_t):longint;cdecl;external;
-    function pthread_mutex_trylock(__mutex:ppthread_mutex_t):longint;cdecl;external;
-    function pthread_mutex_lock(__mutex:ppthread_mutex_t):longint;cdecl;external;
-    function pthread_mutex_unlock(__mutex:ppthread_mutex_t):longint;cdecl;external;
-    function pthread_mutexattr_init(__attr:ppthread_mutexattr_t):longint;cdecl;external;
-    function pthread_mutexattr_destroy(__attr:ppthread_mutexattr_t):longint;cdecl;external;
+    function pthread_attr_setstacksize(p: ppthread_attr_t;s:size_t):cint;cdecl;external c name 'pthread_attr_setstacksize' + LIBC_SUFFIX;
+    function pthread_attr_getstacksize(p: ppthread_attr_t;s:psize_t):cint;cdecl;external c name 'pthread_attr_getstacksize' + LIBC_SUFFIX;
+    function pthread_attr_setscope(__attr:ppthread_attr_t; __scope:longint):longint;cdecl;external c name 'pthread_attr_setscope' + LIBC_SUFFIX;
+    function pthread_attr_getscope(__attr:ppthread_attr_t; __scope:plongint):longint;cdecl;external c name 'pthread_attr_getscope' + LIBC_SUFFIX;
+    function pthread_setschedparam(__target_thread:pthread_t; __policy:longint; __param:psched_param):longint;cdecl;external c name 'pthread_setschedparam' + LIBC_SUFFIX;
+    function pthread_getschedparam(__target_thread:pthread_t; __policy:plongint; __param:psched_param):longint;cdecl;external c name 'pthread_getschedparam' + LIBC_SUFFIX;
+    function pthread_mutex_init(__mutex:ppthread_mutex_t; __mutex_attr:ppthread_mutexattr_t):longint;cdecl;external c name 'pthread_mutex_init' + LIBC_SUFFIX;
+    function pthread_mutex_destroy(__mutex:ppthread_mutex_t):longint;cdecl;external c name 'pthread_mutex_destroy' + LIBC_SUFFIX;
+    function pthread_mutex_trylock(__mutex:ppthread_mutex_t):longint;cdecl;external c name 'pthread_mutex_trylock' + LIBC_SUFFIX;
+    function pthread_mutex_lock(__mutex:ppthread_mutex_t):longint;cdecl;external c name 'pthread_mutex_lock' + LIBC_SUFFIX;
+    function pthread_mutex_unlock(__mutex:ppthread_mutex_t):longint;cdecl;external c name 'pthread_mutex_unlock' + LIBC_SUFFIX;
+    function pthread_mutexattr_init(__attr:ppthread_mutexattr_t):longint;cdecl;external c name 'pthread_mutexattr_init' + LIBC_SUFFIX;
+    function pthread_mutexattr_destroy(__attr:ppthread_mutexattr_t):longint;cdecl;external c name 'pthread_mutexattr_destroy' + LIBC_SUFFIX;
 {$ifndef ANDROID}
-    function pthread_mutexattr_setkind_np(__attr:ppthread_mutexattr_t; __kind:longint):longint;cdecl;external;
-    function pthread_mutexattr_getkind_np(__attr:ppthread_mutexattr_t; __kind:plongint):longint;cdecl;external;
+    function pthread_mutexattr_setkind_np(__attr:ppthread_mutexattr_t; __kind:longint):longint;cdecl;external c name 'pthread_mutexattr_setkind_np' + LIBC_SUFFIX;
+    function pthread_mutexattr_getkind_np(__attr:ppthread_mutexattr_t; __kind:plongint):longint;cdecl;external c name 'pthread_mutexattr_getkind_np' + LIBC_SUFFIX;
 {$endif}
-    function pthread_cond_init(__cond:ppthread_cond_t; __cond_attr:ppthread_condattr_t):longint;cdecl;external;
-    function pthread_cond_destroy(__cond:ppthread_cond_t):longint;cdecl;external;
-    function pthread_cond_signal(__cond:ppthread_cond_t):longint;cdecl;external;
-    function pthread_cond_broadcast(__cond:ppthread_cond_t):longint;cdecl;external;
-    function pthread_cond_wait(__cond:ppthread_cond_t; __mutex:ppthread_mutex_t):longint;cdecl;external;
-    function pthread_cond_timedwait(__cond:ppthread_cond_t; __mutex:ppthread_mutex_t; __abstime:ptimespec):longint;cdecl;external;
+    function pthread_cond_init(__cond:ppthread_cond_t; __cond_attr:ppthread_condattr_t):longint;cdecl;external c name 'pthread_cond_init' + LIBC_SUFFIX;
+    function pthread_cond_destroy(__cond:ppthread_cond_t):longint;cdecl;external c name 'pthread_cond_destroy' + LIBC_SUFFIX;
+    function pthread_cond_signal(__cond:ppthread_cond_t):longint;cdecl;external c name 'pthread_cond_signal' + LIBC_SUFFIX;
+    function pthread_cond_broadcast(__cond:ppthread_cond_t):longint;cdecl;external c name 'pthread_cond_broadcast' + LIBC_SUFFIX;
+    function pthread_cond_wait(__cond:ppthread_cond_t; __mutex:ppthread_mutex_t):longint;cdecl;external c name 'pthread_cond_wait' + LIBC_SUFFIX;
+    function pthread_cond_timedwait(__cond:ppthread_cond_t; __mutex:ppthread_mutex_t; __abstime:ptimespec):longint;cdecl;external c name 'pthread_cond_timedwait' + LIBC_SUFFIX;
 {$ifndef ANDROID}
-    function pthread_condattr_init(__attr:ppthread_condattr_t):longint;cdecl;external;
-    function pthread_condattr_destroy(__attr:ppthread_condattr_t):longint;cdecl;external;
-    function pthread_condattr_setclock(__attr:ppthread_condattr_t; __clock_id: longint):longint;cdecl;external;
+    function pthread_condattr_init(__attr:ppthread_condattr_t):longint;cdecl;external c name 'pthread_condattr_init' + LIBC_SUFFIX;
+    function pthread_condattr_destroy(__attr:ppthread_condattr_t):longint;cdecl;external c name 'pthread_condattr_destroy' + LIBC_SUFFIX;
+    function pthread_condattr_setclock(__attr:ppthread_condattr_t; __clock_id: longint):longint;cdecl;external c name 'pthread_condattr_setclock' + LIBC_SUFFIX;
 {$endif}
-    function pthread_key_create(__key:ppthread_key_t; __destr_function:__destr_function_t):longint;cdecl;external;
-    function pthread_key_delete(__key:pthread_key_t):longint;cdecl;external;
-    function pthread_setspecific(__key:pthread_key_t; __pointer:pointer):longint;cdecl;external;
-    function pthread_getspecific(__key:pthread_key_t):pointer;cdecl;external;
+    function pthread_key_create(__key:ppthread_key_t; __destr_function:__destr_function_t):longint;cdecl;external c name 'pthread_key_create' + LIBC_SUFFIX;
+    function pthread_key_delete(__key:pthread_key_t):longint;cdecl;external c name 'pthread_key_delete' + LIBC_SUFFIX;
+    function pthread_setspecific(__key:pthread_key_t; __pointer:pointer):longint;cdecl;external c name 'pthread_setspecific' + LIBC_SUFFIX;
+    function pthread_getspecific(__key:pthread_key_t):pointer;cdecl;external c name 'pthread_getspecific' + LIBC_SUFFIX;
 {    function pthread_once(__once_control:ppthread_once_t; __init_routine:tprocedure ):longint;cdecl;external;}
 {$ifndef ANDROID}
-    function pthread_setcancelstate(__state:longint; __oldstate:plongint):longint;cdecl;external;
-    function pthread_setcanceltype(__type:longint; __oldtype:plongint):longint;cdecl;external;
-    function pthread_cancel(__thread:pthread_t):longint;cdecl;external;
-    procedure pthread_testcancel;cdecl;external;
+    function pthread_setcancelstate(__state:longint; __oldstate:plongint):longint;cdecl;external c name 'pthread_setcancelstate' + LIBC_SUFFIX;
+    function pthread_setcanceltype(__type:longint; __oldtype:plongint):longint;cdecl;external c name 'pthread_setcanceltype' + LIBC_SUFFIX;
+    function pthread_cancel(__thread:pthread_t):longint;cdecl;external c name 'pthread_cancel' + LIBC_SUFFIX;
+    procedure pthread_testcancel;cdecl;external c name 'pthread_testcancel' + LIBC_SUFFIX;
 {$endif}
 {    procedure _pthread_cleanup_push(__buffer:p_pthread_cleanup_buffer;__routine:t_pthread_cleanup_push_routine; __arg:pointer);cdecl;external; }
 {    procedure _pthread_cleanup_push_defer(__buffer:p_pthread_cleanup_buffer;__routine:t_pthread_cleanup_push_defer_routine; __arg:pointer);cdecl;external;}
 {    function pthread_sigmask(__how:longint; __newmask:plibc_sigset; __oldmask:plibc_sigset):longint;cdecl;external;}
-    function pthread_kill(__thread:pthread_t; __signo:longint):longint;cdecl;external;
+    function pthread_kill(__thread:pthread_t; __signo:longint):longint;cdecl;external c name 'pthread_create' + LIBC_SUFFIX;
 {    function sigwait(__set:plibc_sigset; __sig:plongint):longint;cdecl;external;}
 {$ifndef ANDROID}
-    function pthread_atfork(__prepare:tprocedure ; __parent:tprocedure ; __child:tprocedure ):longint;cdecl;external;
-    procedure pthread_kill_other_threads_np;cdecl;external;
+    function pthread_atfork(__prepare:tprocedure ; __parent:tprocedure ; __child:tprocedure ):longint;cdecl;external c name 'pthread_atfork' + LIBC_SUFFIX;
+    procedure pthread_kill_other_threads_np;cdecl;external c name 'pthread_kill_other_threads_np' + LIBC_SUFFIX;
 {$endif}
-    function pthread_sigmask(how: cint; nset: plibc_sigset; oset: plibc_sigset): cint; cdecl; external;
+    function pthread_sigmask(how: cint; nset: plibc_sigset; oset: plibc_sigset): cint; cdecl; external c name 'pthread_sigmask' + LIBC_SUFFIX;
 
-    function sem_init (__sem:Psem_t; __pshared:longint; __value:dword):longint;cdecl;external;
-    function sem_destroy  (__sem:Psem_t):longint;cdecl;external;
-    function sem_close (__sem:Psem_t):longint;cdecl;external;
-    function sem_unlink (__name:Pchar):longint;cdecl;external;
-    function sem_wait (__sem:Psem_t):longint;cdecl;external;
-    function sem_timedwait (__sem:Psem_t; __abs_timeout:ptimespec):longint;cdecl;external;
-    function sem_trywait  (__sem:Psem_t):longint;cdecl;external;
-    function sem_post     (__sem:Psem_t):longint;cdecl;external;
-    function sem_getvalue (__sem:Psem_t; __sval:Plongint):longint;cdecl;external;
+    function sem_init (__sem:Psem_t; __pshared:longint; __value:dword):longint;cdecl;external c name 'sem_init' + LIBC_SUFFIX;
+    function sem_destroy  (__sem:Psem_t):longint;cdecl;external c name 'sem_destroy' + LIBC_SUFFIX;
+    function sem_close (__sem:Psem_t):longint;cdecl;external c name 'sem_close' + LIBC_SUFFIX;
+    function sem_unlink (__name:Pchar):longint;cdecl;external c name 'sem_unlink' + LIBC_SUFFIX;
+    function sem_wait (__sem:Psem_t):longint;cdecl;external c name 'sem_wait' + LIBC_SUFFIX;
+    function sem_timedwait (__sem:Psem_t; __abs_timeout:ptimespec):longint;cdecl;external c name 'sem_timedwait' + LIBC_SUFFIX;
+    function sem_trywait  (__sem:Psem_t):longint;cdecl;external c name 'sem_trywait' + LIBC_SUFFIX;
+    function sem_post     (__sem:Psem_t):longint;cdecl;external c name 'sem_post' + LIBC_SUFFIX;
+    function sem_getvalue (__sem:Psem_t; __sval:Plongint):longint;cdecl;external c name 'sem_getvalue' + LIBC_SUFFIX;
 
-    function pthread_mutexattr_settype (__attr: Ppthread_mutexattr_t; Kind:Integer): Integer; cdecl;external;
-    function pthread_setname_np(thread: pthread_t; name: PAnsiChar):cint;cdecl;external;
+    function pthread_mutexattr_settype (__attr: Ppthread_mutexattr_t; Kind:Integer): Integer; cdecl;external c name 'pthread_mutexattr_settype' + LIBC_SUFFIX;
+    function pthread_setname_np(thread: pthread_t; name: PAnsiChar):cint;cdecl;external c name 'pthread_setname_np' + LIBC_SUFFIX;
 
 {$else}
 Var
