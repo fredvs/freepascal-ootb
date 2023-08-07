@@ -117,7 +117,7 @@ Type
     function pthread_create(__thread:ppthread_t; __attr:ppthread_attr_t;__start_routine: __start_routine_t;__arg:pointer):
              longint;cdecl;external c name 'pthread_create' + LIBC_SUFFIX;
  
-    function pthread_self:pthread_t;cdecl;external c name 'pthread_create' + LIBC_SUFFIX;
+    function pthread_self:pthread_t;cdecl;external c name 'pthread_self' + LIBC_SUFFIX;
     function pthread_equal(__thread1:pthread_t; __thread2:pthread_t):longint;cdecl;external c name 'pthread_equal' + LIBC_SUFFIX;
     procedure pthread_exit(__retval:pointer);cdecl;external c name 'pthread_exit' + LIBC_SUFFIX;
     function pthread_join(__th:pthread_t; __thread_return:ppointer):longint;cdecl;external c name 'pthread_join' + LIBC_SUFFIX;
@@ -176,7 +176,7 @@ Type
 {    procedure _pthread_cleanup_push(__buffer:p_pthread_cleanup_buffer;__routine:t_pthread_cleanup_push_routine; __arg:pointer);cdecl;external; }
 {    procedure _pthread_cleanup_push_defer(__buffer:p_pthread_cleanup_buffer;__routine:t_pthread_cleanup_push_defer_routine; __arg:pointer);cdecl;external;}
 {    function pthread_sigmask(__how:longint; __newmask:plibc_sigset; __oldmask:plibc_sigset):longint;cdecl;external;}
-    function pthread_kill(__thread:pthread_t; __signo:longint):longint;cdecl;external c name 'pthread_create' + LIBC_SUFFIX;
+    function pthread_kill(__thread:pthread_t; __signo:longint):longint;cdecl;external c name 'pthread_kill' + LIBC_SUFFIX;
 {    function sigwait(__set:plibc_sigset; __sig:plongint):longint;cdecl;external;}
 {$ifndef ANDROID}
     function pthread_atfork(__prepare:tprocedure ; __parent:tprocedure ; __child:tprocedure ):longint;cdecl;external c name 'pthread_atfork' + LIBC_SUFFIX;
