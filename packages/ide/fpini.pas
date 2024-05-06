@@ -161,7 +161,7 @@ begin
 {$ifndef unix}
   IDEDir:=CompleteDir(DirOf(system.Paramstr(0)));
 {$ifdef WINDOWS}
-  SystemIDEDir:=FExpand(DirOf(system.paramstr(0)) +'\tools\fpide_text');
+  SystemIDEDir:=FExpand(DirOf(system.paramstr(0)));
   If Not ExistsDir(SystemIDEdir) Then
   SystemIDEDir:=IDEDir;
   if GetEnv('APPDATA')<>'' then
@@ -181,21 +181,8 @@ begin
    end;
 {$endif WINDOWS}
 {$else}
-  SystemIDEDir:=FExpand(DirOf(system.paramstr(0)) +'/tools/fpide_text');
+  SystemIDEDir:=FExpand(DirOf(system.paramstr(0)));
   
-  If Not ExistsDir(SystemIDEdir) Then
-  begin
-    SystemIDEDir:=FExpand(DirOf(system.paramstr(0))+'../lib/fpc/'+version_string+'/ide/text');
-     If Not ExistsDir(SystemIDEdir) Then
-      SystemIDEDir:='/usr/lib/fpc/'+version_string+'/ide/text';
-  end;
-    
-  If Not ExistsDir(SystemIDEdir) Then
-    begin
-    SystemIDEDir:=FExpand(DirOf(system.paramstr(0))+'../lib64/fpc/'+version_string+'/ide/text');
-    If Not ExistsDir(SystemIDEdir) Then
-      SystemIDEDir:='/usr/lib/fpc/'+version_string+'/ide/text';
-    end;
   IDEdir:=CompleteDir(FExpand('~/.fp'));
   If Not ExistsDir(IDEdir) Then
     begin
