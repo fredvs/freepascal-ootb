@@ -1,4 +1,5 @@
-![alt text](https://github.com/fredvs/attach/assets/3421249/04c74be5-c40f-4f6f-9908-e57e7f6e3d21)
+![alt text](https://github.com/fredvs/attach/assets/3421249/62c44816-12e3-46b8-91b5-bc75bf32623a) 
+
 
 # fpc-ootb.
 
@@ -29,11 +30,11 @@ In your fpc.cfg file is allowed -Fu\$FPCBINDIR/thedirectory.
 
 Example:
 
--Fu\$FPCBINDIR/units/\$fpctarget
+*-Fu/$FPCBINDIR/units/$fpctarget*
 
--Fu\$FPCBINDIR/units/\$fpctarget/\*
+*-Fu/$FPCBINDIR/units/$fpctarget/**
 
--Fu\$FPCBINDIR/units/\$fpctarget/rtl
+*-Fu/$FPCBINDIR/units/$fpctarget/rtl*
 
 NEW: Release OOTB-glibc255 for Linux 64 bit: with signed symbol
 GLIBC_2.2.5. for all glibc methods and link with \'libdl.so.2\'. This is
@@ -49,5 +50,7 @@ l_ibc_csu_fini\_ error at linking on last Linux distros.
 There is binary release for Windows 64/32 bit, Linux 64/32 bit and
 Rasbian ARM32/aarch64 Rpi, FreeBSD 64 bit.
 https://github.com/fredvs/freepascal-ootb/releases
+
+*(Image on top is the Pascal's Mystic Hexagram)*
 
 Have lot of fun!
