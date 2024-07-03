@@ -151,6 +151,8 @@ begin
       DynamicLinker:='/usr/libexec/ld.elf_so'
      else if target_info.system=system_x86_64_dragonfly then
       DynamicLinker:='/libexec/ld-elf.so.2'
+     else if target_info.system=system_x86_64_freebsd then 
+      DynamicLinker:='/libexec/ld-elf.so.1'  
      else
        DynamicLinker:='';
    end;
