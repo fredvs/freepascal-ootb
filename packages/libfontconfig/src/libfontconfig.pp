@@ -23,7 +23,11 @@ uses
 
 Const
 {$ifndef darwin}
+ {$ifdef linux}
+  DefaultLibName = 'libfontconfig.so.1';
+ {$else}  
   DefaultLibName = 'libfontconfig.so';
+ {$endif} 
 {$else}  
   DefaultLibName = 'libfontconfig.dylib';
 {$endif}  
