@@ -1,3 +1,18 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canneyt and other members of the
+    Free Pascal development team
+
+    Dataset parameters implementation
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 
 procedure SkipQuotesString(var p : pchar; QuoteChar : char; EscapeSlash, EscapeRepeat : Boolean);
 var notRepeatEscaped : boolean;
@@ -214,7 +229,7 @@ begin
     DatabaseErrorFmt(SParameterNotFound,[Value],Dataset);
 end;
 
-function TParams.ParseSQL(SQL: String; DoCreate: Boolean): String;
+function TParams.ParseSQL(const SQL: String; DoCreate: Boolean): String;
 
 var
   pb : TParamBinding;
@@ -226,7 +241,7 @@ begin
   Result := DoParseSQL(SQL,PO,psInterbase, pb, ' ',rs);
 end;
 
-function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
+function TParams.ParseSQL(const SQL: String; DoCreate, EscapeSlash,
   EscapeRepeat: Boolean; ParameterStyle: TParamStyle): String;
 
 var pb : TParamBinding;
@@ -238,7 +253,7 @@ begin
   Result := DoParseSQL(SQL,PO,ParameterStyle,pb,' ',rs);
 end;
 
-function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
+function TParams.ParseSQL(const SQL: String; DoCreate, EscapeSlash,
   EscapeRepeat: Boolean; ParameterStyle: TParamStyle; out
   ParamBinding: TParambinding): String;
 
@@ -298,7 +313,7 @@ begin
 end;
 
 
-function TParams.ParseSQL(SQL: String; DoCreate, EscapeSlash,
+function TParams.ParseSQL(const SQL: String; DoCreate, EscapeSlash,
   EscapeRepeat: Boolean; ParameterStyle: TParamStyle; out
   ParamBinding: TParambinding; out ReplaceString: string): String;
 
@@ -310,13 +325,13 @@ begin
   Result:=DoParseSQL(SQL,PO,ParameterStyle,ParamBinding,' ',ReplaceString);
 end;
 
-function TParams.ParseSQL(SQL: String; Options: TSQLParseOptions; ParameterStyle: TParamStyle; out ParamBinding: TParambinding;
+function TParams.ParseSQL(const SQL: String; Options: TSQLParseOptions; ParameterStyle: TParamStyle; out ParamBinding: TParambinding;
   MacroChar: Char; out ReplaceString: string): String;
 begin
   Result:=DoParseSQL(SQL,Options,ParameterStyle,ParamBinding,MacroChar,ReplaceString);
 end;
 
-function TParams.DoParseSQL(SQL: String; Options : TSQLParseOptions; ParameterStyle: TParamStyle; out
+function TParams.DoParseSQL(const SQL: String; Options : TSQLParseOptions; ParameterStyle: TParamStyle; out
   ParamBinding: TParambinding; MacroChar : Char; out ReplaceString: string): String;
 
 type
@@ -626,11 +641,26 @@ begin
     Result:=FValue;
 end;
 
+function TParam.GetAsLongWord: LongWord;
+begin
+  If IsNull then
+    Result:=0
+  else
+    Result:=FValue;
+end;
 
 Function TParam.GetAsMemo: string;
 begin
   If IsNull then
     Result:=''
+  else
+    Result:=FValue;
+end;
+
+Function TParam.GetAsSingle: Single;
+begin
+  If IsNull then
+    Result:=0.0
   else
     Result:=FValue;
 end;
@@ -741,6 +771,12 @@ begin
   Value:=AValue;
 end;
 
+procedure TParam.SetAsByte(const AValue: LongInt);
+begin
+  FDataType:=ftByte;
+  Value:=AValue;
+end;
+
 Procedure TParam.SetAsBytes(const AValue: TBytes);
 begin
   FDataType:=ftVarBytes;
@@ -783,12 +819,29 @@ begin
   Value:=AValue;
 end;
 
+Procedure TParam.SetAsLongWord(AValue: LongWord);
+begin
+  FDataType:=ftLongWord;
+  Value:=AValue;
+end;
+
 Procedure TParam.SetAsMemo(const AValue: string);
 begin
   FDataType:=ftMemo;
   Value:=AValue;
 end;
 
+Procedure TParam.SetAsShortInt(const AValue: LongInt);
+begin
+  FDataType:=ftShortInt;
+  Value:=AValue;
+end;
+
+Procedure TParam.SetAsSingle(AValue: Single);
+begin
+  FDataType:=ftSingle;
+  Value:=AValue;
+end;
 
 Procedure TParam.SetAsSmallInt(AValue: LongInt);
 begin
@@ -845,14 +898,14 @@ begin
   if FDataType = ftUnknown then
     case VarType(Value) of
       varBoolean  : FDataType:=ftBoolean;
-      varSmallint,
-      varShortInt,
-      varByte     : FDataType:=ftSmallInt;
+      varShortInt : FDataType:=ftShortInt;
+      varByte     : FDataType:=ftByte;
+      varSmallint : FDataType:=ftSmallInt;
       varWord,
       varInteger  : FDataType:=ftInteger;
       varCurrency : FDataType:=ftCurrency;
-      varLongWord,
-      varSingle,
+      varLongWord : FDataType:=ftLongWord;
+      varSingle   : FDataType:=ftSingle;
       varDouble   : FDataType:=ftFloat;
       varDate     : FDataType:=ftDateTime;
       varString,
@@ -955,12 +1008,16 @@ begin
   if Assigned(Field) then
     case FDataType of
       ftUnknown  : DatabaseErrorFmt(SUnknownParamFieldType,[Name],DataSet);
+      ftShortInt : Field.AsInteger:=AsShortInt;
+      ftByte     : Field.AsInteger:=AsByte;
       // Need TField.AsSmallInt
       ftSmallint : Field.AsInteger:=AsSmallInt;
       // Need TField.AsWord
       ftWord     : Field.AsInteger:=AsWord;
       ftInteger,
       ftAutoInc  : Field.AsInteger:=AsInteger;
+      ftLongWord : Field.AsLongWord:=AsLongword;
+      ftLargeInt : Field.AsLargeInt:=AsLargeInt;
       ftCurrency : Field.AsCurrency:=AsCurrency;
       ftFloat    : Field.AsFloat:=AsFloat;
       ftBoolean  : Field.AsBoolean:=AsBoolean;
@@ -980,6 +1037,8 @@ begin
       ftFmtBCD   : Field.AsBCD:=AsFMTBCD;
       ftFixedWideChar,
       ftWideString: Field.AsWideString:=AsWideString;
+      ftExtended : Field.AsExtended:=Value;
+      ftSingle   : Field.AsSingle:=AsSingle;
     else
       If not (DataType in [ftCursor, ftArray, ftDataset,ftReference]) then
         DatabaseErrorFmt(SBadParamFieldType, [Name], DataSet);
@@ -994,12 +1053,16 @@ begin
     FDataType:=Field.DataType;
     case Field.DataType of
       ftUnknown  : DatabaseErrorFmt(SUnknownParamFieldType,[Name],DataSet);
+      ftShortInt : AsShortInt:=Field.AsInteger;
+      ftByte     : AsByte:=Field.AsInteger;
       // Need TField.AsSmallInt
       ftSmallint : AsSmallint:=Field.AsInteger;
       // Need TField.AsWord
       ftWord     : AsWord:=Field.AsInteger;
       ftInteger,
       ftAutoInc  : AsInteger:=Field.AsInteger;
+      ftLargeInt : AsLargeInt:=Field.AsLargeInt;
+      ftLongWord : AsLongWord:=Field.AsLongWord;
       ftBCD,
       ftCurrency : AsCurrency:=Field.AsCurrency;
       ftFloat    : AsFloat:=Field.AsFloat;
@@ -1020,6 +1083,8 @@ begin
       ftFmtBCD   : AsFMTBCD:=Field.AsBCD;
       ftFixedWideChar,
       ftWideString: AsWideString:=Field.AsWideString;
+      ftExtended : Value:=Field.AsExtended;
+      ftSingle   : AsSingle:=Field.AsSingle;
     else
       If not (DataType in [ftCursor, ftArray, ftDataset,ftReference]) then
         DatabaseErrorFmt(SBadParamFieldType, [Name], DataSet);
@@ -1074,6 +1139,8 @@ begin
     ftWord     : PWord(Buffer)^:=AsWord;
     ftInteger,
     ftAutoInc  : PInteger(Buffer)^:=AsInteger;
+    ftLargeInt : PInt64(Buffer)^:=AsLargeInt;
+    ftLongWord : PLongWord(Buffer)^:=AsLongWord;
     ftCurrency : PDouble(Buffer)^:=AsCurrency;
     ftFloat    : PDouble(Buffer)^:=AsFloat;
     ftBoolean  : PWordBool(Buffer)^:=AsBoolean;
@@ -1118,6 +1185,9 @@ begin
         end;
       end;
     ftFmtBCD   : PBCD(Buffer)^:=AsFMTBCD;
+    ftShortInt : PShortInt(Buffer)^:=AsShortInt;
+    ftByte     : PByte(Buffer)^:=AsByte;
+    ftSingle   : PSingle(Buffer)^:=AsSingle;
   else
     If not (DataType in [ftCursor, ftArray, ftDataset,ftReference]) then
       DatabaseErrorFmt(SBadParamFieldType, [Name], DataSet);
@@ -1134,6 +1204,8 @@ begin
     ftAutoInc  : Result:=SizeOf(Integer);
     ftSmallint : Result:=SizeOf(SmallInt);
     ftWord     : Result:=SizeOf(Word);
+    ftLongWord : Result:=SizeOf(LongWord);
+    ftLargeInt : Result:=SizeOf(Int64);
     ftTime,
     ftDate     : Result:=SizeOf(Integer);
     ftDateTime,
@@ -1157,6 +1229,9 @@ begin
     ftReference,
     ftCursor   : Result:=0;
     ftFmtBCD   : Result:=SizeOf(TBCD);
+    ftShortInt : Result:=SizeOf(ShortInt);
+    ftByte     : Result:=SizeOf(Byte);
+    ftSingle   : Result:=SizeOf(Single);
   else
     DatabaseErrorFmt(SBadParamFieldType,[Name],DataSet);
   end;
@@ -1223,6 +1298,8 @@ begin
     ftWord     : AsWord:=PWord(Buffer)^;
     ftInteger,
     ftAutoInc  : AsInteger:=PInteger(Buffer)^;
+    ftLargeInt : AsLargeInt:=PInt64(Buffer)^;
+    ftLongWord : AsLongWord:=PLongWord(Buffer)^;
     ftCurrency : AsCurrency:= PDouble(Buffer)^;
     ftFloat    : AsFloat:=PDouble(Buffer)^;
     ftBoolean  : AsBoolean:=PWordBool(Buffer)^;
@@ -1238,6 +1315,9 @@ begin
     ftOraBlob,
     ftOraClob  : SetBlobData(Buffer, StrLen(PChar(Buffer)));
     ftFmtBCD   : AsFMTBCD:=PBCD(Buffer)^;
+    ftShortInt : AsShortInt:=PShortInt(Buffer)^;
+    ftByte     : AsByte:=PByte(Buffer)^;
+    ftSingle   : AsSingle:=PSingle(Buffer)^;
   else
     DatabaseErrorFmt(SBadParamFieldType,[Name],DataSet);
   end;

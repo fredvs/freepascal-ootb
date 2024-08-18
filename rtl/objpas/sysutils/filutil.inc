@@ -1,3 +1,4 @@
+{%MainUnit sysutils.pp}
 {
     This file is part of the Free Pascal run time library.
     Copyright (c) 2012 by the Free Pascal development team
@@ -40,7 +41,7 @@ begin
 end;
 
 
-Function FileAge (Const FileName : UnicodeString): Longint;
+Function FileAge (Const FileName : UnicodeString): Int64;
 begin
   Result:=FileAge(ToSingleByteFileSystemEncodedFileName(FileName));
 end;
@@ -92,7 +93,7 @@ end;
 
 
 {$ifdef OS_FILESETDATEBYNAME}
-Function FileSetDate (Const FileName : UnicodeString;Age : Longint) : Longint;
+Function FileSetDate (Const FileName : UnicodeString;Age : Int64) : Longint;
 begin
   Result:=FileSetDate(ToSingleByteFileSystemEncodedFileName(FileName),Age);
 end;
@@ -119,9 +120,35 @@ begin
 end;
 
 
+function FileAgeUTC(const FileName: RawByteString; out FileDateTimeUTC: TDateTime; FollowLink: Boolean = True): Boolean;
+Var
+  Info : TRawByteSearchRec;
+  A : Integer;
+begin
+  for A:=1 to Length(FileName) do
+    if CharInSet(FileName[A],['?','*']) then
+      Exit(False);
+  A:=0;
+  if not FollowLink then
+    A:=A or faSymLink;
+  Result:=FindFirst(FileName,A,Info)=0;
+  if Result then
+    begin
+      FileDateTimeUTC:=FileDateToUniversal(Info.Time);
+      FindClose(Info);
+    end;
+end;
+
+
 Function FileAge(const FileName: UnicodeString; out FileDateTime: TDateTime; FollowLink: Boolean = True): Boolean;
 begin
   Result:=FileAge(ToSingleByteFileSystemEncodedFileName(FileName),FileDateTime,FollowLink);
+end;
+
+
+Function FileAgeUTC(const FileName: UnicodeString; out FileDateTimeUTC: TDateTime; FollowLink: Boolean = True): Boolean;
+begin
+  Result:=FileAgeUTC(ToSingleByteFileSystemEncodedFileName(FileName),FileDateTimeUTC,FollowLink);
 end;
 
 
@@ -257,7 +284,7 @@ begin
 end;
 
 
-Function FileAge (Const FileName : RawByteString): Longint;
+Function FileAge (Const FileName : RawByteString): Int64;
 begin
   Result:=FileAge(UnicodeString(FileName));
 end;
@@ -306,7 +333,7 @@ end;
 {$endif}
 
 {$ifdef OS_FILESETDATEBYNAME}
-Function FileSetDate (Const FileName : RawByteString;Age : Longint) : Longint;
+Function FileSetDate (Const FileName : RawByteString;Age : Int64) : Longint;
 begin
   Result:=FileSetDate(UnicodeString(FileName),Age);
 end;
@@ -328,7 +355,28 @@ begin
   Result:=FindFirst(FileName,A,Info)=0;
   if Result then
     begin
-      FileDateTime:=FileDatetoDateTime(Info.Time);
+      FileDateTime:=Info.TimeStamp;
+      FindClose(Info);
+    end;
+end;
+
+
+function FileAgeUTC(const FileName: UnicodeString; out FileDateTimeUTC: TDateTime; FollowLink: Boolean = True): Boolean;
+Var
+  Info : TUnicodeSearchRec;
+  A : Integer;
+
+begin
+  for A:=1 to Length(FileName) do
+    if CharInSet(FileName[A],['?','*']) then
+      Exit(False);
+  A:=0;
+  if not FollowLink then
+    A:=A or faSymLink;
+  Result:=FindFirst(FileName,A,Info)=0;
+  if Result then
+    begin
+      FileDateTimeUTC:=Info.TimeStampUTC;
       FindClose(Info);
     end;
 end;
@@ -337,6 +385,12 @@ end;
 Function FileAge(const FileName: RawbyteString; out FileDateTime: TDateTime; FollowLink: Boolean = True): Boolean;
 begin
   Result:=FileAge(UnicodeString(FileName),FileDateTime,FollowLink);
+end;
+
+
+function FileAgeUTC(const FileName: RawByteString; out FileDateTimeUTC: TDateTime; FollowLink: Boolean = True): Boolean;
+begin
+  Result:=FileAgeUTC(UnicodeString(FileName),FileDateTimeUTC,FollowLink);
 end;
 
 
@@ -484,7 +538,7 @@ end;
 
 type
   TAbstractSearchRec = Record
-    Time : Longint;
+    Time : Int64;
     Size : Int64;
     Attr : Longint;
     { this will be assigned by the generic code; it is actually either a
@@ -602,6 +656,7 @@ begin
   InternalFindClose(f.FindHandle{$ifdef SEARCHREC_USEFINDDATA},f.FindData{$endif});
 end;
 
+
 {$if defined(windows) and not defined(win16)}
 function FindDataTimeToDateTime(constref aFileTime: FILETIME; out aResult: TDateTime): Boolean;
 var
@@ -617,7 +672,70 @@ begin
       aResult := SystemTimeToDateTime(st);
   end;
 end;
+
+function FindDataTimeToUTC(constref aFileTime: FILETIME; out aResult: TDateTime): Boolean;
+var
+  st: TSystemTime;
+begin
+  Result := FileTimeToSystemTime(aFileTime, st);
+  if Result then
+    aResult := SystemTimeToDateTime(st);
+end;
 {$endif}
+
+{ TDateTimeInfoRec }
+
+function TDateTimeInfoRec.GetCreationTime: TDateTime;
+begin
+  {$if defined(windows) and not defined(win16)}
+    FindDataTimeToDateTime(Data.ftCreationTime,Result)
+  {$else}
+    {$ifdef unix}
+      {$ifdef use_statx}
+        Result:=FileDateToDateTime(data.stx_ctime.tv_sec)
+      {$else}
+        Result:=FileDateToDateTime(data.st_ctime)
+      {$endif}
+    {$else}
+        Result:=FileDateToDateTime(Data.Time);
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TDateTimeInfoRec.GetLastAccessTime: TDateTime;
+begin
+  {$if defined(windows) and not defined(win16)}
+    FindDataTimeToDateTime(Data.ftLastAccessTime,Result)
+  {$else}
+    {$ifdef unix}
+      {$ifdef use_statx}
+        Result:=FileDateToDateTime(data.stx_atime.tv_sec)
+      {$else}
+        Result:=FileDateToDateTime(data.st_atime)
+      {$endif}
+    {$else}
+      Result:=FileDateToDateTime(Data.Time);
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+function TDateTimeInfoRec.GetTimeStamp: TDateTime;
+begin
+  {$if defined(windows) and not defined(win16)}
+    FindDataTimeToDateTime(Data.ftLastWriteTime,Result)
+  {$else}
+    {$ifdef unix}
+      {$ifdef use_statx}
+        Result:=FileDateToDateTime(data.stx_mtime.tv_sec)
+      {$else}
+        Result:=FileDateToDateTime(data.st_mtime)
+      {$endif}
+    {$else}
+       Result:=FileDateToDateTime(Data.Time);
+    {$ENDIF}
+  {$ENDIF}
+end;
+
 
 { TUnicodeSearchRec }
 
@@ -625,9 +743,26 @@ function TUnicodeSearchRec.GetTimeStamp: TDateTime;
 begin
 {$if declared(FindDataTimeToDateTime)}
   if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
-{$else}
-  Result := FileDateToDateTime(Time);
 {$endif}
+    Result := FileDateToDateTime(Time);
+end;
+
+function TUnicodeSearchRec.IsDirectory: Boolean;
+begin
+  Result:=(Attr and faDirectory)<>0;
+end;
+
+function TUnicodeSearchRec.IsCurrentOrParentDir: Boolean;
+begin
+  Result:=IsDirectory and ((Name='.') or (Name='..'));
+end;
+
+function TUnicodeSearchRec.GetTimeStampUTC: TDateTime;
+begin
+{$if declared(FindDataTimeToUTC)}
+  if not FindDataTimeToUTC(FindData.ftLastWriteTime, Result) then
+{$endif}
+    Result := FileDateToUniversal(Time);
 end;
 
 { TRawbyteSearchRec }
@@ -636,9 +771,26 @@ function TRawbyteSearchRec.GetTimeStamp: TDateTime;
 begin
 {$if declared(FindDataTimeToDateTime)}
   if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
-{$else}
-  Result := FileDateToDateTime(Time);
 {$endif}
+    Result := FileDateToDateTime(Time);
+end;
+
+function TRawbyteSearchRec.IsDirectory: Boolean;
+begin
+  Result:=(Attr and faDirectory)<>0;
+end;
+
+function TRawbyteSearchRec.IsCurrentOrParentDir: Boolean;
+begin
+  Result:=IsDirectory and ((Name='.') or (Name='..'));
+end;
+
+function TRawbyteSearchRec.GetTimeStampUTC: TDateTime;
+begin
+{$if declared(FindDataTimeToDateTime)}
+  if not FindDataTimeToUTC(FindData.ftLastWriteTime, Result) then
+{$endif}
+    Result := FileDateToUniversal(Time);
 end;
 
 { TUnicodeSymLinkRec }
@@ -647,9 +799,8 @@ function TUnicodeSymLinkRec.GetTimeStamp: TDateTime;
 begin
 {$if declared(FindDataTimeToDateTime)}
   if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
-{$else}
-  Result := 0;
 {$endif}
+    Result := 0;
 end;
 
 { TRawbyteSymLinkRec }
@@ -658,9 +809,8 @@ function TRawbyteSymLinkRec.GetTimeStamp: TDateTime;
 begin
 {$if declared(FindDataTimeToDateTime)}
   if not FindDataTimeToDateTime(FindData.ftLastWriteTime, Result) then
-{$else}
-  Result := 0;
 {$endif}
+    Result := 0;
 end;
 
 
@@ -711,7 +861,10 @@ Var
 
 begin
   aLen:=FileSeek(aHandle,0,fsFromEnd);
-  FileSeek(aHandle,0,fsFromBeginning);
+  if aLen<0 then
+    Raise EInOutError.Create(SSeekFailed);
+  if FileSeek(aHandle,0,fsFromBeginning)<0 then
+    Raise EInOutError.Create(SSeekFailed);
   SetLength(Result,aLen);
   aOffset:=0;
   Repeat
@@ -744,3 +897,100 @@ Function GetFileAsString(Const aFileName : UnicodeString; aEncoding : TEncoding)
 begin
   Result:=aEncoding.GetString(GetFileContents(aFileName))
 end;
+
+{$IFNDEF HAS_FILEDATETIME}
+Function FileGetDate (Handle : THandle; out FileDateTime: TDateTime) : Boolean;
+Var
+  aDate : Int64;
+begin
+  aDate:=FileGetDate(Handle);
+  Result:=aDate>=0;
+  if Result then
+    FileDateTime:=FileDateToDateTime(aDate);
+end;
+
+Function FileGetDateUTC (Handle : THandle; out FileDateTimeUTC: TDateTime) : Boolean;
+Var
+  aDate : Int64;
+begin
+  aDate:=FileGetDate(Handle);
+  Result:=aDate>=0;
+  if Result then
+    FileDateTimeUTC:=FileDateToUniversal(aDate);
+end;
+
+Function FileSetDate (Handle : THandle; const FileDateTime: TDateTime) : Longint;
+begin
+  Result := FileSetDate(Handle,DateTimeToFileDate(FileDateTime));
+end;
+
+Function FileSetDateUTC (Handle : THandle; const FileDateTimeUTC: TDateTime) : Longint;
+begin
+  Result := FileSetDate(Handle,UniversalToFileDate(FileDateTimeUTC));
+end;
+
+
+Function FileSetDate (Const FileName : UnicodeString;const FileDateTime : TDateTime) : Longint;
+begin
+  Result:=FileSetDate(FileName,DateTimeToFileDate(FileDateTime));
+end;
+
+Function FileSetDateUTC (Const FileName : UnicodeString;const FileDateTimeUTC : TDateTime) : Longint;
+begin
+  Result:=FileSetDate(FileName,UniversalToFileDate(FileDateTimeUTC));
+end;
+
+{$ENDIF}
+
+Function FileSetDate (Const FileName : RawByteString;const FileDateTime : TDateTime) : Longint;
+begin
+  Result:=FileSetDate(UnicodeString(FileName),FileDateTime);
+end;
+
+Function FileSetDateUTC (Const FileName : RawByteString;const FileDateTimeUTC : TDateTime) : Longint;
+begin
+  Result:=FileSetDateUTC(UnicodeString(FileName),FileDateTimeUTC);
+end;
+
+{$IFNDEF HAS_ISFILENAMECASESENSITIVE}
+Function IsFileNameCaseSensitive(Const aFileName : RawByteString) : Boolean;
+begin
+  Result:=FileNameCaseSensitive;
+end;
+
+Function IsFileNameCaseSensitive(Const aFileName : UnicodeString) : Boolean;
+begin
+  Result:=FileNameCaseSensitive;
+end;
+{$ENDIF HAS_ISFILENAMECASESENSITIVE}
+
+{$IFNDEF HAS_ISFILENAMECASEPRESERVING}
+Function IsFileNameCasePreserving(Const aFileName : RawByteString) : Boolean;
+begin
+  Result:=FileNameCasePreserving;
+end;
+
+Function IsFileNameCasePreserving(Const aFileName : UnicodeString) : Boolean;
+begin
+  Result:=FileNameCasePreserving;
+end;
+{$ENDIF HAS_ISFILENAMECASEPRESERVING}
+
+{$IFNDEF HAS_FILEGETDATETIMEINFO}
+function FileGetDateTimeInfo(const FileName: string;
+  out DateTime: TDateTimeInfoRec; FollowLink: Boolean = True): Boolean;
+
+var
+  Info : TSearchRec;
+
+begin
+  Result:=FindFirst(FileName,0,Info)=0;
+  if Result then
+     begin
+     DateTime.data:=Info;
+     FindClose(Info);
+     end;
+end;
+{$ENDIF}
+
+

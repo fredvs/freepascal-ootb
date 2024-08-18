@@ -84,44 +84,54 @@ uses
 {$ENDIF OS2}
   DynLibs, cTypes, SysUtils;
 
-var
-  {$IFDEF WINDOWS}
-  DLLSSLName: string = 'ssleay32.dll';
-  DLLSSLName2: string = 'libssl32.dll';
-  DLLSSLName3: string = {$IFDEF WIN64}'libssl-1_1-x64.dll'{$ELSE}'libssl-1_1.dll'{$ENDIF};
-  DLLUtilName: string = 'libeay32.dll';
-  DLLUtilName2: string = {$IFDEF WIN64}'libcrypto-1_1-x64.dll'{$ELSE}'libcrypto-1_1.dll'{$ENDIF};
-  {$ELSE}
-   {$IFDEF OS2}
-    {$IFDEF OS2GCC}
-  DLLSSLName: string = 'kssl10.dll';
-  DLLUtilName: string = 'kcrypt10.dll';
-  DLLSSLName2: string = 'kssl.dll';
-  DLLUtilName2: string = 'kcrypto.dll';
-    {$ELSE OS2GCC}
-  DLLSSLName: string = 'emssl10.dll';
-  DLLUtilName: string = 'emcrpt10.dll';
-  DLLSSLName2: string = 'ssl.dll';
-  DLLUtilName2: string = 'crypto.dll';
-    {$ENDIF OS2GCC}
-   {$ELSE OS2}
-  DLLSSLName: string = 'libssl';
-  DLLUtilName: string = 'libcrypto';
+Type
+  TLibreSSLSupport = (lssFirst,lssLast,lssDisabled);
 
+const
+// SSL and Crypto DLL arrays must have the same length and contain
+// matched pairs of DLL filenames. Place newer versions at the beginning.
+{$IF DEFINED(WIN64)}
+  SSL_DLL_Names:    array[1..4] of string = ('libssl-3-x64',    'libssl-1_1-x64',    'ssleay32', 'libssl32');
+  Crypto_DLL_Names: array[1..4] of string = ('libcrypto-3-x64', 'libcrypto-1_1-x64', 'libeay32', 'libeay32');
+{$ELSEIF DEFINED(WINDOWS)}
+  SSL_DLL_Names:    array[1..4] of string = ('libssl-3',    'libssl-1_1',    'ssleay32', 'libssl32');
+  Crypto_DLL_Names: array[1..4] of string = ('libcrypto-3', 'libcrypto-1_1', 'libeay32', 'libeay32');
+{$ELSEIF DEFINED(OS2GCC)}
+  SSL_DLL_Names:    array[1..2] of string = ('kssl10',   'kssl');
+  Crypto_DLL_Names: array[1..2] of string = ('kcrypt10', 'kcrypto');
+{$ELSEIF DEFINED(OS2)}
+  SSL_DLL_Names:    array[1..2] of string = ('emssl10',  'ssl');
+  Crypto_DLL_Names: array[1..2] of string = ('emcrpt10', 'crypto');
+{$ELSE}
+  BaseSSLName: string = 'libssl';
+  BaseCryptoName: string = 'libcrypto';
   { ADD NEW ONES WHEN THEY APPEAR!
     Always make .so/dylib first, then versions, in descending order!
     Add "." .before the version, first is always just "" }
-  DLLVersions: array[1..19] of string = ('', '.1.1', '.11', '.10', '.1.0.6', '.1.0.5', '.1.0.4', '.1.0.3',
+  DLLVersions: array[1..20] of string = ('', '.3', '.1.1', '.11', '.10', '.1.0.6', '.1.0.5', '.1.0.4', '.1.0.3',
                                         '.1.0.2', '.1.0.1','.1.0.0','.0.9.8',
                                         '.0.9.7', '.0.9.6', '.0.9.5', '.0.9.4',
                                         '.0.9.3', '.0.9.2', '.0.9.1');
-   {$ENDIF OS2}
-  {$ENDIF WINDOWS}
+  LibreSSLVersions : Array[1..8] of string =
+                     ('', '.48', '.47', '.46', '.45', '.44', '.43', '.35');
+
+  // Mac OS no longer allows you to load the unversioned one. Bug ID 36484.
+  {$IFDEF DARWIN}
+  StartVersionOffset = 1;
+  DefaultLibreSSLSupport = lssFirst;
+  {$ElSE}
+  StartVersionOffset = 0;
+  DefaultLibreSSLSupport = lssLast;
+  {$ENDIF}
+
+Var
+   LibreSSLSupport : TLibreSSLSupport = DefaultLibreSSLSupport;
+{$ENDIF}
 
 const
   // EVP.h Constants
 
-  EVP_MAX_MD_SIZE               = 64; //* longest known is SHA512 */
+  EVP_MAX_MD_SIZE       = 64; //* longest known is SHA512 */
   EVP_MAX_KEY_LENGTH    = 32;
   EVP_MAX_IV_LENGTH     = 16;
   EVP_MAX_BLOCK_LENGTH  = 32;
@@ -140,6 +150,7 @@ type
   PEVP_MD = SslPtr;
   PBIO_METHOD = SslPtr;
   PBIO = SslPtr;
+  PPBIO = PSslPtr;
 {  EVP_PKEY = SslPtr;}
   PRSA = SslPtr;
   PASN1_UTCTIME = SslPtr;
@@ -1119,6 +1130,7 @@ var
   function SSLGetServername(ssl: PSSL; _type: cInt = TLSEXT_NAMETYPE_host_name): string;
   procedure SslCtxCallbackCtrl(ssl: PSSL; _type: cInt; cb: PCallbackCb);
   function SslSetSslCtx(ssl: PSSL; ctx: PSSL_CTX): PSSL;
+  function SslSet1Host(ssl: PSSL; hostname: string): cInt;
 
 // libeay.dll
   function OPENSSL_INIT_new : POPENSSL_INIT_SETTINGS;
@@ -1143,7 +1155,7 @@ var
   function X509NameAddEntryByTxt(name: PX509_NAME; field: string; _type: cInt;
     bytes: string; len, loc, _set: cInt): cInt;
   function X509Sign(x: PX509; pkey: PEVP_PKEY; const md: PEVP_MD): cInt;
-  function X509GmtimeAdj(s: PASN1_UTCTIME; adj: cInt): PASN1_UTCTIME;
+  function X509GmtimeAdj(s: PASN1_UTCTIME; adj: cLong): PASN1_UTCTIME;
   function X509SetNotBefore(x: PX509; tm: PASN1_UTCTIME): cInt;
   function X509SetNotAfter(x: PX509; tm: PASN1_UTCTIME): cInt;
   function X509GetSerialNumber(x: PX509): PASN1_cInt;
@@ -1171,6 +1183,9 @@ var
   function Asn1IntegerGet(a: PASN1_INTEGER): integer;
   function i2dX509bio(b: PBIO; x: PX509): cInt;
   function i2dPrivateKeyBio(b: PBIO; pkey: PEVP_PKEY): cInt;
+  function d2iX509bio(b:PBIO; x:PX509):  PX509;
+  function PEMReadBioX509(b:PBIO; x:PSslPtr; callback:PFunction; cb_arg: SslPtr): PX509;
+  procedure SkX509PopFree(st: SslPtr);
 
   // 3DES functions
   procedure DESsetoddparity(Key: des_cblock);
@@ -1306,9 +1321,12 @@ var
   function EVP_DigestSignInit(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const evptype: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): cint;
   function EVP_DigestSignUpdate(ctx: PEVP_MD_CTX; const data: Pointer; cnt: csize_t): cint;
   function EVP_DigestSignFinal(ctx: PEVP_MD_CTX; sigret: PByte; siglen: pcsize_t): cint;
+  function EVP_DigestSign(ctx: PEVP_MD_CTX; sigret:Pbyte; siglen:pcsize_t; const tbs : pointer; tbslen: csize_t): cint;
+
   function EVP_DigestVerifyInit(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const evptype: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): cint;
   function EVP_DigestVerifyUpdate(ctx: PEVP_MD_CTX; const data: Pointer; cnt: csize_t): cint;
   function EVP_DigestVerifyFinal(ctx: PEVP_MD_CTX; sig: PByte; siglen: csize_t): cint;
+  function EVP_DigestVerify(ctx: PEVP_MD_CTX; sig: PByte; siglen: csize_t; const tbs : pointer; tbslen: csize_t): cint;
   //function
   //
   // PEM Functions - pem.h
@@ -1335,6 +1353,14 @@ var
   function BioWrite(b: PBIO; Buf: TBytes; Len: cInt): cInt; overload;
   function BIO_ctrl(bp: PBIO; cmd: cint; larg: clong; parg: Pointer): clong;
   function BIO_read_filename(b: PBIO; const name: PChar): cint;
+
+  function BIO_push(b: PBIO; append: PBIO): PBIO;
+  function BIO_pop(b: PBIO): PBIO; 
+  function BIO_gets(b: PBIO; buf: PChar; size: cint): cint;
+  function BIO_puts(b: PBIO; const buf: PChar): cint; 
+  procedure BIO_set_mem_eof_return(b: PBIO; v: cint);
+  procedure BIO_set_mem_buf(b: PBIO; bm: pointer; c: cint); 
+  procedure BIO_get_mem_ptr(b: PBIO; var pp: pointer);
 
   function BIO_s_file: pBIO_METHOD;
   function BIO_new_file(const filename: PChar; const mode: PChar): pBIO;
@@ -1406,6 +1432,10 @@ var
   function BIO_new_PKCS7(_out:PBIO; p7:PPKCS7):PBIO;
   procedure ERR_load_PKCS7_strings;
 
+  // SMIME functions
+  function SMIME_write_PKCS7(_out: PBIO; p7: PPKCS7; data: PBIO; flags: longint): longint;
+  function SMIME_read_PKCS7(_in: PBIO; bcont: PPBIO): PPKCS7;
+
   // BN functions
   function BN_new:PBIGNUM;
   function BN_secure_new:PBIGNUM;
@@ -1457,6 +1487,7 @@ var
   procedure BN_free(a:PBIGNUM);
 
 function IsSSLloaded: Boolean;
+function InitSSLInterface(Const aSSLName, acryptoName : String) : Boolean; overload;
 function InitSSLInterface: Boolean; overload;
 function DestroySSLInterface: Boolean;
 
@@ -1555,7 +1586,7 @@ type
   TSslLibraryInit = function:cInt; cdecl;
   TOPENSSL_INIT_new = function : POPENSSL_INIT_SETTINGS; cdecl;
   TOPENSSL_INIT_free = procedure(settings : POPENSSL_INIT_SETTINGS); cdecl;
-  TOPENSSL_INIT_set_config_appname = function (settings:POPENSSL_INIT_SETTINGS; config_file : Pchar) : cint;
+  TOPENSSL_INIT_set_config_appname = function (settings:POPENSSL_INIT_SETTINGS; config_file : PAnsiChar) : cint; cdecl;
 
   TOPENSSL_init_ssl = function ( opts: uint64_t ; settings : POPENSSL_INIT_SETTINGS) : cint; cdecl;
   TOPENSSL_cleanup = procedure; cdecl;
@@ -1603,6 +1634,7 @@ type
   TSSLGetServername = function(ssl: PSSL; _type: cInt = TLSEXT_NAMETYPE_host_name): PChar; cdecl;
   TSSLCtxCallbackCtrl = procedure(ctx: PSSL_CTX; _type: cInt; cb: PCallbackCb); cdecl;
   TSSLSetSslCtx = function(ssl: PSSL; ctx: PSSL_CTX): PSSL; cdecl;
+  TSslSet1Host = function(ssl: PSSL; hostname: string): cInt; cdecl;
 
 // libeay.dll
   TERR_load_crypto_strings = procedure; cdecl;
@@ -1621,7 +1653,7 @@ type
   TX509NameAddEntryByTxt = function(name: PX509_NAME; field: PChar; _type: cInt;
     bytes: PChar; len, loc, _set: cInt): cInt; cdecl;
   TX509Sign = function(x: PX509; pkey: PEVP_PKEY; const md: PEVP_MD): cInt; cdecl;
-  TX509GmtimeAdj = function(s: PASN1_UTCTIME; adj: cInt): PASN1_UTCTIME; cdecl;
+  TX509GmtimeAdj = function(s: PASN1_UTCTIME; adj: cLong): PASN1_UTCTIME; cdecl;
   TX509SetNotBefore = function(x: PX509; tm: PASN1_UTCTIME): cInt; cdecl;
   TX509SetNotAfter = function(x: PX509; tm: PASN1_UTCTIME): cInt; cdecl;
   TX509GetSerialNumber = function(x: PX509): PASN1_cInt; cdecl;
@@ -1654,6 +1686,9 @@ type
   TAsn1IntegerSet = function(a: PASN1_INTEGER; v: integer): integer; cdecl;
   TAsn1IntegerGet = function(a: PASN1_INTEGER): integer; cdecl;
   Ti2dX509bio = function(b: PBIO; x: PX509): cInt; cdecl;
+  Td2iX509bio = function(b:PBIO;  x:PX509):   PX509; cdecl;
+  TPEMReadBioX509 = function(b:PBIO; x:PSslPtr; callback:PFunction; cb_arg:SslPtr): PX509; cdecl;
+  TSkX509PopFree = procedure(st: PSslPtr; func: TX509Free); cdecl;
   Ti2dPrivateKeyBio= function(b: PBIO; pkey: PEVP_PKEY): cInt; cdecl;
 
   // 3DES functions
@@ -1760,9 +1795,12 @@ type
   //
   TEVP_MD_CTX_new = function(): PEVP_MD_CTX; cdecl;
   TEVP_MD_CTX_free = procedure(ctx: PEVP_MD_CTX); cdecl;
-  TEVP_DigestSignVerifyInit = function(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const evptype: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): cint;
-  TEVP_DigestSignFinal = function(ctx: PEVP_MD_CTX; sigret: PByte; siglen: pcsize_t): cint;
-  TEVP_DigestVerifyFinal = function(ctx: PEVP_MD_CTX; sig: PByte; siglen: csize_t): cint;
+  TEVP_DigestSignVerifyInit = function(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const evptype: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): cint; cdecl;
+  TEVP_DigestSignFinal = function(ctx: PEVP_MD_CTX; sigret: PByte; siglen: pcsize_t): cint; cdecl;
+  TEVP_DigestSign = function(ctx: PEVP_MD_CTX; sigret : Pbyte; siglen : pcsize_t; const tbs : Pbyte; tbslen : csize_t) : cint; cdecl;
+  TEVP_DigestVerifyFinal = function(ctx: PEVP_MD_CTX; sig: PByte; siglen: csize_t): cint; cdecl;
+  TEVP_DigestVerify = function(ctx: PEVP_MD_CTX; sig: PByte; siglen: csize_t; tbs : PByte; tbslen: csize_t): cint; cdecl;
+
   // PEM functions
 
   TPEM_read_bio_PrivateKey = function(bp: PBIO; X: PPEVP_PKEY;
@@ -1781,6 +1819,14 @@ type
   // BIO Functions
 
   TBIO_ctrl = function(bp: PBIO; cmd: cint; larg: clong; parg: Pointer): clong; cdecl;
+
+  TBIO_push = function(b: PBIO; append: PBIO): PBIO;cdecl;
+  TBIO_pop = function(b: PBIO): PBIO;cdecl; 
+  TBIO_gets = function(b: PBIO; buf: PChar; size: cint): cint;cdecl;
+  TBIO_puts = function(b: PBIO; const buf: PChar): cint;cdecl;
+  TBIO_set_mem_eof_return = procedure(b: PBIO; v: cint);cdecl;
+  TBIO_set_mem_buf = procedure(b: PBIO; bm: pointer; c: cint);cdecl; 
+  TBIO_get_mem_ptr = procedure (b: PBIO; var pp: pointer);cdecl;
 
   TBIO_s_file = function: pBIO_METHOD; cdecl;
   TBIO_new_file = function(const filename: PChar; const mode: PChar): pBIO; cdecl;
@@ -1835,6 +1881,7 @@ var
   _SSLGetServername: TSSLGetServername = nil;
   _SslCtxCallbackCtrl: TSSLCtxCallbackCtrl = nil;
   _SslSetSslCtx: TSSLSetSslCtx = nil;
+  _SslSet1Host: TSslSet1Host = nil;
 
 // libeay.dll
   _OPENSSL_cleanup : TOPENSSL_cleanup = Nil;
@@ -1890,6 +1937,9 @@ var
   _Asn1IntegerSet: TAsn1IntegerSet = nil;
   _Asn1IntegerGet: TAsn1IntegerGet = nil;
   _i2dX509bio: Ti2dX509bio = nil;
+  _d2iX509bio: Td2iX509bio = nil;
+  _PEMReadBioX509: TPEMReadBioX509 = nil;
+  _SkX509PopFree: TSkX509PopFree = nil;
   _i2dPrivateKeyBio: Ti2dPrivateKeyBio = nil;
   _EVP_enc_null : TEVP_CIPHERFunction = nil;
   _EVP_rc2_cbc : TEVP_CIPHERFunction = nil;
@@ -2009,8 +2059,10 @@ var
   _EVP_MD_CTX_free : TEVP_MD_CTX_free = nil;
   _EVP_DigestSignInit: TEVP_DigestSignVerifyInit = nil;
   _EVP_DigestSignFinal: TEVP_DigestSignFinal = nil;
+  _EVP_DigestSign: TEVP_DigestSign = nil;
   _EVP_DigestVerifyInit: TEVP_DigestSignVerifyInit = nil;
   _EVP_DigestVerifyFinal: TEVP_DigestVerifyFinal = nil;
+  _EVP_DigestVerify: TEVP_DigestVerify = nil;
   // PEM
   _PEM_read_bio_PrivateKey: TPEM_read_bio_PrivateKey = nil;
 
@@ -2023,6 +2075,14 @@ var
   // BIO Functions
 
   _BIO_ctrl: TBIO_ctrl = nil;
+
+  _BIO_push: TBIO_push = nil;
+  _BIO_pop: TBIO_pop = nil;
+  _BIO_gets: TBIO_gets = nil;
+  _BIO_puts: TBIO_puts = nil;
+  _BIO_set_mem_eof_return: TBIO_set_mem_eof_return = nil;
+  _BIO_set_mem_buf: TBIO_set_mem_buf = nil;
+  _BIO_get_mem_ptr: TBIO_get_mem_ptr = nil;
 
   _BIO_s_file: TBIO_s_file = nil;
   _BIO_new_file: TBIO_new_file = nil;
@@ -2104,7 +2164,9 @@ var
   _PKCS7_add1_attrib_digest : function(si:PPKCS7_SIGNER_INFO; md:Pbyte; mdlen:longint):longint;cdecl;
   _BIO_new_PKCS7 : function(_out:PBIO; p7:PPKCS7):PBIO;cdecl;
   _ERR_load_PKCS7_strings : procedure;cdecl;
-
+  // SMIME
+  _SMIME_write_PKCS7: function(_out: PBIO; p7: PPKCS7; data: PBIO; flags: longint): longint; cdecl;
+  _SMIME_read_PKCS7: function(_in: PBIO; bcont: PPBIO): PPKCS7; cdecl;
   // BN
   _BN_new : function():PBIGNUM; cdecl;
   _BN_secure_new : function():PBIGNUM; cdecl;
@@ -2567,6 +2629,14 @@ begin
     result := nil;
 end;
 
+function SslSet1Host(ssl: PSSL; hostname: string): cInt;
+begin
+  if InitSSLInterface and Assigned(_SslSet1Host) then
+    result := _SslSet1Host(ssl, hostname)
+  else
+    result := 0;
+end;
+
 // libeay.dll
 function SSLeayversion(t: cInt): string;
 begin
@@ -2946,7 +3016,7 @@ begin
     Result := 0;
 end;
 
-function X509GmtimeAdj(s: PASN1_UTCTIME; adj: cInt): PASN1_UTCTIME;
+function X509GmtimeAdj(s: PASN1_UTCTIME; adj: cLong): PASN1_UTCTIME;
 begin
   if InitSSLInterface and Assigned(_X509GmtimeAdj) then
     Result := _X509GmtimeAdj(s, adj)
@@ -2984,6 +3054,28 @@ begin
     Result := _i2dPrivateKeyBio(b, pkey)
   else
     Result := 0;
+end;
+
+function d2iX509bio(b:PBIO; x:PX509):  PX509;
+begin
+  if InitSSLInterface and Assigned(_d2iX509bio) then
+    Result := _d2iX509bio(x,b)
+  else
+    Result := nil;
+end;
+
+function PEMReadBioX509(b:PBIO; x:PSslPtr; callback:PFunction; cb_arg: SslPtr): PX509;
+begin
+  if InitSSLInterface and Assigned(_PEMReadBioX509) then
+    Result := _PEMReadBioX509(b,x,callback,cb_arg)
+  else
+    Result := nil;
+end;
+
+procedure SkX509PopFree(st: SslPtr);
+begin
+  if InitSSLInterface and Assigned(_SkX509PopFree) then
+    _SkX509PopFree(st,_X509Free);
 end;
 
 function EvpGetDigestByName(Name: String): PEVP_MD;
@@ -3562,6 +3654,14 @@ begin
     Result := -1;
 end;
 
+function EVP_DigestVerify(ctx: PEVP_MD_CTX; sig: PByte; siglen: csize_t; const tbs : pointer; tbslen: csize_t): cint;
+begin
+  if InitSSLInterface and Assigned(_EVP_DigestVerify) then
+    Result := _EVP_DigestVerify(ctx, sig, siglen, tbs, tbslen)
+  else
+    Result := -1;
+end;
+
 function EVP_PKEY_size(key: pEVP_PKEY): integer;
 begin
   if InitSSLInterface and Assigned(_EVP_PKEY_size) then
@@ -3739,6 +3839,15 @@ begin
     Result := -1;
 end;
 
+function EVP_DigestSign(ctx: PEVP_MD_CTX; sigret:Pbyte; siglen:pcsize_t; const tbs : pointer; tbslen: csize_t): cint;
+begin
+  if InitSSLInterface and Assigned(_EVP_DigestSign) then
+    Result := _EVP_DigestSign(ctx, sigret, siglen,tbs,tbslen)
+  else
+    Result := -1;
+end;
+
+
 function EVP_DigestVerifyInit(ctx: PEVP_MD_CTX; pctx: PPEVP_PKEY_CTX; const evptype: PEVP_MD; e: PENGINE; pkey: PEVP_PKEY): cint;
 begin
   if InitSSLInterface and Assigned(_EVP_DigestVerifyInit) then
@@ -3832,6 +3941,56 @@ begin
     Result := _BIO_ctrl(bp, cmd, larg, parg)
   else
     Result := -1;
+end;
+
+function BIO_push(b: PBIO; append: PBIO): PBIO;
+begin
+  if InitSSLInterface and Assigned(_BIO_push) then
+    Result := _BIO_push(b,append)
+  else
+    Result := nil;
+end;
+
+function BIO_pop(b: PBIO): PBIO;
+begin
+  if InitSSLInterface and Assigned(_BIO_pop) then
+    Result := _BIO_pop(b)
+  else
+    Result := nil;
+end;
+
+function BIO_gets(b: PBIO; buf: PChar; size: cint): cint;
+begin
+  if InitSSLInterface and Assigned(_BIO_gets) then
+    Result := _BIO_gets(b,buf,size)
+  else
+    Result := -1;
+end;
+
+function BIO_puts(b: PBIO; const buf: PChar): cint;
+begin
+  if InitSSLInterface and Assigned(_BIO_puts) then
+    Result := _BIO_puts(b,buf)
+  else
+    Result := -1;
+end;
+
+procedure BIO_set_mem_eof_return(b: PBIO; v: cint);
+begin
+  if InitSSLInterface and Assigned(_BIO_set_mem_eof_return) then
+    _BIO_set_mem_eof_return(b,v);
+end;
+
+procedure BIO_set_mem_buf(b: PBIO; bm: pointer; c: cint);
+begin
+  if InitSSLInterface and Assigned(_BIO_set_mem_buf) then
+    _BIO_set_mem_buf(b,bm,c);
+end;
+
+procedure BIO_get_mem_ptr(b: PBIO; var pp: pointer);
+begin
+  if InitSSLInterface and Assigned(_BIO_get_mem_ptr) then
+    _BIO_get_mem_ptr(b,pp);
 end;
 
 function BIO_read_filename(b: PBIO; const name: PChar): cint;
@@ -4408,6 +4567,23 @@ begin
     _ERR_load_PKCS7_strings
 end;
 
+// SMIME
+function SMIME_write_PKCS7(_out: PBIO; p7: PPKCS7; data: PBIO; flags: longint): longint;
+begin
+  if InitSSLInterface and Assigned(_SMIME_write_PKCS7) then
+    Result := _SMIME_write_PKCS7(_out, p7, data, flags)
+  else
+    Result := -1;
+end;
+
+function SMIME_read_PKCS7(_in: PBIO; bcont: PPBIO): PPKCS7;
+begin
+  if InitSSLInterface and Assigned(_SMIME_read_PKCS7) then
+    Result := _SMIME_read_PKCS7(_in, bcont)
+  else
+    Result := nil;
+end;
+
 // BN
 
 function BN_new: PBIGNUM;
@@ -4753,42 +4929,6 @@ begin
     _OPENSSLaddallalgorithms;
 end;
 
-{$IFNDEF WINDOWS}
- {$IFNDEF OS2}
-{ Try to load all library versions until you find or run out }
-function LoadLibHack(const Value: String): HModule;
-var
-  i: cInt;
-begin
-  Result := NilHandle;
-
-  for i := Low(DLLVersions) to High(DLLVersions) do begin
-    {$IFDEF DARWIN}
-    Result := LoadLibrary(Value + DLLVersions[i] + '.dylib');
-    {$ELSE}
-    Result := LoadLibrary(Value + '.so' + DLLVersions[i]);
-    {$ENDIF}
-
-    if Result <> NilHandle then
-      Break;
-  end;
-end;
- {$ENDIF OS2}
-{$ENDIF WINDOWS}
-
-function LoadLib(const Value: String): HModule;
-begin
-  {$IFDEF WINDOWS}
-  Result := LoadLibrary(Value);
-  {$ELSE WINDOWS}
-   {$IFDEF OS2}
-  Result := LoadLibrary(Value);
-   {$ELSE OS2}
-  Result := LoadLibHack(Value);
-   {$ENDIF OS2}
-  {$ENDIF WINDOWS}
-end;
-
 Function CheckOK(ProcName : string ) : string;
 
 
@@ -4896,6 +5036,8 @@ begin
   _SslWrite := GetProcAddr(SSLLibHandle, 'SSL_write');
   _SslPending := GetProcAddr(SSLLibHandle, 'SSL_pending');
   _SslGetPeerCertificate := GetProcAddr(SSLLibHandle, 'SSL_get_peer_certificate');
+  if not Assigned(_SslGetPeerCertificate) 
+  then _SslGetPeerCertificate := GetProcAddr(SSLLibHandle, 'SSL_get1_peer_certificate');
   _SslGetVersion := GetProcAddr(SSLLibHandle, 'SSL_get_version');
   _SslCtxSetVerify := GetProcAddr(SSLLibHandle, 'SSL_CTX_set_verify');
   _SslGetCurrentCipher := GetProcAddr(SSLLibHandle, 'SSL_get_current_cipher');
@@ -4905,6 +5047,7 @@ begin
   _SslGetServername := GetProcAddr(SSLLibHandle, 'SSL_get_servername');
   _SslCtxCallbackCtrl := GetProcAddr(SSLLibHandle, 'SSL_CTX_callback_ctrl');
   _SslSetSslCtx := GetProcAddr(SSLLibHandle, 'SSL_set_SSL_CTX');
+  _SslSet1Host := GetProcAddr(SSLLibHandle, 'SSL_set1_host');
 end;
 
 Procedure LoadUtilEntryPoints;
@@ -4973,6 +5116,9 @@ begin
   _Asn1IntegerSet := GetProcAddr(SSLUtilHandle, 'ASN1_INTEGER_set');
   _Asn1IntegerGet := GetProcAddr(SSLUtilHandle, 'ASN1_INTEGER_get');
   _i2dX509bio := GetProcAddr(SSLUtilHandle, 'i2d_X509_bio');
+  _d2iX509bio := GetProcAddr(SSLUtilHandle, 'd2i_X509_bio');
+  _PEMReadBioX509 := GetProcAddr(SSLUtilHandle, 'PEM_read_bio_X509');
+  _SkX509PopFree := GetProcAddr(SSLUtilHandle, 'SK_X509_POP_FREE');
   _i2dPrivateKeyBio := GetProcAddr(SSLUtilHandle, 'i2d_PrivateKey_bio');
   _EVP_enc_null := GetProcAddr(SSLUtilHandle, 'EVP_enc_null');
   _EVP_rc2_cbc := GetProcAddr(SSLUtilHandle, 'EVP_rc2_cbc');
@@ -4997,8 +5143,10 @@ begin
   _EVP_MD_CTX_free := GetProcAddr(SSLUtilHandle, 'EVP_MD_CTX_free');
   _EVP_DigestSignInit := GetProcAddr(SSLUtilHandle, 'EVP_DigestSignInit');
   _EVP_DigestSignFinal := GetProcAddr(SSLUtilHandle, 'EVP_DigestSignFinal');
+  _EVP_DigestSign := GetProcAddr(SSLUtilHandle, 'EVP_DigestSign');
   _EVP_DigestVerifyInit := GetProcAddr(SSLUtilHandle, 'EVP_DigestVerifyInit');
   _EVP_DigestVerifyFinal := GetProcAddr(SSLUtilHandle, 'EVP_DigestVerifyFinal');
+  _EVP_DigestVerify := GetProcAddr(SSLUtilHandle, 'EVP_DigestVerify');
    // 3DES functions
   _DESsetoddparity := GetProcAddr(SSLUtilHandle, 'DES_set_odd_parity');
   _DESsetkeychecked := GetProcAddr(SSLUtilHandle, 'DES_set_key_checked');
@@ -5085,6 +5233,13 @@ begin
   _PEM_write_bio_PKCS7 := GetProcAddr(SSLUtilHandle,'PEM_write_bio_PKCS7');
   // BIO
   _BIO_ctrl := GetProcAddr(SSLUtilHandle, 'BIO_ctrl');
+  _BIO_push:= GetProcAddr(SSLUtilHandle, 'BIO_push');
+  _BIO_pop:= GetProcAddr(SSLUtilHandle, 'BIO_pop');
+  _BIO_gets:= GetProcAddr(SSLUtilHandle, 'BIO_gets');
+  _BIO_puts:= GetProcAddr(SSLUtilHandle, 'BIO_puts');
+  _BIO_set_mem_eof_return:= GetProcAddr(SSLUtilHandle, 'BIO_set_mem_eof_return');
+  _BIO_set_mem_buf:= GetProcAddr(SSLUtilHandle, 'BIO_set_mem_buf');
+  _BIO_get_mem_ptr:= GetProcAddr(SSLUtilHandle, 'BIO_get_mem_ptr');
   _BIO_s_file := GetProcAddr(SSLUtilHandle, 'BIO_s_file');
   _BIO_new_file := GetProcAddr(SSLUtilHandle, 'BIO_new_file');
   _BIO_new_mem_buf := GetProcAddr(SSLUtilHandle, 'BIO_new_mem_buf');
@@ -5151,7 +5306,9 @@ begin
   _PKCS7_add1_attrib_digest:=GetProcAddr(SSLUtilHandle,'PKCS7_add1_attrib_digest');
   _BIO_new_PKCS7:=GetProcAddr(SSLUtilHandle,'BIO_new_PKCS7');
   _ERR_load_PKCS7_strings:=GetProcAddr(SSLUtilHandle,'ERR_load_PKCS7_strings');
-
+  // SMIME
+  _SMIME_write_PKCS7 := GetProcAddr(SSLUtilHandle, 'SMIME_write_PKCS7');
+  _SMIME_read_PKCS7 := GetProcAddr(SSLUtilHandle, 'SMIME_read_PKCS7');
   // BN
   _BN_new:=GetProcAddr(SSLUtilHandle,'BN_new');
   _BN_secure_new:=GetProcAddr(SSLUtilHandle,'BN_secure_new');
@@ -5196,19 +5353,6 @@ begin
   _BN_cmp:=GetProcAddr(SSLUtilHandle,'BN_cmp');
   _BN_free:=GetProcAddr(SSLUtilHandle,'BN_free');
 end;
-
-Function LoadUtilLibrary : Boolean;
-
-begin
-  Result:=(SSLUtilHandle<>0);
-  if not Result then
-    begin
-    SSLUtilHandle := LoadLib(DLLUtilName);
-    Result:=(SSLUtilHandle<>0);
-    end;
-end;
-
-
 
 Procedure ClearSSLEntryPoints;
 
@@ -5260,6 +5404,7 @@ begin
   _SslGetServername := nil;
   _SslCtxCallbackCtrl := nil;
   _SslSetSslCtx := nil;
+  _SslSet1Host := nil;
   _PKCS7_ISSUER_AND_SERIAL_new:=nil;
   _PKCS7_ISSUER_AND_SERIAL_free:=nil;
   _PKCS7_ISSUER_AND_SERIAL_digest:=nil;
@@ -5322,7 +5467,9 @@ begin
   _PKCS7_add1_attrib_digest:=nil;
   _BIO_new_PKCS7:=nil;
   _ERR_load_PKCS7_strings:=nil;
-
+  // SMIME
+  _SMIME_write_PKCS7 := nil;
+  _SMIME_read_PKCS7 := nil;
   // BN
   _BN_new:=nil;
   _BN_secure_new:=nil;
@@ -5366,26 +5513,6 @@ begin
   _BN_get_word:=nil;
   _BN_cmp:=nil;
   _BN_free:=nil;
-end;
-
-Procedure UnloadSSLLib;
-
-begin
-  if (SSLLibHandle<>0) then
-    begin
-    FreeLibrary(SSLLibHandle);
-    SSLLibHandle:=0;
-    end;
-end;
-
-Procedure UnloadUtilLib;
-
-begin
-  if (SSLUtilHandle<>0) then
-     begin
-     FreeLibrary(SSLUtilHandle);
-     SSLUtilHandle := 0;
-     end;
 end;
 
 Procedure ClearUtilEntryPoints;
@@ -5444,6 +5571,9 @@ begin
   _Asn1IntegerSet:= nil;
   _Asn1IntegerGet:= nil;
   _i2dX509bio := nil;
+  _d2iX509bio := nil;
+  _PEMReadBioX509 := nil;
+  _SkX509PopFree := nil;
   _i2dPrivateKeyBio := nil;
 
   // 3DES functions
@@ -5541,8 +5671,10 @@ begin
   _EVP_MD_CTX_free := nil;
   _EVP_DigestSignInit := nil;
   _EVP_DigestSignFinal := nil;
+  _EVP_DigestSign := nil;
   _EVP_DigestVerifyInit := nil;
   _EVP_DigestVerifyFinal := nil;
+  _EVP_DigestVerify := nil;
 
   // PEM
 
@@ -5613,35 +5745,101 @@ begin
   end;
 end;
 
-Function LoadLibraries : Boolean;
+function TryLoadLibPair(const SSL_DLL_Name, Crypto_DLL_Name: string):boolean;
+begin
+  Assert((SSLUtilHandle = 0) and (SSLLibHandle = 0),
+    'LoadTryLoadLibPair: Handle is not zero');
+
+  SSLUtilHandle := LoadLibrary(Crypto_DLL_Name);
+  if (SSLUtilHandle <> 0) then
+    SSLLibHandle := LoadLibrary(SSL_DLL_Name);
+
+  Result := (SSLUtilHandle <> 0) and (SSLLibHandle <> 0);
+  if not Result then UnloadLibraries;
+end;
+
+ Function MakeLibName(Const aBase,aVersion : String) : string;
+
+ begin
+   {$IF DEFINED(WINDOWS) OR DEFINED(OS2)}
+   Result:=aBase+aVersion+'.dll';
+   {$ELSE}
+   {$IFNDEF DARWIN}
+   Result:=aBase+'.so'+aVersion;
+   {$ELSE}
+   Result:=aBase+aVersion+'.dylib';
+   {$ENDIF}
+   {$ENDIF}
+ end;
+
+{$IF NOT(DEFINED(WINDOWS) OR DEFINED(OS2))}
+Function LoadOpenSSl : Boolean;
+
+var
+  Idx: Integer;
+begin
+  Result:=False;
+  Idx := Low(DLLVersions)+StartVersionOffset;
+  While (not Result) and (Idx<=High(DLLVersions)) do
+    begin
+    Result := TryLoadLibPair(MakeLibName(BaseSSLName,DLLVersions[Idx]),
+                             MakeLibName(BaseCryptoName,DLLVersions[Idx]));
+    Inc(Idx);
+    end;
+end;
+
+Function LoadLibreSSl : Boolean;
+
+var
+  Idx: Integer;
+begin
+  Result:=False;
+  Idx := Low(LibreSSLVersions)+StartVersionOffset;
+  While (not Result) and (Idx<=High(LibreSSLVersions)) do
+    begin
+    Result := TryLoadLibPair(MakeLibName(BaseSSLName,LibreSSLVersions[Idx]),
+                             MakeLibName(BaseCryptoName,LibreSSLVersions[Idx]));
+    Inc(Idx);
+    end;
+end;
+{$ENDIF}
+
+Function LoadLibraries(Const aSSLName, aCryptoName : String) : Boolean;
+
+var
+  Idx: Integer;
 
 begin
   Result:=False;
-{$IFDEF DARWIN}  
-  // Mac OS no longer allows you to load the unversioned one. Bug ID 36484.
-  DLLVERSIONS[1]:=DLLVERSIONS[2];
+  if (aSSLName<>'') and (aCryptoName<>'') then
+    Exit(TryLoadLibPair(aSSLName,aCryptoName));
+{$IF DEFINED(WINDOWS) OR DEFINED(OS2)}
+  Assert(Low(SSL_DLL_Names) = Low(Crypto_DLL_Names));
+  Assert(High(SSL_DLL_Names) = High(Crypto_DLL_Names));
+  Idx:=Low(SSL_DLL_Names);
+  While (not Result) and (Idx<=High(SSL_DLL_Names)) do
+    begin
+    Result := TryLoadLibPair(MakeLibName(SSL_DLL_Names[Idx],''), MakeLibName(Crypto_DLL_Names[Idx],''));
+    Inc(Idx);
+    end;
+{$ELSE}
+  if LibreSSLSupport=lssFirst then
+    Result:=LoadLibreSSL;
+  if not Result then
+    Result:=LoadOpenSSL;
+  if (Not Result) and (LibreSSLSupport=lssLast) then
+    Result:=LoadLibreSSL;
 {$ENDIF}
-  SSLUtilHandle := LoadLib(DLLUtilName);
-  SSLLibHandle := LoadLib(DLLSSLName);
-  {$IFDEF MSWINDOWS}
-  if (SSLUtilHandle = 0) then
-    SSLUtilHandle := LoadLib(DLLUtilName2);
-  if (SSLLibHandle = 0) then
-    SSLLibHandle := LoadLib(DLLSSLName2);
-  if (SSLLibHandle = 0) then
-    SSLLibHandle := LoadLib(DLLSSLName3);
-  {$ELSE MSWINDOWS}
-   {$IFDEF OS2}
-  if (SSLUtilHandle = 0) then
-    SSLUtilHandle := LoadLib(DLLUtilName2);
-  if (SSLLibHandle = 0) then
-    SSLLibHandle := LoadLib(DLLSSLName2);
-   {$ENDIF OS2}
-  {$ENDIF MSWINDOWS}
-  Result:=(SSLLibHandle<>0) and (SSLUtilHandle<>0);
 end;
 
 function InitSSLInterface: Boolean;
+
+begin
+  Result:=InitSSLInterface('','');
+end;
+
+function InitSSLInterface(Const aSSLName, acryptoName : String) : Boolean;
+
 begin
   Result:=SSLLoaded;
   if Result then
@@ -5650,7 +5848,7 @@ begin
   try
     if SSLloaded then
       Exit;
-    Result:=LoadLibraries;
+    Result:=LoadLibraries(aSSLName,aCryptoName);
     if Not Result then
       begin
       UnloadLibraries;

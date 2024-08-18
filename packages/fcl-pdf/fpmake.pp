@@ -24,7 +24,7 @@ begin
     P.Email := '';
     P.Description := 'PDF generating and TTF file info library';
     P.NeedLibC:= false;
-    P.OSes:=P.OSes-[embedded,win16,msdos,nativent,macosclassic,palmos];
+    P.OSes:=P.OSes-[embedded,win16,wince,msdos,nativent,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
 
@@ -34,7 +34,8 @@ begin
     P.Dependencies.Add('fcl-xml');
     P.Dependencies.Add('paszlib');
     P.Dependencies.add('winunits-base',AllWindowsOSes-[wince]);
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
+    P.Dependencies.add('libfontconfig',[linux] + AllBSDOses);
     T:=P.Targets.AddUnit('src/fpttfencodings.pp');
     T:=P.Targets.AddUnit('src/fpparsettf.pp');
       T.ResourceStrings:=true;
@@ -58,7 +59,28 @@ begin
       Dependencies.AddUnit('fpttfsubsetter');
       Dependencies.AddInclude('src/fontmetrics_stdpdf.inc');
       end;
+    T:=P.Targets.AddUnit('src/fppdfconsts.pp');
+    T:=P.Targets.AddUnit('src/fppdfpredict.pp');
+    T:=P.Targets.AddUnit('src/fppdfsource.pp');
     
+    T:=P.Targets.AddUnit('src/fppdfobjects.pp');
+    T.Dependencies.AddUnit('fppdfconsts');
+
+    T:=P.Targets.AddUnit('src/fppdfcommands.pp');
+    T.Dependencies.AddUnit('fppdfobjects');
+
+    T:=P.Targets.AddUnit('src/fppdfscanner.pp');
+    T.ResourceStrings:=true;
+    T.Dependencies.AddUnit('fppdfobjects');
+    T.Dependencies.AddUnit('fppdfsource');
+    
+    T:=P.Targets.AddUnit('src/fppdfparser.pp');
+    T.ResourceStrings:=true;
+    T.Dependencies.AddUnit('fppdfobjects');
+    T.Dependencies.AddUnit('fppdfsource');
+    T.Dependencies.AddUnit('fppdfconsts');
+    T.Dependencies.AddUnit('fppdfpredict');
+     
     // md5.ref
 {$ifndef ALLPACKAGES}
     Run;

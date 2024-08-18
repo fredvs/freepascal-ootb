@@ -1,4 +1,19 @@
 unit bufdataset_parser;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Joost van der Sluis and other members of the
+    Free Pascal development team
+
+    BufDataset parser
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 
 {$h+}
 {$mode delphi}
@@ -30,7 +45,7 @@ type
 
     procedure FillExpressList; override;
     procedure HandleUnknownVariable(VarName: string); override;
-    function  GetVariableInfo(VarName: string): TField;
+    function  GetVariableInfo(const VarName: string): TField;
     function  CurrentExpression: string; override;
     function  GetResultType: TExpressionType; override;
 
@@ -42,7 +57,7 @@ type
 
     procedure ClearExpressions; override;
 
-    procedure ParseExpression(AExpression: string); virtual;
+    procedure ParseExpression(const AExpression: string); virtual;
     function ExtractFromBuffer(Buffer: TRecordBuffer): PChar; virtual;
 
     property Dataset: TDataSet read FDataset; // write FDataset;
@@ -65,10 +80,12 @@ type
   private
     FField: TField;
     FFieldName: string;
+    FFieldIsNull: boolean;
     FExprWord: TExprWord;
   protected
     function GetFieldVal: Pointer; virtual; abstract;
     function GetFieldType: TExpressionType; virtual; abstract;
+    function GetFieldIsNull: PBoolean;
   public
     constructor Create(UseField: TField);
 
@@ -78,6 +95,7 @@ type
     property FieldDef: TField read FField;
     property FieldType: TExpressionType read GetFieldType;
     property FieldName: string read FFieldName;
+    property FieldIsNull: PBoolean read GetFieldIsNull;
   end;
 
   TStringFieldVar = class(TFieldVar)
@@ -148,7 +166,6 @@ type
     procedure Refresh(Buffer: TRecordBuffer); override;
   end;
 
-
 //--TFieldVar----------------------------------------------------------------
 constructor TFieldVar.Create(UseField: TField);
 begin
@@ -158,6 +175,11 @@ begin
   //FDataset := ADataset;
   FField := UseField;
   FFieldName := UseField.FieldName;
+end;
+
+function TFieldVar.GetFieldIsNull: PBoolean;
+begin
+  Result := @FFieldIsNull;
 end;
 
 //--TStringFieldVar-------------------------------------------------------------
@@ -188,7 +210,8 @@ end;
 procedure TStringFieldVar.Refresh(Buffer: TRecordBuffer);
 var Fieldbuf : TStringFieldBuffer;
 begin
-  if not FField.DataSet.GetFieldData(FField,@Fieldbuf) then
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@Fieldbuf);
+  if FFieldIsNull  then
     FFieldVal^:=#0
   else
     strcopy(FFieldVal,@Fieldbuf[0]);
@@ -207,7 +230,8 @@ end;
 
 procedure TFloatFieldVar.Refresh(Buffer: TRecordBuffer);
 begin
-  if not FField.DataSet.GetFieldData(FField,@FFieldVal) then
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@FFieldVal);
+  if FFieldIsNull then
     FFieldVal := 0;
 end;
 
@@ -224,7 +248,8 @@ end;
 
 procedure TIntegerFieldVar.Refresh(Buffer: TRecordBuffer);
 begin
-  if not FField.DataSet.GetFieldData(FField,@FFieldVal) then
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@FFieldVal);
+  if FFieldIsNull then
     FFieldVal := 0;
 end;
 
@@ -241,7 +266,8 @@ end;
 
 procedure TLargeIntFieldVar.Refresh(Buffer: TRecordBuffer);
 begin
-  if not FField.DataSet.GetFieldData(FField,@FFieldVal) then
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@FFieldVal);
+  if FFieldIsNull then
     FFieldVal := 0;
 end;
 
@@ -258,7 +284,8 @@ end;
 
 procedure TDateTimeFieldVar.Refresh(Buffer:TRecordBuffer );
 begin
-  if not FField.DataSet.GetFieldData(FField,@FFieldVal) then
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@FFieldVal);
+  if FFieldIsNull then
     FFieldVal := 0;
 end;
 
@@ -275,17 +302,19 @@ end;
 
 procedure TBooleanFieldVar.Refresh(Buffer: TRecordBuffer);
 begin
-  if not FField.DataSet.GetFieldData(FField,@FFieldVal) then
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@FFieldVal);
+  if FFieldIsNull then
     FFieldVal := False;
 end;
 
 procedure TBCDFieldVar.Refresh(Buffer: TRecordBuffer);
 var c: currency;
 begin
-  if FField.DataSet.GetFieldData(FField,@c) then
-    FFieldVal := c
+  FFieldIsNull := not FField.DataSet.GetFieldData(FField,@c);
+  if FFieldIsNull then
+    FFieldVal := 0
   else
-    FFieldVal := 0;
+    FFieldVal := c;
 end;
 
 
@@ -365,7 +394,7 @@ begin
     ParseExpression(lExpression);
 end;
 
-function TBufDatasetParser.GetVariableInfo(VarName: string): TField;
+function TBufDatasetParser.GetVariableInfo(const VarName: string): TField;
 begin
   Result := FDataset.FindField(VarName);
 end;
@@ -390,7 +419,7 @@ begin
     ftString, ftFixedChar:
       begin
       TempFieldVar := TStringFieldVar.Create(FieldInfo);
-      TempFieldVar.FExprWord := DefineStringVariable(VarName, TempFieldVar.FieldVal);
+      TempFieldVar.FExprWord := DefineStringVariable(VarName, TempFieldVar.FieldVal, TempFieldVar.FieldIsNull);
       TempFieldVar.FExprWord.fixedlen := Fieldinfo.Size;
       end;
     ftBoolean:
@@ -406,7 +435,7 @@ begin
     ftAutoInc, ftInteger, ftSmallInt, ftWord:
       begin
         TempFieldVar := TIntegerFieldVar.Create(FieldInfo);
-        TempFieldVar.FExprWord := DefineIntegerVariable(VarName, TempFieldVar.FieldVal);
+        TempFieldVar.FExprWord := DefineIntegerVariable(VarName, TempFieldVar.FieldVal, TempFieldVar.FieldIsNull);
       end;
     ftLargeInt:
       begin
@@ -454,7 +483,7 @@ begin
   FCurrentExpression := EmptyStr;
 end;
 
-procedure TBufDatasetParser.ParseExpression(AExpression: string);
+procedure TBufDatasetParser.ParseExpression(const AExpression: string);
 var
   TempBuffer: TRecordBuffer;
 begin

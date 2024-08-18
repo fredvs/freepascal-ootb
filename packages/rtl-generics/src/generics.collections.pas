@@ -37,6 +37,7 @@ unit Generics.Collections;
 {$HINTS OFF}
 {$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
+{$POINTERMATH ON}
 
 interface
 
@@ -70,7 +71,6 @@ type
       // bug #24282
       TComparerBugHack = TComparer<T>;
   protected
-    // modified QuickSort from classes\lists.inc
     class procedure QuickSort(var AValues: array of T; ALeft, ARight: SizeInt; const AComparer: IComparer<T>);
       virtual; abstract;
   public
@@ -80,37 +80,43 @@ type
     class procedure Sort(var AValues: array of T;
       const AComparer: IComparer<T>; AIndex, ACount: SizeInt); overload;
 
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out ASearchResult: TBinarySearchResult; const AComparer: IComparer<T>;
       AIndex, ACount: SizeInt): Boolean; virtual; abstract; overload;
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out AFoundIndex: SizeInt; const AComparer: IComparer<T>;
       AIndex, ACount: SizeInt): Boolean; virtual; abstract; overload;
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out AFoundIndex: SizeInt; const AComparer: IComparer<T>): Boolean; overload;
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out AFoundIndex: SizeInt): Boolean; overload;
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out ASearchResult: TBinarySearchResult; const AComparer: IComparer<T>): Boolean; overload;
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out ASearchResult: TBinarySearchResult): Boolean; overload;
   end {$ifdef EXTRA_WARNINGS}experimental{$endif}; // will be renamed to TCustomArray (bug #24254)
 
   TArrayHelper<T> = class(TCustomArrayHelper<T>)
+  private
+    type
+      PT = ^T;
+    class procedure QSort(p: PT; n, reasonable: SizeUint; const cmp: IComparer<T>); static;
+    class function Median(p: PT; n: SizeUint; const cmp: IComparer<T>): PT; static;
+    class procedure HeapSort(p: PT; n: SizeUint; const cmp: IComparer<T>); static;
+    class procedure HeapReplacePessimistic(q: PT; nq, id: SizeUint; const item: T; const cmp: IComparer<T>); static;
   protected
-    // modified QuickSort from classes\lists.inc
     class procedure QuickSort(var AValues: array of T; ALeft, ARight: SizeInt; const AComparer: IComparer<T>); override;
   public
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out ASearchResult: TBinarySearchResult; const AComparer: IComparer<T>;
       AIndex, ACount: SizeInt): Boolean; override; overload;
-    class function BinarySearch(constref AValues: array of T; constref AItem: T;
+    class function BinarySearch(const AValues: array of T; const AItem: T;
       out AFoundIndex: SizeInt; const AComparer: IComparer<T>;
       AIndex, ACount: SizeInt): Boolean; override; overload;
   end {$ifdef EXTRA_WARNINGS}experimental{$endif}; // will be renamed to TArray (bug #24254)
 
   TCollectionNotification = (cnAdded, cnRemoved, cnExtracted);
-  TCollectionNotifyEvent<T> = procedure(ASender: TObject; constref AItem: T; AAction: TCollectionNotification)
+  TCollectionNotifyEvent<T> = procedure(ASender: TObject; const AItem: T; AAction: TCollectionNotification)
     of object;
 
   { TEnumerator }
@@ -181,7 +187,7 @@ type
 
     function PrepareAddingItem: SizeInt; virtual;
     function PrepareAddingRange(ACount: SizeInt): SizeInt; virtual;
-    procedure Notify(constref AValue: T; ACollectionNotification: TCollectionNotification); virtual;
+    procedure Notify(const AValue: T; ACollectionNotification: TCollectionNotification); virtual;
     function DoRemove(AIndex: SizeInt; ACollectionNotification: TCollectionNotification): T; virtual;
     procedure SetCapacity(AValue: SizeInt); virtual; abstract;
     function GetCount: SizeInt; virtual;
@@ -241,7 +247,7 @@ type
     procedure SetCapacity(AValue: SizeInt); override;
     procedure SetCount(AValue: SizeInt);
     procedure InitializeList; virtual;
-    procedure InternalInsert(AIndex: SizeInt; constref AValue: T);
+    procedure InternalInsert(AIndex: SizeInt; const AValue: T);
   private
     function GetItem(AIndex: SizeInt): T;
     procedure SetItem(AIndex: SizeInt; const AValue: T);
@@ -254,27 +260,27 @@ type
     {$ENDIF}
     destructor Destroy; override;
 
-    function Add(constref AValue: T): SizeInt; virtual;
-    procedure AddRange(constref AValues: array of T); virtual; overload;
+    function Add(const AValue: T): SizeInt; virtual;
+    procedure AddRange(const AValues: array of T); virtual; overload;
     procedure AddRange(const AEnumerable: IEnumerable<T>); overload;
     procedure AddRange(AEnumerable: TEnumerable<T>); overload;
     {$IFDEF ENABLE_METHODS_WITH_TEnumerableWithPointers}
     procedure AddRange(AEnumerable: TEnumerableWithPointers<T>); overload;
     {$ENDIF}
 
-    procedure Insert(AIndex: SizeInt; constref AValue: T); virtual;
-    procedure InsertRange(AIndex: SizeInt; constref AValues: array of T); virtual; overload;
+    procedure Insert(AIndex: SizeInt; const AValue: T); virtual;
+    procedure InsertRange(AIndex: SizeInt; const AValues: array of T); virtual; overload;
     procedure InsertRange(AIndex: SizeInt; const AEnumerable: IEnumerable<T>); overload;
     procedure InsertRange(AIndex: SizeInt; const AEnumerable: TEnumerable<T>); overload;
     {$IFDEF ENABLE_METHODS_WITH_TEnumerableWithPointers}
     procedure InsertRange(AIndex: SizeInt; const AEnumerable: TEnumerableWithPointers<T>); overload;
     {$ENDIF}
 
-    function Remove(constref AValue: T): SizeInt;
+    function Remove(const AValue: T): SizeInt;
     procedure Delete(AIndex: SizeInt); inline;
     procedure DeleteRange(AIndex, ACount: SizeInt);
     function ExtractIndex(const AIndex: SizeInt): T; overload;
-    function Extract(constref AValue: T): T; overload;
+    function Extract(const AValue: T): T; overload;
 
     procedure Exchange(AIndex1, AIndex2: SizeInt); virtual;
     procedure Move(AIndex, ANewIndex: SizeInt); virtual;
@@ -284,9 +290,9 @@ type
 
     procedure Clear;
 
-    function Contains(constref AValue: T): Boolean; inline;
-    function IndexOf(constref AValue: T): SizeInt; virtual;
-    function LastIndexOf(constref AValue: T): SizeInt; virtual;
+    function Contains(const AValue: T): Boolean; inline;
+    function IndexOf(const AValue: T): SizeInt; virtual;
+    function LastIndexOf(const AValue: T): SizeInt; virtual;
 
     procedure Reverse;
 
@@ -294,8 +300,8 @@ type
 
     procedure Sort; overload;
     procedure Sort(const AComparer: IComparer<T>); overload;
-    function BinarySearch(constref AItem: T; out AIndex: SizeInt): Boolean; overload;
-    function BinarySearch(constref AItem: T; out AIndex: SizeInt; const AComparer: IComparer<T>): Boolean; overload;
+    function BinarySearch(const AItem: T; out AIndex: SizeInt): Boolean; overload;
+    function BinarySearch(const AItem: T; out AIndex: SizeInt; const AComparer: IComparer<T>): Boolean; overload;
 
     property Count: SizeInt read FLength write SetCount;
     property Items[Index: SizeInt]: T read GetItem write SetItem; default;
@@ -314,12 +320,12 @@ type
   protected
     procedure InitializeList; override;
   public
-    function Add(constref AValue: T): SizeInt; override; overload;
-    procedure AddRange(constref AValues: array of T); override; overload;
-    procedure Insert(AIndex: SizeInt; constref AValue: T); override;
+    function Add(const AValue: T): SizeInt; override; overload;
+    procedure AddRange(const AValues: array of T); override; overload;
+    procedure Insert(AIndex: SizeInt; const AValue: T); override;
     procedure Exchange(AIndex1, AIndex2: SizeInt); override;
     procedure Move(AIndex, ANewIndex: SizeInt); override;
-    procedure InsertRange(AIndex: SizeInt; constref AValues: array of T); override; overload;
+    procedure InsertRange(AIndex: SizeInt; const AValues: array of T); override; overload;
     property Duplicates: TDuplicates read FDuplicates write FDuplicates;
     property Sorted: Boolean read GetSorted write SetSorted;
     property SortStyle: TCollectionSortStyle read FSortStyle write SetSortStyle;
@@ -336,8 +342,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure Add(constref AValue: T);
-    procedure Remove(constref AValue: T);
+    procedure Add(const AValue: T);
+    procedure Remove(const AValue: T);
     procedure Clear;
 
     function LockList: TList<T>;
@@ -358,6 +364,7 @@ type
       constructor Create(AQueue: TQueue<T>);
     end;
   protected
+    function PrepareAddingItem: SizeInt; override;
     function GetPtrEnumerator: TEnumerator<PT>; override;
   protected
     // bug #24287 - workaround for generics type name conflict (Identifier not found)
@@ -374,6 +381,7 @@ type
     function GetEnumerator: TEnumerator; reintroduce;
   private
     FLow: SizeInt;
+    procedure MoveToFront;
   protected
     procedure SetCapacity(AValue: SizeInt); override;
     function DoRemove(AIndex: SizeInt; ACollectionNotification: TCollectionNotification): T; override;
@@ -384,7 +392,7 @@ type
     constructor Create(ACollection: TEnumerableWithPointers<T>); overload;
     {$ENDIF}
     destructor Destroy; override;
-    procedure Enqueue(constref AValue: T);
+    procedure Enqueue(const AValue: T);
     function Dequeue: T;
     function Extract: T;
     function Peek: T;
@@ -413,7 +421,7 @@ type
     {$ENDIF}
     destructor Destroy; override;
     procedure Clear;
-    procedure Push(constref AValue: T);
+    procedure Push(const AValue: T);
     function Pop: T; inline;
     function Peek: T;
     function Extract: T; inline;
@@ -424,7 +432,7 @@ type
   private
     FObjectsOwner: Boolean;
   protected
-    procedure Notify(constref AValue: T; ACollectionNotification: TCollectionNotification); override;
+    procedure Notify(const AValue: T; ACollectionNotification: TCollectionNotification); override;
   public
     constructor Create(AOwnsObjects: Boolean = True); overload;
     constructor Create(const AComparer: IComparer<T>; AOwnsObjects: Boolean = True); overload;
@@ -439,7 +447,7 @@ type
   private
     FObjectsOwner: Boolean;
   protected
-    procedure Notify(constref AValue: T; ACollectionNotification: TCollectionNotification); override;
+    procedure Notify(const AValue: T; ACollectionNotification: TCollectionNotification); override;
   public
     constructor Create(AOwnsObjects: Boolean = True); overload;
     constructor Create(ACollection: TEnumerable<T>; AOwnsObjects: Boolean = True); overload;
@@ -454,7 +462,7 @@ type
   private
     FObjectsOwner: Boolean;
   protected
-    procedure Notify(constref AValue: T; ACollectionNotification: TCollectionNotification); override;
+    procedure Notify(const AValue: T; ACollectionNotification: TCollectionNotification); override;
   public
     constructor Create(AOwnsObjects: Boolean = True); overload;
     constructor Create(ACollection: TEnumerable<T>; AOwnsObjects: Boolean = True); overload;
@@ -502,13 +510,13 @@ type
     {$ENDIF}
     function GetEnumerator: TCustomSetEnumerator; reintroduce; virtual; abstract;
 
-    function Add(constref AValue: T): Boolean; virtual; abstract;
-    function Remove(constref AValue: T): Boolean; virtual; abstract;
-    function Extract(constref AValue: T): T; virtual; abstract;
+    function Add(const AValue: T): Boolean; virtual; abstract;
+    function Remove(const AValue: T): Boolean; virtual; abstract;
+    function Extract(const AValue: T): T; virtual; abstract;
 
     procedure Clear; virtual; abstract;
-    function Contains(constref AValue: T): Boolean; virtual; abstract;
-    function AddRange(constref AValues: array of T): Boolean; overload;
+    function Contains(const AValue: T): Boolean; virtual; abstract;
+    function AddRange(const AValues: array of T): Boolean; overload;
     function AddRange(const AEnumerable: IEnumerable<T>): Boolean; overload;
     function AddRange(AEnumerable: TEnumerable<T>): Boolean; overload;
     {$IFDEF ENABLE_METHODS_WITH_TEnumerableWithPointers}
@@ -530,7 +538,7 @@ type
 
   THashSet<T> = class(TCustomSet<T>)
   private
-    procedure InternalDictionaryNotify(ASender: TObject; constref AItem: T; AAction: TCollectionNotification);
+    procedure InternalDictionaryNotify(ASender: TObject; const AItem: T; AAction: TCollectionNotification);
   protected
     FInternalDictionary: TOpenAddressingLP<T, TEmptyRecord>;
   public type
@@ -563,12 +571,12 @@ type
     destructor Destroy; override;
     function GetEnumerator: TCustomSetEnumerator; override;
 
-    function Add(constref AValue: T): Boolean; override;
-    function Remove(constref AValue: T): Boolean; override;
-    function Extract(constref AValue: T): T; override;
+    function Add(const AValue: T): Boolean; override;
+    function Remove(const AValue: T): Boolean; override;
+    function Extract(const AValue: T): T; override;
 
     procedure Clear; override;
-    function Contains(constref AValue: T): Boolean; override;
+    function Contains(const AValue: T): Boolean; override;
 
     procedure TrimExcess; override;
   end;
@@ -666,7 +674,7 @@ type
     function DoRemove(ANode: PNode; ACollectionNotification: TCollectionNotification; ADispose: boolean): TValue;
     procedure DisposeAllNodes(ANode: PNode); overload;
 
-    function Compare(constref ALeft, ARight: TKey): Integer; inline;
+    function Compare(const ALeft, ARight: TKey): Integer; inline;
     function FindPredecessor(ANode: PNode): PNode;
     function FindInsertNode(ANode: PNode; out AInsertNode: PNode): Integer;
 
@@ -675,10 +683,10 @@ type
     procedure RotateRightLeft(ANode: PNode); virtual;
     procedure RotateLeftRight(ANode: PNode); virtual;
 
-    procedure KeyNotify(constref AKey: TKey; ACollectionNotification: TCollectionNotification); inline;
-    procedure ValueNotify(constref AValue: TValue; ACollectionNotification: TCollectionNotification); inline;
+    procedure KeyNotify(const AKey: TKey; ACollectionNotification: TCollectionNotification); inline;
+    procedure ValueNotify(const AValue: TValue; ACollectionNotification: TCollectionNotification); inline;
     procedure NodeNotify(ANode: PNode; ACollectionNotification: TCollectionNotification; ADispose: boolean); inline;
-    procedure SetValue(var AValue: TValue; constref ANewValue: TValue);
+    procedure SetValue(var AValue: TValue; const ANewValue: TValue);
     function GetItem(const AKey: TKey): TValue;
     procedure SetItem(const AKey: TKey; const AValue: TValue);
 
@@ -745,12 +753,12 @@ type
 
     destructor Destroy; override;
     function AddNode(ANode: PNode): boolean; overload; inline;
-    function Add(constref APair: TTreePair): PNode; overload; inline;
-    function Add(constref AKey: TKey; constref AValue: TValue): PNode; overload; inline;
-    function Remove(constref AKey: TKey; ADisposeNode: boolean = true): boolean;
-    function ExtractPair(constref AKey: TKey; ADisposeNode: boolean = true): TTreePair; overload;
-    function ExtractPair(constref ANode: PNode; ADispose: boolean = true): TTreePair; overload;
-    function Extract(constref AKey: TKey; ADisposeNode: boolean): PNode;
+    function Add(const APair: TTreePair): PNode; overload; inline;
+    function Add(const AKey: TKey; const AValue: TValue): PNode; overload; inline;
+    function Remove(const AKey: TKey; ADisposeNode: boolean = true): boolean;
+    function ExtractPair(const AKey: TKey; ADisposeNode: boolean = true): TTreePair; overload;
+    function ExtractPair(const ANode: PNode; ADispose: boolean = true): TTreePair; overload;
+    function Extract(const AKey: TKey; ADisposeNode: boolean): PNode;
     function ExtractNode(ANode: PNode; ADispose: boolean): PNode;
     procedure Delete(ANode: PNode; ADispose: boolean = true); inline;
 
@@ -765,9 +773,9 @@ type
     property Count: SizeInt read FCount;
 
     property Root: PNode read FRoot;
-    function Find(constref AKey: TKey): PNode;
-    function ContainsKey(constref AKey: TKey; out ANode: PNode): boolean; overload; inline;
-    function ContainsKey(constref AKey: TKey): boolean; overload; inline;
+    function Find(const AKey: TKey): PNode;
+    function ContainsKey(const AKey: TKey; out ANode: PNode): boolean; overload; inline;
+    function ContainsKey(const AKey: TKey): boolean; overload; inline;
 
     procedure ConsistencyCheck; virtual;
     procedure WriteTreeNode(AStream: TStream; ANode: PNode);
@@ -817,7 +825,7 @@ type
   public type
     TItemEnumerator = TKeyEnumerator;
   public
-    function Add(constref AValue: T): PNode; reintroduce; inline;
+    function Add(const AValue: T): PNode; reintroduce; inline;
     function AddNode(ANode: PNode): boolean; reintroduce; inline;
 
     property OnNotify: TCollectionNotifyEvent<T> read FOnKeyNotify write FOnKeyNotify;
@@ -830,7 +838,7 @@ type
   public type
     TItemEnumerator = TKeyEnumerator;
   public
-    function Add(constref AValue: T): PNode; reintroduce; inline;
+    function Add(const AValue: T): PNode; reintroduce; inline;
     function AddNode(ANode: PNode): boolean; reintroduce; inline;
 
     property OnNotify: TCollectionNotifyEvent<T> read FOnKeyNotify write FOnKeyNotify;
@@ -838,7 +846,7 @@ type
 
   TSortedSet<T> = class(TCustomSet<T>)
   private
-    procedure InternalAVLTreeNotify(ASender: TObject; constref AItem: T; AAction: TCollectionNotification);
+    procedure InternalAVLTreeNotify(ASender: TObject; const AItem: T; AAction: TCollectionNotification);
   protected
     FInternalTree: TAVLTree<T>;
   public type
@@ -871,18 +879,18 @@ type
     destructor Destroy; override;
     function GetEnumerator: TCustomSetEnumerator; override;
 
-    function Add(constref AValue: T): Boolean; override;
-    function Remove(constref AValue: T): Boolean; override;
-    function Extract(constref AValue: T): T; override;
+    function Add(const AValue: T): Boolean; override;
+    function Remove(const AValue: T): Boolean; override;
+    function Extract(const AValue: T): T; override;
     procedure Clear; override;
-    function Contains(constref AValue: T): Boolean; override;
+    function Contains(const AValue: T): Boolean; override;
 
     procedure TrimExcess; override;
   end;
 
   TSortedHashSet<T> = class(TCustomSet<T>)
   private
-    procedure InternalDictionaryNotify(ASender: TObject; constref AItem: PT; AAction: TCollectionNotification);
+    procedure InternalDictionaryNotify(ASender: TObject; const AItem: PT; AAction: TCollectionNotification);
   protected
     FInternalDictionary: TOpenAddressingLP<PT, TEmptyRecord>;
     FInternalTree: TAVLTree<T>;
@@ -897,8 +905,8 @@ type
     private
       FComparer: IComparer<T>;
       FEqualityComparer: IEqualityComparer<T>;
-      function Equals(constref ALeft, ARight: PT): Boolean;
-      function GetHashCode(constref AValue: PT): UInt32;
+      function Equals(const ALeft, ARight: PT): Boolean;
+      function GetHashCode(const AValue: PT): UInt32;
     public
       constructor Create(const AComparer: IComparer<T>); overload;
       constructor Create(const AEqualityComparer: IEqualityComparer<T>); overload;
@@ -931,11 +939,11 @@ type
     destructor Destroy; override;
     function GetEnumerator: TCustomSetEnumerator; override;
 
-    function Add(constref AValue: T): Boolean; override;
-    function Remove(constref AValue: T): Boolean; override;
-    function Extract(constref AValue: T): T; override;
+    function Add(const AValue: T): Boolean; override;
+    function Remove(const AValue: T): Boolean; override;
+    function Extract(const AValue: T): T; override;
     procedure Clear; override;
-    function Contains(constref AValue: T): Boolean; override;
+    function Contains(const AValue: T): Boolean; override;
 
     procedure TrimExcess; override;
   end;
@@ -957,25 +965,25 @@ end;
 
 { TCustomArrayHelper<T> }
 
-class function TCustomArrayHelper<T>.BinarySearch(constref AValues: array of T; constref AItem: T;
+class function TCustomArrayHelper<T>.BinarySearch(const AValues: array of T; const AItem: T;
   out AFoundIndex: SizeInt; const AComparer: IComparer<T>): Boolean;
 begin
   Result := BinarySearch(AValues, AItem, AFoundIndex, AComparer, Low(AValues), Length(AValues));
 end;
 
-class function TCustomArrayHelper<T>.BinarySearch(constref AValues: array of T; constref AItem: T;
+class function TCustomArrayHelper<T>.BinarySearch(const AValues: array of T; const AItem: T;
   out AFoundIndex: SizeInt): Boolean;
 begin
   Result := BinarySearch(AValues, AItem, AFoundIndex, TComparerBugHack.Default, Low(AValues), Length(AValues));
 end;
 
-class function TCustomArrayHelper<T>.BinarySearch(constref AValues: array of T; constref AItem: T;
+class function TCustomArrayHelper<T>.BinarySearch(const AValues: array of T; const AItem: T;
   out ASearchResult: TBinarySearchResult; const AComparer: IComparer<T>): Boolean;
 begin
   Result := BinarySearch(AValues, AItem, ASearchResult, AComparer, Low(AValues), Length(AValues));
 end;
 
-class function TCustomArrayHelper<T>.BinarySearch(constref AValues: array of T; constref AItem: T;
+class function TCustomArrayHelper<T>.BinarySearch(const AValues: array of T; const AItem: T;
   out ASearchResult: TBinarySearchResult): Boolean;
 begin
   Result := BinarySearch(AValues, AItem, ASearchResult, TComparerBugHack.Default, Low(AValues), Length(AValues));
@@ -1002,59 +1010,138 @@ end;
 
 { TArrayHelper<T> }
 
-class procedure TArrayHelper<T>.QuickSort(var AValues: array of T; ALeft, ARight: SizeInt;
-  const AComparer: IComparer<T>);
+class procedure TArrayHelper<T>.QSort(p: PT; n, reasonable: SizeUint; const cmp: IComparer<T>);
 var
-  I, J: SizeInt;
-  P, Q: T;
+  L, R: SizeInt;
+  pivot, temp: T;
 begin
-  if ((ARight - ALeft) <= 0) or (Length(AValues) = 0) then
-    Exit;
-  repeat
-    I := ALeft;
-    J := ARight;
-    P := AValues[ALeft + (ARight - ALeft) shr 1];
+  while (n >= 2) and (reasonable > 0) do
+  begin
+    { 'reasonable' loses 3/16 (~20%) on each partition, and on reaching zero, heap sort is performed.
+      This means -log13/16(n) ~=~ 3.3 * log2(n) partitions allowed. }
+    reasonable := reasonable div 2 + reasonable div 4 + reasonable div 16;
+    pivot := Median(p, n, cmp)^;
+
+    R := 0;
+    L := n - 1;
     repeat
-        while AComparer.Compare(AValues[I], P) < 0 do
-          Inc(I);
-        while AComparer.Compare(AValues[J], P) > 0 do
-          Dec(J);
-      if I <= J then
+      while cmp.Compare((p + R)^, pivot) < 0 do
+        inc(R);
+      while cmp.Compare(pivot, (p + L)^) < 0 do
+        dec(L);
+      if R <= L then
       begin
-        if I <> J then
-        begin
-          Q := AValues[I];
-          AValues[I] := AValues[J];
-          AValues[J] := Q;
-        end;
-        Inc(I);
-        Dec(J);
+        temp := (p + R)^; (p + R)^ := (p + L)^; (p + L)^ := temp;
+        inc(R);
+        dec(L);
       end;
-    until I > J;
-    // sort the smaller range recursively
-    // sort the bigger range via the loop
-    // Reasons: memory usage is O(log(n)) instead of O(n) and loop is faster than recursion
-    if J - ALeft < ARight - I then
+    until R > L;
+
+    { [0 .. L], [R .. n - 1]. Possible edge cases are L = -1 or R = n. Recurse into the smaller half. }
+    if n - R <= L then
     begin
-      if ALeft < J then
-        QuickSort(AValues, ALeft, J, AComparer);
-      ALeft := I;
-    end
-    else
+      QSort(p + R, n - R, reasonable, cmp);
+      n := L + 1;
+    end else
     begin
-      if I < ARight then
-        QuickSort(AValues, I, ARight, AComparer);
-      ARight := J;
+      QSort(p, L + 1, reasonable, cmp);
+      p := p + R;
+      n := n - R;
     end;
-   until ALeft >= ARight;
+  end;
+  if n >= 2 then
+    HeapSort(p, n, cmp);
 end;
 
-class function TArrayHelper<T>.BinarySearch(constref AValues: array of T; constref AItem: T;
+class function TArrayHelper<T>.Median(p: PT; n: SizeUint; const cmp: IComparer<T>): PT;
+var
+  a, b, c, temp: PT;
+begin
+  a := p;
+  b := p + n div 2;
+  c := p + (n - 1);
+  if cmp.Compare(b^, a^) < 0 then begin temp := a; a := b; b := temp; end;
+  if cmp.Compare(c^, b^) < 0 then begin temp := b; b := c; c := temp; end;
+  if cmp.Compare(b^, a^) < 0 then result := a else result := b;
+end;
+
+class procedure TArrayHelper<T>.HeapSort(p: PT; n: SizeUint; const cmp: IComparer<T>);
+var
+  temp: T;
+  i: SizeInt;
+begin
+  for i := SizeUint(n - 2) div 2 downto 0 do
+  begin
+    temp := (p + i)^;
+    HeapReplacePessimistic(p, n, i, temp, cmp);
+  end;
+
+  for i := n - 1 downto 1 do
+  begin
+    temp := (p + i)^;
+    (p + i)^ := p^;
+    HeapReplacePessimistic(p, i, 0, temp, cmp);
+  end;
+end;
+
+{ HeapReplacePessimistic replaces q[id] with 'item' by doing something like
+
+  startId := id;
+  q[id] := item;
+  id := HeapDownThoroughly(q, nq, id);
+  id := HeapUpToId(q, nq, id, startId);
+
+  Where 'HeapDownThoroughly' sinks the element all the way down, without stopping at the correct position, so it must float up afterwards.
+  See Python's 'heapq' module for explanation why this is an improvement over simple HeapDown.
+  TL;DR: HeapDownThoroughly uses 1 fewer comparison per level, and the item usually ends up close to the bottom, so these savings pay off.
+
+  Moreover, heap invariant assumed for q[id .. nq - 1] rather than whole q[0 .. nq - 1] which matters when heapifying the array from the end. }
+
+class procedure TArrayHelper<T>.HeapReplacePessimistic(q: PT; nq, id: SizeUint; const item: T; const cmp: IComparer<T>);
+var
+  iChild, iParent, start: SizeUint;
+begin
+  start := id;
+  repeat
+    iChild := 2 * id + 1; { childs of q[id] are q[2 * id + 1] ... q[2 * id + 2]. }
+    if iChild >= nq then
+      break;
+    if (iChild + 1 < nq) and (cmp.Compare((q + iChild)^, (q + iChild + 1)^) < 0) then
+      iChild := iChild + 1;
+    (q + id)^ := (q + iChild)^;
+    id := iChild;
+  until false;
+
+  while id > start do
+  begin
+    iParent := SizeUint(id - 1) div 2;
+    if cmp.Compare((q + iParent)^, item) >= 0 then
+      break;
+    (q + id)^ := (q + iParent)^;
+    id := iParent;
+  end;
+  (q + id)^ := item;
+end;
+
+class procedure TArrayHelper<T>.QuickSort(var AValues: array of T; ALeft, ARight: SizeInt;
+  const AComparer: IComparer<T>);
+begin
+  QSort(PT(AValues) + ALeft, ARight - ALeft + 1, ARight - ALeft + 1, AComparer);
+end;
+
+class function TArrayHelper<T>.BinarySearch(const AValues: array of T; const AItem: T;
   out ASearchResult: TBinarySearchResult; const AComparer: IComparer<T>;
   AIndex, ACount: SizeInt): Boolean;
 var
   imin, imax, imid: Int32;
 begin
+  if Length(AValues) = 0 then
+  begin
+    ASearchResult.CompareResult := 0;
+    ASearchResult.FoundIndex := -1;
+    ASearchResult.CandidateIndex := -1;
+    Exit(False);
+  end;
   // continually narrow search until just one element remains
   imin := AIndex;
   imax := Pred(AIndex + ACount);
@@ -1112,13 +1199,19 @@ begin
   end;
 end;
 
-class function TArrayHelper<T>.BinarySearch(constref AValues: array of T; constref AItem: T;
+class function TArrayHelper<T>.BinarySearch(const AValues: array of T; const AItem: T;
   out AFoundIndex: SizeInt; const AComparer: IComparer<T>;
   AIndex, ACount: SizeInt): Boolean;
 var
   imin, imax, imid: Int32;
   LCompare: SizeInt;
 begin
+  if Length(AValues) = 0 then
+  begin
+    AFoundIndex := -1;
+    Exit(False);
+  end;
+
   // continually narrow search until just one element remains
   imin := AIndex;
   imax := Pred(AIndex + ACount);
@@ -1289,7 +1382,7 @@ begin
   Result := FLength;
 end;
 
-procedure TCustomList<T>.Notify(constref AValue: T; ACollectionNotification: TCollectionNotification);
+procedure TCustomList<T>.Notify(const AValue: T; ACollectionNotification: TCollectionNotification);
 begin
   if Assigned(FOnNotify) then
     FOnNotify(Self, AValue, ACollectionNotification);
@@ -1461,14 +1554,14 @@ begin
   Result := GetEnumerator;
 end;
 
-function TList<T>.Add(constref AValue: T): SizeInt;
+function TList<T>.Add(const AValue: T): SizeInt;
 begin
   Result := PrepareAddingItem;
   FItems[Result] := AValue;
   Notify(AValue, cnAdded);
 end;
 
-procedure TList<T>.AddRange(constref AValues: array of T);
+procedure TList<T>.AddRange(const AValues: array of T);
 begin
   InsertRange(Count, AValues);
 end;
@@ -1499,7 +1592,7 @@ begin
 end;
 {$ENDIF}
 
-procedure TList<T>.InternalInsert(AIndex: SizeInt; constref AValue: T);
+procedure TList<T>.InternalInsert(AIndex: SizeInt; const AValue: T);
 begin
   if AIndex <> PrepareAddingItem then
   begin
@@ -1511,7 +1604,7 @@ begin
   Notify(AValue, cnAdded);
 end;
 
-procedure TList<T>.Insert(AIndex: SizeInt; constref AValue: T);
+procedure TList<T>.Insert(AIndex: SizeInt; const AValue: T);
 begin
   if (AIndex < 0) or (AIndex > Count) then
     raise EArgumentOutOfRangeException.CreateRes(@SArgumentOutOfRange);
@@ -1519,7 +1612,7 @@ begin
   InternalInsert(AIndex, AValue);
 end;
 
-procedure TList<T>.InsertRange(AIndex: SizeInt; constref AValues: array of T);
+procedure TList<T>.InsertRange(AIndex: SizeInt; const AValues: array of T);
 var
   i: SizeInt;
   LLength: SizeInt;
@@ -1597,7 +1690,7 @@ begin
 end;
 {$ENDIF}
 
-function TList<T>.Remove(constref AValue: T): SizeInt;
+function TList<T>.Remove(const AValue: T): SizeInt;
 begin
   Result := IndexOf(AValue);
   if Result >= 0 then
@@ -1646,7 +1739,7 @@ begin
   Result := DoRemove(AIndex, cnExtracted);
 end;
 
-function TList<T>.Extract(constref AValue: T): T;
+function TList<T>.Extract(const AValue: T): T;
 var
   LIndex: SizeInt;
 begin
@@ -1709,12 +1802,12 @@ begin
   SetCapacity(Count);
 end;
 
-function TList<T>.Contains(constref AValue: T): Boolean;
+function TList<T>.Contains(const AValue: T): Boolean;
 begin
   Result := IndexOf(AValue) >= 0;
 end;
 
-function TList<T>.IndexOf(constref AValue: T): SizeInt;
+function TList<T>.IndexOf(const AValue: T): SizeInt;
 var
   i: SizeInt;
 begin
@@ -1724,7 +1817,7 @@ begin
   Result := -1;
 end;
 
-function TList<T>.LastIndexOf(constref AValue: T): SizeInt;
+function TList<T>.LastIndexOf(const AValue: T): SizeInt;
 var
   i: SizeInt;
 begin
@@ -1761,12 +1854,12 @@ begin
   TArrayHelperBugHack.Sort(FItems, AComparer, 0, Count);
 end;
 
-function TList<T>.BinarySearch(constref AItem: T; out AIndex: SizeInt): Boolean;
+function TList<T>.BinarySearch(const AItem: T; out AIndex: SizeInt): Boolean;
 begin
   Result := TArrayHelperBugHack.BinarySearch(FItems, AItem, AIndex, FComparer, 0, Count);
 end;
 
-function TList<T>.BinarySearch(constref AItem: T; out AIndex: SizeInt; const AComparer: IComparer<T>): Boolean;
+function TList<T>.BinarySearch(const AItem: T; out AIndex: SizeInt; const AComparer: IComparer<T>): Boolean;
 begin
   Result := TArrayHelperBugHack.BinarySearch(FItems, AItem, AIndex, AComparer, 0, Count);
 end;
@@ -1778,7 +1871,7 @@ begin
   FSortStyle := cssAuto;
 end;
 
-function TSortedList<T>.Add(constref AValue: T): SizeInt;
+function TSortedList<T>.Add(const AValue: T): SizeInt;
 var
   LSearchResult: TBinarySearchResult;
 begin
@@ -1804,7 +1897,7 @@ begin
   InternalInsert(Result, AValue);
 end;
 
-procedure TSortedList<T>.Insert(AIndex: SizeInt; constref AValue: T);
+procedure TSortedList<T>.Insert(AIndex: SizeInt; const AValue: T);
 begin
   if FSortStyle = cssAuto then
     raise EListError.Create(SSortedListError)
@@ -1828,7 +1921,7 @@ begin
     inherited;
 end;
 
-procedure TSortedList<T>.AddRange(constref AValues: array of T);
+procedure TSortedList<T>.AddRange(const AValues: array of T);
 var
   i: T;
 begin
@@ -1836,7 +1929,7 @@ begin
     Add(i);
 end;
 
-procedure TSortedList<T>.InsertRange(AIndex: SizeInt; constref AValues: array of T);
+procedure TSortedList<T>.InsertRange(AIndex: SizeInt; const AValues: array of T);
 var
   LValue: T;
   i:  SizeInt;
@@ -1927,7 +2020,7 @@ begin
   end;
 end;
 
-procedure TThreadList<T>.Add(constref AValue: T);
+procedure TThreadList<T>.Add(const AValue: T);
 begin
   LockList;
   try
@@ -1940,7 +2033,7 @@ begin
   end;
 end;
 
-procedure TThreadList<T>.Remove(constref AValue: T);
+procedure TThreadList<T>.Remove(const AValue: T);
 begin
   LockList;
   try
@@ -2006,6 +2099,34 @@ end;
 
 { TQueue<T> }
 
+function TQueue<T>.PrepareAddingItem: SizeInt;
+begin
+  repeat
+    result := FLength;
+    if result <= High(FItems) then
+    begin
+      FLength := result + 1;
+      exit;
+    end;
+
+    if SizeUint(FLow) >= 4 + SizeUint(result) div 4 then
+      // If the empty space at the beginning is comparable to queue size, convert
+      //
+      // .......QQQQQQQQQ
+      //        ↑FLow    ↑FLength=length(FItems)
+      //
+      // to
+      //
+      // QQQQQQQQQ.......
+      // ↑FLow=0
+      //
+      // and retry the shortcut above.
+      MoveToFront
+    else
+      exit(inherited);
+  until false;
+end;
+
 function TQueue<T>.GetPtrEnumerator: TEnumerator<PT>;
 begin
   Result := TPointersenumerator.Create(Self);
@@ -2037,6 +2158,21 @@ begin
   Notify(Result, ACollectionNotification);
 end;
 
+procedure TQueue<T>.MoveToFront;
+var
+  i: SizeInt;
+begin
+  if FLength > FLow then
+    if IsManagedType(T) then
+      for i := 0 to FLength - FLow - 1 do
+        FItems[i] := FItems[FLow + i]
+    else
+      Move(FItems[FLow], FItems[0], (FLength - FLow) * SizeOf(T));
+
+  FLength := FLength - FLow;
+  FLow := 0;
+end;
+
 procedure TQueue<T>.SetCapacity(AValue: SizeInt);
 begin
   if AValue < Count then
@@ -2045,15 +2181,8 @@ begin
   if AValue = FLength then
     Exit;
 
-  if (Count > 0) and (FLow > 0) then
-  begin
-    Move(FItems[FLow], FItems[0], Count * SizeOf(T));
-    FillChar(FItems[Count], (FLength - Count) * SizeOf(T), #0);
-  end;
-
+  MoveToFront;
   SetLength(FItems, AValue);
-  FLength := Count;
-  FLow := 0;
 end;
 
 function TQueue<T>.GetCount: SizeInt;
@@ -2084,7 +2213,7 @@ begin
   Clear;
 end;
 
-procedure TQueue<T>.Enqueue(constref AValue: T);
+procedure TQueue<T>.Enqueue(const AValue: T);
 var
   LIndex: SizeInt;
 begin
@@ -2184,7 +2313,7 @@ begin
   SetLength(FItems, AValue);
 end;
 
-procedure TStack<T>.Push(constref AValue: T);
+procedure TStack<T>.Push(const AValue: T);
 var
   LIndex: SizeInt;
 begin
@@ -2218,7 +2347,7 @@ end;
 
 { TObjectList<T> }
 
-procedure TObjectList<T>.Notify(constref AValue: T; ACollectionNotification: TCollectionNotification);
+procedure TObjectList<T>.Notify(const AValue: T; ACollectionNotification: TCollectionNotification);
 begin
   inherited Notify(AValue, ACollectionNotification);
 
@@ -2258,7 +2387,7 @@ end;
 
 { TObjectQueue<T> }
 
-procedure TObjectQueue<T>.Notify(constref AValue: T; ACollectionNotification: TCollectionNotification);
+procedure TObjectQueue<T>.Notify(const AValue: T; ACollectionNotification: TCollectionNotification);
 begin
   inherited Notify(AValue, ACollectionNotification);
   if FObjectsOwner and (ACollectionNotification = cnRemoved) then
@@ -2295,7 +2424,7 @@ end;
 
 { TObjectStack<T> }
 
-procedure TObjectStack<T>.Notify(constref AValue: T; ACollectionNotification: TCollectionNotification);
+procedure TObjectStack<T>.Notify(const AValue: T; ACollectionNotification: TCollectionNotification);
 begin
   inherited Notify(AValue, ACollectionNotification);
   if FObjectsOwner and (ACollectionNotification = cnRemoved) then
@@ -2376,7 +2505,7 @@ begin
 end;
 {$ENDIF}
 
-function TCustomSet<T>.AddRange(constref AValues: array of T): Boolean;
+function TCustomSet<T>.AddRange(const AValues: array of T): Boolean;
 var
   i: T;
 begin
@@ -2497,7 +2626,7 @@ end;
 
 { THashSet<T> }
 
-procedure THashSet<T>.InternalDictionaryNotify(ASender: TObject; constref AItem: T; AAction: TCollectionNotification);
+procedure THashSet<T>.InternalDictionaryNotify(ASender: TObject; const AItem: T; AAction: TCollectionNotification);
 begin
   FOnNotify(Self, AItem, AAction);
 end;
@@ -2556,14 +2685,14 @@ begin
   FInternalDictionary.Free;
 end;
 
-function THashSet<T>.Add(constref AValue: T): Boolean;
+function THashSet<T>.Add(const AValue: T): Boolean;
 begin
   Result := not FInternalDictionary.ContainsKey(AValue);
   if Result then
     FInternalDictionary.Add(AValue, EmptyRecord);
 end;
 
-function THashSet<T>.Remove(constref AValue: T): Boolean;
+function THashSet<T>.Remove(const AValue: T): Boolean;
 var
   LIndex: SizeInt;
 begin
@@ -2573,7 +2702,7 @@ begin
     FInternalDictionary.DoRemove(LIndex, cnRemoved);
 end;
 
-function THashSet<T>.Extract(constref AValue: T): T;
+function THashSet<T>.Extract(const AValue: T): T;
 var
   LIndex: SizeInt;
 begin
@@ -2590,7 +2719,7 @@ begin
   FInternalDictionary.Clear;
 end;
 
-function THashSet<T>.Contains(constref AValue: T): Boolean;
+function THashSet<T>.Contains(const AValue: T): Boolean;
 begin
   Result := FInternalDictionary.ContainsKey(AValue);
 end;
@@ -2834,7 +2963,7 @@ begin
   Dispose(ANode);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Compare(constref ALeft, ARight: TKey): Integer; inline;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Compare(const ALeft, ARight: TKey): Integer; inline;
 begin
   Result := FComparer.Compare(ALeft, ARight);
 end;
@@ -3065,13 +3194,13 @@ begin
   LRight.Balance := 0;
 end;
 
-procedure TCustomAVLTreeMap<TREE_CONSTRAINTS>.KeyNotify(constref AKey: TKey; ACollectionNotification: TCollectionNotification);
+procedure TCustomAVLTreeMap<TREE_CONSTRAINTS>.KeyNotify(const AKey: TKey; ACollectionNotification: TCollectionNotification);
 begin
   if Assigned(FOnKeyNotify) then
     FOnKeyNotify(Self, AKey, ACollectionNotification);
 end;
 
-procedure TCustomAVLTreeMap<TREE_CONSTRAINTS>.ValueNotify(constref AValue: TValue; ACollectionNotification: TCollectionNotification);
+procedure TCustomAVLTreeMap<TREE_CONSTRAINTS>.ValueNotify(const AValue: TValue; ACollectionNotification: TCollectionNotification);
 begin
   if Assigned(FOnValueNotify) then
     FOnValueNotify(Self, AValue, ACollectionNotification);
@@ -3085,7 +3214,7 @@ begin
   ValueNotify(ANode.Value, ACollectionNotification);
 end;
 
-procedure TCustomAVLTreeMap<TREE_CONSTRAINTS>.SetValue(var AValue: TValue; constref ANewValue: TValue);
+procedure TCustomAVLTreeMap<TREE_CONSTRAINTS>.SetValue(var AValue: TValue; const ANewValue: TValue);
 var
   LOldValue: TValue;
 begin
@@ -3409,7 +3538,7 @@ begin
   Result := ANode=InternalAdd(ANode, false);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Add(constref APair: TTreePair): PNode;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Add(const APair: TTreePair): PNode;
 begin
   Result := NewNode;
   Result.Data.Key := APair.Key;
@@ -3417,7 +3546,7 @@ begin
   Result := InternalAdd(Result, true);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Add(constref AKey: TKey; constref AValue: TValue): PNode;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Add(const AKey: TKey; const AValue: TValue): PNode;
 begin
   Result := NewNode;
   Result.Data.Key := AKey;
@@ -3425,7 +3554,7 @@ begin
   Result := InternalAdd(Result, true);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Remove(constref AKey: TKey; ADisposeNode: boolean): boolean;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Remove(const AKey: TKey; ADisposeNode: boolean): boolean;
 var
   LNode: PNode;
 begin
@@ -3437,7 +3566,7 @@ begin
     Result:=false;
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ExtractPair(constref AKey: TKey; ADisposeNode: boolean): TTreePair;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ExtractPair(const AKey: TKey; ADisposeNode: boolean): TTreePair;
 var
   LNode: PNode;
 begin
@@ -3450,13 +3579,13 @@ begin
     Result := Default(TTreePair);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ExtractPair(constref ANode: PNode; ADispose: boolean = true): TTreePair;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ExtractPair(const ANode: PNode; ADispose: boolean = true): TTreePair;
 begin
   Result.Key := ANode.Key;
   Result.Value := DoRemove(ANode, cnExtracted, ADispose);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Extract(constref AKey: TKey; ADisposeNode: boolean): PNode;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Extract(const AKey: TKey; ADisposeNode: boolean): PNode;
 begin
   Result:=Find(AKey);
   if Result<>nil then
@@ -3508,7 +3637,7 @@ begin
     while Result.Right<>nil do Result:=Result.Right;
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Find(constref AKey: TKey): PNode;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.Find(const AKey: TKey): PNode;
 var
   LComp: SizeInt;
 begin
@@ -3525,13 +3654,13 @@ begin
   end;
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ContainsKey(constref AKey: TKey; out ANode: PNode): boolean;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ContainsKey(const AKey: TKey; out ANode: PNode): boolean;
 begin
   ANode := Find(AKey);
   Result := Assigned(ANode);
 end;
 
-function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ContainsKey(constref AKey: TKey): boolean; overload; inline;
+function TCustomAVLTreeMap<TREE_CONSTRAINTS>.ContainsKey(const AKey: TKey): boolean; overload; inline;
 begin
   Result := Assigned(Find(AKey));
 end;
@@ -3793,7 +3922,7 @@ end;
 
 { TAVLTree<T> }
 
-function TAVLTree<T>.Add(constref AValue: T): PNode;
+function TAVLTree<T>.Add(const AValue: T): PNode;
 begin
   Result := inherited Add(AValue, EmptyRecord);
 end;
@@ -3805,7 +3934,7 @@ end;
 
 { TIndexedAVLTree<T> }
 
-function TIndexedAVLTree<T>.Add(constref AValue: T): PNode;
+function TIndexedAVLTree<T>.Add(const AValue: T): PNode;
 begin
   Result := inherited Add(AValue, EmptyRecord);
 end;
@@ -3846,7 +3975,7 @@ end;
 
 { TSortedSet<T> }
 
-procedure TSortedSet<T>.InternalAVLTreeNotify(ASender: TObject; constref AItem: T; AAction: TCollectionNotification);
+procedure TSortedSet<T>.InternalAVLTreeNotify(ASender: TObject; const AItem: T; AAction: TCollectionNotification);
 begin
   FOnNotify(Self, AItem, AAction);
 end;
@@ -3904,7 +4033,7 @@ begin
   FInternalTree.Free;
 end;
 
-function TSortedSet<T>.Add(constref AValue: T): Boolean;
+function TSortedSet<T>.Add(const AValue: T): Boolean;
 var
   LNodePtr, LParent: TAVLTree<T>.PNode;
   LNode: TAVLTree<T>.TNode;
@@ -3930,7 +4059,7 @@ begin
   FInternalTree.NodeNotify(LNodePtr, cnAdded, false);
 end;
 
-function TSortedSet<T>.Remove(constref AValue: T): Boolean;
+function TSortedSet<T>.Remove(const AValue: T): Boolean;
 var
   LNode: TAVLTree<T>.PNode;
 begin
@@ -3940,7 +4069,7 @@ begin
     FInternalTree.Delete(LNode);
 end;
 
-function TSortedSet<T>.Extract(constref AValue: T): T;
+function TSortedSet<T>.Extract(const AValue: T): T;
 var
   LNode: TAVLTree<T>.PNode;
 begin
@@ -3956,7 +4085,7 @@ begin
   FInternalTree.Clear;
 end;
 
-function TSortedSet<T>.Contains(constref AValue: T): Boolean;
+function TSortedSet<T>.Contains(const AValue: T): Boolean;
 begin
   Result := FInternalTree.ContainsKey(AValue);
 end;
@@ -3967,7 +4096,7 @@ end;
 
 { TSortedHashSet<T>.TSortedHashSetEqualityComparer }
 
-function TSortedHashSet<T>.TSortedHashSetEqualityComparer.Equals(constref ALeft, ARight: PT): Boolean;
+function TSortedHashSet<T>.TSortedHashSetEqualityComparer.Equals(const ALeft, ARight: PT): Boolean;
 begin
   if Assigned(FComparer) then
     Result := FComparer.Compare(ALeft^, ARight^) = 0
@@ -3975,7 +4104,7 @@ begin
     Result := FEqualityComparer.Equals(ALeft^, ARight^);
 end;
 
-function TSortedHashSet<T>.TSortedHashSetEqualityComparer.GetHashCode(constref AValue: PT): UInt32;
+function TSortedHashSet<T>.TSortedHashSetEqualityComparer.GetHashCode(const AValue: PT): UInt32;
 begin
   Result := FEqualityComparer.GetHashCode(AValue^);
 end;
@@ -4028,7 +4157,7 @@ end;
 
 { TSortedHashSet<T> }
 
-procedure TSortedHashSet<T>.InternalDictionaryNotify(ASender: TObject; constref AItem: PT; AAction: TCollectionNotification);
+procedure TSortedHashSet<T>.InternalDictionaryNotify(ASender: TObject; const AItem: PT; AAction: TCollectionNotification);
 begin
   FOnNotify(Self, AItem^, AAction);
 end;
@@ -4077,7 +4206,7 @@ begin
   Result := TSortedHashSetEnumerator.Create(Self);
 end;
 
-function TSortedHashSet<T>.Add(constref AValue: T): Boolean;
+function TSortedHashSet<T>.Add(const AValue: T): Boolean;
 var
   LNode: TAVLTree<T>.PNode;
 begin
@@ -4089,7 +4218,7 @@ begin
   end;
 end;
 
-function TSortedHashSet<T>.Remove(constref AValue: T): Boolean;
+function TSortedHashSet<T>.Remove(const AValue: T): Boolean;
 var
   LIndex: SizeInt;
 begin
@@ -4102,7 +4231,7 @@ begin
   end;
 end;
 
-function TSortedHashSet<T>.Extract(constref AValue: T): T;
+function TSortedHashSet<T>.Extract(const AValue: T): T;
 var
   LIndex: SizeInt;
 begin
@@ -4122,7 +4251,7 @@ begin
   FInternalTree.Clear;
 end;
 
-function TSortedHashSet<T>.Contains(constref AValue: T): Boolean;
+function TSortedHashSet<T>.Contains(const AValue: T): Boolean;
 begin
   Result := FInternalDictionary.ContainsKey(@AValue);
 end;

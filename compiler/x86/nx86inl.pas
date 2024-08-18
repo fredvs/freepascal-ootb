@@ -1011,6 +1011,12 @@ implementation
           emit_reg_reg(A_POPCNT,TCGSize2OpSize[opsize],left.location.register,location.register)
         else
           emit_ref_reg(A_POPCNT,TCGSize2OpSize[opsize],left.location.reference,location.register);
+
+        if resultdef.size=1 then
+          begin
+            location.size:=OS_8;
+            location.register:=cg.makeregsize(current_asmdata.CurrAsmList,location.register,location.size);
+          end;
       end;
 
 
@@ -1094,7 +1100,9 @@ implementation
              { only one memory operand is allowed }
              gotmem:=false;
              memop:=0;
-             for i:=1 to 3 do
+             { in case parameters come on the FPU stack, we have to pop them in reverse order as we
+               called secondpass }
+             for i:=3 downto 1 do
                begin
                  if not(paraarray[i].location.loc in [LOC_MMREGISTER,LOC_CMMREGISTER]) then
                    begin
@@ -1180,10 +1188,10 @@ implementation
           begin
             secondpass(left);
             hlcg.location_force_mmregscalar(current_asmdata.CurrAsmList,left.location,left.resultdef,true);
-            location_reset(location,LOC_MMREGISTER,left.location.size);
+            location_reset(location,LOC_MMREGISTER,def_cgsize(resultdef));
             location.register:=cg.getmmregister(current_asmdata.CurrAsmList,location.size);
             if UseAVX then
-              case tfloatdef(resultdef).floattype of
+              case tfloatdef(left.resultdef).floattype of
                 s32real:
                   begin
                     { using left.location.register here as 3rd parameter is crucial to break dependency chains }
@@ -1203,7 +1211,7 @@ implementation
               begin
                 extrareg:=cg.getmmregister(current_asmdata.CurrAsmList,location.size);
                 cg.a_loadmm_loc_reg(current_asmdata.CurrAsmList,location.size,left.location,location.register,mms_movescalar);
-                case tfloatdef(resultdef).floattype of
+                case tfloatdef(left.resultdef).floattype of
                   s32real:
                     begin
                       current_asmdata.CurrAsmList.concat(taicpu.op_const_reg_reg(A_ROUNDSS,S_NO,3,left.location.register,extrareg));
@@ -1218,6 +1226,8 @@ implementation
                     internalerror(2017052103);
                 end;
               end;
+            if tfloatdef(left.resultdef).floattype<>tfloatdef(resultdef).floattype then
+              hlcg.a_loadmm_reg_reg(current_asmdata.CurrAsmList,left.resultdef,resultdef,location.register,location.register,mms_movescalar);
           end
         else
           internalerror(2017052101);

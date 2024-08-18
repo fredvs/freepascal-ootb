@@ -1,3 +1,4 @@
+{%MainUnit sysutils.pp}
 {
     *********************************************************************
     Copyright (C) 1997, 1998 Gertjan Schouten
@@ -372,7 +373,7 @@ end;
 
 Procedure DoDirSeparators (Var FileName : PathStr); {$ifdef FPC_HAS_CPSTRING}rtlproc;{$endif}
 
-VAr I : longint;
+Var I : longint;
 
 begin
   For I:=1 to Length(FileName) do
@@ -509,12 +510,14 @@ function ConcatPaths(const Paths: array of PathStr): PathStr;
 var
   I: Integer;
 begin
+  Result := '';
   if Length(Paths) > 0 then
   begin
-    Result := Paths[0];
+    if Paths[0]<>'' then
+      Result := Paths[0];
     for I := 1 to Length(Paths) - 1 do
-      Result := IncludeTrailingPathDelimiter(Result) + ExcludeLeadingPathDelimiter(Paths[I]);
-  end else
-    Result := '';
+      if Paths[i]<>'' then
+        Result := IncludeTrailingPathDelimiter(Result) + ExcludeLeadingPathDelimiter(Paths[I]);
+  end
 end;
 

@@ -1,3 +1,19 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canneyt and other members of the
+    Free Pascal development team
+
+    XML Registry aux support
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
+
 
 { ---------------------------------------------------------------------
     System dependent Registry implementation - using XML file.
@@ -34,6 +50,22 @@ begin
     dtString : Result:=rdString;
     dtBinary : Result:=rdBinary;
     dtStrings : Result:=rdMultiString;
+  end;
+end;
+
+Function RootKeyToRootKeyStr(Value: HKEY): UnicodeString;
+
+begin
+  Case Value of
+    HKEY_CLASSES_ROOT     : Result := 'HKEY_CLASSES_ROOT';
+    HKEY_CURRENT_USER     : Result := 'HKEY_CURRENT_USER';
+    HKEY_LOCAL_MACHINE    : Result := 'HKEY_LOCAL_MACHINE';
+    HKEY_USERS            : Result := 'HKEY_USERS';
+    HKEY_PERFORMANCE_DATA : Result := 'HKEY_PERFORMANCE_DATA';
+    HKEY_CURRENT_CONFIG   : Result := 'HKEY_CURRENT_CONFIG';
+    HKEY_DYN_DATA         : Result := 'HKEY_DYN_DATA';
+  else
+    Result:=Format('Key%d',[Value]);
   end;
 end;
 
@@ -113,6 +145,26 @@ begin
   Dec(FRefCount);
 end;
 
+procedure useKeyFromTRegistryInstance(reg: TRegistry);
+var XmlRegistry: TXMLRegistry;
+    RootKeyStr: UnicodeString;
+begin
+  XmlRegistry:=TXMLRegistry(reg.FSysData);
+  RootKeyStr:=RootKeyToRootKeyStr(reg.RootKey);
+
+  // '/' at the end when comparing
+  if (reg.CurrentKey=0) and (UnicodeCompareText(XmlRegistry.RootKey, RootKeyStr + '/')<>0) then
+    XmlRegistry.SetRootKey(RootKeyStr)
+  else
+    begin
+    if UnicodeCompareText(XmlRegistry.CurrentKey, RootKeyStr+'/'+reg.CurrentPath + '/')<>0 then
+      begin
+      XmlRegistry.SetRootKey(RootKeyStr);
+      XmlRegistry.SetKey(reg.CurrentPath, false);
+      end;
+    end;
+end;
+
 procedure TRegistry.SysRegCreate;
 var s : string;
 begin
@@ -137,17 +189,20 @@ end;
 function TRegistry.SysCreateKey(Key: UnicodeString): Boolean;
 
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXmlRegistry(FSysData).CreateKey(Key);
 end;
 
 function TRegistry.DeleteKey(const Key: UnicodeString): Boolean;
 
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXMLRegistry(FSysData).DeleteKey(Key);
 end;
 
 function TRegistry.DeleteValue(const Name: UnicodeString): Boolean;
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXmlRegistry(FSysData).DeleteValue(Name);
 end;
 
@@ -157,6 +212,7 @@ function TRegistry.SysGetData(const Name: UnicodeString; Buffer: Pointer;
 Var
   DataType : TDataType;
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=BufSize;
   If TXmlregistry(FSysData).GetValueDataUnicode(Name,DataType,Buffer^,Result) then
     RegData:=DataTypeToRegDataType(DataType)
@@ -170,6 +226,7 @@ Var
   Info : TDataInfo;
 
 begin
+  useKeyFromTRegistryInstance(self);
   Result := TXmlRegistry(FSysData).GetValueInfo(ValueName,Info,True);
   If Not Result then
     With Value do
@@ -196,6 +253,7 @@ Var
   Info : TKeyInfo;
 
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXmlRegistry(FSysData).GetKeyInfo(info);
   If Result then
     With Value,Info do
@@ -211,6 +269,7 @@ end;
 
 function TRegistry.KeyExists(const Key: UnicodeString): Boolean;
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXmlRegistry(FSysData).KeyExists(Key);
 end;
 
@@ -225,9 +284,10 @@ var
   S: UnicodeString;
   P: SizeInt;
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXmlRegistry(FSysData).SetKey(Key,CanCreate);
-  FCurrentKey:=1;
   If Result then begin
+    fCurrentKey:=1;
     S:=TXmlRegistry(FSysData).CurrentKey;
     if (S>'') then begin
       //S starts with RootKey+'/'
@@ -235,14 +295,14 @@ begin
       if (P>0) then
         System.Delete(S,1,P);
     end;
-    ChangeKey(FCurrentKey, S);
+    ChangeKey(fCurrentKey, S);
   end;
 end;
 
 function TRegistry.OpenKeyReadOnly(const Key: UnicodeString): Boolean;
 
 begin
-  Result:=TXmlRegistry(FSysData).SetKey(Key,False);
+  Result:=OpenKey(Key,False);
 end;
 
 function TRegistry.RegistryConnect(const UNCName: UnicodeString): Boolean;
@@ -272,6 +332,7 @@ end;
 
 function TRegistry.ValueExists(const Name: UnicodeString): Boolean;
 begin
+  useKeyFromTRegistryInstance(self);
   Result := TXmlRegistry(FSysData).ValueExists(Name);
 end;
 
@@ -282,11 +343,13 @@ end;
 
 function TRegistry.GetKeyNames: TUnicodeStringArray;
 begin
+  useKeyFromTRegistryInstance(self);
   Result:=TXmlRegistry(FSysData).EnumSubKeys;
 end;
 
 function TRegistry.GetValueNames: TUnicodeStringArray;
 begin
+  useKeyFromTRegistryInstance(self);
   Result := TXmlRegistry(FSysData).EnumValues;
 end;
 
@@ -298,6 +361,7 @@ Var
   DataType : TDataType;
 
 begin
+  useKeyFromTRegistryInstance(self);
   //writeln('TRegistry.SysPutData: Name=',Name,', RegData=',RegData,', BufSize=',BufSize);
   DataType:=RegDataTypeToXmlDataType(RegData);
 
@@ -306,6 +370,7 @@ end;
 
 procedure TRegistry.RenameValue(const OldName, NewName: UnicodeString);
 begin
+  useKeyFromTRegistryInstance(self);
   TXMLRegistry(FSysData).RenameValue(OldName,NewName);
 end;
 
@@ -321,24 +386,11 @@ Var
   S: UnicodeString;
 
 begin
-  If (Value=HKEY_CLASSES_ROOT) then
-    S:='HKEY_CLASSES_ROOT'
-  else if (Value=HKEY_CURRENT_USER) then
-    S:='HKEY_CURRENT_USER'
-  else if (Value=HKEY_LOCAL_MACHINE) then
-    S:='HKEY_LOCAL_MACHINE'
-  else if (Value=HKEY_USERS) then
-    S:='HKEY_USERS'
-  else if Value=HKEY_PERFORMANCE_DATA then
-    S:='HKEY_PERFORMANCE_DATA'
-  else if (Value=HKEY_CURRENT_CONFIG) then
-    S:='HKEY_CURRENT_CONFIG'
-  else if (Value=HKEY_DYN_DATA) then
-    S:='HKEY_DYN_DATA'
-  else
-    S:=Format('Key%d',[Value]);
+  S:=RootKeyToRootKeyStr(Value);
   TXmlRegistry(FSysData).SetRootKey(S);
   fRootKey := Value;
+  fCurrentKey:=0;
+  FCurrentPath:='';
 end;
 
 function TRegistry.GetLastErrorMsg: string;
@@ -355,6 +407,8 @@ begin
   begin
     TXMLRegistry(FSysData).Flush;
     TXMLRegistry(FSysData).SetRootKey(TXMLRegistry(FSysData).RootKey);
+    fCurrentKey:=0;
+    FCurrentPath:='';
   end;
 end;
 
@@ -365,6 +419,8 @@ begin
   begin
     TXMLRegistry(FSysData).Flush;
     TXMLRegistry(FSysData).SetRootKey(TXMLRegistry(FSysData).RootKey);
+    fCurrentKey:=0;
+    FCurrentPath:='';
   end;
 end;
 

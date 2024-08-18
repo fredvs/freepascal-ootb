@@ -111,12 +111,13 @@ const
    LOG_NDELAY = $08;
    LOG_NOWAIT = $10;
    LOG_PERROR = $20;
-   
-procedure closelog;cdecl;external clib name 'closelog@GLIBC_2.2.5';
-procedure openlog(__ident:Pchar; __option:longint; __facility:longint);cdecl;external clib name 'openlog@GLIBC_2.2.5';
-function setlogmask(__mask:longint):longint;cdecl;external clib name 'setlogmask@GLIBC_2.2.5';
-procedure syslog(__pri: Integer; __fmt: PChar; arg : array of const); cdecl; external clib name 'syslog@GLIBC_2.2.5';
-procedure vsyslog(__pri: Integer; Fmt: PChar; Arg: Pointer);cdecl; external clib name 'vsyslog@GLIBC_2.2.5';
+
+procedure closelog;cdecl;external clib name 'closelog';
+procedure openlog(__ident:Pchar; __option:longint; __facility:longint);cdecl;external clib name 'openlog';
+function setlogmask(__mask:longint):longint;cdecl;external clib name 'setlogmask';
+procedure syslog(__pri: Integer; __fmt: PChar; arg : array of const); cdecl; external clib name 'syslog';
+procedure vsyslog(__pri: Integer; Fmt: PChar; Arg: Pointer);cdecl; external clib name 'vsyslog';
+
 
 { ---------------------------------------------------------------------
     Borland compatibility types

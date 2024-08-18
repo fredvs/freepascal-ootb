@@ -1,3 +1,18 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canneyt and other members of the
+    Free Pascal development team
+
+    Typesafe dataset  
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 unit fpcgtypesafedataset;
 
 {$mode objfpc}{$H+}
@@ -41,8 +56,8 @@ Type
     function GetInterfaceName: String;
     function GetQueryClass: String;
     function GetTransactionClass: String;
-    procedure SetInterfaceGUID(AValue: String);
-    procedure SetInterfaceName(AValue: String);
+    procedure SetInterfaceGUID(const AValue: String);
+    procedure SetInterfaceName(const AValue: String);
     procedure SetTypeSafeAccesOptions(AValue: TTypeSafeDatasetOptions);
   Protected
     function GetMapAncestorName: String; override;
@@ -128,6 +143,7 @@ Type
     Constructor Create(AOwner : TComponent); override;
     Destructor Destroy; override;
     Class Function NeedsSQL: Boolean; override;
+    Class Function NeedsFieldDefs : Boolean; override;
     Property SafeOpts : TGenTypeSafeDatasetOptions Read GetSafeOpts;
   end;
 
@@ -818,6 +834,12 @@ begin
   Result:=True;
 end;
 
+Class Function TDDTypeSafeDatasetCodeGenerator.NeedsFieldDefs : Boolean; 
+
+begin
+  Result:=True;
+end;
+
 { TGenTypeSafeDatasetOptions }
 
 function TGenTypeSafeDatasetOptions.GetInterfaceName: String;
@@ -869,7 +891,7 @@ begin
     Result:='TSQLConnection';
 end;
 
-procedure TGenTypeSafeDatasetOptions.SetInterfaceGUID(AValue: String);
+procedure TGenTypeSafeDatasetOptions.SetInterfaceGUID(const AValue: String);
 
 Var
   G : TGUID;
@@ -879,7 +901,7 @@ begin
   FInterfaceGUID:=GUIDToString(G);
 end;
 
-procedure TGenTypeSafeDatasetOptions.SetInterfaceName(AValue: String);
+procedure TGenTypeSafeDatasetOptions.SetInterfaceName(const AValue: String);
 begin
   CheckIdentifier(AValue,True);
   FInterfaceName:=AValue;

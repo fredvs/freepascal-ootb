@@ -994,7 +994,7 @@ function SetConsoleCtrlHandler(HandlerRoutine:PHANDLER_ROUTINE; Add:WINBOOL):WIN
 function GenerateConsoleCtrlEvent(dwCtrlEvent:DWORD; dwProcessGroupId:DWORD):WINBOOL; external 'kernel32' name 'GenerateConsoleCtrlEvent';
 function AllocConsole:WINBOOL; external 'kernel32' name 'AllocConsole';
 function FreeConsole:WINBOOL; external 'kernel32' name 'FreeConsole';
-function CreateConsoleScreenBuffer(dwDesiredAccess:DWORD; dwShareMode:DWORD; var lpSecurityAttributes:SECURITY_ATTRIBUTES; dwFlags:DWORD; lpScreenBufferData:LPVOID):HANDLE; external 'kernel32' name 'CreateConsoleScreenBuffer';
+function CreateConsoleScreenBuffer(dwDesiredAccess:DWORD; dwShareMode:DWORD; lpSecurityAttributes:LPSECURITY_ATTRIBUTES; dwFlags:DWORD; lpScreenBufferData:LPVOID):HANDLE; external 'kernel32' name 'CreateConsoleScreenBuffer';
 function GetConsoleCP:UINT; external 'kernel32' name 'GetConsoleCP';
 function SetConsoleCP(wCodePageID:UINT):WINBOOL; external 'kernel32' name 'SetConsoleCP';
 function GetConsoleOutputCP:UINT; external 'kernel32' name 'GetConsoleOutputCP';
@@ -1314,7 +1314,6 @@ function CONSOLE_REAL_OUTPUT_HANDLE : HANDLE;
   function AttachConsole(dwProcessId:DWORD):BOOL;stdcall;external 'kernel32' name 'AttachConsole';
   function ATTACH_PARENT_PROCESS : DWORD;    
 
-
   function GetConsoleDisplayMode(lpModeFlags:LPDWORD):BOOL;stdcall;external 'kernel32' name 'GetConsoleDisplayMode';
   function SetConsoleDisplayMode(hConsoleOutput:HANDLE; dwFlags:DWORD; lpNewScreenBufferDimensions:PCOORD):BOOL;stdcall;external 'kernel32' name 'SetConsoleDisplayMode';
   function GetConsoleWindow:HWND;stdcall;external 'kernel32' name 'GetConsoleWindow';
@@ -1331,8 +1330,30 @@ function CONSOLE_REAL_OUTPUT_HANDLE : HANDLE;
   function RealChildWindowFromPoint(Parent : HWND; Pt : TPOINT): HWND; stdcall; external 'user32.dll' name 'RealChildWindowFromPoint';
   function GetGuiResources(ProcessHandle : THANDLE; ResourceType : DWORD): DWORD; stdcall; external 'user32.dll' name 'GetGuiResources';
   function SendInput(InputsCount : UINT; InputsPtr : PINPUT; Size : WINT) : UINT; stdcall; external 'user32.dll' name 'SendInput';
-{$endif read_interface}
 
+  // legacy threadpool
+  function QueueUserWorkItem(func: LPTHREAD_START_ROUTINE; Context: pointer; Flags: ULONG): BOOL; stdcall; external 'kernel32' name 'QueueUserWorkItem';
+  function UnregisterWaitEx(WaitHandle : THandle; CompletionEvent : THandle):WinBool; stdcall; external 'kernel32.dll' name 'UnregisterWaitEx';
+  function CreateTimerQueue : THandle; stdcall; external 'kernel32.dll' name 'CreateTimerQueue';
+  function CreateTimerQueueTimer(phNewTimer:PHandle;TimerQueue:THandle;Callback:WAITORTIMERCALLBACK;Parameter:PVOID;DueTime,Period : DWord;Flags:ULong) : THandle; stdcall; external 'kernel32.dll' name 'CreateTimerQueueTimer';
+  function ChangeTimerQueueTimer(TimerQueue:THandle;Timer:THandle;DueTime,Period : DWord) : BOOL; stdcall; external 'kernel32.dll' name 'ChangeTimerQueueTimer';
+  function DeleteTimerQueueTimer(TimerQueue:THandle;Timer:THandle;CompletionEvent: THandle) : BOOL; stdcall; external 'kernel32.dll' name 'DeleteTimerQueueTimer';
+  function DeleteTimerQueueEx(TimerQueue:THandle;CompletionEvent: THandle) : BOOL; stdcall; external 'kernel32.dll' name 'DeleteTimerQueueEx';
+
+  // only in widechar variant.
+  function GetDateFormatEx(LocaleName : pwidechar;Flags : DWORD;Date : PSYSTEMTIME; Format : pwidechar; DateBuffer : pwidechar; BufferLen  : longint; Calendar : pwidechar) : BOOL; stdcall; external 'kernel32' name 'GetDateFormatEx';
+  function SetThreadExecutionState( esflags:EXECUTION_STATE ) : Cardinal; stdcall; external 'kernel32.dll' name 'SetThreadExecutionState';
+
+  function GetGUIThreadInfo(InThreadId : DWORD;InoutGuiThreadInfo : PGUITHREADINFO): BOOL; stdcall; external 'user32.dll' name 'GetGUIThreadInfo';
+  function GetNumaProcessorNode(Processor:UCHAR; NodeNumber:PUCHAR):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaProcessorNode';
+  function GetNumaNodeNumberFromHandle(hFile:HANDLE; NodeNumber:PUSHORT):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaNodeNumberFromHandle';
+  function GetNumaProcessorNodeEx(Processor:PPROCESSOR_NUMBER; NodeNumber:PUSHORT):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaProcessorNodeEx';
+  function GetNumaNodeProcessorMask(Node:UCHAR; ProcessorMask:PULONGLONG):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaNodeProcessorMask';
+  function GetNumaAvailableMemoryNode(Node:UCHAR; AvailableBytes:PULONGLONG):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaAvailableMemoryNode';
+  function GetNumaAvailableMemoryNodeEx(Node:USHORT; AvailableBytes:PULONGLONG):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaAvailableMemoryNodeEx';
+  function GetNumaProximityNode(ProximityId:ULONG; NodeNumber:PUCHAR):BOOL;stdcall;external 'kernel32.dll' name 'GetNumaProximityNode';
+
+{$endif read_interface}
 
 {$ifdef read_implementation}
 

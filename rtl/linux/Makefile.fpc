@@ -305,7 +305,7 @@ strings$(PPUEXT) : $(INC)/strings.pp $(INC)/stringsi.inc\
 # $(SYSTEMUNIT) Dependent Units
 #
 
-unix$(PPUEXT) : $(UNIXINC)/unix.pp strings$(PPUEXT) baseunix$(PPUEXT) $(INC)/textrec.inc $(INC)/filerec.inc \
+unix$(PPUEXT) : $(UNIXINC)/unix.pp strings$(PPUEXT) syscall$(PPUEXT) baseunix$(PPUEXT) $(INC)/textrec.inc $(INC)/filerec.inc \
                  unxconst.inc $(UNIXINC)/timezone.inc $(SYSTEMUNIT)$(PPUEXT) unixutil$(PPUEXT) \
                  unxfunc.inc
 	$(COMPILER) $(UNIXINC)/unix.pp
@@ -313,7 +313,7 @@ unix$(PPUEXT) : $(UNIXINC)/unix.pp strings$(PPUEXT) baseunix$(PPUEXT) $(INC)/tex
 syscall$(PPUEXT) : $(UNIXINC)/syscall.pp $(ARCH)/syscallh.inc $(SYSNRINC)  $(SYSTEMUNIT)$(PPUEXT)
 	$(COMPILER) $(UNIXINC)/syscall.pp
 
-unixutil$(PPUEXT) : $(UNIXINC)/unixutil.pp $(INC)/textrec.inc $(INC)/filerec.inc $(SYSTEMUNIT)$(PPUEXT)
+unixutil$(PPUEXT) : $(UNIXINC)/unixutil.pp $(INC)/textrec.inc $(INC)/filerec.inc baseunix$(PPUEXT) $(SYSTEMUNIT)$(PPUEXT)
 	$(COMPILER) $(UNIXINC)/unixutil.pp
 
 unixtype$(PPUEXT) : $(UNIXINC)/unixtype.pp ptypes.inc $(UNIXINC)/ctypes.inc $(SYSTEMUNIT)$(PPUEXT)
@@ -363,8 +363,8 @@ dos$(PPUEXT) : $(UNIXINC)/dos.pp $(INC)/filerec.inc $(INC)/textrec.inc strings$(
 #
 
 sysutils$(PPUEXT) : $(UNIXINC)/sysutils.pp $(wildcard $(OBJPASDIR)/sysutils/*.inc) \
-                    objpas$(PPUEXT) unix$(PPUEXT) errors$(PPUEXT) sysconst$(PPUEXT) \
-                    linux$(PPUEXT)
+                    objpas$(PPUEXT) unix$(PPUEXT) errors$(PPUEXT) sysconst$(PPUEXT) unixtype$(PPUEXT) \
+                    linux$(PPUEXT) syscall$(PPUEXT) baseunix$(PPUEXT) unixtype$(PPUEXT) unixutil$(PPUEXT) initc$(PPUEXT)
         $(COMPILER) -Fi$(OBJPASDIR)/sysutils $(UNIXINC)/sysutils.pp
 
 classes$(PPUEXT) : $(UNIXINC)/classes.pp $(wildcard $(OBJPASDIR)/classes/*.inc) \
@@ -451,7 +451,7 @@ fpwidestring$(PPUEXT): $(OBJPASDIR)/fpwidestring.pp character$(PPUEXT) unixcp$(P
 # Other $(SYSTEMUNIT)-dependent RTL Units
 #
 
-errors$(PPUEXT) : $(UNIXINC)/errors.pp strings$(PPUEXT) $(SYSTEMUNIT)$(PPUEXT)
+errors$(PPUEXT) : $(UNIXINC)/errors.pp strings$(PPUEXT) unixtype$(PPUEXT) $(SYSTEMUNIT)$(PPUEXT)
 	$(COMPILER) $(UNIXINC)/errors.pp
 
 callspec$(PPUEXT) : $(INC)/callspec.pp $(SYSTEMUNIT)$(PPUEXT)
@@ -460,10 +460,10 @@ callspec$(PPUEXT) : $(INC)/callspec.pp $(SYSTEMUNIT)$(PPUEXT)
 cmem$(PPUEXT) : $(INC)/cmem.pp $(SYSTEMUNIT)$(PPUEXT)
 	$(COMPILER) $(INC)/cmem.pp
 
-cthreads$(PPUEXT) : $(UNIXINC)/cthreads.pp $(SYSTEMUNIT)$(PPUEXT) unix$(PPUEXT) sysutils$(PPUEXT) baseunix$(PPUEXT) initc$(PPUEXT) dl$(PPUEXT)
+cthreads$(PPUEXT) : $(UNIXINC)/cthreads.pp $(SYSTEMUNIT)$(PPUEXT) unixtype$(PPUEXT) unix$(PPUEXT) sysutils$(PPUEXT) baseunix$(PPUEXT) initc$(PPUEXT) dl$(PPUEXT)
 	$(COMPILER) $(UNIXINC)/cthreads.pp
 
-cwstring$(PPUEXT) : $(UNIXINC)/cwstring.pp $(SYSTEMUNIT)$(PPUEXT) sysutils$(PPUEXT) baseunix$(PPUEXT) unix$(PPUEXT) unixtype$(PPUEXT) ctypes$(PPUEXT) dynlibs$(PPUEXT) unixcp$(PPUEXT)
+cwstring$(PPUEXT) : $(UNIXINC)/cwstring.pp $(SYSTEMUNIT)$(PPUEXT) unixtype$(PPUEXT) sysutils$(PPUEXT) baseunix$(PPUEXT) unix$(PPUEXT) unixtype$(PPUEXT) ctypes$(PPUEXT) dynlibs$(PPUEXT) unixcp$(PPUEXT)
 	$(COMPILER) $(UNIXINC)/cwstring.pp
 
 ctypes$(PPUEXT) :  $(INC)/ctypes.pp unixtype$(PPUEXT) $(SYSTEMUNIT)$(PPUEXT)

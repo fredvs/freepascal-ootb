@@ -56,8 +56,11 @@ interface
        PPointerArray = ^PointerArray;
 
        // Delphi Berlin compatibility 
-       FixedInt = Int32;
+       FixedInt  = Int32;
        FixedUInt = UInt32;
+       PFixedInt = ^FixedInt;
+       PFixedUInt= ^FixedUInt;
+   
        
 {$if FPC_FULLVERSION >= 20701}
 
@@ -86,6 +89,9 @@ interface
        generic IEnumerable<T> = interface
          function GetEnumerator: specialize IEnumerator<T>;
        end;
+       generic IEquatable<T>  = interface
+                                  function Equals(Value:T):boolean;
+                                 end;
 {$endif}
 
 {$SCOPEDENUMS ON}

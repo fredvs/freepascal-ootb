@@ -111,8 +111,6 @@ unit cpubase;
       first_mm_supreg    = RS_INVALID;
       first_mm_imreg     = 0;
 
-      regnumber_count_bsstart = 32;
-
       regnumber_table : array[tregisterindex] of tregister = (
         {$i ravrnum.inc}
       );
@@ -164,14 +162,14 @@ unit cpubase;
                                 Operands
 *****************************************************************************}
 
-      taddressmode = (AM_UNCHANGED,AM_POSTINCREMENT,AM_PREDRECEMENT);
+      taddressmode = (AM_UNCHANGED,AM_POSTINCREMENT,AM_PREDECREMENT);
 
 {*****************************************************************************
                                  Constants
 *****************************************************************************}
 
     const
-      max_operands = 4;
+      max_operands = 2;
 
       maxintregs = 15;
       maxfpuregs = 0;
@@ -232,8 +230,8 @@ unit cpubase;
 *****************************************************************************}
 
       { Stack pointer register }
-      NR_STACK_POINTER_REG = NR_R13;
-      RS_STACK_POINTER_REG = RS_R13;
+      NR_STACK_POINTER_REG = NR_INVALID;
+      RS_STACK_POINTER_REG = RS_INVALID;
       { Frame pointer register }
       RS_FRAME_POINTER_REG = RS_R28;
       NR_FRAME_POINTER_REG = NR_R28;
@@ -307,6 +305,9 @@ unit cpubase;
     function dwarf_reg_no_error(r:tregister):shortint;
 
     function is_calljmp(o:tasmop):boolean;{$ifdef USEINLINE}inline;{$endif USEINLINE}
+
+    function GetDefaultTmpReg : TRegister;
+    function GetDefaultZeroReg : TRegister;
 
   implementation
 
@@ -427,14 +428,40 @@ unit cpubase;
         result:=reg;
       end;
 
+
     function dwarf_reg_no_error(r:tregister):shortint;
       begin
         result:=regdwarf_table[findreg_by_number(r)];
       end;
 
+
+    function eh_return_data_regno(nr: longint): longint;
+      begin
+        result:=-1;
+      end;
+
+
     function is_calljmp(o:tasmop):boolean;{$ifdef USEINLINE}inline;{$endif USEINLINE}
       begin
         is_calljmp:= o in call_jmp_instructions;
+      end;
+
+
+    function GetDefaultTmpReg: TRegister;
+      begin
+        if CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype] then
+          Result:=NR_R16
+        else
+          Result:=NR_R0;
+      end;
+
+
+    function GetDefaultZeroReg: TRegister;
+      begin
+        if CPUAVR_16_REGS in cpu_capabilities[current_settings.cputype] then
+          Result:=NR_R17
+        else
+          Result:=NR_R1;
       end;
 
 

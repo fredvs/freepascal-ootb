@@ -60,7 +60,6 @@ type
     FSeps : Array of string;
     procedure SetDefines(const Value: TStrings);
     function  FindNextSeparator(ASeps: Array of string; Out IsExtended : Boolean): AnsiString;
-    procedure AddToStatement(value: AnsiString; ForceNewLine : boolean);
     procedure SetDirectives(value: TStrings);
     procedure SetDollarStrings(AValue: TStrings);
     procedure SetSQL(value: TStrings);
@@ -71,20 +70,31 @@ type
     Procedure RecalcSeps;
     function GetLine: Integer;
   protected
-    procedure ClearStatement; virtual;
     procedure InternalStatement (Statement: TStrings; var StopExecution: Boolean); virtual;
     procedure InternalDirective (Directive, Argument: String; var StopExecution: Boolean); virtual;
     // Runs commit. If ComitRetaining, use CommitRetraining if possible, else stop/starttransaction
     procedure InternalCommit(CommitRetaining: boolean=true); virtual;
-    Function ProcessConditional(Directive : String; Param : String) : Boolean; virtual;
-    function NextStatement: AnsiString; virtual;
+    Function ProcessConditional(const Directive : String; const Param : String) : Boolean; virtual;
     procedure ProcessStatement; virtual;
-    function Available: Boolean; virtual;
     procedure DefaultDirectives; virtual;
     procedure ExecuteStatement (Statement: TStrings; var StopExecution: Boolean); virtual; abstract;
     procedure ExecuteDirective (Directive, Argument: String; var StopExecution: Boolean); virtual; abstract;
     // Executes commit. If possible and CommitRetaining, use CommitRetaining, else
     procedure ExecuteCommit(CommitRetaining: boolean=true); virtual; abstract;
+    // Useful when you want to add your own parsing routines.
+    // Get next statement. This must also use AddToCurrentStatement  to add the statement.
+    function NextStatement: AnsiString; virtual;
+    // Add text to current statement. If InComment is false, strippedstatement will also be updated.
+    procedure AddToCurrentStatement(value: AnsiString; ForceNewLine : boolean); virtual;
+    // Clear current statement
+    procedure ClearStatement; virtual;
+    // Is a next statement available ?
+    function Available: Boolean; virtual;
+    // Current state
+    Property CurrentStatement : TStrings Read FCurrentStatement;
+    Property CurrentStrippedStatement : TStrings Read FCurrentStripped;
+    Property InComment : Boolean Read FComment Write FComment;
+    Property EmitLine : Boolean Read FEmitline Write FEmitline;
   public
     constructor Create (AnOwner: TComponent); override;
     destructor Destroy; override;
@@ -92,12 +102,12 @@ type
   protected
     property Aborted: Boolean read FAborted;
     property Line: Integer read GetLine;
-    Property AutoCommit : Boolean Read FAutoCommit Write FAutoCommit;
-    property CommentsInSQL: Boolean read FCommentsInSQL write FCommentsInSQL;
-    property UseSetTerm: Boolean read FUseSetTerm write FUseSetTerm;
-    property UseCommit: Boolean read FUseCommit write FUseCommit;
-    property UseDefines: Boolean read FUseDefines write FUseDefines;
-    Property UseDollarString : Boolean Read FUseDollarString Write SetUseDollarString;
+    Property AutoCommit : Boolean Read FAutoCommit Write FAutoCommit default false;
+    property CommentsInSQL: Boolean read FCommentsInSQL write FCommentsInSQL default true;
+    property UseSetTerm: Boolean read FUseSetTerm write FUseSetTerm default true;
+    property UseCommit: Boolean read FUseCommit write FUseCommit Default true;
+    property UseDefines: Boolean read FUseDefines write FUseDefines default true;
+    Property UseDollarString : Boolean Read FUseDollarString Write SetUseDollarString default false;
     Property DollarStrings : TStrings Read FDollarStrings Write SetDollarStrings;
     property Defines : TStrings Read FDefines Write SetDefines;
     property Directives: TStrings read FDirectives write SetDirectives;
@@ -189,7 +199,7 @@ begin
     end;
 end;
 
-Function ConvertWhiteSpace(S : String) : String;
+Function ConvertWhiteSpace(const S : String) : String;
 
 begin
   Result:=StringReplace(S,#13,' ',[rfReplaceAll]);
@@ -290,8 +300,7 @@ begin
   Result:=FLine - 1;
 end;
 
-procedure TCustomSQLScript.AddToStatement(value: AnsiString;
-  ForceNewLine: boolean);
+procedure TCustomSQLScript.AddToCurrentStatement(value: AnsiString;  ForceNewLine: boolean);
 
   Procedure DA(L : TStrings);
 
@@ -329,7 +338,7 @@ begin
     if (I=-1) then
       begin
       if FEmitLine then
-        AddToStatement(S,(FCol<=1));
+        AddToCurrentStatement(S,(FCol<=1));
       FCol:=1;
       FLine:=FLine+1;
       end
@@ -338,7 +347,7 @@ begin
       Result:=ASeps[i];
       IsExtended:=I>=MinSQLSeps;
       if FEmitLine then
-        AddToStatement(Copy(S,1,Pos(Result,S)-1),(FCol=1));
+        AddToCurrentStatement(Copy(S,1,Pos(Result,S)-1),(FCol=1));
       FCol:=(FCol-1)+Pos(Result,S);
       break;
       end;
@@ -509,6 +518,7 @@ begin
   FSkipStackIndex:=0;
   Faborted:=False;
   FLine:=1;
+  FCol:=1;
   DefaultDirectives;
   Repeat
     NextStatement();
@@ -537,13 +547,13 @@ begin
       begin
       FComment:=True;
       if FCommentsInSQL then
-        AddToStatement(pnt,false)
+        AddToCurrentStatement(pnt,false)
       else
         FEmitLine:=False;
       FCol:=FCol + length(pnt);
       pnt:=FindNextSeparator(['*/'],b);
       if FCommentsInSQL then
-        AddToStatement(pnt,false)
+        AddToCurrentStatement(pnt,false)
       else
         FEmitLine:=True;
       FCol:=FCol + length(pnt);
@@ -553,33 +563,33 @@ begin
       begin
       FComment:=True;
       if FCommentsInSQL then
-        AddToStatement(Copy(FSQL[FLine-1],FCol,Length(FSQL[FLine-1])-FCol+1),False);
+        AddToCurrentStatement(Copy(FSQL[FLine-1],FCol,Length(FSQL[FLine-1])-FCol+1),False);
       Inc(Fline);
       FCol:=1;
       FComment:=False;
       end
     else if pnt = '"' then
       begin
-      AddToStatement(pnt,false);
+      AddToCurrentStatement(pnt,false);
       FCol:=FCol + length(pnt);
       pnt:=FindNextSeparator(['"'],b);
-      AddToStatement(pnt,false);
+      AddToCurrentStatement(pnt,false);
       FCol:=FCol + length(pnt);
       end
     else if pnt = '''' then
       begin
-      AddToStatement(pnt,False);
+      AddToCurrentStatement(pnt,False);
       FCol:=FCol + length(pnt);
       pnt:=FindNextSeparator([''''],b);
-      AddToStatement(pnt,false);
+      AddToCurrentStatement(pnt,false);
       FCol:=FCol + length(pnt);
       end
     else if IsExtra then
       begin
-        AddToStatement(pnt,false);
+        AddToCurrentStatement(pnt,false);
         FCol:=FCol + length(pnt);
         pnt:=FindNextSeparator([pnt],b);
-        AddToStatement(pnt,false);
+        AddToCurrentStatement(pnt,false);
         FCol:=FCol + length(pnt);
       end;
     end;
@@ -644,7 +654,7 @@ end;
 
 procedure TCustomSQLScript.DefaultDirectives;
 
-  Procedure Add(S : String);
+  Procedure Add(const S : String);
   
   begin
     if FDirectives.IndexOf(S)=-1 then
@@ -673,7 +683,7 @@ begin
     end;
 end;
 
-function TCustomSQLScript.ProcessConditional(Directive: String; Param: String
+function TCustomSQLScript.ProcessConditional(const Directive: String; const Param: String
   ): Boolean;
 
   Procedure PushSkipMode;

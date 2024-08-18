@@ -46,6 +46,7 @@ Type
     FCurElement: TJSElement;
     FCurLine: integer;
     FCurColumn: integer;
+    FLineBreak: string;
     FOnWriting: TTextWriterWriting;
   protected
     Function DoWrite(Const S : TJSWriterString) : Integer; virtual; abstract;
@@ -70,6 +71,7 @@ Type
     Property CurColumn: integer read FCurColumn write FCurColumn;// char index, not codepoint
     Property CurElement: TJSElement read FCurElement write SetCurElement;
     Property OnWriting: TTextWriterWriting read FOnWriting write FOnWriting;
+    Property LineBreak: string read FLineBreak write FLineBreak;
   end;
 
   {$ifdef HasFileWriter}
@@ -609,10 +611,9 @@ begin
               begin
               inc(I,2); // surrogate, two char codepoint
               continue;
-              end
-            else
-              // invalid UTF-16, cannot be encoded as UTF-8 -> encode as hex
-              R:=R+'\u'+TJSString(HexStr(ord(c),4));
+              end;
+            // invalid UTF-16, cannot be encoded as UTF-8 -> encode as hex
+            R:=R+'\u'+TJSString(HexStr(ord(S[i]),4));
             end
           else
             // invalid UTF-16 at end of string, cannot be encoded as UTF-8 -> encode as hex
@@ -650,6 +651,15 @@ const
       inc(h);
       end;
     p:=h;
+  end;
+
+  function SkipToNextLineEnd(const S: TJSString; p: integer): integer;
+  var
+    l: SizeInt;
+  begin
+    l:=length(S);
+    while (p<=l) and not (S[p] in [#10,#13]) do inc(p);
+    Result:=p;
   end;
 
   function SkipToNextLineStart(const S: TJSString; p: integer): integer;
@@ -711,9 +721,11 @@ begin
     GetLineIndent(JS,p); // the first line is already indented, skip
     repeat
       StartP:=p;
-      p:=SkipToNextLineStart(JS,StartP);
+      p:=SkipToNextLineEnd(JS,StartP);
       Write(copy(JS,StartP,p-StartP));
       if p>length(JS) then break;
+      Write(sLineBreak);
+      p:=SkipToNextLineStart(JS,p);
       CurLineIndent:=GetLineIndent(JS,p);
       Write(StringOfChar(FIndentChar,FCurIndent+CurLineIndent-MinIndent));
     until false;
@@ -1360,11 +1372,26 @@ begin
 end;
 
 procedure TJSWriter.WriteBinary(El: TJSBinary);
+var
+  ElC: TClass;
+  S : String;
+
+  procedure WriteRight(Bin: TJSBinary);
+  begin
+    FSkipRoundBrackets:=(Bin.B.ClassType=ElC)
+          and ((ElC=TJSLogicalOrExpression)
+            or (ElC=TJSLogicalAndExpression));
+    Write(S);
+    WriteJS(Bin.B);
+    Writer.CurElement:=Bin;
+  end;
 
 Var
-  S : String;
   AllowCompact, WithBrackets: Boolean;
-  ElC: TClass;
+  Left: TJSElement;
+  SubBin: TJSBinaryExpression;
+  Binaries: TJSElementArray;
+  BinariesCnt: integer;
 begin
   {$IFDEF VerboseJSWriter}
   System.writeln('TJSWriter.WriteBinary SkipRoundBrackets=',FSkipRoundBrackets);
@@ -1374,20 +1401,10 @@ begin
     Write('(');
   FSkipRoundBrackets:=false;
   ElC:=El.ClassType;
-  if El.A is TJSBinaryExpression then
-    if (El.A.ClassType=ElC)
-        and ((ElC=TJSLogicalOrExpression)
-        or (ElC=TJSLogicalAndExpression)
-        or (ElC=TJSBitwiseAndExpression)
-        or (ElC=TJSBitwiseOrExpression)
-        or (ElC=TJSBitwiseXOrExpression)
-        or (ElC=TJSAdditiveExpressionPlus)
-        or (ElC=TJSAdditiveExpressionMinus)
-        or (ElC=TJSMultiplicativeExpressionMul)) then
-      FSkipRoundBrackets:=true;
-  WriteJS(El.A);
-  Writer.CurElement:=El;
+  Left:=El.A;
   AllowCompact:=False;
+
+  S:='';
   if (El is TJSBinaryExpression) then
     begin
     S:=TJSBinaryExpression(El).OperatorString;
@@ -1400,17 +1417,47 @@ begin
     else
       S:=' '+S+' ';
     end;
-  FSkipRoundBrackets:=false;
-  ElC:=El.ClassType;
-  if El.B is TJSBinaryExpression then
-    if (El.B.ClassType=ElC)
-        and ((ElC=TJSLogicalOrExpression)
-        or (ElC=TJSLogicalAndExpression)) then
-      FSkipRoundBrackets:=true;
-  // Note: a+(b+c) <> a+b+c  e.g. floats, 0+string
-  Write(S);
-  WriteJS(El.B);
-  Writer.CurElement:=El;
+
+  if (Left is TJSBinaryExpression)
+      and (Left.ClassType=ElC)
+      and ((ElC=TJSLogicalOrExpression)
+        or (ElC=TJSLogicalAndExpression)
+        or (ElC=TJSBitwiseAndExpression)
+        or (ElC=TJSBitwiseOrExpression)
+        or (ElC=TJSBitwiseXOrExpression)
+        or (ElC=TJSAdditiveExpressionPlus)
+        or (ElC=TJSAdditiveExpressionMinus)
+        or (ElC=TJSMultiplicativeExpressionMul)) then
+    begin
+    // handle left handed multi add without stack
+    SetLength(Binaries{%H-},8);
+    BinariesCnt:=0;
+    while Left is TJSBinaryExpression do
+      begin
+      SubBin:=TJSBinaryExpression(Left);
+      if SubBin.ClassType<>ElC then break;
+      if BinariesCnt=length(Binaries) then
+        SetLength(Binaries,BinariesCnt*2);
+      Binaries[BinariesCnt]:=SubBin;
+      inc(BinariesCnt);
+      Left:=SubBin.A;
+      end;
+
+    WriteJS(Left);
+    Writer.CurElement:=El;
+
+    while BinariesCnt>0 do
+      begin
+      dec(BinariesCnt);
+      WriteRight(TJSBinaryExpression(Binaries[BinariesCnt]));
+      end;
+    end
+  else
+    begin;
+    WriteJS(Left);
+    Writer.CurElement:=El;
+    end;
+  WriteRight(El);
   if WithBrackets then
     Write(')');
 end;
@@ -2017,6 +2064,7 @@ constructor TTextWriter.Create;
 begin
   FCurLine:=1;
   FCurColumn:=1;
+  FLineBreak:=sLineBreak;
 end;
 
 {$ifdef FPC_HAS_CPSTRING}
@@ -2085,7 +2133,7 @@ end;
 
 function TTextWriter.WriteLn(const S: TJSWriterString): Integer;
 begin
-  Result:=Write(S)+Write(sLineBreak);
+  Result:=Write(S)+Write(LineBreak);
 end;
 
 function TTextWriter.Write(const Fmt: TJSWriterString;

@@ -881,6 +881,12 @@ begin
   FFieldDefs.Assign(AFieldDefs);
 end;
 
+procedure TDataSet.SetSparseArrays(AValue: Boolean);
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TDataSet.SparseArrays
+  FSparseArrays := AValue;
+end;
+
 procedure TDataSet.DoInsertAppendRecord(const Values: array of const; DoAppend : boolean);
 var i : integer;
     ValuesSize : integer;
@@ -1121,6 +1127,11 @@ begin
   end;
 end;
 
+function TDataset.GetDefaultBufferCount : Cardinal;
+
+begin
+  Result:=DefaultBufferCount;
+end;
 
 procedure TDataSet.RecalcBufListSize;
 
@@ -1140,7 +1151,11 @@ begin
   if IsUniDirectional then
     ABufferCount := 1
   else
-    ABufferCount := DefaultBufferCount;
+    begin
+    ABufferCount := GetDefaultBufferCount;
+    if aBufferCount<2 then
+      aBufferCount:=2;
+    end;  
 
   for i := 0 to MyDataSourceCount - 1 do
     for j := 0 to MyDataSources[i].DataLinkCount - 1 do

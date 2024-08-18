@@ -1,5 +1,19 @@
 unit dbf;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Pascal Ganaye,Micha Nelissen and other members of the
+    Free Pascal development team
 
+    DBF  main unit 
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 { design info in dbf_reg.pas }
 
 interface
@@ -186,6 +200,7 @@ type
     FDateTimeHandling: TDateTimeHandling;
     FTranslationMode: TDbfTranslationMode;
     FIndexDefs: TDbfIndexDefs;
+    FUseAutoInc: Boolean;
     FBeforeAutoCreate: TBeforeAutoCreateEvent;
     FOnTranslate: TTranslateEvent;
     FOnLanguageWarning: TLanguageWarningEvent;
@@ -193,7 +208,7 @@ type
     FOnIndexMissing: TDbfIndexMissingEvent;
     FOnCompareRecord: TNotifyEvent;
     FOnCopyDateTimeAsString: TConvertFieldEvent;
-
+    FMyBufferSize : Cardinal;
     function GetIndexName: string;
     function GetVersion: string;
     function GetPhysicalRecNo: Integer;
@@ -203,6 +218,7 @@ type
     function GetPhysicalRecordCount: Integer;
     function GetKeySize: Integer;
     function GetMasterFields: string;
+    function GetNextAutoInc: Cardinal;
     function FieldDefsStored: Boolean;
     procedure SetBackLink(NewBackLink: String);
 
@@ -216,6 +232,8 @@ type
     procedure SetMasterFields(const Value: string);
     procedure SetTableLevel(const NewLevel: Integer);
     procedure SetPhysicalRecNo(const NewRecNo: Integer);
+    procedure SetNextAutoInc(ThisNextAutoInc: Cardinal);
+    procedure SetUseAutoInc(ThisUseAutoInc: Boolean);
 
     procedure MasterChanged(Sender: TObject);
     procedure MasterDisabled(Sender: TObject);
@@ -232,6 +250,8 @@ type
     procedure SetRangeBuffer(LowRange: PChar; HighRange: PChar);
 
   protected
+    function GetDefaultBufferCount : Cardinal; override;
+    procedure SetDefaultBufferCount(aValue : Cardinal); virtual; 
     { abstract methods }
     function  AllocRecordBuffer: TRecordBuffer; override; {virtual abstract}
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
@@ -390,7 +410,7 @@ type
 {$ifndef SUPPORT_INITDEFSFROMFIELDS}
     procedure InitFieldDefsFromFields;
 {$endif}
-
+    Property DefaultBufferCount : Cardinal Read GetDefaultBufferCount Write SetDefaultBufferCount;
     property AbsolutePath: string read FAbsolutePath;
     property DbfFieldDefs: TDbfFieldDefs read GetDbfFieldDefs;
     property PhysicalRecNo: Integer read GetPhysicalRecNo write SetPhysicalRecNo;
@@ -414,6 +434,8 @@ type
     // Storage for memo file - if any - when using memory storage
     property UserMemoStream: TStream read FUserMemoStream write FUserMemoStream;
     property DisableResyncOnPost: Boolean read FDisableResyncOnPost write FDisableResyncOnPost;
+    // The value stored in the file.
+    property NextAutoInc: Cardinal read GetNextAutoInc write SetNextAutoInc;
   published
     property DateTimeHandling: TDateTimeHandling
              read FDateTimeHandling write FDateTimeHandling default dtBDETimeStamp;
@@ -434,6 +456,8 @@ type
     property TableName: string read FTableName write SetTableName;
     property TableLevel: Integer read FTableLevel write SetTableLevel;
     property Version: string read GetVersion write SetVersion stored false;
+    // Turn this off to overwrite.
+    property UseAutoInc: Boolean read FUseAutoInc write SetUseAutoInc;
     property BeforeAutoCreate: TBeforeAutoCreateEvent read FBeforeAutoCreate write FBeforeAutoCreate;
     property OnCompareRecord: TNotifyEvent read FOnCompareRecord write FOnCompareRecord;
     property OnLanguageWarning: TLanguageWarningEvent read FOnLanguageWarning write FOnLanguageWarning;
@@ -637,6 +661,21 @@ begin
   end;
 end;
 
+function TDbf.GetDefaultBufferCount : Cardinal; 
+
+begin
+  Result:=fMyBufferSize;
+end;
+
+procedure TDbf.SetDefaultBufferCount(aValue : Cardinal); 
+
+begin
+  CheckInactive;
+  FMyBufferSize:=aValue;
+  if FMyBufferSize<2 then
+    FMyBufferSize:=2;
+end;
+
 //====================================================================
 // TDbf = TDataset Descendant.
 //====================================================================
@@ -646,7 +685,7 @@ begin
 
   if DbfGlobals = nil then
     DbfGlobals := TDbfGlobals.Create;
-
+  FMyBufferSize:=inherited GetDefaultBufferCount;
   BookmarkSize := sizeof(TBookmarkData);
   FIndexDefs := TDbfIndexDefs.Create(Self);
   FMasterLink := TDbfMasterLink.Create(Self);
@@ -668,6 +707,7 @@ begin
   FTableLevel := 4;
   FIndexName := EmptyStr;
   FilePath := EmptyStr;
+  FUseAutoInc := True;
   FTempBuffer := nil;
   FFilterBuffer := nil;
   FIndexFile := nil;
@@ -1179,15 +1219,16 @@ var
 begin
   MustReleaseDbfFile := false;
   with FieldDefs do
-  begin
+  try
     if FDbfFile = nil then
     begin
+      MustReleaseDbfFile := true;
       // do not AutoCreate file
       InitDbfFile(pfReadOnly);
       FDbfFile.Open;
-      MustReleaseDbfFile := true;
     end;
     GetFieldDefsFromDbfFieldDefs;
+  finally
     if MustReleaseDbfFile then
       FreeAndNil(FDbfFile);
   end;
@@ -2705,6 +2746,19 @@ begin
   DoAfterScroll;
 end;
 
+procedure TDbf.SetNextAutoInc(ThisNextAutoInc: Cardinal);
+begin
+  DbfFile.NextAutoInc := ThisNextAutoInc;
+end;
+
+procedure TDbf.SetUseAutoInc(ThisUseAutoInc: Boolean);
+begin
+  if FUseAutoInc = ThisUseAutoInc then Exit;
+
+  FUseAutoInc := ThisUseAutoInc;
+  DbfFile.UseAutoInc := FUseAutoInc;
+end;
+
 function TDbf.GetDbfFieldDefs: TDbfFieldDefs;
 begin
   if FDbfFile <> nil then
@@ -2985,6 +3039,11 @@ end;
 function TDbf.GetMasterFields: string;
 begin
   Result := FMasterLink.FieldNames;
+end;
+
+function TDbf.GetNextAutoInc: Cardinal;
+begin
+  Result := DbfFile.NextAutoInc;
 end;
 
 procedure TDbf.SetMasterFields(const Value: string);

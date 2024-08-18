@@ -17,7 +17,7 @@ begin
     P:=AddPackage('utils-json2pas');
     P.Dependencies.Add('fcl-json');
 
-    P.ShortName:='js2p';
+    P.ShortName:='jsnp';
     P.OSes:=AllOSes-[embedded,msdos,win16,macosclassic,palmos];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
@@ -30,7 +30,7 @@ begin
     P.NeedLibC:= false;
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
 
     T:=P.Targets.AddProgram('json2pas.pp');
     end;

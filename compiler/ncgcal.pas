@@ -742,7 +742,7 @@ implementation
                  }
                  paramanager.freecgpara(current_asmdata.CurrAsmList,ppn.tempcgpara);
                  tmpparaloc:=ppn.tempcgpara.location;
-                 sizeleft:=ppn.tempcgpara.intsize;
+                 sizeleft:=ppn.parasym.paraloc[callerside].intsize;
                  calleralignment:=ppn.parasym.paraloc[callerside].alignment;
                  tmpalignment:=ppn.tempcgpara.alignment;
                  if (tmpalignment=0) or
@@ -806,7 +806,7 @@ implementation
                                     reference_reset_base(htempref,tmpparaloc^.reference.index,tmpparaloc^.reference.offset,ctempposinvalid,tmpalignment,[]);
                                     { use concatcopy, because it can also be a float which fails when
                                       load_ref_ref is used }
-                                    if (ppn.tempcgpara.size <> OS_NO) then
+                                    if (tmpparaloc^.size <> OS_NO) then
                                       cg.g_concatcopy(current_asmdata.CurrAsmList,htempref,href,tcgsize2size[tmpparaloc^.size])
                                     else
                                       cg.g_concatcopy(current_asmdata.CurrAsmList,htempref,href,sizeleft)
@@ -1048,8 +1048,6 @@ implementation
                    begin
                      reorder_parameters;
                      pushparas;
-                     { free the resources allocated for the parameters }
-                     freeparas;
                    end;
 
                  if callref then
@@ -1085,8 +1083,6 @@ implementation
                     begin
                       reorder_parameters;
                       pushparas;
-                      { free the resources allocated for the parameters }
-                      freeparas;
                     end;
 
                   cg.alloccpuregisters(current_asmdata.CurrAsmList,R_INTREGISTER,regs_to_save_int);
@@ -1146,8 +1142,6 @@ implementation
                 begin
                   reorder_parameters;
                   pushparas;
-                  { free the resources allocated for the parameters }
-                  freeparas;
                 end;
 
               if callref then
@@ -1174,6 +1168,10 @@ implementation
                 retloc:=hlcg.a_call_reg(current_asmdata.CurrAsmList,callpvdef,pvreg,paralocs);
               extra_post_call_code;
            end;
+
+         { free the resources allocated for the parameters }
+         if assigned(left) then
+           freeparas;
 
          { Need to remove the parameters from the stack? }
          if procdefinition.proccalloption in clearstack_pocalls then

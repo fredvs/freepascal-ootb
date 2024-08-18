@@ -14,17 +14,12 @@
  **********************************************************************}
 unit fphttpclient;
 
-{ ---------------------------------------------------------------------
-  Todo:
-  * Proxy support ?
-  ---------------------------------------------------------------------}
-
 {$mode objfpc}{$H+}
 
 interface
 
 uses
-  Classes, SysUtils, ssockets, httpdefs, uriparser, base64;
+  Classes, SysUtils, ssockets, httpdefs, uriparser, base64, sslsockets;
 
 Const
   // Socket Read buffer size
@@ -42,6 +37,7 @@ Type
   // Use this to set up a socket handler. UseSSL is true if protocol was https
   TGetSocketHandlerEvent = Procedure (Sender : TObject; Const UseSSL : Boolean; Out AHandler : TSocketHandler) of object;
   TSocketHandlerCreatedEvent = Procedure (Sender : TObject; AHandler : TSocketHandler) of object;
+  THTTPVerifyCertificateEvent = Procedure (Sender : TObject; AHandler : TSSLSocketHandler; var aAllow : Boolean) of object;
 
   TFPCustomHTTPClient = Class;
 
@@ -79,6 +75,7 @@ Type
     FOnHeaders: TNotifyEvent;
     FOnPassword: TPasswordEvent;
     FOnRedirect: TRedirectEvent;
+    FOnVerifyCertificate: THTTPVerifyCertificateEvent;
     FPassword: String;
     FIOTimeout: Integer;
     FConnectTimeout: Integer;
@@ -98,6 +95,7 @@ Type
     FOnGetSocketHandler : TGetSocketHandlerEvent;
     FAfterSocketHandlerCreated : TSocketHandlerCreatedEvent;
     FProxy : TProxyData;
+    FVerifySSLCertificate: Boolean;
     function CheckContentLength: Int64;
     function CheckTransferEncoding: string;
     function GetCookies: TStrings;
@@ -113,7 +111,8 @@ Type
     Procedure ExtractHostPort(AURI: TURI; Out AHost: String; Out APort: Word);
     Procedure CheckConnectionCloseHeader;
   protected
-
+    // Called with TSSLSocketHandler as sender
+    procedure DoVerifyCertificate(Sender: TObject; var Allow: Boolean); virtual;
     Function NoContentAllowed(ACode : Integer) : Boolean;
     // Peform a request, close connection.
     Procedure DoNormalRequest(const AURI: TURI; const AMethod: string;
@@ -232,6 +231,17 @@ Type
     Class Procedure SimpleDelete(const URL: string; Response : TStrings);
     Class Procedure SimpleDelete(const URL: string; const LocalFileName: String);
     Class function SimpleDelete(const URL: string) : RawByteString;
+    // Simple Patch
+    // Put URL, and Requestbody. Return response in Stream, File, TstringList or String;
+    Procedure Patch(const URL: string; const Response: TStream);
+    Procedure Patch(const URL: string; Response : TStrings);
+    Procedure Patch(const URL: string; const LocalFileName: String);
+    function Patch(const URL: string) : RawByteString;
+    // Simple class methods.
+    Class Procedure SimplePatch(const URL: string; const Response: TStream);
+    Class Procedure SimplePatch(const URL: string; Response : TStrings);
+    Class Procedure SimplePatch(const URL: string; const LocalFileName: String);
+    Class function SimplePatch(const URL: string) : RawByteString;
     // Simple Options
     // Options from URL, and Requestbody. Return response in Stream, File, TstringList or String;
     Procedure Options(const URL: string; const Response: TStream);
@@ -305,9 +315,6 @@ Type
     // Maximum chunk size: If chunk sizes bigger than this are encountered, an error will be raised.
     // Set to zero to disable the check.
     Property MaxChunkSize : SizeUInt Read FMaxChunkSize Write FMaxChunkSize;
-    // Called On redirect. Dest URL can be edited.
-    // If The DEST url is empty on return, the method is aborted (with redirect status).
-    Property OnRedirect : TRedirectEvent Read FOnRedirect Write FOnRedirect;
     // Proxy support
     Property Proxy : TProxyData Read GetProxy Write SetProxy;
     // Authentication.
@@ -319,6 +326,11 @@ Type
     Property Connected: Boolean read IsConnected;
     // Keep-Alive support. Setting to true will set HTTPVersion to 1.1
     Property KeepConnection: Boolean Read FKeepConnection Write SetKeepConnection;
+    // SSL certificate validation.
+    Property VerifySSLCertificate : Boolean Read FVerifySSLCertificate Write FVerifySSLCertificate;
+    // Called On redirect. Dest URL can be edited.
+    // If The DEST url is empty on return, the method is aborted (with redirect status).
+    Property OnRedirect : TRedirectEvent Read FOnRedirect Write FOnRedirect;
     // If a request returns a 401, then the OnPassword event is fired.
     // It can modify the username/password and set RepeatRequest to true;
     Property OnPassword : TPasswordEvent Read FOnPassword Write FOnPassword;
@@ -330,6 +342,8 @@ Type
     Property OnGetSocketHandler : TGetSocketHandlerEvent Read FOnGetSocketHandler Write FOnGetSocketHandler;
     // Called after create socket handler was created, with the created socket handler.
     Property AfterSocketHandlerCreate : TSocketHandlerCreatedEvent Read FAfterSocketHandlerCreated Write FAfterSocketHandlerCreated;
+    // Called when a SSL certificate must be verified.
+    Property OnVerifySSLCertificate : THTTPVerifyCertificateEvent Read FOnVerifyCertificate Write FOnVerifyCertificate;
   end;
 
 
@@ -357,6 +371,10 @@ Type
     Property OnHeaders;
     Property OnGetSocketHandler;
     Property Proxy;
+    Property VerifySSLCertificate;
+    Property AfterSocketHandlerCreate;
+    Property OnVerifySSLCertificate;
+
   end;
 
   EHTTPClient = Class(EHTTP);
@@ -365,8 +383,6 @@ Function EncodeURLElement(S : String) : String;
 Function DecodeURLElement(Const S : String) : String;
 
 implementation
-
-uses sslsockets;
 
 resourcestring
   SErrInvalidProtocol = 'Invalid protocol : "%s"';
@@ -585,13 +601,21 @@ end;
 
 function TFPCustomHTTPClient.GetSocketHandler(const UseSSL: Boolean): TSocketHandler;
 
+Var
+  SSLHandler : TSSLSocketHandler;
+
 begin
   Result:=Nil;
   if Assigned(FonGetSocketHandler) then
     FOnGetSocketHandler(Self,UseSSL,Result);
   if (Result=Nil) then
     If UseSSL then
-      Result:=TSSLSocketHandler.GetDefaultHandler
+      begin
+      SSLHandler:=TSSLSocketHandler.GetDefaultHandler;
+      SSLHandler.VerifyPeerCert:=FVerifySSLCertificate;
+      SSLHandler.OnVerifyCertificate:=@DoVerifyCertificate;
+      Result:=SSLHandler;
+      end
     else
       Result:=TSocketHandler.Create;
   if Assigned(AfterSocketHandlerCreate) then
@@ -943,6 +967,12 @@ begin
       end;
     Inc(I);
     end;
+end;
+
+procedure TFPCustomHTTPClient.DoVerifyCertificate(Sender: TObject; var Allow: Boolean);
+begin
+  If Assigned(FOnVerifyCertificate) then
+    FOnVerifyCertificate(Self,Sender as TSSLSocketHandler,Allow);
 end;
 
 function TFPCustomHTTPClient.GetCookies: TStrings;
@@ -1826,6 +1856,103 @@ begin
       Free;
     end;
 end;
+
+
+
+
+
+procedure TFPCustomHTTPClient.Patch(const URL: string; const Response: TStream);
+begin
+  HTTPMethod('PATCH',URL,Response,[]);
+end;
+
+procedure TFPCustomHTTPClient.Patch(const URL: string; Response: TStrings);
+begin
+  Response.Text:=Patch(URL);
+end;
+
+procedure TFPCustomHTTPClient.Patch(const URL: string; const LocalFileName: String
+  );
+
+Var
+  F : TFileStream;
+
+begin
+  F:=TFileStream.Create(LocalFileName,fmCreate);
+  try
+    Patch(URL,F);
+  finally
+    F.Free;
+  end;
+end;
+
+function TFPCustomHTTPClient.Patch(const URL: string): RawByteString;
+Var
+  SS : TRawByteStringStream;
+begin
+  SS:=TRawByteStringStream.Create();
+  try
+    Patch(URL,SS);
+    Result:=SS.Datastring;
+  finally
+    SS.Free;
+  end;
+end;
+
+class procedure TFPCustomHTTPClient.SimplePatch(const URL: string;
+  const Response: TStream);
+
+begin
+  With Self.Create(nil) do
+    try
+      KeepConnection := False;
+      Patch(URL,Response);
+    finally
+      Free;
+    end;
+end;
+
+class procedure TFPCustomHTTPClient.SimplePatch(const URL: string;
+  Response: TStrings);
+
+begin
+  With Self.Create(nil) do
+    try
+      KeepConnection := False;
+      Patch(URL,Response);
+    finally
+      Free;
+    end;
+end;
+
+class procedure TFPCustomHTTPClient.SimplePatch(const URL: string;
+  const LocalFileName: String);
+
+begin
+  With Self.Create(nil) do
+    try
+      KeepConnection := False;
+      Patch(URL,LocalFileName);
+    finally
+      Free;
+    end;
+end;
+
+class function TFPCustomHTTPClient.SimplePatch(const URL: string): RawByteString;
+
+begin
+  With Self.Create(nil) do
+    try
+      KeepConnection := False;
+      Result:=Patch(URL);
+    finally
+      Free;
+    end;
+end;
+
+
+
+
 
 procedure TFPCustomHTTPClient.Options(const URL: string; const Response: TStream
   );

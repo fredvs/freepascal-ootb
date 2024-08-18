@@ -2185,6 +2185,19 @@ override COMPILER_UNITTARGETDIR=$(COMPILER_TARGETDIR)
 override UNITTARGETDIRPREFIX=$(TARGETDIRPREFIX)
 endif
 endif
+ifdef SYSROOTPATH
+override FPCOPT+=-XR$(SYSROOTPATH)
+else
+ifeq ($(OS_TARGET),$(OS_SOURCE))
+ifneq ($(findstring $(OS_TARGET),darwin),)
+ifneq ($(findstring $(CPU_TARGET),aarch64),)
+ifneq ($(wildcard /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk),)
+override FPCOPT+=-XR/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+endif
+endif
+endif
+endif
+endif
 ifdef CREATESHARED
 override FPCOPT+=-Cg
 endif
@@ -2533,4 +2546,5 @@ ppuinfo :
 	echo PPULOG list is "$(PPULOGLIST)"
 cleanppulogs : $(RMPPULOGLIST)
 testppudump :
-	$(MAKE) cleanppulogs ppulogs
+	$(MAKE) cleanppulogs
+	$(MAKE) ppulogs

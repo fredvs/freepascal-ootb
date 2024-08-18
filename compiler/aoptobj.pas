@@ -1182,12 +1182,10 @@ Unit AoptObj;
         removedSomething := false;
         firstRemovedWasAlloc := false;
 {$ifdef allocregdebug}
-        hp := tai_comment.Create(strpnew('allocating '+std_regname(newreg(R_INTREGISTER,supreg,R_SUBWHOLE))+
-          ' from here...'));
-        insertllitem(asml,p1.previous,p1,hp);
-        hp := tai_comment.Create(strpnew('allocated '+std_regname(newreg(R_INTREGISTER,supreg,R_SUBWHOLE))+
-          ' till here...'));
-        insertllitem(asml,p2,p2.next,hp);
+        hp := tai_comment.Create(strpnew('allocating '+std_regname(reg)+' from here...'));
+        insertllitem(p1.previous,p1,hp);
+        hp := tai_comment.Create(strpnew('allocated '+std_regname(reg)+' till here...'));
+        insertllitem(p2,p2.next,hp);
 {$endif allocregdebug}
         { do it the safe way: always allocate the full super register,
           as we do no register re-allocation in the peephole optimizer,
@@ -1508,7 +1506,15 @@ Unit AoptObj;
       var
         p,hp1,hp2 : tai;
         stoploop:boolean;
-      begin
+      const
+{$ifdef JVM}
+        TaiFence = SkipInstr + [ait_const, ait_realconst, ait_typedconst, ait_label, ait_jcatch];
+{$else JVM}
+        { Stop if it reaches SEH directive information in the form of
+          consts, which may occur if RemoveDeadCodeAfterJump is called on
+          the final RET instruction on x86, for example }
+        TaiFence = SkipInstr + [ait_const, ait_realconst, ait_typedconst, ait_label, ait_align];
+{$endif JVM}      begin
         repeat
           stoploop:=true;
           p := BlockStart;
@@ -1547,7 +1553,7 @@ Unit AoptObj;
                                   and (hp1.typ <> ait_jcatch)
 {$endif}
                                   do
-                              if not(hp1.typ in ([ait_label,ait_align]+skipinstr)) then
+                              if not(hp1.typ in TaiFence) then
                                 begin
                                   if (hp1.typ = ait_instruction) and
                                      taicpu(hp1).is_jmp and

@@ -62,18 +62,6 @@ interface
 
 {$define basicevents_with_pthread_cond}
 
-const
-  /// allow to assign proper signed symbol table name for a libc.so.6 method
-  {$if defined(linux) and defined(cpux86_64)}
-  LIBC_SUFFIX = '@GLIBC_2.2.5';
-  {$else}
-  {$if defined(linux) and defined(cpui386)}
-  LIBC_SUFFIX = '@GLIBC_2.0';
-  {$else}
-  LIBC_SUFFIX = '';
-  {$endif}
-  {$endif}
-
 Procedure SetCThreadManager;
 
 implementation
@@ -363,7 +351,12 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
       { Initialize multithreading if not done }
       if not TLSInitialized then
         InitCTLS;
-      IsMultiThread:=true;
+      if not IsMultiThread then
+        begin
+          { We're still running in single thread mode, lazy initialize thread support }
+           LazyInitThreading;
+           IsMultiThread:=true;
+        end;
 
       { the only way to pass data to the newly created thread
         in a MT safe way, is to use the heap }
@@ -437,7 +430,8 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
       result:=dword(-1);
     end;
 
-  procedure sched_yield; cdecl; external 'c' name 'sched_yield' + LIBC_SUFFIX ;
+
+  procedure sched_yield; cdecl; external 'c' name 'sched_yield';
 
   procedure CThreadSwitch;  {give time to other threads}
     begin

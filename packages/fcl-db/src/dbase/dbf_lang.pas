@@ -1,5 +1,19 @@
 unit dbf_lang;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Pascal Ganaye,Micha Nelissen and other members of the
+    Free Pascal development team
 
+    DBF multilang support
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$I dbf_common.inc}
 
 interface
@@ -510,7 +524,7 @@ function ConstructLangName(CodePage: Integer; Locale: LCID; IsFoxPro: Boolean): 
 function ConstructLangId(CodePage: Integer; Locale: LCID; IsFoxPro: Boolean): Byte;
 
 // Visual DBaseVII specific
-function GetLangId_From_LangName(LocaleStr: string): Byte;
+function GetLangId_From_LangName(const LocaleStr: string): Byte;
 
 implementation
 
@@ -630,7 +644,7 @@ begin
     end;
 end;
 
-function GetLangId_From_LangName(LocaleStr: string): Byte;
+function GetLangId_From_LangName(const LocaleStr: string): Byte;
 var
   CodePage, SubType: Integer;
   IsFoxPro: Boolean;

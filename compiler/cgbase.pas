@@ -168,14 +168,9 @@ interface
                   OS_S8,  OS_S16,  OS_S32,  OS_S64,  OS_S128,
                  { single, double, extended, comp, float128 }
                   OS_F32, OS_F64,  OS_F80,  OS_C64,  OS_F128,
-                 { multi-media sizes: split in byte, word, dword, ... }
-                 { entities, then the signed counterparts             }
-                  OS_M8,  OS_M16,  OS_M32,  OS_M64,  OS_M128,  OS_M256,  OS_M512,
-                  OS_MS8, OS_MS16, OS_MS32, OS_MS64, OS_MS128, OS_MS256, OS_MS512,
-                 { multi-media sizes: single-precision floating-point }
-                  OS_MF32, OS_MF128, OS_MF256, OS_MF512,
-                 { multi-media sizes: double-precision floating-point }
-                  OS_MD64, OS_MD128, OS_MD256, OS_MD512);
+                 { multi-media sizes, describes only the register size but not how it is split,
+                   this information must be passed separately }
+                  OS_M8,  OS_M16,  OS_M32,  OS_M64,  OS_M128,  OS_M256,  OS_M512);
 
       { Register types }
       TRegisterType = (
@@ -319,12 +314,7 @@ interface
          { floating point values }
          4,  8, 10,  8, 16,
          { multimedia values }
-         1,  2,  4,  8, 16, 32, 64,
-         1,  2,  4,  8, 16, 32, 64,
-         { single-precision multimedia values }
-         4, 16, 32, 64,
-         { double-precision multimedia values }
-         8, 16, 32, 64);
+         1,  2,  4,  8, 16, 32, 64);
 
        tfloat2tcgsize: array[tfloattype] of tcgsize =
          (OS_F32,OS_F64,OS_F80,OS_F80,OS_C64,OS_C64,OS_F128);
@@ -364,10 +354,7 @@ interface
          OS_8,    OS_16,   OS_32,   OS_64,   OS_128,
 
          OS_F32,  OS_F64,  OS_F80,  OS_C64,  OS_F128,
-         OS_M8,   OS_M16,  OS_M32,  OS_M64,  OS_M128, OS_M256, OS_M512,
-         OS_M8,   OS_M16,  OS_M32,  OS_M64,  OS_M128, OS_M256, OS_M512,
-         OS_MF32, OS_MF128,OS_MF256,OS_MF512,
-         OS_MD64, OS_MD128,OS_MD256,OS_MD512);
+         OS_M8,   OS_M16,  OS_M32,  OS_M64,  OS_M128, OS_M256, OS_M512);
 
 
        tcgsize2signed : array[tcgsize] of tcgsize = (OS_NO,
@@ -375,10 +362,7 @@ interface
          OS_S8,   OS_S16,  OS_S32,  OS_S64,  OS_S128,
 
          OS_F32,  OS_F64,  OS_F80,  OS_C64,  OS_F128,
-         OS_MS8,  OS_MS16, OS_MS32, OS_MS64, OS_MS128,OS_MS256,OS_MS512,
-         OS_MS8,  OS_MS16, OS_MS32, OS_MS64, OS_MS128,OS_MS256,OS_MS512,
-         OS_MF32, OS_MF128,OS_MF256,OS_MF512,
-         OS_MD64, OS_MD128,OS_MD256,OS_MD512);
+         OS_M8,   OS_M16,  OS_M32,  OS_M64,  OS_M128, OS_M256,OS_M512);
 
 
        tcgloc2str : array[TCGLoc] of string[12] = (
@@ -449,10 +433,12 @@ interface
       the source }
     procedure removeshuffles(var shuffle : tmmshuffle);
 
+    function is_float_cgsize(size: tcgsize): boolean;{$ifdef USEINLINE}inline;{$endif}
+
 implementation
 
     uses
-      verbose;
+      cutils,verbose;
 
 {******************************************************************************
                              tsuperregisterworklist
@@ -730,13 +716,13 @@ implementation
       begin
         case a of
           4:
-            result := OS_MF32;
+            result := OS_M32;
           16:
-            result := OS_MF128;
+            result := OS_M128;
           32:
-            result := OS_MF256;
+            result := OS_M256;
           64:
-            result := OS_MF512;
+            result := OS_M512;
           else
             result := int_cgsize(a);
         end;
@@ -746,13 +732,13 @@ implementation
       begin
         case a of
           8:
-            result := OS_MD64;
+            result := OS_M64;
           16:
-            result := OS_MD128;
+            result := OS_M128;
           32:
-            result := OS_MD256;
+            result := OS_M256;
           64:
-            result := OS_MD512;
+            result := OS_M512;
           else
             result := int_cgsize(a);
         end;
@@ -830,6 +816,25 @@ implementation
           shuffle.shuffles[i]:=(shuffle.shuffles[i] and $f) or ((shuffle.shuffles[i] and $f0) shr 4);
       end;
 
+
+    function is_float_cgsize(size: tcgsize): boolean;{$ifdef USEINLINE}inline;{$endif}
+      begin
+        result:=size in [OS_F32..OS_F128];
+      end;
+
+
+   procedure Initmms(var p : pmmshuffle;len : ShortInt);
+     var
+       i : Integer;
+     begin
+       Getmem(p,sizeof(tmmshuffle)+(max(len,0)-1)*2);
+       p^.len:=len;
+       for i:=1 to len do
+{$push}
+{$R-}
+         p^.shuffles[i]:=i;
+{$pop}
+     end;
 
 initialization
   new(mms_movescalar);

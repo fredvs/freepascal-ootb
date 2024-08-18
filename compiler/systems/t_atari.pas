@@ -69,11 +69,11 @@ begin
    begin
     if not UseVLink then
      begin
-      ExeCmd[1]:='ld $DYNLINK $OPT -d -n -o $EXE $RES';
+      ExeCmd[1]:='ld $DYNLINK $FLAGS $OPT $STRIP $MAP -d -n -o $EXE -T $RES';
      end
     else
      begin
-      ExeCmd[1]:='vlink -b ataritos $FLAGS $GCSECTIONS $OPT $STRIP -o $EXE -T $RES';
+      ExeCmd[1]:='vlink -b ataritos $FLAGS $GCSECTIONS $OPT $STRIP $MAP -o $EXE -T $RES';
      end;
    end;
 end;
@@ -216,13 +216,23 @@ var
   DynLinkStr : string;
   GCSectionsStr : string;
   FlagsStr : string;
+  MapStr: string;
   ExeName: string;
 begin
   StripStr:='';
   GCSectionsStr:='';
   DynLinkStr:='';
-  FlagsStr:='-tos-flags fastload,fastram';
+  MapStr:='';
+  if UseVLink then
+    FlagsStr:='-tos-flags '+tostr(ataritos_exe_flags)
+  else
+    FlagsStr:='--mprg-flags '+tostr(ataritos_exe_flags);
 
+  if (cs_link_map in current_settings.globalswitches) then
+    if UseVLink then
+      MapStr:='-M'+maybequoted(ScriptFixFileName(current_module.mapfilename))
+    else
+      MapStr:='-Map '+maybequoted(ScriptFixFileName(current_module.mapfilename));
   if (cs_link_strip in current_settings.globalswitches) then
     StripStr:='-s';
   if rlinkpath<>'' then
@@ -243,6 +253,7 @@ begin
   Replace(cmdstr,'$OPT',Info.ExtraOptions);
   Replace(cmdstr,'$EXE',maybequoted(ScriptFixFileName(ExeName)));
   Replace(cmdstr,'$RES',maybequoted(ScriptFixFileName(outputexedir+Info.ResName)));
+  Replace(cmdstr,'$MAP',MapStr);
   Replace(cmdstr,'$FLAGS',FlagsStr);
   Replace(cmdstr,'$STRIP',StripStr);
   Replace(cmdstr,'$GCSECTIONS',GCSectionsStr);

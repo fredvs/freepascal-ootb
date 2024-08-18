@@ -26,18 +26,6 @@ property cerrno:cint read fpgetCerrno write fpsetcerrno;
 
 const clib = 'c';
 
-const
-  /// allow to assign proper signed symbol table name for a libc.so.6 method
-  {$if defined(linux) and defined(cpux86_64)}
-  LIBC_SUFFIX = '@GLIBC_2.2.5';
-  {$else}
-  {$if defined(linux) and defined(cpui386)}
-  LIBC_SUFFIX = '@GLIBC_2.0';
-  {$else}
-  LIBC_SUFFIX = '';
-  {$endif}
-  {$endif}
-
 implementation
 // hasn't been divided up in .inc's, because I first want to see hoe
 // this idea works out.
@@ -64,7 +52,7 @@ end;
 
 
 {$if defined(Linux)}
-function geterrnolocation: pcint; cdecl;external clib name '__errno_location'  + LIBC_SUFFIX;
+function geterrnolocation: pcint; cdecl;external clib name '__errno_location';
 {$endif}
 
 {$if defined(Android)} // look at exported symbols in libc.so

@@ -22,9 +22,12 @@ Type
     Function FetchErrorInfo: Boolean;
     function CheckSSL(SSLResult: Integer): Boolean;
     function CheckSSL(SSLResult: Pointer): Boolean;
+    function CreateSSLContext(AType: TSSLType): TSSLContext; virtual;
     function InitContext(NeedCertificate: Boolean): Boolean; virtual;
     function DoneContext: Boolean; virtual;
     function InitSslKeys: boolean;virtual;
+    Function GetLastSSLErrorString : String; override;
+    Function GetLastSSLErrorCode : Integer; override;
   Public
     Constructor create; override;
     destructor destroy; override;
@@ -47,6 +50,8 @@ implementation
 { TSocketHandler }
 Resourcestring
   SErrNoLibraryInit = 'Could not initialize OpenSSL library';
+  SErrCouldNotCreateSelfSignedCertificate = 'Failed to create self-signed certificate';
+  SErrCouldNotInitSSLKeys = 'Failed to initialize SSL keys';
 
 Procedure MaybeInitSSLInterface;
 
@@ -59,6 +64,11 @@ end;
 function TopenSSLSocketHandler.CreateCertGenerator: TX509Certificate;
 begin
   Result:=TOpenSSLX509Certificate.Create;
+end;
+
+function TOpenSSLSocketHandler.CreateSSLContext(AType: TSSLType): TSSLContext;
+begin
+  Result := TSSLContext.Create(AType);
 end;
 
 procedure TOpenSSLSocketHandler.SetSSLLastErrorString(AValue: string);
@@ -78,6 +88,8 @@ begin
      begin
      if SendHostAsSNI  and (Socket is TInetSocket) then
        FSSL.Ctrl(SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,PAnsiChar(AnsiString((Socket as TInetSocket).Host)));
+     if VerifyPeerCert and (Socket is TInetSocket) then
+       FSSL.Set1Host((Socket as TInetSocket).Host);
      Result:=CheckSSL(FSSL.Connect);
      //if Result and VerifyPeerCert then
      //  Result:=(FSSL.VerifyResult<>0) or (not DoVerifyCert);
@@ -171,10 +183,20 @@ begin
     Result:=CheckSSL(FCTX.UseCertificate(CertificateData.Certificate));
   if Result and not CertificateData.PrivateKey.Empty then
     Result:=CheckSSL(FCTX.UsePrivateKey(CertificateData.PrivateKey));
-  if Result and (CertificateData.CertCA.FileName<>'') then
-    Result:=CheckSSL(FCTX.LoadVerifyLocations(CertificateData.CertCA.FileName,''));
+  if Result and ((CertificateData.CertCA.FileName<>'') or (CertificateData.TrustedCertsDir<>'')) then
+    Result:=CheckSSL(FCTX.LoadVerifyLocations(CertificateData.CertCA.FileName,CertificateData.TrustedCertsDir));
   if Result and not CertificateData.PFX.Empty then
     Result:=CheckSSL(FCTX.LoadPFX(CertificateData.PFX,CertificateData.KeyPassword));
+end;
+
+function TOpenSSLSocketHandler.GetLastSSLErrorString: String;
+begin
+  Result:=FSSLLastErrorString;
+end;
+
+function TOpenSSLSocketHandler.GetLastSSLErrorCode: Integer;
+begin
+  Result:=FSSLLastError;
 end;
 
 constructor TOpenSSLSocketHandler.create;
@@ -203,11 +225,10 @@ begin
   if Not Result then
     Exit;
   try
-    FCTX:=TSSLContext.Create(SSLType);
+    FCTX:=CreateSSLContext(SSLType);
   Except
     CheckSSL(Nil);
-    Result:=False;
-    Exit;
+    raise;
   end;
   S:=CertificateData.CipherList;
   FCTX.SetCipherList(S);
@@ -218,12 +239,12 @@ begin
     if Not CreateSelfSignedCertificate then
       begin
       DoneContext;
-      Exit(False);
+      raise ESSL.Create(SErrCouldNotCreateSelfSignedCertificate);
       end;
    if Not InitSSLKeys then
      begin
      DoneContext;
-     Exit(False);
+     raise ESSL.Create(SErrCouldNotInitSSLKeys);
      end;
    try
      FSSL:=TSSL.Create(FCTX);
@@ -231,7 +252,7 @@ begin
    Except
      CheckSSL(Nil);
      DoneContext;
-     Result:=False;
+     raise;
    end;
 end;
 

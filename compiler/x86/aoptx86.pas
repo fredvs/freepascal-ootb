@@ -842,6 +842,13 @@ unit aoptx86;
             (p.opcode = A_FNSTSW)) and
            (p.oper[0]^.typ=top_reg) and
            Reg1WriteOverwritesReg2Entirely(p.oper[0]^.reg,reg)) or
+          (((p.opcode = A_SHRX) or (p.opcode = A_SHLX)) and
+           (p.ops=3) and
+           (Reg1WriteOverwritesReg2Entirely(p.oper[2]^.reg,reg)) and
+           (((p.oper[1]^.typ=top_reg) and not(Reg1ReadDependsOnReg2(p.oper[1]^.reg,reg))) or
+            ((p.oper[1]^.typ=top_ref) and not(RegInRef(reg,p.oper[1]^.ref^)))) and
+            (((p.oper[0]^.typ=top_reg) and not(Reg1ReadDependsOnReg2(p.oper[0]^.reg,reg))) or
+            ((p.oper[0]^.typ=top_ref) and not(RegInRef(reg,p.oper[0]^.ref^))))) or
           (((p.opcode = A_XOR) or (p.opcode = A_SUB) or (p.opcode = A_SBB)) and
            (p.oper[0]^.typ=top_reg) and (p.oper[1]^.typ=top_reg) and
            (p.oper[0]^.reg=p.oper[1]^.reg) and
@@ -1355,6 +1362,7 @@ unit aoptx86;
 
                            mov mem, %reg"
                       }
+                      AllocRegBetween(taicpu(hp1).oper[1]^.reg,p,hp1,usedregs);
                       taicpu(p).loadoper(1,taicpu(hp1).oper[1]^);
                       DebugMsg(SPeepholeOptimization + 'MovMov2Mov 3 done',p);
                       asml.remove(hp1);
@@ -2761,6 +2769,7 @@ unit aoptx86;
                       if (l<=4) and (l>0) then
                         begin
                           condition:=inverse_cond(taicpu(p).condition);
+                          UpdateUsedRegs(tai(p.next));
                           GetNextInstruction(p,hp1);
                           repeat
                             if not Assigned(hp1) then
@@ -2768,7 +2777,7 @@ unit aoptx86;
 
                             taicpu(hp1).opcode:=A_CMOVcc;
                             taicpu(hp1).condition:=condition;
-                            UpdateUsedRegs(hp1);
+                            UpdateUsedRegs(tai(hp1.next));
                             GetNextInstruction(hp1,hp1);
                           until not(CanBeCMOV(hp1));
 
@@ -2815,6 +2824,7 @@ unit aoptx86;
                           asml.Remove(p);
                           p.Free;
 
+                          UpdateUsedRegs(tai(hp2.next));
                           GetNextInstruction(hp2, p); { Instruction after the label }
 
                           { Remove the label if this is its final reference }
@@ -2825,10 +2835,7 @@ unit aoptx86;
                             end;
 
                           if Assigned(p) then
-                            begin
-                              UpdateUsedRegs(p);
-                              result:=true;
-                            end;
+                            result:=true;
                           exit;
                         end;
                     end
@@ -2878,29 +2885,33 @@ unit aoptx86;
                              FindLabel(tasmlabel(taicpu(hp2).oper[0]^.ref^.symbol),hp1) then
                              begin
                                 condition:=inverse_cond(taicpu(p).condition);
+                                UpdateUsedRegs(tai(p.next));
                                 GetNextInstruction(p,hp1);
                                 repeat
                                   taicpu(hp1).opcode:=A_CMOVcc;
                                   taicpu(hp1).condition:=condition;
-                                  UpdateUsedRegs(hp1);
+                                  UpdateUsedRegs(tai(hp1.next));
                                   GetNextInstruction(hp1,hp1);
                                 until not(assigned(hp1)) or
                                   not(CanBeCMOV(hp1));
 
                                 condition:=inverse_cond(condition);
+                                if GetLastInstruction(hpmov2,hp1) then
+                                  UpdateUsedRegs(tai(hp1.next));
                                 hp1 := hpmov2;
                                 { hp1 is now at <several movs 2> }
                                 while Assigned(hp1) and CanBeCMOV(hp1) do
                                   begin
                                     taicpu(hp1).opcode:=A_CMOVcc;
                                     taicpu(hp1).condition:=condition;
-                                    UpdateUsedRegs(hp1);
+                                    UpdateUsedRegs(tai(hp1.next));
                                     GetNextInstruction(hp1,hp1);
                                   end;
 
                                 hp1 := p;
 
                                 { Get first instruction after label }
+                                UpdateUsedRegs(tai(hp3.next));
                                 GetNextInstruction(hp3, p);
 
                                 if assigned(p) and (hp3.typ = ait_align) then
@@ -2955,10 +2966,7 @@ unit aoptx86;
                                   end;
 
                                 if Assigned(p) then
-                                  begin
-                                    UpdateUsedRegs(p);
-                                    result:=true;
-                                  end;
+                                  result:=true;
                                 exit;
                              end;
                          end;

@@ -116,6 +116,7 @@ type
 { Standard events }
 
   TNotifyEvent = procedure(Sender: TObject) of object;
+  THintEvent = procedure(var HintStr: string; var CanShow: Boolean) of object;
   THelpEvent = function (Command: Word; Data: Longint;
     var CallHelp: Boolean): Boolean of object;
   TGetStrProc = procedure(const S: string) of object;
@@ -132,11 +133,7 @@ type
   EMethodNotFound = class(EFilerError);
   EInvalidImage = class(EFilerError);
   EResNotFound = class(Exception);
-{$ifdef FPC_TESTGENERICS}
-  EListError = fgl.EListError;
-{$else}
-  EListError = class(Exception);
-{$endif}
+  EListError = {$IFDEF FPC_DOTTEDUNITS}System.{$ENDIF}SysUtils.EListError;
   EBitsError = class(Exception);
   EStringListError = class(Exception);
   EComponentError = class(Exception);
@@ -849,8 +846,9 @@ type
     procedure InsertItem(Index: Integer; const S: string); virtual;
     procedure InsertItem(Index: Integer; const S: string; O: TObject); virtual;
     Function DoCompareText(const s1,s2 : string) : PtrInt; override;
-
   public
+    Constructor Create;
+    Constructor Create(anOwnsObjects : Boolean);
     destructor Destroy; override;
     function Add(const S: string): Integer; override;
     procedure Clear; override;
@@ -2023,11 +2021,15 @@ type
     FOnChange: TNotifyEvent;
     FOnExecute: TNotifyEvent;
     FOnUpdate: TNotifyEvent;
+    procedure SetActionComponent(AValue: TComponent);
   protected
     FClients: TFpList;
     procedure Change; virtual;
+    Procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure SetOnExecute(Value: TNotifyEvent); virtual;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    Function ClientCount : Integer;
+    Function GetClient(Idx : Integer) : TObject;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -2038,10 +2040,12 @@ type
     procedure RegisterChanges(Value: TBasicActionLink);
     procedure UnRegisterChanges(Value: TBasicActionLink);
     function Update: Boolean; virtual;
-    property ActionComponent: TComponent read FActionComponent write FActionComponent;
+    function Suspended: Boolean; virtual;
+    property ActionComponent: TComponent read FActionComponent write SetActionComponent;
     property OnExecute: TNotifyEvent read FOnExecute write SetOnExecute;
     property OnUpdate: TNotifyEvent read FOnUpdate write FOnUpdate;
   end;
+  TActionEvent = procedure(Action: TBasicAction; var Handled: Boolean) of object;
 
 { TBasicAction class reference type }
 
@@ -2314,4 +2318,4 @@ function LineStart(Buffer, BufPos: PChar): PChar;
 procedure BinToHex(BinValue, HexValue: PChar; BinBufSize: Integer);
 function HexToBin(HexValue, BinValue: PChar; BinBufSize: Integer): Integer;
 function ExtractStrings(Separators, WhiteSpace: TSysCharSet; Content: PChar; Strings: TStrings; AddEmptyStrings : Boolean = False): Integer;
-
+Function IfThen(AValue: Boolean; const ATrue: TStringList; const AFalse: TStringList = nil): TStringList; overload;

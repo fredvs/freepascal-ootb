@@ -330,9 +330,9 @@ FPCFPMAKE=$(FPC)
 endif
 endif
 override PACKAGE_NAME=fpc
-override PACKAGE_VERSION=3.2.2
-REQUIREDVERSION=3.2.0
-REQUIREDVERSION2=3.2.2
+override PACKAGE_VERSION=3.2.4-rc1
+REQUIREDVERSION=3.2.2
+REQUIREDVERSION2=3.2.0
 ifndef inOS2
 override FPCDIR:=$(BASEDIR)
 export FPCDIR
@@ -465,7 +465,15 @@ ifneq ($(OPT),)
 OPTNEW+=$(OPT)
 endif
 CLEANOPTS=FPC=$(PPNEW)
-BUILDOPTS=FPC=$(PPNEW) FPCFPMAKE=$(FPCFPMAKENEW) RELEASE=1 'OPT=$(OPTNEW)'
+BUILDOPTS=FPC=$(PPNEW) FPCFPMAKE=$(FPCFPMAKENEW) RELEASE=1 'OPT=$(OPTNEW)' 'FPCMAKEOPT=$(OPT)'
+ifdef CROSSCOMPILE
+ifneq ($(CROSSASPROG),)
+BUILDOPTS+=ASPROG=$(CROSSASPROG)
+endif
+ifneq ($(CROSSASTARGET),)
+BUILDOPTS+=ASTARGET=$(CROSSASTARGET)
+endif
+endif
 INSTALLOPTS=FPC=$(PPNEW) ZIPDESTDIR=$(BASEDIR) FPCMAKE=$(FPCMAKENEW)
 BuildOnlyBaseCPUs=jvm
 ifneq ($(wildcard utils),)
@@ -475,6 +483,10 @@ ifdef BUILDFULLNATIVE
 UTILS=1
 endif
 endif
+endif
+INSTALLERTARGETS=emx go32v2 msdos os2
+ifneq ($(findstring $(OS_TARGET),$(INSTALLERTARGETS)),)
+INSTALLER=1
 endif
 ifeq ($(FULL_TARGET),i386-linux)
 override TARGET_DIRS+=compiler rtl utils packages installer
@@ -1510,6 +1522,19 @@ else
 ifdef COMPILER_TARGETDIR
 override COMPILER_UNITTARGETDIR=$(COMPILER_TARGETDIR)
 override UNITTARGETDIRPREFIX=$(TARGETDIRPREFIX)
+endif
+endif
+ifdef SYSROOTPATH
+override FPCOPT+=-XR$(SYSROOTPATH)
+else
+ifeq ($(OS_TARGET),$(OS_SOURCE))
+ifneq ($(findstring $(OS_TARGET),darwin),)
+ifneq ($(findstring $(CPU_TARGET),aarch64),)
+ifneq ($(wildcard /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk),)
+override FPCOPT+=-XR/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+endif
+endif
+endif
 endif
 endif
 ifdef CREATESHARED
@@ -2838,10 +2863,16 @@ endif
 ifdef UTILS
 	$(MAKE) utils_clean $(CLEANOPTS)
 endif
+ifdef INSTALLER
+	$(MAKE) installer_clean $(CLEANOPTS)
+endif
 	$(MAKE) rtl_$(ALLTARGET) $(BUILDOPTS)
 	$(MAKE) packages_$(ALLTARGET) $(BUILDOPTS)
 ifdef UTILS
 	$(MAKE) utils_all $(BUILDOPTS)
+endif
+ifdef INSTALLER
+	$(MAKE) installer_all $(BUILDOPTS)
 endif
 	$(ECHOREDIR) Build > $(BUILDSTAMP)
 	$(ECHOREDIR) Build > base.$(BUILDSTAMP)

@@ -10,6 +10,8 @@ procedure add_fcl_web(const ADirectory: string);
 
 Const
   LibMicroHttpdOSes = AllUnixOSes + [win32,win64];
+  SqldbConnectionOSes = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,ios,netbsd,openbsd,solaris,win32,win64,wince,android,dragonfly];
+  SqliteOSes          = [aix,beos,haiku,linux,freebsd,darwin,iphonesim,ios,netbsd,openbsd,solaris,win32,win64,wince,android,dragonfly];
 
 Var
   T : TTarget;
@@ -20,7 +22,7 @@ begin
     P:=AddPackage('fcl-web');
     P.ShortName:='fclw';
     P.Directory:=ADirectory;
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.OSes := [beos,haiku,freebsd,darwin,iphonesim,ios,solaris,netbsd,openbsd,linux,win32,win64,wince,aix,amiga,aros,morphos,dragonfly,android];
     if Defaults.CPU=jvm then
       P.OSes := P.OSes - [java,android];
@@ -32,6 +34,8 @@ begin
     P.Dependencies.Add('fcl-net');
     P.Dependencies.Add('fcl-process');
     P.Dependencies.Add('fcl-fpcunit');
+    P.Dependencies.Add('fcl-hash');
+    P.Dependencies.Add('hash');
     P.Dependencies.Add('fcl-registry',AllWindowsOSes);
     P.Dependencies.Add('openssl',AllUnixOSes+AllWindowsOSes);
     P.Dependencies.Add('fastcgi');
@@ -50,6 +54,7 @@ begin
 
     P.SourcePath.Add('src/base');
     P.SourcePath.Add('src/webdata');
+    P.SourcePath.Add('src/jwt');
     P.SourcePath.Add('src/jsonrpc');
     P.SourcePath.Add('src/hpack');
     P.SourcePath.Add('src/restbridge');
@@ -264,6 +269,7 @@ begin
       end;
     T:=P.Targets.AddUnit('sqldbwebdata.pp');
     T.ResourceStrings:=true;
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do
       begin
       AddUnit('fpwebdata');
@@ -321,6 +327,14 @@ begin
     T.Dependencies.AddUnit('fpjwt');
     T:=P.Targets.AddUnit('fpoauth2ini.pp');
     T.Dependencies.AddUnit('fpoauth2');
+    T:=P.Targets.AddUnit('fpjwasha256.pp');
+    T.Dependencies.AddUnit('fpjwt');
+    T:=P.Targets.AddUnit('fpjwasha512.pp');
+    T.Dependencies.AddUnit('fpjwt');
+    T:=P.Targets.AddUnit('fpjwasha384.pp');
+    T.Dependencies.AddUnit('fpjwt');
+    T:=P.Targets.AddUnit('fpjwaes256.pp');
+    T.Dependencies.AddUnit('fpjwt');
     T:=P.Targets.AddUnit('fphttpwebclient.pp');
     T.Dependencies.AddUnit('fpwebclient');
     T:=P.Targets.AddUnit('restbase.pp');
@@ -338,19 +352,23 @@ begin
     
     T:=P.Targets.AddUnit('sqldbrestconst.pp');
     T.ResourceStrings:=true;
+    T.OSes:=SqldbConnectionOSes;
     
     T:=P.Targets.AddUnit('sqldbrestschema.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestio.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestconst');
       AddUnit('sqldbrestschema');
       end;
     T:=P.Targets.AddUnit('sqldbrestdata.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestconst');
@@ -358,6 +376,7 @@ begin
       AddUnit('sqldbrestio');
       end;
     T:=P.Targets.AddUnit('sqldbrestauth.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestconst');
@@ -365,6 +384,7 @@ begin
       AddUnit('sqldbrestschema');
       end;
     T:=P.Targets.AddUnit('sqldbrestjson.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestio');
@@ -372,6 +392,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestbridge.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestio');
@@ -380,6 +401,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestcds.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestio');
@@ -387,6 +409,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestcsv.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestio');
@@ -394,6 +417,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestxml.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestio');
@@ -401,6 +425,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestado.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestio');
@@ -408,6 +433,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestini.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestbridge');
@@ -415,6 +441,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestauthini.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestauth');
@@ -422,6 +449,7 @@ begin
       AddUnit('sqldbrestconst');
       end;
     T:=P.Targets.AddUnit('sqldbrestmodule.pp');
+    T.OSes:=SqldbConnectionOSes;
     With T.Dependencies do  
       begin
       AddUnit('sqldbrestbridge');

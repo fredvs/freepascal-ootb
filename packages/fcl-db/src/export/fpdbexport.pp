@@ -1,5 +1,19 @@
 unit fpDBExport;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
 
+    DB Export code
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$mode objfpc}{$H+}
 
 interface
@@ -161,8 +175,8 @@ Type
     // Format field as UTF8 string, according to settings
     Function FormatField(F : TField) : UTF8String; virtual;
     // Raise EDataExporter error
-    Procedure ExportError(Msg : String); overload;
-    Procedure ExportError(Fmt : String; Args: Array of const); overload;
+    Procedure ExportError(Const Msg : String); overload;
+    Procedure ExportError(const Fmt : String; const Args: Array of const); overload;
   Public
     Constructor Create(AOwner : TComponent); override;
     Destructor Destroy; override;
@@ -660,13 +674,12 @@ begin
     Result:=F.AsUTF8String;
 end;
 
-procedure TCustomDatasetExporter.ExportError(Msg: String);
+procedure TCustomDatasetExporter.ExportError(const Msg: String);
 begin
   Raise EDataExporter.Create(Msg);
 end;
 
-procedure TCustomDatasetExporter.ExportError(Fmt: String;
-  Args: array of const);
+procedure TCustomDatasetExporter.ExportError(const Fmt: String; const Args: array of const);
 begin
   Raise EDataExporter.CreateFmt(Fmt,Args);
 end;
@@ -978,7 +991,7 @@ end;
 function TExportFormats.ConstructFilter(AnExport: TCustomDatasetExporter
   ): String;
   
-  Procedure AddToResult(S : String);
+  Procedure AddToResult(const S : String);
   
   begin
     If (Result<>'') and (S<>'') then

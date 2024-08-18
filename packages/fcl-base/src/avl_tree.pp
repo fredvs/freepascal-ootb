@@ -636,7 +636,6 @@ end;
 
 constructor TAVLTree.Create(const OnCompareMethod: TListSortCompare);
 begin
-  fNodeMgr:=NodeMemManager;
   FOnCompare:=OnCompareMethod;
   Init;
 end;
@@ -644,7 +643,6 @@ end;
 constructor TAVLTree.CreateObjectCompare(
   const OnCompareMethod: TObjectSortCompare);
 begin
-  fNodeMgr:=NodeMemManager;
   FOnObjectCompare:=OnCompareMethod;
   Init;
 end;
@@ -1146,9 +1144,17 @@ procedure TAVLTree.FreeAndClear;
   end;
 
 // TAVLTree.FreeAndClear
+var
+  r: TAVLTreeNode;
 begin
   // free all data
-  FreeNodeData(Root);
+  r := Root;
+  FRoot := nil; // Prevent any being-destroyed object from removing its node.
+  try
+    FreeNodeData(r);
+  finally
+    FRoot := r;
+  end;
   // free all nodes
   Clear;
 end;

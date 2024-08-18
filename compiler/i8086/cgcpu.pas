@@ -53,6 +53,7 @@ unit cgcpu;
         procedure a_op_reg_reg(list : TAsmList; Op: TOpCG; size: TCGSize; src, dst: TRegister); override;
         procedure a_op_ref_reg(list : TAsmList; Op: TOpCG; size: TCGSize; const ref: TReference; reg: TRegister); override;
         procedure a_op_reg_ref(list : TAsmList; Op: TOpCG; size: TCGSize;reg: TRegister; const ref: TReference); override;
+        procedure a_op_ref(list : TAsmList; Op: TOpCG; size: TCGSize; const ref: TReference); override;
 
         procedure push_const(list:TAsmList;size:tcgsize;a:tcgint);
 
@@ -1138,7 +1139,7 @@ unit cgcpu;
       begin
         tmpref:=ref;
         make_simple_ref(list,tmpref);
-        if not (op in [OP_NEG,OP_NOT,OP_SHR,OP_SHL,OP_SAR,OP_ROL,OP_ROR]) then
+        if not (op in [OP_SHR,OP_SHL,OP_SAR,OP_ROL,OP_ROR]) then
           check_register_size(size,reg);
 
         if size in [OS_64, OS_S64] then
@@ -1147,27 +1148,8 @@ unit cgcpu;
         if size in [OS_32, OS_S32] then
           begin
             case op of
-              OP_NEG:
-                begin
-                  if reg<>NR_NO then
-                    internalerror(200109237);
-                  inc(tmpref.offset, 2);
-                  list.concat(taicpu.op_ref(A_NOT, S_W, tmpref));
-                  dec(tmpref.offset, 2);
-                  cg.a_reg_alloc(list,NR_DEFAULTFLAGS);
-                  list.concat(taicpu.op_ref(A_NEG, S_W, tmpref));
-                  inc(tmpref.offset, 2);
-                  list.concat(taicpu.op_const_ref(A_SBB, S_W,-1, tmpref));
-                  cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
-                end;
-              OP_NOT:
-                begin
-                  if reg<>NR_NO then
-                    internalerror(200109237);
-                  list.concat(taicpu.op_ref(A_NOT, S_W, tmpref));
-                  inc(tmpref.offset, 2);
-                  list.concat(taicpu.op_ref(A_NOT, S_W, tmpref));
-                end;
+              OP_NEG,OP_NOT:
+                inherited;
               OP_IMUL:
                 begin
                   { this one needs a load/imul/store, which is the default }
@@ -1257,6 +1239,45 @@ unit cgcpu;
           end
         else
           inherited a_op_reg_ref(list,Op,size,reg,tmpref);
+      end;
+
+
+    procedure tcg8086.a_op_ref(list: TAsmList; Op: TOpCG; size: TCGSize; const ref: TReference);
+      var
+        tmpref: treference;
+      begin
+        tmpref:=ref;
+        make_simple_ref(list,tmpref);
+
+        if size in [OS_64, OS_S64] then
+          internalerror(2013050805);
+
+        if size in [OS_32, OS_S32] then
+          begin
+            case op of
+              OP_NEG:
+                begin
+                  inc(tmpref.offset, 2);
+                  list.concat(taicpu.op_ref(A_NOT, S_W, tmpref));
+                  dec(tmpref.offset, 2);
+                  cg.a_reg_alloc(list,NR_DEFAULTFLAGS);
+                  list.concat(taicpu.op_ref(A_NEG, S_W, tmpref));
+                  inc(tmpref.offset, 2);
+                  list.concat(taicpu.op_const_ref(A_SBB, S_W,-1, tmpref));
+                  cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
+                end;
+              OP_NOT:
+                begin
+                  list.concat(taicpu.op_ref(A_NOT, S_W, tmpref));
+                  inc(tmpref.offset, 2);
+                  list.concat(taicpu.op_ref(A_NOT, S_W, tmpref));
+                end;
+              else
+                internalerror(2020050709);
+            end;
+          end
+        else
+          inherited;
       end;
 
 
@@ -2005,8 +2026,8 @@ unit cgcpu;
             else
               list.concat(taicpu.op_const_reg(A_CMP,S_W,longint(a and $ffff),reg));
             gen_cmp32_jmp2(list, cmp_op, hl_skip, l);
-            a_label(list,hl_skip);
             cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
+            a_label(list,hl_skip);
           end
         else
           inherited a_cmp_const_reg_label(list, size, cmp_op, a, reg, l);
@@ -2030,8 +2051,8 @@ unit cgcpu;
             dec(tmpref.offset,2);
             list.concat(taicpu.op_const_ref(A_CMP,S_W,longint(a and $ffff),tmpref));
             gen_cmp32_jmp2(list, cmp_op, hl_skip, l);
-            a_label(list,hl_skip);
             cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
+            a_label(list,hl_skip);
           end
         else
           inherited a_cmp_const_ref_label(list, size, cmp_op, a, ref, l);
@@ -2052,8 +2073,8 @@ unit cgcpu;
             gen_cmp32_jmp1(list, cmp_op, hl_skip, l);
             list.concat(taicpu.op_reg_reg(A_CMP,S_W,reg1,reg2));
             gen_cmp32_jmp2(list, cmp_op, hl_skip, l);
-            a_label(list,hl_skip);
             cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
+            a_label(list,hl_skip);
           end
         else
           inherited a_cmp_reg_reg_label(list, size, cmp_op, reg1, reg2, l);
@@ -2078,8 +2099,8 @@ unit cgcpu;
             dec(tmpref.offset,2);
             list.concat(taicpu.op_ref_reg(A_CMP,S_W,tmpref,reg));
             gen_cmp32_jmp2(list, cmp_op, hl_skip, l);
-            a_label(list,hl_skip);
             cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
+            a_label(list,hl_skip);
           end
         else
           inherited a_cmp_ref_reg_label(list, size, cmp_op, ref, reg, l);
@@ -2104,8 +2125,8 @@ unit cgcpu;
             dec(tmpref.offset,2);
             list.concat(taicpu.op_reg_ref(A_CMP,S_W,reg,tmpref));
             gen_cmp32_jmp2(list, cmp_op, hl_skip, l);
-            a_label(list,hl_skip);
             cg.a_reg_dealloc(list,NR_DEFAULTFLAGS);
+            a_label(list,hl_skip);
           end
         else
           inherited a_cmp_reg_ref_label(list, size, cmp_op, reg, ref, l);

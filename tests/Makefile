@@ -1671,6 +1671,19 @@ override COMPILER_UNITTARGETDIR=$(COMPILER_TARGETDIR)
 override UNITTARGETDIRPREFIX=$(TARGETDIRPREFIX)
 endif
 endif
+ifdef SYSROOTPATH
+override FPCOPT+=-XR$(SYSROOTPATH)
+else
+ifeq ($(OS_TARGET),$(OS_SOURCE))
+ifneq ($(findstring $(OS_TARGET),darwin),)
+ifneq ($(findstring $(CPU_TARGET),aarch64),)
+ifneq ($(wildcard /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk),)
+override FPCOPT+=-XR/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+endif
+endif
+endif
+endif
+endif
 ifdef CREATESHARED
 override FPCOPT+=-Cg
 endif
@@ -2113,6 +2126,9 @@ endif
 ifndef TEST_OPT
 TEST_OPT=
 endif
+ifndef TEST_DISABLE_LONGLOG
+TEST_USE_LONGLOG=1
+endif
 override TEST_OPT+=-Fd
 ifndef TEST_FPC_VERSION
 TEST_FPC_COMPILERINFO:=$(shell $(TEST_FPC) -iVSPTPSOTODW)
@@ -2171,7 +2187,7 @@ endif
 TEST_OUTPUTDIR=output/$(TEST_TARGETSUFFIX)
 C_SUBDIR=$(TEST_OS_TARGET)/$(TEST_CPU_TARGET)
 ifneq ($(DATE),__missing_command_DATE)
-TEST_DATETIME:=$(shell $(DATE) +%Y%m%d%H%M)
+TEST_DATETIME:=$(shell $(DATE) -u +%Y%m%d%H%M)
 else
 TEST_DATETIME="No-date"
 endif
@@ -2203,12 +2219,12 @@ export LOG:=$(TEST_OUTPUTDIR)/log
 endif
 LOGFILES=$(TEST_OUTPUTDIR)/log $(TEST_OUTPUTDIR)/longlog $(TEST_OUTPUTDIR)/faillist
 LOGEXT=.testlog .tbslog .tbflog .webtbslog .webtbflog
-TESTUNITDIRS=system dos crt objects strings sysutils math sharemem strutils matrix lineinfo ucomplex fpwidestring cpu fmtbcd windows
+TESTUNITDIRS=system dos crt objects strings sysutils math sharemem strutils matrix lineinfo ucomplex fpwidestring cpu fmtbcd windows classes character dateutil fpcunit softfpu variants sortbase sortalgs linux unixutil
 TESTDIRECTDIRS=
 TESTSUBDIRS=cg cg/variants cg/cdecl cpu16 cpu16/i8086 library opt $(addprefix units/,$(TESTUNITDIRS))
-TESTPACKAGESDIRS=win-base webtbs hash fcl-registry fcl-process zlib fcl-db fcl-xml cocoaint bzip2
+TESTPACKAGESDIRS=win-base webtbs hash fcl-registry fcl-process zlib fcl-db fcl-xml cocoaint bzip2 fcl-net
 TESTPACKAGESUBDIRS=$(addprefix packages/,$(TESTPACKAGESDIRS))
-TESTPACKAGESDIRECTDIRS=rtl-objpas rtl-generics
+TESTPACKAGESDIRECTDIRS=rtl-objpas rtl-generics hash regexpr fcl-registry fcl-passrc fcl-json fcl-image pastojs
 TESTPACKAGESDIRECTSUBDIRS=$(addprefix ../packages/,$(addsuffix /tests,$(TESTPACKAGESDIRECTDIRS)))
 ifdef QUICKTEST
 export QUICKTEST
@@ -2237,19 +2253,19 @@ ifndef CONCAT
 CONCAT=utils/concat
 endif
 ifndef GPARMAKE
-GPARMAKE=./gparmake$(EXEEXT)
+GPARMAKE=./gparmake$(SRCEXEEXT)
 endif
 ifndef PREPUP
 PREPUP=utils/prepup
 endif
 ifndef CREATELST
-CREATELST=./createlst$(EXEEXT)
+CREATELST=./createlst$(SRCEXEEXT)
 endif
 tstunits:
 ifdef inOS2
-	$(MAKE) -C tstunits FPC_VERSION= FPC=$(TEST_FPC) CPU_TARGET=$(TEST_CPU_TARGET) OS_TARGET=$(TEST_OS_TARGET) SUBARCH=$(TEST_SUBARCH) "OPT=$(TEST_OPT)" CCOMPILER=$(TEST_CCOMPILER) BINUTILSPREFIX=$(TEST_BINUTILSPREFIX)
+	$(MAKE) -C tstunits FPC_VERSION= FPC=$(TEST_FPC) NATIVE_FPC=$(FPC) CPU_TARGET=$(TEST_CPU_TARGET) OS_TARGET=$(TEST_OS_TARGET) SUBARCH=$(TEST_SUBARCH) "OPT=$(TEST_OPT)" CCOMPILER=$(TEST_CCOMPILER) BINUTILSPREFIX=$(TEST_BINUTILSPREFIX)
 else
-	$(MAKE) -C tstunits FPC_VERSION= FPC=$(TEST_FPC) CPU_TARGET=$(TEST_CPU_TARGET) OS_TARGET=$(TEST_OS_TARGET) SUBARCH=$(TEST_SUBARCH) 'OPT=$(TEST_OPT)' CCOMPILER=$(TEST_CCOMPILER) BINUTILSPREFIX=$(TEST_BINUTILSPREFIX)
+	$(MAKE) -C tstunits FPC_VERSION= FPC=$(TEST_FPC) NATIVE_FPC=$(FPC) CPU_TARGET=$(TEST_CPU_TARGET) OS_TARGET=$(TEST_OS_TARGET) SUBARCH=$(TEST_SUBARCH) 'OPT=$(TEST_OPT)' CCOMPILER=$(TEST_CCOMPILER) BINUTILSPREFIX=$(TEST_BINUTILSPREFIX)
 endif
 .PHONY: create_c_objects delete_c_objects copyfiles test_c_objects
 C_SOURCE_DIR=test/cg/obj
@@ -2266,6 +2282,7 @@ CPP_OBJECTS=$(addprefix $(C_OBJECTS_DIR)/, $(subst .cpp,.o, $(CPP_SOURCES)))
 TASM_OBJECTS=$(addprefix $(C_OBJECTS_DIR)/, $(subst .asm,.obj, $(TASM_SOURCES)))
 create_c_objects:
 ifneq ($(TEST_CCOMPILER),)
+		$(MKDIRTREE) $(C_OBJECTS_DIR)
 		-$(COPY) $(addprefix $(C_SOURCE_DIR)/, $(C_SOURCES)) $(C_OBJECTS_DIR)
 		$(MAKE) $(C_OBJECTS)
 		-$(COPY) $(addprefix $(C_SOURCE_DIR)/, $(CPP_SOURCES)) $(C_OBJECTS_DIR)
@@ -2330,6 +2347,9 @@ endif
 ifdef TEST_VERBOSE
 override DOTESTOPT+=-V
 endif
+ifdef TEST_PARALLEL
+override DOTESTOPT+=-L
+endif
 ifdef TEST_BENCH
 override DOTESTOPT+=-D
 endif
@@ -2366,6 +2386,9 @@ override DOTESTOPT+=-a
 endif
 ifdef EMULATOR
 override DOTESTOPT+=-M$(EMULATOR)
+endif
+ifdef EMULATOR_OPTS
+override DOTESTOPT+=-N$(EMULATOR_OPTS)
 endif
 ifdef USEENV
 override DOTESTENV:=$(DOTESTOPT)
@@ -2412,10 +2435,10 @@ ifndef SINGLEDOTESTRUNS
 endif
 alltests: alltest alltbs alltbf allwebtbs allwebtbf
 test_c_objects: testprep
-	$(MAKE) $(patsubst %.pp,%.log, $(wildcard test/cg/cdecl/tcalext*.pp)))
-	$(MAKE) $(patsubst %.pp,%.elg, $(wildcard test/cg/cdecl/tcalext*.pp)))
-	$(MAKE) $(patsubst %.pp,%.log, $(wildcard test/cg/cdecl/tcppcl*.pp)))
-	$(MAKE) $(patsubst %.pp,%.elg, $(wildcard test/cg/cdecl/tcppcl*.pp)))
+	$(MAKE) $(patsubst %.pp,%.log, $(wildcard test/cg/cdecl/tcalext*.pp))
+	$(MAKE) $(patsubst %.pp,%.elg, $(wildcard test/cg/cdecl/tcalext*.pp))
+	$(MAKE) $(patsubst %.pp,%.log, $(wildcard test/cg/cdecl/tcppcl*.pp))
+	$(MAKE) $(patsubst %.pp,%.elg, $(wildcard test/cg/cdecl/tcppcl*.pp))
 ifdef SINGLEDOTESTRUNS
 .PHONY: allexectbs allexectbf allexecwebtbs allexecwebtbf allexectest allexectests
 allexectbs: $(addsuffix .tbslog, $(LOGFILES))
@@ -2496,11 +2519,25 @@ distclean: clean fpc_distclean
 digest : utils
 	-$(DIGEST) $(LOG)
 SVNVERSION:=$(firstword $(wildcard $(addsuffix /svnversion$(SRCEXEEXT),$(SEARCHPATH))))
+GIT:=$(firstword $(wildcard $(addsuffix /git$(SRCEXEEXT),$(SEARCHPATH))))
+ifneq ($(wildcard ../.git),)
+ifneq ($(GIT),)
+GIT_GET_HASH=$(GIT) log -1 --format=%h
+SVN_TESTS_REV_STR=$(shell $(GIT_GET_HASH) .)
+SVN_COMPILER_REV_STR=$(shell $(GIT_GET_HASH) ../compiler)
+SVN_RTL_REV_STR=$(shell $(GIT_GET_HASH) ../rtl)
+SVN_PACKAGES_REV_STR=$(shell $(GIT_GET_HASH) ../packages)
+endif
+else
 ifneq ($(SVNVERSION),)
 SVN_TESTS_REV_STR=$(shell $(SVNVERSION) -c .)
 SVN_COMPILER_REV_STR=$(shell $(SVNVERSION) -c ../compiler)
 SVN_RTL_REV_STR=$(shell $(SVNVERSION) -c ../rtl)
 SVN_PACKAGES_REV_STR=$(shell $(SVNVERSION) -c ../packages)
+endif
+endif
+ifeq ($(TEST_COMMENT),)
+TEST_COMMENT=$(TEST_OPT)
 endif
 $(TEST_OUTPUTDIR)/dbdigest.cfg:
 	$(ECHOREDIR) OS=$(TEST_OS_TARGET) > $(TEST_OUTPUTDIR)/dbdigest.cfg
@@ -2512,7 +2549,7 @@ ifneq ($(TEST_USE_LONGLOG),)
 endif
 	$(ECHOREDIR) Submitter=$(TEST_USER) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
 	$(ECHOREDIR) Machine=$(TEST_HOSTNAME) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
-	$(ECHOREDIR) Comment=$(TEST_OPT) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
+	$(ECHOREDIR) Comment=$(TEST_COMMENT) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
 ifneq ($(TEST_DATETIME),)
 	$(ECHOREDIR) Date=$(TEST_DATETIME) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
 endif
@@ -2522,7 +2559,7 @@ endif
 ifneq ($(TEST_FPC_FULLVERSION),)
 	$(ECHOREDIR) CompilerFullVersion=$(TEST_FPC_FULLVERSION) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
 endif
-ifneq ($(SVNVERSION),)
+ifneq ($(SVN_TESTS_REV_STR),)
 	$(ECHOREDIR) svntestsrevision=$(SVN_TESTS_REV_STR) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
 	$(ECHOREDIR) svncompilerrevision=$(SVN_COMPILER_REV_STR) >> $(TEST_OUTPUTDIR)/dbdigest.cfg
 	$(ECHOREDIR) svnrtlrevision=$(SVN_RTL_REV_STR) >> $(TEST_OUTPUTDIR)/dbdigest.cfg

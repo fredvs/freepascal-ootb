@@ -1632,6 +1632,19 @@ override COMPILER_UNITTARGETDIR=$(COMPILER_TARGETDIR)
 override UNITTARGETDIRPREFIX=$(TARGETDIRPREFIX)
 endif
 endif
+ifdef SYSROOTPATH
+override FPCOPT+=-XR$(SYSROOTPATH)
+else
+ifeq ($(OS_TARGET),$(OS_SOURCE))
+ifneq ($(findstring $(OS_TARGET),darwin),)
+ifneq ($(findstring $(CPU_TARGET),aarch64),)
+ifneq ($(wildcard /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk),)
+override FPCOPT+=-XR/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+endif
+endif
+endif
+endif
+endif
 ifdef CREATESHARED
 override FPCOPT+=-Cg
 endif
@@ -1924,11 +1937,11 @@ DUMMYINSTALLDIR=$(BASEDIR)/tmp
 INSTALLOPT=INSTALL_PREFIX=$(DUMMYINSTALLDIR) INSTALL_UNITDIR=$(BASEDIR)/$(COMPILER_TARGETDIR)
 rtl-stamp.$(FULL_TARGET):
 ifneq ($(inOS2),)
-	$(MAKE) -C ../../rtl all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)"
+	$(MAKE) -C ../../rtl all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)" FPC=$(FPC) FPCFPMAKE=$(NATIVE_FPC)
 else
-	$(MAKE) -C ../../rtl all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)'
+	$(MAKE) -C ../../rtl all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)' FPC=$(FPC) FPCFPMAKE=$(NATIVE_FPC)
 endif
-	$(MAKE) -C ../../rtl install $(INSTALLOPT) OPT= CROSSOPT=
+	$(MAKE) -C ../../rtl install $(INSTALLOPT) OPT= CROSSOPT= FPC=$(FPC) FPCFPMAKE=$(NATIVE_FPC)
 	$(ECHO) Compiled > rtl-stamp.$(FULL_TARGET)
 cleanrtl:
 	$(DELTREE) $(COMPILER_TARGETDIR)
@@ -1961,11 +1974,11 @@ INSTALLOPT=INSTALL_PREFIX=$(DUMMYINSTALLDIR) INSTALL_UNITDIR=$(BASEDIR)/$(COMPIL
 PACKAGESDIR=$(FPCDIR)/packages
 packages-stamp.$(FULL_TARGET):
 ifneq ($(inOS2),)
-	$(MAKE) -C ../../packages all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)"
+	$(MAKE) -C ../../packages all "OPT=$(OPT) -n" "CROSSOPT=$(CROSSOPT)" FPC=$(FPC) FPCFPMAKE=$(NATIVE_FPC)
 else
-	$(MAKE) -C ../../packages all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)'
+	$(MAKE) -C ../../packages all 'OPT=$(OPT) -n' 'CROSSOPT=$(CROSSOPT)' FPC=$(FPC) FPCFPMAKE=$(NATIVE_FPC)
 endif
-	$(MAKE) -C ../../packages install $(INSTALLOPT) OPT= CROSSOPT=
+	$(MAKE) -C ../../packages install $(INSTALLOPT) OPT= CROSSOPT= FPC=$(FPC) FPCFPMAKE=$(NATIVE_FPC)
 	$(ECHO) Compiled > packages-stamp.$(FULL_TARGET)
 cleanpackages:
 	$(DELTREE) $(COMPILER_TARGETDIR)

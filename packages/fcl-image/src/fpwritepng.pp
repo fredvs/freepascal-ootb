@@ -25,6 +25,8 @@ type
 
   TColorFormatFunction = function (color:TFPColor) : TColorData of object;
 
+  { TFPWriterPNG }
+
   TFPWriterPNG = class (TFPCustomImageWriter)
     private
       FUsetRNS, FCompressedText, FWordSized, FIndexed,
@@ -57,6 +59,7 @@ type
       procedure InternalWrite (Str:TStream; Img:TFPCustomImage); override;
       procedure WriteIHDR; virtual;
       procedure WritePLTE; virtual;
+      procedure WriteResolutionValues; virtual;
       procedure WritetRNS; virtual;
       procedure WriteIDAT; virtual;
       procedure WriteTexts; virtual;
@@ -237,7 +240,7 @@ var diff : byte;
     p := PreviousLine(index);
     Diff := (l + p) div 2;
   end;
-  procedure FilterPaeth;
+  procedure FilterPath;
   var dl, dp, dlp : word; // index for previous and distances for:
       l, p, lp : byte;  // r:predictor, Left, Previous, LeftPrevious
       r : integer;
@@ -257,12 +260,12 @@ var diff : byte;
       diff := lp;
   end;
 begin
+  diff := 0;
   case LineFilter of
-    0 : diff := 0;
     1 : FilterSub;
     2 : FilterUp;
     3 : FilterAverage;
-    4 : FilterPaeth;
+    4 : FilterPath;
   end;
   if diff > b then
     result := (b + $100 - diff)
@@ -667,6 +670,36 @@ begin
   WriteChunk;
 end;
 
+procedure TFPWriterPNG.WriteResolutionValues;
+begin
+  SetChunkLength(sizeof(TPNGPhysicalDimensions));
+  SetChunkType(ctpHYs);
+
+  with PPNGPhysicalDimensions(ChunkDataBuffer)^ do
+  begin
+    if (TheImage.ResolutionUnit=ruPixelsPerInch)
+    then TheImage.ResolutionUnit :=ruPixelsPerCentimeter;
+    if (TheImage.ResolutionUnit=ruPixelsPerCentimeter)
+    then begin
+           Unit_Specifier:=1;
+           X_Pixels :=Trunc(TheImage.ResolutionX*100);
+           Y_Pixels :=Trunc(TheImage.ResolutionY*100);
+         end
+    else begin //ruNone
+           Unit_Specifier:=0;
+           X_Pixels :=Trunc(TheImage.ResolutionX);
+           Y_Pixels :=Trunc(TheImage.ResolutionY);
+       end;
+
+    {$IFDEF ENDIAN_LITTLE}
+    X_Pixels :=swap(X_Pixels);
+    Y_Pixels :=swap(Y_Pixels);
+    {$ENDIF}
+  end;
+
+  WriteChunk;
+end;
+
 procedure TFPWriterPNG.InitWriteIDAT;
 begin
   FDatalineLength := TheImage.Width*ByteWidth;
@@ -719,7 +752,7 @@ begin
     end;
 end;
 
-procedure TFPWriterPNG.GatherData;
+procedure TFPWriterPNG.Gatherdata;
 var x,y : integer;
     lf : byte;
 begin
@@ -846,6 +879,9 @@ begin
   WriteIHDR;
   if Fheader.colorType = 3 then
     WritePLTE;
+
+  WriteResolutionValues;
+
   if FUsetRNS then
     WritetRNS;
   WriteIDAT;

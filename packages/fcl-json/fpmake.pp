@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('rtl-objpas');
     P.Author := 'Michael van Canneyt';
@@ -83,12 +83,19 @@ begin
       begin
       AddUnit('fpjson');
       AddUnit('jsonparser');
-     end;
+      end;
     T:=P.Targets.AddUnit('json2yaml.pp');
     with T.Dependencies do
       begin
       AddUnit('fpjson');
-     end;
+      end;
+    T:=P.Targets.AddUnit('fpjsonapply.pp');
+    with T.Dependencies do
+      begin
+      AddUnit('fpjson');
+      end;
+    T.ResourceStrings:=true;
+
 
     P.ExamplePath.Add('examples');
     T:=P.Targets.AddExampleProgram('confdemo.pp');

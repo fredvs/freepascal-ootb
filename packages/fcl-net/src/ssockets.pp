@@ -70,6 +70,8 @@ type
     function Recv(Const Buffer; Count: Integer): Integer; virtual;
     function Send(Const Buffer; Count: Integer): Integer; virtual;
     function BytesAvailable: Integer; virtual;
+    // Call this to get extra error info.
+    Function GetLastErrorDescription : String; virtual;
     Property Socket : TSocketStream Read FSocket;
     Property LastError : Integer Read FLastError;
   end;
@@ -289,7 +291,7 @@ resourcestring
   strSocketCreationFailed = 'Creation of socket failed: %s';
   strSocketBindFailed = 'Binding of socket failed: %s';
   strSocketListenFailed = 'Listening on port #%d failed, error: %d';
-  strSocketConnectFailed = 'Connect to %s failed.';
+  strSocketConnectFailed = 'Connect to %s failed: %s';
   strSocketAcceptFailed = 'Could not accept a client connection on socket: %d, error %d';
   strSocketAcceptWouldBlock = 'Accept would block on socket: %d';
   strSocketIOTimeOut = 'Failed to set IO Timeout to %d';
@@ -380,6 +382,11 @@ begin
   { we need ioctlsocket here }
 end;
 
+function TSocketHandler.GetLastErrorDescription: String;
+begin
+  Result:='';
+end;
+
 
 Function TSocketHandler.Close: Boolean;
 begin
@@ -401,7 +408,7 @@ begin
     seAcceptFailed     : s := strSocketAcceptFailed;
     seAcceptWouldBLock : S := strSocketAcceptWouldBlock;
     seIOTimeout        : S := strSocketIOTimeOut;
-    seConnectTimeOut    : s := strSocketConnectTimeout;
+    seConnectTimeOut   : s := strSocketConnectTimeout;
   end;
   s := Format(s, MsgArgs);
   inherited Create(s);
@@ -469,6 +476,7 @@ end;
 Procedure TSocketStream.SetSocketOptions(Value : TSocketOptions);
 
 begin
+  FSocketOptions:=Value;
 end;
 
 function TSocketStream.Seek(Offset: Longint; Origin: Word): Longint;
@@ -872,20 +880,30 @@ begin
 end;
 
 Function  TInetServer.SockToStream (ASocket : Longint) : TSocketStream;
-
 Var
   H : TSocketHandler;
+  A : Boolean;
+
+  procedure ShutDownH;
+  begin
+    H.Shutdown(False);
+    FreeAndNil(Result);
+  end;
 
 begin
   H:=GetClientSocketHandler(aSocket);
   Result:=TInetSocket.Create(ASocket,H);
   (Result as TInetSocket).FHost:='';
   (Result as TInetSocket).FPort:=FPort;
-  if Not H.Accept then
-    begin
-    H.Shutdown(False);
-    FreeAndNil(Result);
-    end;
+
+  try
+    A:=H.Accept;
+  except
+    ShutDownH;
+    raise;
+  end;
+  if Not A then
+    ShutDownH;
 end;
 
 Function TInetServer.Accept : Longint;
@@ -1117,6 +1135,7 @@ Var
   IsError : Boolean;
   TimeOutResult : TCheckTimeOutResult;
   Err: Integer;
+  aErrMsg : String;
 {$IFDEF HAVENONBLOCKING}
   FDS: TFDSet;
   TimeV: TTimeVal;
@@ -1171,7 +1190,10 @@ begin
     if TimeoutResult=ctrTimeout then
       Raise ESocketError.Create(seConnectTimeOut, [Format('%s:%d',[FHost, FPort])])
     else
-      Raise ESocketError.Create(seConnectFailed, [Format('%s:%d',[FHost, FPort])]);
+      begin
+      aErrMsg:=FHandler.GetLastErrorDescription;
+      Raise ESocketError.Create(seConnectFailed, [Format('%s:%d',[FHost, FPort]),aErrMsg]);
+      end;
 end;
 
 { ---------------------------------------------------------------------
@@ -1203,7 +1225,7 @@ Var
 begin
   Str2UnixSockAddr(FFilename,UnixAddr,AddrLen);
   If  FpConnect(ASocket,@UnixAddr,AddrLen)<>0 then
-    Raise ESocketError.Create(seConnectFailed,[FFilename]);
+    Raise ESocketError.Create(seConnectFailed,[FFilename,'']);
 end;
 {$endif}
 end.

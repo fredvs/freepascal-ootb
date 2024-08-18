@@ -32,16 +32,21 @@
 #APP
         .ident  "FreePascal 2.6.x/2.7.x series dynlinked to libc"
 #NO_APP
-	.section	.note.ABI-tag,"a",@progbits
+	.section	.note.tag,"a",@note
 	.align 4
 	.type	abitag, @object
-	.size	abitag, 24
+	.size	abitag, 48
 abitag:
 	.long	8
 	.long	4
 	.long	1
 	.string	"FreeBSD"
-	.long	900044
+	.long	1400097
+        .long   8
+        .long   4
+        .long   1
+	.string	"FreeBSD"
+        .long   0
 .globl __progname
 	.section	.rodata
 .LC0:
@@ -196,3 +201,6 @@ operatingsystem_parameters:
 	.align 8
 .LEFDE1:
 	.ident	"GCC: (GNU) 4.2.1 20070719  [FreeBSD]"
+
+	.section .note.GNU-stack,"",@progbits
+

@@ -2561,7 +2561,7 @@ TYPE
 //     Function RemoteNext(Celt:ULong; Out rgelt;out celtfetched :ULong):Hresult; StdCall;
        Function Skip(celt:Ulong):HResult; StdCall;
        Function Reset:HResult; StdCall;
-       Function Close(out penum:IEnumMoniker):HResult;StdCall;
+       Function Clone(out penum:IEnumMoniker):HResult;StdCall;
        End;
 
 
@@ -2633,7 +2633,7 @@ TYPE
       Function IsRunning(Const bc:IBindCtx;Const MkToLeft:IMoniker;Const mknewlyRunning:IMoniker):HResult;StdCall;
       Function GetTimeOfLastChange(Const bc:IBindCtx;Const mkToLeft:IMoniker; out ft : FileTime):HResult; StdCall;
       Function Inverse(out mk : IMoniker):HResult; StdCall;
-      Function CommonPrefixWith (Const mkOther:IMoniker):HResult; StdCall;
+      Function CommonPrefixWith (Const mkOther:IMoniker;Out mkPrefix : IMoniker):HResult; StdCall;
       Function RelativePathTo(Const mkother:IMoniker; Out mkRelPath : IMoniker):HResult;StdCall;
       Function GetDisplayName(Const bc:IBindCtx;const mktoleft:IMoniker;Out szDisplayName: pOleStr):HResult; StdCall;
       Function ParseDisplayName(Const bc:IBindCtx;Const mkToLeft:IMoniker;szDisplayName:POleStr;out cheaten:ULong;out mkOut:IMoniker):HResult; StdCall;
@@ -4608,7 +4608,7 @@ type
     oleaut32dll   = 'oleaut32.dll';
 
   function  SysAllocString(psz: pointer): TBStr; stdcall; external oleaut32dll name 'SysAllocString';
-  function  SysAllocStringLen(psz: pointer; len:dword): Integer; stdcall; external oleaut32dll name 'SysAllocStringLen';
+  function  SysAllocStringLen(psz: pointer; len:dword): TBStr; stdcall; external oleaut32dll name 'SysAllocStringLen';
   procedure SysFreeString(bstr:pointer); stdcall; external oleaut32dll name 'SysFreeString';
   function  SysStringLen(bstr:pointer):UINT; stdcall; external oleaut32dll name 'SysStringLen';
   function  SysStringByteLen(bstr:pointer):UINT; stdcall; external oleaut32dll name 'SysStringByteLen';

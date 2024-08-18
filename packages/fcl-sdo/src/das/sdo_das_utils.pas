@@ -58,11 +58,18 @@ const
     //ftOraTimeStamp, ftOraInterval
 {$IFEND }
 {$IF Declared(ftLongWord)}
-    , StringType, StringType, StringType, StringType, StringType, StringType, StringType,
-    //ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
-    StringType, StringType, StringType
-    //ftTimeStampOffset, ftObject, ftSingle
-{$IFEND }
+    , StringType, StringType, StringType, StringType 
+    // ftLongWord, ftShortint, ftByte, ftExtended 
+    {$IFDEF FPC}
+    {$IF Declared(ftSingle)}
+    , StringType
+    {$IFEND}
+    // ftSingle
+    {$ELSE}
+    , StringType, StringType, StringType, StringType, StringType, StringType
+    // ftConnection, ftParams, ftStream, ftTimeStampOffset, ftObject, ftSingle
+    {$ENDIF}
+{$IFEND}
   );
 
 type

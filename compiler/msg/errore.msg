@@ -2366,7 +2366,7 @@ sym_e_type_must_be_rec_or_object=05098_E_Record or object type expected
 #
 # Codegenerator
 #
-# 06049 is the last used one
+# 06062 is the last used one
 #
 % \section{Code generator messages}
 % This section lists all messages that can be displayed if the code
@@ -2521,6 +2521,19 @@ cg_n_no_inline=06058_N_Call to subroutine "$1" marked as inline is not inlined
 % The directive inline is only a hint to the compiler. Sometimes the compiler ignores this hint, a subroutine
 % marked as inline is not inlined. In this case, this hint is given. Compiling with \var{-vd} might result in more information why
 % the directive inline is ignored.
+cg_e_case_missing_value=06059_E_Case statement does not handle ordinal value "$1", and no else/otherwise statement is present.
+# The case statement does not handle the specified value and does not have an else/otherwise statement, and the compiler determined
+# that this value can be passed to the case statement. This is a compile-time error in ISO and Extended Pascal.
+cg_w_case_incomplete=06060_W_Case statement does not handle all possible cases
+% The case statement does not contain labels for all possible values of the operand, and no else statement is present.
+cg_w_cannot_compile_subroutine=06061_W_The current subroutine "$1" cannot be compiled for the target CPU, creating dummy
+% Some processors have a very limited instruction set so some routines cannot be compiled for them. As it is not always
+% clear from the beginning if a subroutine can be compiled for a certain CPU or not, the compiler checks afterwards
+% and creates a dummy if it cannot compile the subroutine.
+cg_w_interrupt_does_not_save_registers=06062_W_The target CPU does not support preserving the registers in subroutine "$1"
+% Certain processors have no memory (e.~g. avr1 family), so they do not support storing/restoring the used registers
+% in an interrupt routine. The programmer has to ensure that while there is a chance for the interrupt routine being
+% called that no other code depending on registers being preserved is executed.
 %
 % \end{description}
 # EndOfTeX
@@ -3059,7 +3072,7 @@ execinfo_x_stackcommit=09134_X_Stack space committed: $1 bytes
 #
 # Internal linker messages
 #
-# 09220 is the last used one
+# 09223 is the last used one
 #
 # BeginOfTeX
 % \section{Linker messages}
@@ -3119,7 +3132,9 @@ link_e_comdat_content_differs=09219_E_Content of duplicate COMDAT symbol "$1" di
 % The COMDAT section specifies that all sections with the same name need to have the same content,
 % but this section had a different size.
 link_e_comdat_selection_differs=09220_E_COMDAT selection mode for symbol "$1" differs
-%\end{description}
+link_e_unsupported_cross_endian_internal_linker=09223_E_Using internal linker in cross-endian configuration is not supported
+% The internal linker does not correctly handle endianess conversion.
+% \end{description}
 # EndOfTeX
 
 #
@@ -3353,7 +3368,7 @@ cg_f_internal_type_does_not_match=10066_F_Internal type "$1" does not look as ex
 #
 #  Options
 #
-# 11062 is the last used one
+# 11068 is the last used one
 #
 option_usage=11000_O_$1 [options] <inputfile> [options]
 # BeginOfTeX
@@ -3419,6 +3434,9 @@ option_obsolete_switch_use_new=11019_W_You are using the obsolete switch $1, ple
 option_switch_bin_to_src_assembler=11020_N_Switching assembler to default source writing assembler
 % This notifies you that the assembler has been changed because you used the
 % -a switch, which cannot be used with a binary assembler writer.
+option_switch_bin_to_src_assembler_cross_endian=11068_N_Switching assembler to default source writing assembler in cross-endian configuration
+% This notifies you that the assembler has been changed because
+% the binary assembler writer is not yet ready for cross-endian configuration.
 option_incompatible_asm=11021_W_Assembler output selected "$1" is not compatible with "$2"
 option_asm_forced=11022_W_"$1" assembler use forced
 % The assembler output selected cannot generate
@@ -3612,7 +3630,7 @@ package_e_duplicate_package=13003_E_Duplicate package $1
 % a second time.
 package_e_unit_deny_package=13004_E_Unit $1 can not be part of a package
 % The unit can not be part of a package because the DenyPackageUnit directive is enabled for the unit.
-package_n_implicit_unit_import=13005_N_Unit $1 is implicitely imported into package $2
+package_n_implicit_unit_import=13005_N_Unit $1 is implicitly imported into package $2
 % The unit was not specified as part of the \var{contains} section and is also not included in one of the
 % required packages. Add the unit to the \var{contains} section to increase compatibility with other packages.
 package_f_cant_create_pcp=13006_F_Failed to create PCP file $2 for package $1
@@ -3688,7 +3706,7 @@ package_u_ppl_filename=13029_U_PPL filename $1
 #
 option_logo=11023_[
 Free Pascal Compiler version $FPCFULLVERSION [$FPCDATE] for $FPCCPU
-Copyright (c) 1993-2021 by Florian Klaempfl and others
+Copyright (c) 1993-2024 by Florian Klaempfl and others
 ]
 
 #
@@ -3715,6 +3733,9 @@ Supported inline assembler modes:
 Recognized compiler and RTL features:
   $FEATURELIST
 
+Recognized modeswitches:
+  $MODESWITCHES
+
 Supported ABI targets:
   $ABITARGETS
 
@@ -3724,6 +3745,9 @@ Supported Optimizations:
 Supported Whole Program Optimizations:
   All
   $WPOPTIMIZATIONS
+
+Code Generation Backend
+  $CODEGENERATIONBACKEND
 
 Supported Microcontroller types:$\n  $CONTROLLERTYPES$\n
 This program comes under the GNU General Public Licence
@@ -3876,7 +3900,9 @@ J*2Cv_Var/out parameter copy-out checking
 **2CX_Create also smartlinked library
 **1d<x>_Defines the symbol <x>
 **1D_Generate a DEF file
+**2DD<x>_Set the date string returned by %DATE% to x, it is not checked for being a valid date string
 **2Dd<x>_Set description to <x>
+**2DT<x>_Set the time string returned by %TIME% to x, it is not checked for being a valid time string
 **2Dv<x>_Set DLL version to <x>
 *O2Dw_PM application
 **1e<x>_Set path to executable
@@ -3932,9 +3958,11 @@ J*2Cv_Var/out parameter copy-out checking
 **2iV_Return short compiler version
 **2iW_Return full compiler version
 **2ia_Return list of supported ABI targets
+**2ib_Return the used code generation backend type
 **2ic_Return list of supported CPU instruction sets
 **2if_Return list of supported FPU instruction sets
 **2ii_Return list of supported inline assembler modes
+**2im_Return list of supported modeswitches
 **2io_Return list of supported optimizations
 **2ir_Return list of recognized compiler and RTL features
 **2it_Return list of supported targets
@@ -3943,7 +3971,7 @@ J*2Cv_Var/out parameter copy-out checking
 **1I<x>_Add <x> to include path
 **1k<x>_Pass <x> to the linker
 **1l_Write logo
-**1M<x>_Set language mode to <x>
+**1M<x>_Set language mode to <x> / enable modeswitch <x> (see option -im)
 **2Mfpc_Free Pascal dialect (default)
 **2Mobjfpc_FPC mode with Object Pascal support
 **2Mdelphi_Delphi 7 compatibility mode
@@ -3952,6 +3980,9 @@ J*2Cv_Var/out parameter copy-out checking
 **2Miso_ISO 7185 mode
 **2Mextendedpascal_ISO 10206 mode
 **2Mdelphiunicode_Delphi 2009 and later compatibility mode
+**2*_Each mode (as listed above) enables its default set of modeswitches.
+**2*_Other modeswitches are disabled and need to be enabled one by another.
+**1M<x>-_Disable modeswitch <x> (see option -im)
 **1n_Do not read the default config files
 **1o<x>_Change the name of the executable produced to <x>
 **1O<x>_Optimizations:
@@ -4062,9 +4093,9 @@ F*2P<x>_Set target CPU (aarch64,arm,avr,i386,i8086,jvm,m68k,mips,mipsel,powerpc,
 # arm targets
 A*2Tandroid_Android
 A*2Taros_AROS
-A*2Tdarwin_Darwin/iPhoneOS/iOS
 A*2Tembedded_Embedded
 A*2Tgba_Game Boy Advance
+A*2Tios_iOS
 A*2Tlinux_Linux
 A*2Tnds_Nintendo DS
 A*2Tnetbsd_NetBSD
@@ -4072,7 +4103,8 @@ A*2Tpalmos_PalmOS
 A*2Tsymbian_Symbian
 A*2Twince_Windows CE
 # aarch64 targets
-a*2Tdarwin_Darwin/iOS
+a*2Tdarwin_Darwin/Mac OS X
+a*2Tios_iOS
 a*2Tlinux_Linux
 # jvm targets
 J*2Tandroid_Android
@@ -4157,6 +4189,7 @@ A*2We_Use external resources (Darwin)
 P*2We_Use external resources (Darwin)
 p*2We_Use external resources (Darwin)
 3*2WF_Specify full-screen type application (EMX, OS/2)
+6*2WF<x>_Set TOS program flags to <x> (Atari)
 3*2WG_Specify graphic type application (EMX, OS/2, Windows)
 4*2WG_Specify graphic type application (Windows)
 A*2WG_Specify graphic type application (Windows)

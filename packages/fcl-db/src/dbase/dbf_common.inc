@@ -1,3 +1,19 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Pascal Ganaye,Micha Nelissen and other members of the
+    Free Pascal development team
+
+    DBF compiletime settings
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
+
 // define this if you need more SPEEEEEDDDD!!!
 // useful if you index dbf files over a network
 
@@ -223,6 +239,7 @@
   {$define SUPPORT_SEPARATE_VARIANTS_UNIT}
   {$define SUPPORT_REFRESHEVENTS}
   {$define SUPPORT_BACKWARD_FIELDDATA}
+  {$define SUPPORT_LONGWORD}
 
   // FPC 1.0.x exceptions: no 0/0 support
   {$ifdef VER1_0}

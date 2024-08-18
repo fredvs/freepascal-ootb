@@ -1,3 +1,4 @@
+{ %OPT=-Sc }
 {
     This file is part of the Free Component Library (FCL)
     Copyright (c) 2014 by Michael Van Canneyt
@@ -20,8 +21,8 @@ uses
   {$IFDEF EnableMemCheck}
   MemCheck,
   {$ENDIF}
-  Classes, consoletestrunner, tcconverter, TCModules, tcoptimizations, tcsrcmap,
-  tcfiler, tcunitsearch, tcprecompile, TCGenerics;
+  Classes, consoletestrunner, tcconverter, TCModules, TCSrcMap,
+  TCFiler, TCUnitSearch, TCOptimizations, TCGenerics, TCPrecompile;
 
 type
 

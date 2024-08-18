@@ -51,7 +51,9 @@ type
                              siteattr_EXWINDOW_STYLES,
                              siteattr_FONT,
                              siteattr_IMAGELIST,
-                             siteattr_IMAGETYPE
+                             siteattr_IMAGETYPE,
+                             siteattr_BACKGROUND,
+                             siteattr_FOREGROUND
                             );
 
   { TChmSiteMapSubItem }
@@ -238,7 +240,9 @@ const sitemapkws : array[TChmSiteMapItemAttrName] of string = (
                     'EXWINDOW STYLES',
                     'FONT',
                     'IMAGELIST',
-                    'IMAGETYPE');
+                    'IMAGETYPE',
+                    'BACKGROUND',
+                    'FOREGROUND');
 
 function indexitemcompare(Item1, Item2: Pointer): Integer;
 begin
@@ -384,6 +388,8 @@ begin
                    siteattr_FONT            : Font:=TagAttributeValue;
                    siteattr_IMAGELIST       : ImageList:=TagAttributeValue;
                    siteattr_IMAGETYPE       : UseFolderImages:=uppercase(TagAttributeValue)='FOLDER';
+                   siteattr_BACKGROUND      : BackgroundColor:=strtointdef(trim(TagAttributeValue),longint(-1));
+                   siteattr_FOREGROUND      : ForegroundColor:=strtointdef(trim(TagAttributeValue),0)
                    end;
              end;
               // writeln('0:',flevel,' ' ,aactualtag,' ',tagname,' ' ,tagattributename, ' ' ,tagattributevalue);
@@ -593,10 +599,10 @@ begin
       if WindowName <> '' then WriteParam('WindowName', WindowName);
       if ImageList <> '' then WriteParam('ImageList', ImageList);
       if ImageWidth > 0 then WriteParam('Image Width', IntToStr(ImageWidth));
-      if BackgroundColor <> 0 then WriteParam('Background', hexStr(BackgroundColor, 4));
-      if ForegroundColor <> 0 then WriteParam('Foreground', hexStr(ForegroundColor, 4));
-      if ExWindowStyles <> 0 then WriteParam('ExWindow Styles', hexStr(ExWindowStyles, 4));
-      if WindowStyles <> 0 then WriteParam('Window Styles', hexStr(WindowStyles, 4));
+      if BackgroundColor <> 0 then WriteParam('Background', '0x'+hexStr(BackgroundColor, 8));
+      if ForegroundColor <> 0 then WriteParam('Foreground', '0x'+hexStr(ForegroundColor, 8));
+      if ExWindowStyles <> 0 then WriteParam('ExWindow Styles', '0x'+hexStr(ExWindowStyles, 8));
+      if WindowStyles <> 0 then WriteParam('Window Styles', '0x'+hexStr(WindowStyles, 8));
       if UseFolderImages then WriteParam('ImageType', 'Folder');
     end;
     // both TOC and Index have font

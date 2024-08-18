@@ -880,6 +880,8 @@ implementation
               end
             else
               begin
+                if is_array_constructor(expr.resultdef) then
+                  tarrayconstructornode(expr).force_type(hloopvar.resultdef);
                 // search for operator first
                 pd:=search_enumerator_operator(expr.resultdef, hloopvar.resultdef);
                 // if there is no operator then search for class/object enumerator method
@@ -1567,13 +1569,19 @@ implementation
         usefromtemp : boolean;
 
       procedure iterate_counter(var s : tstatementnode;fw : boolean);
+        var
+          leftcopy: tnode;
         begin
+          { get rid of nf_write etc. as the left node is now only read }
+          leftcopy:=left.getcopy;
+          node_reset_flags(leftcopy,[nf_pass1_done,nf_modify,nf_write]);
+
           if fw then
             addstatement(s,
-              cassignmentnode.create_internal(left.getcopy,cinlinenode.createintern(in_succ_x,false,left.getcopy)))
+              cassignmentnode.create_internal(left.getcopy,cinlinenode.createintern(in_succ_x,false,leftcopy)))
           else
             addstatement(s,
-              cassignmentnode.create_internal(left.getcopy,cinlinenode.createintern(in_pred_x,false,left.getcopy)));
+              cassignmentnode.create_internal(left.getcopy,cinlinenode.createintern(in_pred_x,false,leftcopy)));
         end;
 
       function iterate_counter_func(arg : tnode;fw : boolean) : tnode;
@@ -1952,7 +1960,7 @@ implementation
               { nested exits don't need the non local goto switch }
               (labelsym.realname='$nestedexit') then
               begin
-                if current_procinfo.procdef.parast.symtablelevel>labelsym.owner.symtablelevel then
+                if current_procinfo.procdef.parast.symtablelevel>=labelsym.owner.symtablelevel then
                   begin
                     { don't mess with the exception blocks, global gotos in/out side exception blocks are not allowed }
                     if exceptionblock>0 then
@@ -1987,7 +1995,7 @@ implementation
                       CGMessage1(cg_e_goto_label_not_found,labelsym.realname);
                   end
                 else
-                  CGMessage(cg_e_interprocedural_goto_only_to_outer_scope_allowed);
+                  CGMessagePos(self.fileinfo,cg_e_interprocedural_goto_only_to_outer_scope_allowed);
               end
             else
               CGMessage1(cg_e_goto_label_not_found,labelsym.realname);

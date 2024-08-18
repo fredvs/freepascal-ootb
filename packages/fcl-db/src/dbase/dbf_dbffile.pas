@@ -1,5 +1,19 @@
 unit dbf_dbffile;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Pascal Ganaye,Micha Nelissen and other members of the
+    Free Pascal development team
 
+    DBF file implementation
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 interface
 
 {$I dbf_common.inc}
@@ -90,6 +104,8 @@ type
     // Updates _NULLFLAGS field with null or varlength flag for field
     procedure UpdateNullField(Buffer: Pointer; AFieldDef: TDbfFieldDef; Action: TUpdateNullField; WhichField: TNullFieldFlag);
     procedure WriteLockInfo(Buffer: TRecordBuffer);
+    function GetNextAutoInc: Cardinal;
+    procedure SetNextAutoInc(ThisNextAutoInc: Cardinal);
 
   public
     constructor Create;
@@ -101,27 +117,27 @@ type
 
     // Write out field definitions to header etc.
     procedure FinishCreate(AFieldDefs: TDbfFieldDefs; MemoSize: Integer);
-    function GetIndexByName(AIndexName: string): TIndexFile;
+    function GetIndexByName(const AIndexName: string): TIndexFile;
     procedure SetRecordSize(NewSize: Integer); override;
 
     procedure TryExclusive; override;
     procedure EndExclusive; override;
-    procedure OpenIndex(IndexName, IndexField: string; CreateIndex: Boolean; Options: TIndexOptions);
+    procedure OpenIndex(const IndexName, IndexField: string; CreateIndex: Boolean; Options: TIndexOptions);
     function  DeleteIndex(const AIndexName: string): Boolean;
-    procedure CloseIndex(AIndexName: string);
-    procedure RepageIndex(AIndexFile: string);
-    procedure CompactIndex(AIndexFile: string);
+    procedure CloseIndex(const AIndexName: string);
+    procedure RepageIndex(const AIndexFile: string);
+    procedure CompactIndex(const AIndexFile: string);
 
     // Inserts new record
     function  Insert(Buffer: TRecordBuffer): integer;
     // Write dbf header as well as EOF marker at end of file if necessary
     procedure WriteHeader; override;
     // Writes autoinc value to record buffer and updates autoinc value in field header
-    procedure ApplyAutoIncToBuffer(DestBuf: TRecordBuffer);
+    procedure ApplyAutoIncToBuffer(DestBuf: TRecordBuffer); virtual;
     procedure FastPackTable;
     procedure RestructureTable(DbfFieldDefs: TDbfFieldDefs; Pack: Boolean);
-    procedure Rename(DestFileName: string; NewIndexFileNames: TStrings; DeleteFiles: boolean);
-    function  GetFieldInfo(FieldName: string): TDbfFieldDef;
+    procedure Rename(const DestFileName: string; NewIndexFileNames: TStrings; DeleteFiles: boolean);
+    function  GetFieldInfo(const FieldName: string): TDbfFieldDef;
     // Copies record buffer to field buffer
     // Returns true if not null & data succesfully copied; false if field is null
     function  GetFieldData(Column: Integer; DataType: TFieldType; Src,Dst: Pointer; 
@@ -134,7 +150,7 @@ type
     procedure SetFieldData(Column: Integer; DataType: TFieldType; Src,Dst: Pointer; NativeFormat: boolean);
     // Fill DestBuf with default field data
     procedure InitRecord(DestBuf: TRecordBuffer);
-    procedure PackIndex(lIndexFile: TIndexFile; AIndexName: string);
+    procedure PackIndex(lIndexFile: TIndexFile; const AIndexName: string);
     procedure RegenerateIndexes;
     procedure LockRecord(RecNo: Integer; Buffer: TRecordBuffer);
     procedure UnlockRecord(RecNo: Integer; Buffer: TRecordBuffer);
@@ -165,6 +181,8 @@ type
     property ForceClose: Boolean read FForceClose;
     property CopyDateTimeAsString: Boolean read FCopyDateTimeAsString write FCopyDateTimeAsString;
     property DateTimeHandling: TDateTimeHandling read FDateTimeHandling write FDateTimeHandling;
+
+    property NextAutoInc: Cardinal read GetNextAutoInc write SetNextAutoInc;
 
     property OnIndexMissing: TDbfIndexMissingEvent read FOnIndexMissing write FOnIndexMissing;
     property OnLocaleError: TDbfLocaleErrorEvent read FOnLocaleError write FOnLocaleError;
@@ -251,7 +269,7 @@ const
 //====================================================================
 // International separator
 // thanks to Bruno Depero from Italy
-// and Andreas Wöllenstein from Denmark
+// and Andreas W\F6llenstein from Denmark
 //====================================================================
 function DbfStrToFloat(const Src: PChar; const Size: Integer): Extended;
 var
@@ -828,7 +846,7 @@ begin
 
           //AutoInc only support in Visual Foxpro; another upgrade
           //Note: .AutoIncrementNext is really a cardinal (see the definition)
-          lFieldDescIII.AutoIncrementNext:=SwapIntLE(lFieldDef.AutoInc);
+          PCardinal(@lFieldDescIII.AutoIncrementNext)^:=SwapIntLE(lFieldDef.AutoInc);
           lFieldDescIII.AutoIncrementStep:=lFieldDef.AutoIncStep;
           // Set autoincrement flag using AutoIncStep as a marker
           if (lFieldDef.AutoIncStep<>0) then
@@ -938,6 +956,111 @@ begin
   end;
 end;
 
+function TDbfFile.GetNextAutoInc: Cardinal;
+var
+  TempFieldDef: TDbfFieldDef;
+  I, NextVal, lAutoIncOffset: Cardinal;
+begin
+  Result := 0;
+
+  if FAutoIncPresent then
+  begin
+    // if shared, reread header to find new autoinc values
+    if NeedLocks then
+    begin
+      // lock header so nobody else can use this value
+      LockPage(0, true);
+    end;
+
+    // find autoinc fields
+    for I := 0 to FFieldDefs.Count-1 do
+    begin
+      TempFieldDef := FFieldDefs.Items[I];
+      if (DbfVersion=xBaseVII) and
+        (TempFieldDef.NativeFieldType = '+') then
+      begin
+        // read current auto inc, from header or field, depending on sharing
+        lAutoIncOffset := sizeof(rDbfHdr) + sizeof(rEndFixedHdrVII) +
+          FieldDescVII_AutoIncOffset + I * sizeof(rFieldDescVII);
+        if NeedLocks then
+        begin
+          ReadBlock(@NextVal, 4, lAutoIncOffset);
+          NextVal := SwapIntLE(NextVal);
+        end else
+          NextVal := TempFieldDef.AutoInc;
+        // store to buffer, positive = high bit on, so flip it
+        Result := NextVal;
+      end
+      else //No DBaseVII
+      if (DbfVersion=xVisualFoxPro) and (TempFieldDef.NativeFieldType = 'I') and
+        (TempFieldDef.AutoIncStep<>0) then
+      begin
+        // read current auto inc from field header
+        lAutoIncOffset := SizeOf(rDbfHdr) + FieldDescIII_AutoIncOffset +
+          SizeOf(rFieldDescIII) * I;
+        if NeedLocks then
+        begin
+          ReadBlock(@NextVal, 4, lAutoIncOffset);
+          NextVal := SwapIntLE(NextVal);
+        end else
+          NextVal := TempFieldDef.AutoInc;
+        Result := NextVal;
+      end;
+    end;
+
+    // release lock if locked
+    if NeedLocks then
+      UnlockPage(0);
+  end;
+end;
+
+procedure TDbfFile.SetNextAutoInc(ThisNextAutoInc: Cardinal);
+var
+  TempFieldDef: TDbfFieldDef;
+  I, NextVal, lAutoIncOffset: Cardinal;
+begin
+  if FAutoIncPresent then
+  begin
+    // if shared, reread header to find new autoinc values
+    if NeedLocks then
+    begin
+      // lock header so nobody else can use this value
+      LockPage(0, true);
+    end;
+
+    // find autoinc fields
+    for I := 0 to FFieldDefs.Count-1 do
+    begin
+      TempFieldDef := FFieldDefs.Items[I];
+      if (DbfVersion=xBaseVII) and
+        (TempFieldDef.NativeFieldType = '+') then
+      begin
+        // read current auto inc, from header or field, depending on sharing
+        lAutoIncOffset := sizeof(rDbfHdr) + sizeof(rEndFixedHdrVII) +
+          FieldDescVII_AutoIncOffset + I * sizeof(rFieldDescVII);
+        // write new value to header buffer
+        PCardinal(FHeader+lAutoIncOffset)^ := SwapIntLE(ThisNextAutoInc);
+      end
+      else //No DBaseVII
+      if (DbfVersion=xVisualFoxPro) and (TempFieldDef.NativeFieldType = 'I') and
+        (TempFieldDef.AutoIncStep<>0) then
+      begin
+        // read current auto inc from field header
+        lAutoIncOffset := SizeOf(rDbfHdr) + FieldDescIII_AutoIncOffset +
+          SizeOf(rFieldDescIII) * I;
+        PCardinal(FHeader+lAutoIncOffset)^ := SwapIntLE(ThisNextAutoInc);
+      end;
+    end;
+
+    // write modified header (new autoinc values) to file
+    WriteHeader;
+
+    // release lock if locked
+    if NeedLocks then
+      UnlockPage(0);
+  end;
+end;
+
 function TDbfFile.HasBlob: Boolean;
 var
   I: Integer;
@@ -1013,6 +1136,7 @@ var
   TempFieldDef: TDbfFieldDef;
   lSize,lPrec,I, lColumnCount: Integer;
   lAutoInc: Cardinal;
+  lAutoIncStep: Byte;
   dataPtr: PChar;
   lNativeFieldType: Char;
   lFieldName: string;
@@ -1063,6 +1187,9 @@ begin
   try
     // Specs say there has to be at least one field, so use repeat:
     repeat
+      // clear autoinc params
+      lAutoInc := 0;
+      lAutoIncStep := 0;
       // version field info?
       if FDbfVersion = xBaseVII then
       begin
@@ -1084,8 +1211,9 @@ begin
         if (FDBFVersion=xVisualFoxPro) and ((lFieldDescIII.VisualFoxProFlags and $0C)<>0) then
         begin
           // We do not test for an I field - we could implement our own N autoincrement this way...
-          lAutoInc:=lFieldDescIII.AutoIncrementNext;
-          FAutoIncPresent:=true;
+          lAutoInc := PCardinal(@lFieldDescIII.AutoIncrementNext)^;
+          lAutoIncStep := lFieldDescIII.AutoIncrementStep;
+          FAutoIncPresent := True;
         end;
 
         // Only Visual FoxPro supports null fields, if the nullable field flag is on
@@ -1124,6 +1252,7 @@ begin
         Size := lSize;
         Precision := lPrec;
         AutoInc := lAutoInc;
+        AutoIncStep := lAutoIncStep;
         NativeFieldType := lNativeFieldType;
         IsSystemField := lIsVFPSystemField;
         if lIsVFPVarLength then
@@ -1358,7 +1487,7 @@ begin
   end;
 end;
 
-procedure TDbfFile.Rename(DestFileName: string; NewIndexFileNames: TStrings; DeleteFiles: boolean);
+procedure TDbfFile.Rename(const DestFileName: string; NewIndexFileNames: TStrings; DeleteFiles: boolean);
 var
   lIndexFileNames: TStrings;
   lIndexFile: TIndexFile;
@@ -1665,16 +1794,17 @@ begin
   end;
 end;
 
-function TDbfFile.GetFieldInfo(FieldName: string): TDbfFieldDef;
+function TDbfFile.GetFieldInfo(const FieldName: string): TDbfFieldDef;
 var
   I: Integer;
   lfi: TDbfFieldDef;
+  FN : String;
 begin
-  FieldName := AnsiUpperCase(FieldName);
+  FN := AnsiUpperCase(FieldName);
   for I := 0 to FFieldDefs.Count-1 do
   begin
     lfi := TDbfFieldDef(FFieldDefs.Items[I]);
-    if lfi.fieldName = FieldName then
+    if lfi.fieldName = FN then
     begin
       Result := lfi;
       exit;
@@ -2341,7 +2471,8 @@ begin
     TempFieldDef := FFieldDefs.Items[I];
     // binary (non-text) field? (foxpro memo fields are binary, but dbase not)
     if (TempFieldDef.NativeFieldType in ['I', 'O', '@', '+', '0', 'W', 'Y'])
-        or ((TempFieldDef.NativeFieldType = 'M') and (TempFieldDef.Size = 4) {Visual FoxPro?}) then
+        or ((TempFieldDef.NativeFieldType = 'M') and (TempFieldDef.Size = 4) {Visual FoxPro?})
+        or ((TempFieldDef.NativeFieldType = 'B') and (FDbfVersion in [xFoxPro, xVisualFoxPro])) then
       FillChar(PChar(FDefaultBuffer+TempFieldDef.Offset)^, TempFieldDef.Size, 0);
     // copy default value?
     if TempFieldDef.HasDefault then
@@ -2377,7 +2508,7 @@ var
   TempFieldDef: TDbfFieldDef;
   I, NextVal, lAutoIncOffset: {LongWord} Cardinal;    {Delphi 3 does not know LongWord?}
 begin
-  if FAutoIncPresent then
+  if FAutoIncPresent and FUseAutoInc then
   begin
     // if shared, reread header to find new autoinc values
     if NeedLocks then
@@ -2411,16 +2542,24 @@ begin
         PCardinal(FHeader+lAutoIncOffset)^ := SwapIntLE(NextVal);
       end
       else //No DBaseVII
-      if (DbfVersion=xVisualFoxPro) and
+      if (DbfVersion=xVisualFoxPro) and (TempFieldDef.NativeFieldType = 'I') and
         (TempFieldDef.AutoIncStep<>0) then
       begin
         // read current auto inc from field header
-        NextVal:=TempFieldDef.AutoInc; //todo: is this correct
-        PCardinal(DestBuf+TempFieldDef.Offset)^ := SwapIntBE(NextVal); //todo: is swapintbe correct?
+        lAutoIncOffset := SizeOf(rDbfHdr) + FieldDescIII_AutoIncOffset +
+          SizeOf(rFieldDescIII) * I;
+        if NeedLocks then
+        begin
+          ReadBlock(@NextVal, 4, lAutoIncOffset);
+          NextVal := SwapIntLE(NextVal);
+        end else
+          NextVal := TempFieldDef.AutoInc;
+        PCardinal(DestBuf+TempFieldDef.Offset)^ := SwapIntLE(NextVal);
         // Increase with step size
         NextVal:=NextVal+TempFieldDef.AutoIncStep;
         // write new value back
         TempFieldDef.AutoInc:=NextVal;
+        PCardinal(FHeader+lAutoIncOffset)^ := SwapIntLE(NextVal);
       end;
     end;
 
@@ -2465,7 +2604,7 @@ begin
   inherited;
 end;
 
-procedure TDbfFile.OpenIndex(IndexName, IndexField: string; CreateIndex: Boolean; Options: TIndexOptions);
+procedure TDbfFile.OpenIndex(const IndexName, IndexField: string; CreateIndex: Boolean; Options: TIndexOptions);
   //
   // assumes IndexName is not empty
   //
@@ -2483,6 +2622,8 @@ var
   tempExclusive: boolean;
   addedIndexFile: Integer;
   addedIndexName: Integer;
+  Tmp : String;
+
 begin
   // init
   addedIndexFile := -1;
@@ -2575,11 +2716,11 @@ begin
       tempExclusive := IsSharedAccess;
       if tempExclusive then TryExclusive;
       // always uppercase index expression
-      IndexField := AnsiUpperCase(IndexField);
+      Tmp := AnsiUpperCase(IndexField);
       try
         try
           // create index if asked
-          lIndexFile.CreateIndex(IndexField, IndexName, Options);
+          lIndexFile.CreateIndex(Tmp, IndexName, Options);
           // add all records
           PackIndex(lIndexFile, IndexName);
           // if we wanted to open index readonly, but we created it, then reopen
@@ -2622,7 +2763,7 @@ begin
   end;
 end;
 
-procedure TDbfFile.PackIndex(lIndexFile: TIndexFile; AIndexName: string);
+procedure TDbfFile.PackIndex(lIndexFile: TIndexFile; const AIndexName: string);
 var
   prevMode: TIndexUpdateMode;
   prevIndex: string;
@@ -2687,7 +2828,7 @@ begin
   end;
 end;
 
-procedure TDbfFile.RepageIndex(AIndexFile: string);
+procedure TDbfFile.RepageIndex(const AIndexFile: string);
 var
   lIndexNo: Integer;
 begin
@@ -2708,7 +2849,7 @@ begin
   end;
 end;
 
-procedure TDbfFile.CompactIndex(AIndexFile: string);
+procedure TDbfFile.CompactIndex(const AIndexFile: string);
 var
   lIndexNo: Integer;
 begin
@@ -2729,7 +2870,7 @@ begin
   end;
 end;
 
-procedure TDbfFile.CloseIndex(AIndexName: string);
+procedure TDbfFile.CloseIndex(const AIndexName: string);
 var
   lIndexNo: Integer;
   lIndex: TIndexFile;
@@ -3041,7 +3182,7 @@ begin
   inherited;
 end;
 
-function TDbfFile.GetIndexByName(AIndexName: string): TIndexFile;
+function TDbfFile.GetIndexByName(const AIndexName: string): TIndexFile;
 var
   I: Integer;
 begin

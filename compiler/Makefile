@@ -330,7 +330,7 @@ FPCFPMAKE=$(FPC)
 endif
 endif
 override PACKAGE_NAME=compiler
-override PACKAGE_VERSION=3.2.2
+override PACKAGE_VERSION=3.2.4-rc1
 unexport FPC_VERSION FPC_COMPILERINFO
 CYCLETARGETS=i386 powerpc sparc arm x86_64 powerpc64 m68k armeb mipsel mips avr jvm i8086 aarch64 sparc64
 ALLTARGETS=$(CYCLETARGETS)
@@ -403,6 +403,24 @@ endif
 ifndef RTLOPT
 RTLOPT:=$(OPT)
 endif
+SVNVERSION:=$(firstword $(wildcard $(addsuffix /svnversion$(SRCEXEEXT),$(SEARCHPATH))))
+ifndef GIT
+GIT:=$(firstword $(wildcard $(addsuffix /git$(SRCEXEEXT),$(SEARCHPATH))))
+endif
+DATE_FMT = +%Y/%m/%d
+ifdef SOURCE_DATE_EPOCH
+    COMPDATESTR ?= $(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u "$(DATE_FMT)")
+else
+   GIT_DIR = $(wildcard ../.git)
+   ifneq ($(GIT_DIR),)
+      ifneq ($(GIT),)
+	COMPDATESTR:=$(shell $(GIT) log -1 --pretty=%cd --date=format:'%Y/%m/%d')
+      endif
+   endif
+endif
+ifdef COMPDATESTR
+override OPTNEW+=-DD$(COMPDATESTR)
+endif
 ifdef CYCLELEVEL
 ifeq ($(CYCLELEVEL),1)
 override LOCALOPT+=$(OPTLEVEL1)
@@ -433,6 +451,12 @@ override LOCALOPT+=$(LOCALOPTLEVEL4)
 override RTLOPT+=$(RTLOPTLEVEL4)
 override LOCALOPT+=$(OPTNEW)
 override RTLOPT+=$(OPTNEW)
+endif
+else
+ifdef COMPDATESTR
+ifeq ($(FPC_VERSION),$(PACKAGE_VERSION))
+override LOCALOPT+=-DD$(COMPDATESTR)
+endif
 endif
 endif
 override OPT=
@@ -483,11 +507,30 @@ CPUSUF=a64
 endif
 NOCPUDEF=1
 MSGFILE=msg/error$(FPCLANG).msg
-SVNVERSION:=$(firstword $(wildcard $(addsuffix /svnversion$(SRCEXEEXT),$(SEARCHPATH))))
+PPUDUMPPROG:=$(firstword $(strip $(wildcard $(addsuffix /ppudump$(SRCEXEEXT),$(SEARCHPATH)))))
+ifndef PPUDUMP
+ifdef PPUDUMPPROG
+PPUDUMP=$(PPUDUMPPROG)
+else
+PPUDUMP=ppudump
+endif
+endif
 REVINC:=$(wildcard revision.inc)
 ifneq ($(REVINC),)
 override LOCALOPT+=-dREVINC
 ifeq ($(REVSTR),)
+ifneq ($(wildcard ../.git),)
+ifneq ($(GIT),)
+GITDESCRIBE=$(shell $(GIT) describe --dirty)
+REVSTR:=$(word 2,$(subst -, ,$(GITDESCRIBE)))-$(word 3,$(subst -, ,$(GITDESCRIBE)))
+ifneq ($(shell $(GIT) log @{u}..),)
+REVSTR:=$(REVSTR)-unpushed
+endif
+ifneq ($(word 4,$(subst -, ,$(GITDESCRIBE))),)
+REVSTR:=$(REVSTR)-$(word 4,$(subst -, ,$(GITDESCRIBE)))
+endif
+export REVSTR
+else
 ifneq ($(SVNVERSION),)
 REVSTR:=$(subst r,,$(subst r1:,,r$(subst exported,,$(shell $(SVNVERSION) -c .))))
 export REVSTR
@@ -495,6 +538,8 @@ else
 ifeq ($(REVINC),force)
 REVSTR:=exported
 export REVSTR
+endif
+endif
 endif
 endif
 endif
@@ -3254,6 +3299,19 @@ override COMPILER_UNITTARGETDIR=$(COMPILER_TARGETDIR)
 override UNITTARGETDIRPREFIX=$(TARGETDIRPREFIX)
 endif
 endif
+ifdef SYSROOTPATH
+override FPCOPT+=-XR$(SYSROOTPATH)
+else
+ifeq ($(OS_TARGET),$(OS_SOURCE))
+ifneq ($(findstring $(OS_TARGET),darwin),)
+ifneq ($(findstring $(CPU_TARGET),aarch64),)
+ifneq ($(wildcard /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk),)
+override FPCOPT+=-XR/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+endif
+endif
+endif
+endif
+endif
 ifdef CREATESHARED
 override FPCOPT+=-Cg
 endif
@@ -4396,11 +4454,13 @@ extcycle:
 	$(MAKE) cycle OPT="$(OPT) -n -OG2p3 -glttt -CRriot -dEXTDEBUG" ALLOW_WARNINGS=1
 cvstest:
 	$(MAKE) cycle 'LOCALOPT=-n -Se' 'RTLOPT=-n -Se'
+ifeq ($(findstring -dFPC_SOFT_FPUX80,$(LOCALOPT)),)
 ifeq ($(OS_SOURCE),win64)
   EXCLUDE_80BIT_TARGETS=1
 endif
 ifneq ($(findstring $(CPU_SOURCE),aarch64 arm avr jvm m68k mips mipsel powerpc powerpc64 sparc sparc64),)
   EXCLUDE_80BIT_TARGETS=1
+endif
 endif
 full: fullcycle
 fullcycle:
@@ -4485,7 +4545,7 @@ rtlppulogs : $(RTLPPULOGLIST)
 vpath %.ppu $(PPUDIR) $(RTLPPUDIR) $(ALLPPUDIR)
 vpath %.log-ppu $(PPUDIR) $(RTLPPUDIR) $(ALLPPUDIR)
 %.log-ppu : %.ppu
-	ppudump -VA -M $< > $@
+	$(PPUDUMP) -VA -M $< > $@
 ./utils/ppudump$(EXEEXT):
 	$(MAKE) -C $(COMPILERUTILSDIR) ppudump$(EXEEXT)
 ppuinfo :
@@ -4498,7 +4558,8 @@ cleanppulogs :
 cleanrtlppulogs :
 	-$(RMPROG) $(RTLPPULOGLIST)
 testppudump :
-	$(MAKE) cleanrtlppulogs cleanppulogs ppulogs rtlppulogs
+	$(MAKE) cleanrtlppulogs cleanppulogs
+	$(MAKE) ppulogs rtlppulogs
 localmake:=$(strip $(wildcard makefile.loc))
 ifdef localmake
 include ./$(localmake)

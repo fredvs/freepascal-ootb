@@ -312,6 +312,7 @@ function CreateAcceleratorTableW(var Accel; Count: Integer): HACCEL; external 'u
 function CreateColorSpace(var ColorSpace: TLogColorSpace): HCOLORSPACE;external 'gdi32' name 'CreateColorSpaceA';
 function CreateColorSpaceA(var ColorSpace: TLogColorSpaceA): HCOLORSPACE; external 'gdi32' name 'CreateColorSpaceA';
 //function CreateColorSpaceW(var ColorSpace: TLogColorSpaceW): HCOLORSPACE; external 'gdi32' name 'CreateColorSpaceW';
+function CreateConsoleScreenBuffer(dwDesiredAccess:DWORD; dwShareMode:DWORD; var lpSecurityAttributes:SECURITY_ATTRIBUTES; dwFlags:DWORD; lpScreenBufferData:LPVOID):HANDLE; external 'kernel32' name 'CreateConsoleScreenBuffer';
 function CreateDialogIndirectParam(hInstance: HINST; const lpTemplate: TDlgTemplate; hWndParent: HWND; lpDialogFunc: TFNDlgProc; dwInitParam: LPARAM): HWND;external 'user32' name 'CreateDialogIndirectParamA';
 //function CreateDialogIndirectParamA(hInstance: HINST; const lpTemplate: TDlgTemplate; hWndParent: HWND; lpDialogFunc: TFNDlgProc; dwInitParam: LPARAM): HWND; external 'user32' name 'CreateDialogIndirectParamA';
 //function CreateDialogIndirectParamW(hInstance: HINST; const lpTemplate: TDlgTemplate; hWndParent: HWND; lpDialogFunc: TFNDlgProc; dwInitParam: LPARAM): HWND; external 'user32' name 'CreateDialogIndirectParamW';
@@ -623,6 +624,8 @@ function GetThreadPriorityBoost(hThread: THandle; var DisablePriorityBoost: Bool
 function GetThreadSelectorEntry(hThread: THandle; dwSelector: DWORD; var lpSelectorEntry: TLDTEntry): BOOL; external 'kernel32' name 'GetThreadSelectorEntry';
 function GetThreadTimes(hThread: THandle; var lpCreationTime, lpExitTime, lpKernelTime, lpUserTime: TFileTime): BOOL; external 'kernel32' name 'GetThreadTimes';
 function GetTimeZoneInformation(var lpTimeZoneInformation: TTimeZoneInformation): DWORD; external 'kernel32' name 'GetTimeZoneInformation';
+//function GetTimeZoneInformationForYear(wYear: USHORT; lpDynamicTimeZoneInformation: PDynamicTimeZoneInformation;
+//  var lpTimeZoneInformation: TTimeZoneInformation): BOOL; external 'kernel32' name 'GetTimeZoneInformationForYear';
 //function GetTitleBarInfo(hwnd: HWND; var pti: TTitleBarInfo): BOOL;external 'user32' name 'GetTitleBarInfo';
 function GetTokenInformation(TokenHandle: THandle; TokenInformationClass: TTokenInformationClass; TokenInformation: Pointer; TokenInformationLength: DWORD; var ReturnLength: DWORD): BOOL; external 'advapi32' name 'GetTokenInformation';
 function GetUpdateRect(hWnd: HWND; var lpRect: TRect; bErase: BOOL): BOOL; external 'user32' name 'GetUpdateRect';
@@ -746,8 +749,8 @@ function PrivilegedServiceAuditAlarm(SubsystemName, ServiceName: PChar; ClientTo
 function PrivilegedServiceAuditAlarmA(SubsystemName, ServiceName: LPCSTR; ClientToken: THandle; var Privileges: TPrivilegeSet; AccessGranted: BOOL): BOOL; external 'advapi32' name 'PrivilegedServiceAuditAlarmA';
 function PrivilegedServiceAuditAlarmW(SubsystemName, ServiceName: LPWSTR; ClientToken: THandle; var Privileges: TPrivilegeSet; AccessGranted: BOOL): BOOL; external 'advapi32' name 'PrivilegedServiceAuditAlarmW';
 //function PtInRect(const lprc: TRect; pt: TPoint): BOOL; external 'user32' name 'PtInRect';
-function QueryPerformanceCounter(var lpPerformanceCount: TLargeInteger): BOOL; external 'kernel32' name 'QueryPerformanceCounter';
-function QueryPerformanceFrequency(var lpFrequency: TLargeInteger): BOOL; external 'kernel32' name 'QueryPerformanceFrequency';
+function QueryPerformanceCounter(out lpPerformanceCount: TLargeInteger): BOOL; external 'kernel32' name 'QueryPerformanceCounter';
+function QueryPerformanceFrequency(out lpFrequency: TLargeInteger): BOOL; external 'kernel32' name 'QueryPerformanceFrequency';
 //function QueryRecoveryAgents(p1: PChar; var p2: Pointer; var p3: TRecoveryAgentInformation): DWORD;external 'kernel32' name 'QueryRecoveryAgentsA';
 //function QueryRecoveryAgentsA(p1: LPCSTR; var p2: Pointer; var p3: TRecoveryAgentInformationA): DWORD;external 'kernel32' name 'QueryRecoveryAgentsA';
 //function QueryRecoveryAgentsW(p1: LPWSTR; var p2: Pointer; var p3: TRecoveryAgentInformationW): DWORD;external 'kernel32' name 'QueryRecoveryAgentsW';
@@ -1008,12 +1011,12 @@ function OpenWaitableTimer(dwDesiredAccess:DWORD;bInheritHandle:BOOL;lpTimerName
 // windows because of Delphi compat.
 
 {$calling default}
-function InterLockedIncrement (var Target: longint) : longint; register; external name 'FPC_INTERLOCKEDINCREMENT';
-function InterLockedDecrement (var Target: longint) : longint; register; external name 'FPC_INTERLOCKEDDECREMENT';
-function InterLockedExchange (var Target: longint;Source : longint) : longint; register; external name 'FPC_INTERLOCKEDEXCHANGE';
-function InterLockedExchangeAdd (var Target: longint;Source : longint) : longint; register; external name 'FPC_INTERLOCKEDEXCHANGEADD';
-function InterLockedExchangeAdd (Target: plongint;Source : longint) : longint; register; external name 'FPC_INTERLOCKEDEXCHANGEADD';
-function InterlockedCompareExchange(var Target: longint; NewValue: longint; Comperand: longint): longint; register; external name 'FPC_INTERLOCKEDCOMPAREEXCHANGE';
+function InterLockedIncrement (var Target: longint) : longint; register; external name 'FPC_INTERLOCKEDINCREMENT'; overload;
+function InterLockedDecrement (var Target: longint) : longint; register; external name 'FPC_INTERLOCKEDDECREMENT'; overload;
+function InterLockedExchange (var Target: longint;Source : longint) : longint; register; external name 'FPC_INTERLOCKEDEXCHANGE'; overload;
+function InterLockedExchangeAdd (var Target: longint;Source : longint) : longint; register; external name 'FPC_INTERLOCKEDEXCHANGEADD'; overload;
+function InterLockedExchangeAdd (Target: plongint;Source : longint) : longint; register; external name 'FPC_INTERLOCKEDEXCHANGEADD'; overload;
+function InterlockedCompareExchange(var Target: longint; NewValue: longint; Comperand: longint): longint; register; external name 'FPC_INTERLOCKEDCOMPAREEXCHANGE'; overload;
 {$calling stdcall}
 
 {$endif read_interface}

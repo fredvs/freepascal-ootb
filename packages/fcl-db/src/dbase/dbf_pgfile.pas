@@ -1,5 +1,19 @@
 unit dbf_pgfile;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Pascal Ganaye,Micha Nelissen and other members of the
+    Free Pascal development team
 
+    DBF  paging file support
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 interface
 
 {$I dbf_common.inc}
@@ -65,6 +79,7 @@ type
     FBufferMaxSize: Integer;
     FBufferModified: Boolean;
     FWriteError: Boolean;
+    FUseAutoInc: Boolean;
   protected
     procedure SetHeaderOffset(NewValue: Integer); virtual;
     procedure SetRecordSize(NewValue: Integer); virtual;
@@ -73,7 +88,7 @@ type
     procedure SetPageOffsetByHeader(NewValue: Boolean); virtual;
     procedure SetRecordCount(NewValue: Integer);
     procedure SetBufferAhead(NewValue: Boolean);
-    procedure SetFileName(NewName: string);
+    procedure SetFileName(const NewName: string);
     procedure SetStream(NewStream: TStream);
     function  LockSection(const Offset, Length: Cardinal; const Wait: Boolean): Boolean; virtual;
     function  UnlockSection(const Offset, Length: Cardinal): Boolean; virtual;
@@ -146,6 +161,7 @@ type
     property Stream: TStream read FStream write SetStream;
     property BufferAhead: Boolean read FBufferAhead write SetBufferAhead;
     property WriteError: Boolean read FWriteError;
+    property UseAutoInc: Boolean read FUseAutoInc write FUseAutoInc;
   end;
 
 implementation
@@ -499,7 +515,7 @@ begin
     FStream := NewStream;
 end;
 
-procedure TPagedFile.SetFileName(NewName: string);
+procedure TPagedFile.SetFileName(const NewName: string);
 begin
   if not FActive then
     FFileName := NewName;

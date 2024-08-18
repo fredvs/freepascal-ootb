@@ -76,9 +76,18 @@ FreeBSD: same implementation as NetBSD.
 
 begin
   {$ifdef CPU64}
+    {$ifdef freebsd}
+    // newer style, no align zeroes in _syscall
+    Fplseek:=do_syscall(syscall_nr___syscall,syscall_nr_lseek,TSysParam(fd),Offset,whence);
+    {$else}
     Fplseek:=do_syscall(syscall_nr___syscall,syscall_nr_lseek,TSysParam(fd),0,Offset,whence);
+    {$endif}
   {$else}
+    {$ifdef freebsd}    
+    Fplseek:=do_syscall(syscall_nr___syscall,syscall_nr_lseek,0,TSysParam(fd),
+    {$else}
     Fplseek:=do_syscall(syscall_nr___syscall,syscall_nr_lseek,0,TSysParam(fd),0,
+    {$endif}
        {$ifdef ENDIAN_BIG}hi(offset),lo(offset){$endif}
        {$ifdef ENDIAN_LITTLE}lo(Offset),hi(offset){$endif},
        Whence);
@@ -90,11 +99,20 @@ function Fpftruncate(fd : cint; flength : off_t): cint; [public, alias : 'FPC_SY
 
 begin
  {$ifdef CPU64}
+   {$ifdef freebsd}
+   // newer style, no align zeroes in _syscall
+   Fpftruncate:=Do_syscall(syscall_nr___syscall,syscall_nr_ftruncate, fd  ,flength);
+   {$else}
    Fpftruncate:=Do_syscall(syscall_nr___syscall,syscall_nr_ftruncate, fd  ,0   ,flength);
+   {$endif}
  {$else}
+   {$ifdef freebsd}
+   // newer style, no align zeroes in _syscall
+   Fpftruncate:=Do_syscall(syscall_nr___syscall,syscall_nr_ftruncate,0,fd,lo(flength),hi(flength));
+   {$else}
    Fpftruncate:=Do_syscall(syscall_nr___syscall,syscall_nr_ftruncate,0,fd,0,lo(flength),hi(flength));
+   {$endif}
  {$endif}
-
 end;
 
 
@@ -102,9 +120,17 @@ Function Fpmmap(start:pointer;len:size_t;prot:cint;flags:cint;fd:cint;offst:off_
 
 begin
  {$ifdef CPU64}
+ {$ifdef freebsd}
+  Fpmmap:=pointer(ptruint(do_syscall(TSysParam(syscall_nr_mmap),TSysParam(Start),TSysParam(Len),TSysParam(Prot),TSysParam(Flags),TSysParam(fd),TSysParam(offst))));
+ {$else}
   Fpmmap:=pointer(ptruint(do_syscall(TSysParam(syscall_nr_mmap),TSysParam(Start),TSysParam(Len),TSysParam(Prot),TSysParam(Flags),TSysParam(fd),0,TSysParam(offst))));
+ {$endif}
 {$else}
- Fpmmap:=pointer(ptruint(do_syscall(syscall_nr_mmap,TSysParam(Start),Len,Prot,Flags,fd,0,
+ {$ifdef freebsd}
+  Fpmmap:=pointer(ptruint(do_syscall(syscall_nr_mmap,TSysParam(Start),Len,Prot,Flags,fd,
+ {$else}
+  Fpmmap:=pointer(ptruint(do_syscall(syscall_nr_mmap,TSysParam(Start),Len,Prot,Flags,fd,0,
+ {$endif} 
          {$ifdef FPC_BIG_ENDIAN}    hi(offst),lo(offst){$endif}
          {$ifdef FPC_LITTLE_ENDIAN} lo(offst),hi(offst){$endif}
          )));
@@ -138,12 +164,25 @@ begin
   Fprename:=do_syscall(syscall_nr_rename,TSysParam(old),TSysParam(newpath));
 end;
 
-function Fpstat(const path: pchar; var buf : stat):cint; [public, alias : 'FPC_SYSC_STAT'];
+{$ifdef freebsd}
+Function fpFstatat(fd: cint; path: pchar; var sb: stat; flag: cint):cint;
 
 begin
- Fpstat:=do_syscall(syscall_nr_stat,TSysParam(path),TSysParam(@buf));
+  fpFStatat:=do_syscall(syscall_nr_fstatat,fd,TSysParam(path),TSysParam(@sb),flag);
 end;
+{$endif}
 
+function Fpstat(const path: pchar; var buf : stat):cint; [public, alias : 'FPC_SYSC_STAT'];
+
+const
+ AT_FDCWD=-100;
+begin
+{$ifdef freebsd}
+  Fpstat:=FpFstatat(AT_FDCWD, path, buf, 0);
+{$else}
+  Fpstat:=do_syscall(syscall_nr_stat,TSysParam(path),TSysParam(@buf));
+{$endif}
+end;
 
 {*****************************************************************************
                --- Directory:Directory related calls ---
@@ -171,6 +210,13 @@ end;
 
 const DIRBLKSIZ=1024;
 
+{$ifdef freebsd}
+function FpGetdirentries(fd : cint; buf : pchar; nbytes : clong) : cint;
+
+begin
+  FpGetdirentries:=do_syscall(syscall_nr_getdirentries,fd,TSysParam(buf),nbytes,TSysParam(0));
+end;
+{$endif}
 
 function Fpfstat(fd : cint; var sb : stat): cint; forward;
 
@@ -247,7 +293,11 @@ function readbuffer:longint;
 
 var retval :longint;
 begin
- Retval:=do_syscall(syscall_nr_getdents,TSysParam(dirp^.dd_fd),TSysParam(@dirp^.dd_buf^),DIRBLKSIZ {sizeof(getdentsbuffer)});
+{$ifdef freebsd}
+  Retval:=FpGetdirentries(dirp^.dd_fd, @dirp^.dd_buf^, DIRBLKSIZ {sizeof(getdentsbuffer)});
+{$else}
+  Retval:=do_syscall(syscall_nr_getdents,TSysParam(dirp^.dd_fd),TSysParam(@dirp^.dd_buf^),DIRBLKSIZ {sizeof(getdentsbuffer)});
+{$endif}
    dirp^.dd_rewind:=TSysParam(dirp^.dd_buf);
    if retval=0 then
     begin

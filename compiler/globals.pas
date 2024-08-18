@@ -280,6 +280,9 @@ interface
        do_build,
        do_release,
        do_make       : boolean;
+
+       timestr,
+       datestr : string;
        { Path to ppc }
        exepath       : TPathStr;
        { Path to unicode charmap/collation binaries }
@@ -378,6 +381,8 @@ interface
        prop_auto_getter_prefix,
        prop_auto_setter_prefix : string;
 
+       cgbackend: tcgbackend;
+
     const
        Inside_asm_statement : boolean = false;
 
@@ -391,6 +396,11 @@ interface
        palmos_applicationname : string = 'FPC Application';
        palmos_applicationid : string[4] = 'FPCA';
 {$endif defined(m68k) or defined(arm)}
+
+{$if defined(m68k)}
+       { Atari Specific }
+       ataritos_exe_flags: dword = 7;
+{$endif defined(m68k)}
 
        { default name of the C-style "main" procedure of the library/program }
        { (this will be prefixed with the target_info.cprefix)                }
@@ -908,7 +918,6 @@ implementation
          Replace(s,'$FPCDATE',date_string);
          Replace(s,'$FPCCPU',target_cpu_string);
          Replace(s,'$FPCOS',target_os_string);
-         Replace(s,'$FPCBINDIR',exepath);
          if (tf_use_8_3 in Source_Info.Flags) or
             (tf_use_8_3 in Target_Info.Flags) then
            Replace(s,'$FPCTARGET',target_os_string)
@@ -1626,6 +1635,11 @@ implementation
 
 initialization
   allocinitdoneprocs;
+{$ifdef LLVM}
+  cgbackend:=cg_llvm;
+{$else}
+  cgbackend:=cg_fpc;
+{$endif}
 finalization
   freeinitdoneprocs;
 end.

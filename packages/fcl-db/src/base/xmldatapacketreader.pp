@@ -65,7 +65,7 @@ implementation
 uses xmlwrite, xmlread, base64;
 
 const
-  XMLFieldtypenames : Array [TFieldType] of String[16] =
+  XMLFieldTypeNames : Array [TFieldType] of String[16] =
     (
       'Unknown',
       'string',
@@ -92,7 +92,7 @@ const
       '',
       'string',             // ftFixedChar
       'string.uni',         // ftWideString
-      'i8',
+      'i8',                 // ftLargeint
       '',
       '',
       '',
@@ -106,7 +106,14 @@ const
       '',
       'fixedFMT',           // ftFmtBCD
       'string.uni',         // ftFixedWideChar
-      'bin.hex:WideText'    // ftWideMemo
+      'bin.hex:WideText',   // ftWideMemo
+      'SQLdateTime',        // ftOraTimeStamp
+      '',                   // ftOraInterval
+      'ui4',                // ftLongWord
+      'i1',                 // ftShortint
+      'ui1',                // ftByte
+      '',                   // ftExtended
+      'r4'                  // ftSingle
     );
 
 resourcestring
@@ -125,7 +132,7 @@ end;
 
 procedure TXMLDatapacketReader.LoadFieldDefs(var AnAutoIncValue: integer);
 
-  function GetNodeAttribute(const aNode : TDOMNode; AttName : String) : string;
+  function GetNodeAttribute(const aNode : TDOMNode; const AttName : String) : string;
   var AnAttr : TDomNode;
   begin
     AnAttr := ANode.Attributes.GetNamedItem(AttName);
@@ -299,7 +306,7 @@ end;
 procedure TXMLDatapacketReader.InitLoadRecords;
 
 var ChangeLogStr : String;
-    i,cp         : integer;
+    I, StartI, cp: integer;
     ps           : string;
 
 begin
@@ -312,12 +319,13 @@ begin
     ChangeLogStr:='';
   ps := '';
   cp := 0;
-  if ChangeLogStr<>'' then for i := 1 to length(ChangeLogStr)+1 do
+  StartI := 1;
+  if ChangeLogStr<>'' then
+  for I := 1 to Length(ChangeLogStr)+1 do
     begin
-    if not (ChangeLogStr[i] in [' ',#0]) then
-      ps := ps + ChangeLogStr[i]
-    else
+    if (I>Length(ChangeLogStr)) or (ChangeLogStr[I] in [' ',#0]) then
       begin
+      ps := Copy(ChangeLogStr, StartI, I-StartI);
       case (cp mod 3) of
         0 : begin
             SetLength(FChangeLog,length(FChangeLog)+1);
@@ -333,8 +341,8 @@ begin
               FChangeLog[cp div 3].UpdateKind:=ukModify;
             end;
       end; {case}
-      ps := '';
       inc(cp);
+      StartI := I+1;
       end;
     end;
 end;

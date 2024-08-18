@@ -363,6 +363,13 @@ const
    YESSTR = __YESSTR;
    NOSTR = __NOSTR;
 
-function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo' + LIBC_SUFFIX;
-function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l' + LIBC_SUFFIX;
 
+function nl_langinfo(__item:nl_item):Pchar;cdecl;external clib name 'nl_langinfo';
+function __nl_langinfo_l(__item:nl_item; l:__locale_t):Pchar;cdecl;external clib name '__nl_langinfo_l';
+
+
+{ ---------------------------------------------------------------------
+    Borland compatibility types
+  ---------------------------------------------------------------------}
+
+// Type

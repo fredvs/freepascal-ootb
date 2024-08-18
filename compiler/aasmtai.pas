@@ -670,6 +670,9 @@ interface
           constructor Create_int_codeptr_unaligned(_value: int64);
           constructor Create_int_dataptr(_value: int64);
           constructor Create_int_dataptr_unaligned(_value: int64);
+{$ifdef avr}
+          constructor Create_int_dataptr_unaligned(_value: int64; size: taiconst_type);
+{$endif}
 {$ifdef i8086}
           constructor Create_seg_name(const name:string);
           constructor Create_dgroup;
@@ -1894,6 +1897,20 @@ implementation
       end;
 
 
+{$ifdef avr}
+    constructor tai_const.Create_int_dataptr_unaligned(_value: int64;
+      size: taiconst_type);
+      begin
+        inherited Create;
+        typ:=ait_const;
+        consttype:=size;
+        sym:=nil;
+        endsym:=nil;
+        symofs:=0;
+        value:=_value;
+      end;
+{$endif avr}
+
 {$ifdef i8086}
     constructor tai_const.Create_seg_name(const name:string);
       begin
@@ -2876,6 +2893,11 @@ implementation
                   p.oper[i]^.ref^:=oper[i]^.ref^;
                 end;
 {$ifdef ARM}
+              top_regset:
+                begin
+                  new(p.oper[i]^.regset);
+                  p.oper[i]^.regset^:=oper[i]^.regset^;
+                end;
               top_shifterop:
                 begin
                   new(p.oper[i]^.shifterop);

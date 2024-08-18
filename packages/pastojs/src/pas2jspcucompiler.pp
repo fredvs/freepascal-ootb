@@ -169,7 +169,7 @@ begin
   PrecompileInitialFlags.ParserOptions:=MyFile.Parser.Options;
   PrecompileInitialFlags.ModeSwitches:=MyFile.Scanner.CurrentModeSwitches;
   PrecompileInitialFlags.BoolSwitches:=MyFile.Scanner.CurrentBoolSwitches;
-  PrecompileInitialFlags.ConverterOptions:=MyFile.GetInitialConverterOptions;
+  PrecompileInitialFlags.ConverterOptions:=MyFile.GetInitialConverterOptions+PCUMinConverterOptions;
   PrecompileInitialFlags.TargetPlatform:=Compiler.TargetPlatform;
   PrecompileInitialFlags.TargetProcessor:=Compiler.TargetProcessor;
 end;
@@ -187,6 +187,7 @@ begin
     RaiseInternalError(20180312142954,'');
   FPCUReader:=FPCUFormat.ReaderClass.Create;
   FPCUReader.SourceFilename:=ExtractFileName(MyFile.PCUFilename);
+  FPCUReader.PCUFilename:=MyFile.PCUFilename;
 
   if MyFile.ShowDebug then
     MyFile.Log.LogMsg(nParsingFile,[QuoteStr(MyFile.PCUFilename)]);
@@ -315,17 +316,16 @@ begin
 
     // create JavaScript for procs, initialization, finalization
     MyFile.CreateConverter;
-    MyFile.Converter.Options:=MyFile.Converter.Options+[coStoreImplJS];
+    MyFile.Converter.Options:=MyFile.Converter.Options+PCUMinConverterOptions;
     MyFile.Converter.OnIsElementUsed:=@OnPCUConverterIsElementUsed;
     MyFile.Converter.OnIsTypeInfoUsed:=@OnPCUConverterIsTypeInfoUsed;
     JS:=MyFile.Converter.ConvertPasElement(MyFile.PasModule,MyFile.PascalResolver);
-    MyFile.Converter.Options:=MyFile.Converter.Options-[coStoreImplJS];
     MyFile.PCUSupport.SetInitialCompileFlags;
     {$IFDEF REALLYVERBOSE}
     writeln('TPas2jsCompilerFile.WritePCU create pcu ... ',MyFile.PCUFilename);
     {$ENDIF}
     Writer.WritePCU(MyFile.PascalResolver,MyFile.Converter,
-                    PrecompileInitialFlags,ms,AllowCompressed);
+              PrecompileInitialFlags,ms,AllowCompressed);
     {$IFDEF REALLYVERBOSE}
     writeln('TPas2jsCompilerFile.WritePCU precompiled ',MyFile.PCUFilename);
     {$ENDIF}

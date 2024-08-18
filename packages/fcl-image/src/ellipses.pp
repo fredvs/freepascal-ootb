@@ -17,7 +17,7 @@ unit Ellipses;
 
 interface
 
-uses classes, FPImage, FPCanvas;
+uses classes, FPImage, FPCanvas, Math;
 
 procedure DrawSolidEllipse (Canv:TFPCustomCanvas; const Bounds:TRect; const c:TFPColor);
 procedure DrawSolidEllipse (Canv:TFPCustomCanvas; const Bounds:TRect; Width:integer; const c:TFPColor);
@@ -171,6 +171,8 @@ var infoP, infoM : PEllipseInfoData;
     halfnumber,
     r, NumberPixels, xtemp,yt,yb : integer;
     pPy, pMy, x,y, rx,ry, xd,yd,ra, rdelta : real;
+    ras,rac : single;
+    
 begin
   ClearList;
   CalculateCircular (bounds, x,y,rx,ry);
@@ -198,8 +200,9 @@ begin
     infoM := NewInfoRec (round(x - rx));
     for r := 0 to NumberPixels do
       begin
-      xd := rx * cos(ra);
-      yd := ry * sin(ra);
+      sincos(ra,ras,rac);
+      xd := rx * rac;
+      yd := ry * ras;
       // take all 4 quarters
       yt := round(y - yd);
       yb := round(y + yd);
@@ -489,7 +492,36 @@ begin
 end;
 
 procedure FillEllipsePattern (Canv:TFPCustomCanvas; const Bounds:TRect; Pattern:TBrushPattern; const c:TFPColor);
+var info : TEllipseInfo;
+    r, y : integer;
+    pixNo: Byte;
+    pixVal: TPenPattern;
+    patt: TPenPattern;
+    pattHeight: Integer;
+    infoData: PEllipseInfoData;
 begin
+  info := TEllipseInfo.Create;
+  try
+    info.GatherEllipseInfo(bounds);
+    pattHeight := Length(Pattern);
+    for r := 0 to info.infolist.count-1 do
+      begin
+      infoData := PEllipseInfoData(info.infolist[r]);
+      with infoData^ do
+        begin
+        pixNo := x mod PatternBitCount;
+        pixVal := 1 shl pixNo;
+        for y := ytopmin to ybotmax do
+          begin
+          patt := Pattern[y mod pattHeight];
+          if patt and pixVal <> 0 then
+            canv.DrawPixel(x, y, c);
+          end;
+        end;
+      end;
+  finally
+    info.Free;
+  end;
 end;
 
 procedure FillEllipseHashHorizontal (Canv:TFPCustomCanvas; const Bounds:TRect; width:integer; const c:TFPColor);

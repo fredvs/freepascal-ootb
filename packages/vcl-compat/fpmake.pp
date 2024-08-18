@@ -26,18 +26,23 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-xml');
     P.Dependencies.Add('fcl-web');
     P.Dependencies.Add('rtl-extra'); 
-
+    P.Dependencies.Add('rtl-objpas'); 
+    P.Dependencies.Add('rtl-generics');
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
 
 
     T:=P.Targets.AddUnit('system.netencoding.pp');
     T.ResourceStrings := True;
+    T:=P.Targets.AddUnit('system.ioutils.pp');
+    T.ResourceStrings := True;
+    T:=P.Targets.AddUnit('system.ansistrings.pp');
+    T:=P.Targets.AddUnit('system.imagelist.pp');
 
 {$ifndef ALLPACKAGES}
     Run;

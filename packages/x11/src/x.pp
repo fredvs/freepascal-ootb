@@ -5,7 +5,7 @@ uses
 
 {$ifndef os2}
   {$LinkLib c}
-  {$LinkLib libX11.so.6}
+  {$LinkLib X11}
 {$endif}
 
 {

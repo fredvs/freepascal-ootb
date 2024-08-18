@@ -29,17 +29,9 @@ interface
        { version string }
        version_nr = '3';
        release_nr = '2';
-       patch_nr   = '2';
-       {$if defined(linux) and defined(cpux86_64)}
-       minorpatch = '_glibc225';
-       {$else}
-       {$if defined(linux) and defined(cpui386)}
-       minorpatch = '_glibc20';
-       {$else}
-       minorpatch = ' ';
-       {$endif}
-       {$endif}
-       
+       patch_nr   = '4';
+       minorpatch = '-rc1';
+
        { word version for ppu file }
        wordversion = ((ord(version_nr)-ord('0')) shl 14)+
                      ((ord(release_nr)-ord('0')) shl 7)+
@@ -99,7 +91,7 @@ function full_version_string:string;
 begin
   full_version_string := version_nr+'.'+release_nr+'.'+patch_nr+minorpatch
 {$ifdef REVINC}
-  +'-r'+{$i revision.inc}
+  +'-'+{$i revision.inc}
 {$endif REVINC}
   ;
 end;

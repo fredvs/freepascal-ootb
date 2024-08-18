@@ -369,25 +369,37 @@ end;
 
 class function TStringHelper.Join(const Separator: string;
   const Values: array of string; StartIndex: SizeInt; ACount: SizeInt): string;
-
 Var
-  I,L,VLen : SizeInt;
-
+  VLen,I,CountLim,NR,NSep,N : SizeInt;
+  Rp: PChar;
 begin
-  VLen:=High(Values);
-  If (ACount<0) or ((StartIndex>0) and (StartIndex>VLen)) then
+  VLen:=System.Length(Values);
+  If (ACount=0)  then
+    Exit('');
+  CountLim:=VLen-StartIndex;
+  if ACount>CountLim then
+    ACount:=CountLim;
+  If (ACount<0) or (StartIndex>VLen) or (StartIndex<0) then
     raise ERangeError.Create(SRangeError);
-  If (ACount=0) or (VLen<0) then
-    Result:=''
-  else
-    begin
-    L:=StartIndex+ACount-1;
-    if L>Vlen then
-      L:=VLen;
-    Result:=Values[StartIndex];
-    For I:=StartIndex+1 to L do
-      Result:=Result+Separator+Values[I];
-    end;
+  if ACount=1 then
+    exit(Values[StartIndex]);
+  NSep:=System.Length(Separator);
+  NR:=(ACount-1)*NSep;
+  for I:=StartIndex to StartIndex+ACount-1 do
+    NR:=NR+System.Length(Values[I]);
+  SetLength(Result,NR);
+  Rp:=@Result[1];
+  for I:=StartIndex to StartIndex+ACount-1 do
+     begin
+        if I>StartIndex then
+          begin
+            Move(separator[1],Rp^,NSep*sizeof(Char));
+            Rp:=Rp+NSep;
+          end;
+        N:=System.Length(Values[I]);
+        Move(Values[I][1],Rp^,N*sizeof(Char));
+        Rp:=Rp+N;
+     end;
 end;
 
 
@@ -639,12 +651,19 @@ function TStringHelper.IndexOf(AValue: Char; StartIndex: SizeInt;
   ACount: SizeInt): SizeInt;
 
 Var
-  S : String;
+  CountLim : SizeInt;
 
 begin
-  S:=System.Copy(Self,StartIndex+1,ACount);
-  Result:=Pos(AValue,S)-1;
-  if Result<>-1 then
+  if StartIndex<0 then
+    StartIndex:=0;
+  CountLim:=System.Length(Self)-StartIndex;
+  if ACount>CountLim then
+    ACount:=CountLim;
+  if ACount<=0 then
+    Exit(-1);
+  // pointer casts are to access self as 0 based index!
+  Result:=IndexChar(PChar(Pointer(self))[StartIndex],ACount,AValue);
+  if Result>=0 then
     Result:=Result+StartIndex;
 end;
 
@@ -653,13 +672,30 @@ function TStringHelper.IndexOf(const AValue: string; StartIndex: SizeInt;
   ACount: SizeInt): SizeInt;
 
 Var
-  S : String;
+  CountLim,NV,Ofs : SizeInt;
+  SP,SE : PChar;
 
 begin
-  S:=System.Copy(Self,StartIndex+1,ACount);
-  Result:=Pos(AValue,S)-1;
-  if Result<>-1 then
-    Result:=Result+StartIndex;
+  if StartIndex<0 then
+    StartIndex:=0;
+  CountLim:=System.Length(Self)-StartIndex;
+  if ACount>CountLim then
+    ACount:=CountLim;
+  NV:=System.Length(AValue);
+  if (NV>0) and (ACount>=NV) then
+    begin
+      SP:=PChar(Pointer(Self))+StartIndex;
+      SE:=SP+ACount-NV+1;
+      repeat
+        Ofs:=IndexChar(SP^,SE-SP,PChar(Pointer(AValue))[0]);
+        if Ofs<0 then
+          Break;
+        SP:=SP+Ofs+1;
+        if CompareChar(SP^,PChar(Pointer(AValue))[1],NV-1)=0 then
+          Exit(SP-PChar(Pointer(Self))-1);
+      until false;
+    end;
+  Result:=-1;
 end;
 
 function TStringHelper.IndexOfUnQuoted(const AValue: string; StartQuote,
@@ -1076,8 +1112,38 @@ end;
 
 function TStringHelper.Replace(OldChar: Char; NewChar: Char;
   ReplaceFlags: TReplaceFlags): string;
+var
+  Sp,Se,Rp : PChar;
+  Ofs : SizeInt;
 begin
-  Result:=StringReplace(Self,OldChar,NewChar,ReplaceFlags);
+  if rfIgnoreCase in ReplaceFlags then
+    exit(StringReplace(Self,OldChar,NewChar,ReplaceFlags));
+
+  Sp:=PChar(Pointer(Self));
+  Se:=Sp+System.Length(Self);
+  Ofs:=IndexChar(Sp^,Se-Sp,OldChar);
+  if Ofs<0 then
+    exit(Self);
+  SetLength(Result,Se-Sp);
+  Rp:=PChar(Pointer(Result));
+
+  repeat
+    Move(Sp^,Rp^,Ofs*sizeof(Char));
+    Sp:=Sp+Ofs+1;
+    Rp[Ofs]:=NewChar;
+    Rp:=Rp+Ofs+1;
+    if not (rfReplaceAll in ReplaceFlags) then
+      break;
+    { This loop can be removed entirely, but greatly speeds up replacing streaks of characters. }
+    while (Sp<Se) and (Sp^=OldChar) do
+      begin
+        Rp^:=NewChar;
+        Sp:=Sp+1;
+        Rp:=Rp+1;
+      end;
+    Ofs:=IndexChar(Sp^,Se-Sp,OldChar);
+  until Ofs<0;
+  Move(Sp^,Rp^,(Se-Sp)*sizeof(Char));
 end;
 
 

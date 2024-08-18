@@ -36,12 +36,7 @@ const
     fclib = 'libfontconfig.dylib';
     {$LINKLIB libfontconfig}
   {$ELSE}
-    {$ifdef linux}
-    fclib = 'libfontconfig.so.1';
-    {$else}  
     fclib = 'libfontconfig.so';
- {$endif} 
- 
   {$IFEND}
 
 //#define FcPublic

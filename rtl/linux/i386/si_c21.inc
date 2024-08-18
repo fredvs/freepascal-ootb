@@ -35,24 +35,16 @@
 
 {$asmmode att}
 
-//procedure __libc_csu_init; cdecl; external name '__libc_csu_init@GLIBC_2.0'; // Set as dummy
-//procedure __libc_csu_fini; cdecl; external name '__libc_csu_fini@GLIBC_2.0';  // Set as dummy
+procedure ini_dummy;
+  begin
+  end;
 
-procedure libc_start_main; external name '__libc_start_main@GLIBC_2.0';
-procedure libc_exit(code: longint); cdecl; external name 'exit@GLIBC_2.0';
-
+procedure libc_start_main; external name '__libc_start_main';
+procedure libc_exit(code: longint); cdecl; external name 'exit';
 
 {******************************************************************************
                        glibc 2.1 lib + profiling start/halt
  ******************************************************************************}
- 
-procedure libc_csu_init; // dummy
-begin
-end;
-
-procedure libc_csu_fini;  // dummy
-begin
-end;
 
 procedure _FPC_libc21_start; assembler; nostackframe; public name '_start';
 asm
@@ -102,8 +94,8 @@ asm
         pushl %esp   			{ stack_end }
         pushl %edx   			{ function to be registered with
                       			  atexit(), passed by loader }
-        pushl $libc_csu_fini
-        pushl $libc_csu_init
+        pushl $ini_dummy
+        pushl $ini_dummy
         pushl %esi                      { Push second argument: argv.  }
         pushl %ecx                      { Push first argument: argc.  }
 

@@ -48,6 +48,7 @@
 
 function GetBinaryType(lpApplicationName:LPCWSTR; lpBinaryType:LPDWORD):WINBOOL; external 'kernel32' name 'GetBinaryTypeW';
 function GetShortPathName(lpszLongPath:LPCWSTR; lpszShortPath:LPWSTR; cchBuffer:DWORD):DWORD; external 'kernel32' name 'GetShortPathNameW';
+function GetLongPathName(lpszShortPath:LPCWSTR; lpszLongPath:LPWSTR; cchBuffer:DWORD):DWORD; external 'kernel32' name 'GetLongPathNameW';
 function GetEnvironmentStrings : LPWSTR; external 'kernel32' name 'GetEnvironmentStringsW';function FreeEnvironmentStrings(_para1:LPWSTR):WINBOOL; external 'kernel32' name 'FreeEnvironmentStringsW';
 function FormatMessage(dwFlags:DWORD; lpSource:LPCVOID; dwMessageId:DWORD; dwLanguageId:DWORD; lpBuffer:LPWSTR;nSize:DWORD; Arguments:va_list):DWORD; external 'kernel32' name 'FormatMessageW';
 function CreateMailslot(lpName:LPCWSTR; nMaxMessageSize:DWORD; lReadTimeout:DWORD; lpSecurityAttributes:LPSECURITY_ATTRIBUTES):HANDLE; external 'kernel32' name 'CreateMailslotW';
@@ -475,6 +476,7 @@ function FindFirstFileTransacted(lpfilename : LPCWStr;fInfoLevelId:FINDEX_INFO_L
 function GetComputerNameEx(NameType:COMPUTER_NAME_FORMAT;lpbuffer:LPWSTR;nSize:LPDWORD):BOOL;stdcall;external 'kernel32' name 'GetComputerNameExW';
 function QueryFullProcessImageName(hProcess:THandle;dwFlags:DWord; lpexename :lpwstr;lpdwsize:pdword):BOOL; stdcall; external 'kernel32.dll' name 'QueryFullProcessImageNameW';
 function RealGetWindowClass(Wnd : HWND;ClassnameBuffer : pwidechar;ClassnameBufferSize : DWORD): DWORD; stdcall; external 'user32.dll' name 'RealGetWindowClassW';
+function RegisterDeviceNotification(hRecipient:THandle;NotificationFilter:pointer;Flags:DWORD ):HDEVNOTIFY; stdcall; external 'user32.dll' name 'RegisterDeviceNotificationW';
 {$endif read_interface}
 
 

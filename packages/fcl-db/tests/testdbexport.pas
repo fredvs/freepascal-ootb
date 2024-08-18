@@ -90,13 +90,13 @@ const
   // Alphabetically sorted for quick review:
   DBaseVIIUnsupported=[ftADT,ftArray,ftBCD,ftBytes,ftCurrency,ftCursor,ftDataSet,
     ftFixedWideChar,
-    ftFMTBcd,ftFmtMemo,ftGraphic,ftGuid,ftIDispatch,ftInterface,ftOraBlob,
-    ftOraClob,ftParadoxOle,ftReference,ftTime,ftTimeStamp,ftTypedBinary,
+    ftFMTBcd,ftFmtMemo,ftGraphic,ftGuid,ftIDispatch,ftInterface,ftLongWord,
+    ftOraBlob,ftOraClob,ftParadoxOle,ftReference,ftTime,ftTimeStamp,ftTypedBinary,
     ftUnknown,ftVarBytes,ftVariant,ftWidememo,ftWideString];
   FoxProUnsupported=  [ftADT,ftArray,      ftBytes,           ftCursor,ftDataSet,
     ftFixedWideChar,
-    ftFMTBcd,ftFmtMemo,ftGraphic,ftGuid,ftIDispatch,ftInterface,ftOraBlob,
-    ftOraClob,ftParadoxOle,ftReference,ftTime,ftTimeStamp,ftTypedBinary,
+    ftFMTBcd,ftFmtMemo,ftGraphic,ftGuid,ftIDispatch,ftInterface,ftLongWord,
+    ftOraBlob,ftOraClob,ftParadoxOle,ftReference,ftTime,ftTimeStamp,ftTypedBinary,
     ftUnknown,ftVarBytes,ftVariant,ftWideMemo,ftWideString];
 begin
   result:=true;
@@ -335,7 +335,7 @@ begin
     ExportSettings.ExportFormat:=AccessCompatible;
     ExportFormat:=efXMLXSDAccess;
     ExportSettings.CreateXSD:=false;
-    ExportSettings.DecimalSeparator:=char(''); //don't override
+    ExportSettings.DecimalSeparator:=#0; //don't override
     Exporter.FileName := FExportTempDir + inttostr(ord(ExportFormat)) +
       lowercase(rightstr(TestName,5)) +
       TDetailedExportExtensions[ExportFormat];
@@ -391,7 +391,7 @@ begin
     ExportSettings.ExportFormat:=AccessCompatible;
     ExportFormat:=efXMLXSDAccess;
     ExportSettings.CreateXSD:=true;
-    ExportSettings.DecimalSeparator:=char(''); //don't override
+    ExportSettings.DecimalSeparator:=char(#0); //don't override
     Exporter.FileName := FExportTempDir + inttostr(ord(ExportFormat)) +
       lowercase(rightstr(TestName,5)) +
       TDetailedExportExtensions[ExportFormat];

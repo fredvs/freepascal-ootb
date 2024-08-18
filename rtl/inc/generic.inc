@@ -59,7 +59,7 @@ begin
         then
         begin
           { Align on native pointer size }
-          aligncount:=(PtrUInt(pdest) and (sizeof(PtrUInt)-1));
+          aligncount:=(sizeof(PtrUInt)-PtrInt(pdest)) and (sizeof(PtrUInt)-1);
           dec(count,aligncount);
           pend:=psrc+aligncount;
           while psrc<pend do
@@ -1741,7 +1741,7 @@ end;
           ((q1>q3) or (q2>q3) or
           { the bit 31 can be only set if we have $8000 0000 }
           { and sign is true                                 }
-          (q3 shr 15<>0) and
+          (q3 shr 31<>0) and
            ((q3<>dword(dword(1) shl 31)) or not(sign))
           ) then
           HandleErrorAddrFrameInd(215,get_pc_addr,get_frame);

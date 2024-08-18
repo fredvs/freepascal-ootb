@@ -230,6 +230,8 @@ interface
       supported: boolean;
     end;
 
+{$push}
+{$j-}
     const
        { alias for supported_target field in tasminfo }
        system_any = system_none;
@@ -393,6 +395,11 @@ interface
          on the caller side rather than on the callee side }
        systems_caller_copy_addr_value_para = [system_aarch64_ios,system_aarch64_darwin,system_aarch64_linux];
 
+       { all PPC ABIs that use a TOC register to address globals }
+       abis_ppc_toc = [
+         {$ifdef powerpc64}abi_powerpc_sysv,{$endif}abi_powerpc_aix,abi_powerpc_elfv2
+       ];
+
        { pointer checking (requires special code in FPC_CHECKPOINTER,
          and can never work for libc-based targets or any other program
          linking to an external library)
@@ -403,6 +410,20 @@ interface
                              + [system_i386_os2]
                              + [system_i386_beos,system_i386_haiku]
                              + [system_powerpc_morphos];
+
+       systems_support_uf2 = [system_arm_embedded,system_avr_embedded,system_mipsel_embedded];
+
+       { all internal COFF writers }
+       asms_int_coff = [as_arm_pecoffwince,as_x86_64_pecoff,as_i386_pecoffwince,
+                        as_i386_pecoffwdosx,as_i386_pecoff,as_i386_coff];
+
+       { all internal ELF writers }
+       asms_int_elf = [as_arm_elf32,as_x86_64_elf64,
+                       as_sparc_elf32,as_i386_elf32];
+
+       { all internal writers }
+       asms_internals = asms_int_coff + asms_int_elf
+                        + [as_i8086_omf, as_i386_macho];
 
        cpu2str : array[TSystemCpu] of string[10] =
             ('','i386','m68k','alpha','powerpc','sparc','vm','ia64','x86_64',
@@ -415,13 +436,40 @@ interface
          (name: 'AIX'    ; supported:{$if defined(powerpc) or defined(powerpc64)}true{$else}false{$endif}),
          (name: 'DARWIN'    ; supported:{$if defined(powerpc) or defined(powerpc64)}true{$else}false{$endif}),
          (name: 'ELFV2'  ; supported:{$if defined(powerpc64)}true{$else}false{$endif}),
-         (name: 'EABI'   ; supported:{$ifdef FPC_ARMEL}true{$else}false{$endif}),
+         (name: 'EABI'   ; supported:{$if defined(arm)}true{$else}false{$endif}),
          (name: 'ARMEB'  ; supported:{$ifdef FPC_ARMEB}true{$else}false{$endif}),
-         (name: 'EABIHF' ; supported:{$ifdef FPC_ARMHF}true{$else}false{$endif}),
+         (name: 'EABIHF' ; supported:{$if defined(arm)}true{$else}false{$endif}),
          (name: 'OLDWIN32GNU'; supported:{$ifdef I386}true{$else}false{$endif}),
          (name: 'AARCH64IOS'; supported:{$ifdef aarch64}true{$else}false{$endif}),
          (name: 'LINUX386_SYSV'; supported:{$if defined(i386)}true{$else}false{$endif})
        );
+
+       cgbackend2str: array[tcgbackend] of ansistring = (
+         'FPC',
+         'LLVM'
+       );
+
+       { x86 asm modes with an Intel-style syntax }
+       asmmodes_x86_intel = [
+{$ifdef i8086}
+         asmmode_standard,
+{$endif i8086}
+         asmmode_i8086_intel,
+         asmmode_i386_intel,
+         asmmode_x86_64_intel
+       ];
+
+       { x86 asm modes with an AT&T-style syntax }
+       asmmodes_x86_att = [
+{$if defined(i386) or defined(x86_64)}
+         asmmode_standard,
+{$endif}
+         asmmode_i8086_att,
+         asmmode_i386_att,
+         asmmode_x86_64_att,
+         asmmode_x86_64_gas
+       ];
+{$pop}
 
     var
        targetinfos   : array[tsystem] of psysteminfo;

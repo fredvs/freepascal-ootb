@@ -585,9 +585,12 @@ Type
     Class Procedure Unzip(const AZipFileName : RawByteString);
     // Unzip a single file.
     Class Procedure Unzip(const AZipFileName : RawByteString;aExtractFileName : RawByteString);
+    Class Procedure UnZip(const AZipFileName, aExtractFileName: RawByteString; aOutputFileName : string);
     // Unzip several files
     Class Procedure Unzip(const AZipFileName : RawByteString; aFileList : Array of RawByteString);
     Class Procedure Unzip(const AZipFileName : RawByteString; aFileList : TStrings);
+    Class Procedure Unzip(const AZipFileName : RawByteString; aFileList : Array of RawByteString; aOutputDir : RawByteString; aFlat : Boolean = false);
+    Class Procedure Unzip(const AZipFileName : RawByteString; aFileList : TStrings; aOutputDir : RawByteString; aFlat : Boolean = false);
     Procedure Clear;
     Procedure Examine;
     Procedure Terminate;
@@ -623,7 +626,7 @@ ResourceString
   SErrFileChange = 'Changing output file name is not allowed while (un)zipping.';
   SErrInvalidCRC = 'Invalid CRC checksum while unzipping %s.';
   SErrCorruptZIP = 'Corrupt ZIP file %s.';
-  SErrUnsupportedCompressionFormat = 'Unsupported compression format %d';
+  SErrUnsupportedCompressionFormat = 'Unsupported compression format %d.';
   SErrUnsupportedMultipleDisksCD = 'A central directory split over multiple disks is unsupported.';
   SErrMaxEntries = 'Encountered %d file entries; maximum supported is %d.';
   SErrMissingFileName = 'Missing filename in entry %d.';
@@ -632,8 +635,13 @@ ResourceString
   SErrPosTooLarge = 'Position/offset %d is larger than maximum supported %d.';
   SErrNoFileName = 'No archive filename for examine operation.';
   SErrNoStream = 'No stream is opened.';
-  SErrEncryptionNotSupported = 'Cannot unzip item "%s" : encryption is not supported.';
-  SErrPatchSetNotSupported = 'Cannot unzip item "%s" : Patch sets are not supported.';
+  SErrEncryptionNotSupported = 'Cannot unzip item "%s": encryption is not supported.';
+  SErrPatchSetNotSupported = 'Cannot unzip item "%s": patch sets are not supported.';
+
+const
+  ZIPBITFLAG_ENCRYPTION       = 1;
+  ZIPBITFLAG_SIZE_IN_DATADESC = 1 shl 3;
+  ZIPBITFLAG_PATCH_SET        = 1 shl 5;  
 
 { ---------------------------------------------------------------------
     Auxiliary
@@ -972,7 +980,7 @@ end;
 procedure TDeflater.Compress;
 Var
   Buf : PByte;
-  I,Count,NewCount : integer;
+  I,Count : integer;
   C : TCompressionStream;
   BytesNow : Int64;
   NextMark : Int64;
@@ -996,9 +1004,8 @@ begin
         Count:=FInFile.Read(Buf^,FBufferSize);
         For I:=0 to Count-1 do
           UpdC32(Buf[i]);
-        NewCount:=Count;
-        while (NewCount>0) do
-          NewCount:=NewCount-C.Write(Buf^,NewCount);
+        // Writebuffer will loop  
+        C.WriteBuffer(Buf^,Count);
         inc(BytesNow,Count);
         if BytesNow>NextMark Then
           begin
@@ -2313,6 +2320,15 @@ Begin
   With LocalHdr do
     begin
       Item.FBitFlags:=Bit_Flag;
+      // If bit 3 is set in the BitFlags, file size and CRC should be read from
+      // the DataDescriptor record. For simplicity, however, we copy them from
+      // the same fields of the zipfile entry.
+      if Item.FBitFlags and ZIPBITFLAG_SIZE_IN_DATADESC <> 0 then
+      begin
+        Uncompressed_Size := Item.Size;
+        Compressed_Size := Item.CompressedSize;
+        CRC32 := Item.CRC32;
+      end;
       SetLength(S,Filename_Length);
       FZipStream.ReadBuffer(S[1],Filename_Length);
       if Bit_Flag and EFS_LANGUAGE_ENCODING_FLAG <> 0 then
@@ -2581,6 +2597,7 @@ Begin
       // Header position will be corrected later with zip64 version, if needed..
       NewNode.HdrPos := Local_Header_Offset;
       NewNode.FBitFlags:=Bit_Flag;
+      NewNode.FCompressMethod := Compress_Method;
       SetLength(S,Filename_Length);
       FZipStream.ReadBuffer(S[1],Filename_Length);
       if Bit_Flag and EFS_LANGUAGE_ENCODING_FLAG <> 0 then
@@ -2786,9 +2803,9 @@ Var
 
 Begin
   ReadZipHeader(Item, ZMethod);
-  if (Item.BitFlags and 1)<>0 then
+  if (Item.BitFlags and ZIPBITFLAG_ENCRYPTION)<>0 then
     Raise EZipError.CreateFmt(SErrEncryptionNotSupported,[Item.ArchiveFileName]);
-  if (Item.BitFlags and (1 shl 5))<>0 then
+  if (Item.BitFlags and ZIPBITFLAG_PATCH_SET)<>0 then
     Raise EZipError.CreateFmt(SErrPatchSetNotSupported,[Item.ArchiveFileName]);
   // Normalize output filename to conventions of target platform.
   // Zip file always has / path separators
@@ -3021,6 +3038,62 @@ begin
     end;
 end;
 
+Type
+
+  { TCustomExtractor }
+
+  TCustomExtractor = Class(TObject)
+  Private
+    FStream : TStream;
+    FunZipper  : TUnzipper;
+    procedure DoCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+  Public
+    Constructor Create(aUnZipper : TUnzipper);
+    Destructor Destroy; override;
+    Procedure UnZip(const AZipFileName, aExtractFileName: RawByteString; aOutputFileName: string);
+  end;
+
+{ TCustomExtractor }
+
+procedure TCustomExtractor.DoCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+begin
+  aStream:=FStream;
+  FStream:=Nil;
+end;
+
+constructor TCustomExtractor.Create(aUnZipper: TUnzipper);
+begin
+  FStream:=Nil;
+  FUnzipper:=aUnzipper;
+end;
+
+destructor TCustomExtractor.Destroy;
+begin
+  FreeAndNil(FUnZipper);
+  FreeAndNil(FStream);
+  Inherited;
+end;
+
+procedure TCustomExtractor.UnZip(const AZipFileName, aExtractFileName: RawByteString; aOutputFileName: string);
+begin
+  FStream:=TFileStream.Create(aOutputFileName,fmCreate);
+  FUnZipper.OnCreateStream:=@DoCreateStream;
+  FUnzipper.UnzipFile(aZipFileName,aExtractFileName);
+end;
+
+class procedure TUnZipper.UnZip(const AZipFileName, aExtractFileName: RawByteString; aOutputFileName: string);
+
+
+
+begin
+  With TCustomExtractor.Create(Self.Create) do
+    try
+      Unzip(aZipFileName,aExtractFileName,aOutputFileName);
+    Finally
+      Free;
+    end;
+end;
+
 class procedure TUnZipper.Unzip(const AZipFileName: RawByteString; aFileList: array of RawByteString);
 begin
   With Self.Create do
@@ -3035,6 +3108,31 @@ class procedure TUnZipper.Unzip(const AZipFileName: RawByteString; aFileList: TS
 begin
   With Self.Create do
     try
+      UnZipFiles(aZipFileName,aFileList);
+    finally
+      Free;
+    end;
+end;
+
+class procedure TUnZipper.Unzip(const AZipFileName: RawByteString; aFileList: array of RawByteString; aOutputDir: RawByteString;
+  aFlat: Boolean);
+begin
+  With Self.Create do
+    try
+      Flat:=aFlat;
+      OutputPath:=aOutputDir;
+      UnZipFiles(aZipFileName,aFileList);
+    finally
+      Free;
+    end;
+end;
+
+class procedure TUnZipper.Unzip(const AZipFileName: RawByteString; aFileList: TStrings; aOutputDir: RawByteString; aFlat: Boolean);
+begin
+  With Self.Create do
+    try
+      Flat:=aFlat;
+      OutputPath:=aOutputDir;
       UnZipFiles(aZipFileName,aFileList);
     finally
       Free;

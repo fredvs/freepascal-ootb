@@ -30,6 +30,9 @@
    bigtiff 64bit offsets
    endian - currently using system endianess
    orientation with rotation
+
+   2023-07  - Massimo Magnano
+            - added Resolution support
 }
 unit FPWriteTiff;
 
@@ -41,7 +44,6 @@ uses
   Math, Classes, SysUtils, zbase, zdeflate, FPimage, FPTiffCmn;
 
 type
-
   { TTiffWriterEntry }
 
   TTiffWriterEntry = class
@@ -85,7 +87,6 @@ type
     procedure SortEntries;
     procedure WriteTiff;
     procedure WriteHeader;
-    procedure WriteIFDs;
     procedure WriteEntry(Entry: TTiffWriterEntry);
     procedure WriteData;
     procedure WriteEntryData(Entry: TTiffWriterEntry);
@@ -93,6 +94,7 @@ type
     procedure WriteWord(w: Word);
     procedure WriteDWord(d: DWord);
   protected
+    procedure WriteIFDs; virtual;
     procedure InternalWrite(Stream: TStream; Img: TFPCustomImage); override;
     procedure AddEntryString(Tag: word; const s: string);
     procedure AddEntryShort(Tag: word; Value: Word);
@@ -415,6 +417,20 @@ var
   cx,cy,x,y,sx: DWord;
   dx,dy: integer;
   ChunkBytesPerLine: DWord;
+
+  procedure WriteResolutionValues;
+  begin
+       IFD.ResolutionUnit :=ResolutionUnitToTifResolutionUnit(Img.ResolutionUnit);
+       IFD.XResolution.Numerator :=Trunc(Img.ResolutionX*1000);
+       IFD.XResolution.Denominator :=1000;
+       IFD.YResolution.Numerator :=Trunc(Img.ResolutionY*1000);
+       IFD.YResolution.Denominator :=1000;
+
+       Img.Extra[TiffResolutionUnit]:=IntToStr(IFD.ResolutionUnit);
+       Img.Extra[TiffXResolution]:=TiffRationalToStr(IFD.XResolution);
+       Img.Extra[TiffYResolution]:=TiffRationalToStr(IFD.YResolution);
+  end;
+
 begin
   ChunkOffsets:=nil;
   Chunk:=nil;
@@ -429,6 +445,9 @@ begin
       IFD.PhotoMetricInterpretation:=2;
     if not (IFD.PhotoMetricInterpretation in [0,1,2]) then
       TiffError('PhotoMetricInterpretation="'+Img.Extra[TiffPhotoMetric]+'" not supported');
+
+    //Resolution
+    WriteResolutionValues;
 
     GrayBits:=0;
     RedBits:=0;
@@ -579,8 +598,7 @@ begin
         TilesDown:=(OrientedHeight+IFD.TileLength{%H-}-1) div IFD.TileLength;
         ChunkCount:=TilesAcross*TilesDown;
         {$IFDEF FPC_Debug_Image}
-        writeln('TFPWriterTiff.AddImage BitsPerPixel=',BitsPerPixel,' OrientedWidth=',OrientedWidth,' OrientedHeight=',OrientedHeight,' TileWidth=',IFD.TileWidth,' TileLength=',IFD.TileLength,' TilesAcross=',TilesAcross,' TilesDown=',TilesDown,' ChunkCoun
-t=',ChunkCount);
+        writeln('TFPWriterTiff.AddImage BitsPerPixel=',BitsPerPixel,' OrientedWidth=',OrientedWidth,' OrientedHeight=',OrientedHeight,' TileWidth=',IFD.TileWidth,' TileLength=',IFD.TileLength,' TilesAcross=',TilesAcross,' TilesDown=',TilesDown,' ChunkCount=',ChunkCount);
         {$ENDIF}
       end else begin
         ChunkCount:=(OrientedHeight+IFD.RowsPerStrip{%H-}-1) div IFD.RowsPerStrip;

@@ -5841,6 +5841,7 @@ CONST
 // end_r_commctrl
 
 TYPE
+         PHTREEITEM          = ^HTREEITEM;
          HTREEITEM           = ^TREEITEM;
 
 CONST
@@ -5904,14 +5905,6 @@ Type
                                  iSelectedImage : cint;
                                  cChildren    : cint;
                                  lParam       : LPARAM;
-{$ifdef ie6plus}
-                                 uStateEx     : cUINT;
-                                 hwnd         : HWND;
-                                 iExpandedImage  : cint;
-{$endif}
-{$ifdef NTDDI_WIN7}
-				 iPadding        : cint;
-{$endif}
                                  END;
          TVITEMA              = tagTVITEMA;
          LPTVITEMA            = ^tagTVITEMA;
@@ -5930,14 +5923,6 @@ Type
                                  iSelectedImage : cint;
                                  cChildren    : cint;
                                  lParam       : LPARAM;
-{$ifdef ie6plus}
-                                 uStateEx     : cUINT;
-                                 hwnd         : HWND;
-                                 iExpandedImage  : cint;
-{$endif}
-{$ifdef NTDDI_WIN7}
-				 iPadding        : cint;
-{$endif}
                                  END;
          TVITEMW              = tagTVITEMW;
          LPTVITEMW            = ^tagTVITEMW;
@@ -5959,6 +5944,14 @@ Type
                                  cChildren    : cint;
                                  lParam       : LPARAM;
                                  iIntegral    : cint;
+{$ifdef ie6plus}
+                                 uStateEx     : cUINT;
+                                 hwnd         : HWND;
+                                 iExpandedImage  : cint;
+{$endif}
+{$ifdef NTDDI_WIN7}
+                                 iPadding        : cint;
+{$endif}
                                  END;
          TVITEMEXA            = tagTVITEMEXA;
          LPTVITEMEXA          = ^tagTVITEMEXA;
@@ -5978,6 +5971,14 @@ Type
                                  cChildren    : cint;
                                  lParam       : LPARAM;
                                  iIntegral    : cint;
+{$ifdef ie6plus}
+                                 uStateEx     : cUINT;
+                                 hwnd         : HWND;
+                                 iExpandedImage  : cint;
+{$endif}
+{$ifdef NTDDI_WIN7}
+                                 iPadding        : cint;
+{$endif}
                                  END;
          TVITEMEXW            = tagTVITEMEXW;
          LPTVITEMEXW          = ^tagTVITEMEXW;
@@ -6145,7 +6146,7 @@ CONST
          TVM_GETITEMRECT                = (TV_FIRST + 4);
 
 // Macro 160
-Function TreeView_GetItemRect( hwnd : hwnd; hitem: HTREEITEM; code : WPARAM; prc : pRECT):BOOL;inline;
+Function TreeView_GetItemRect( hwnd : hwnd; hitem: HTREEITEM;  prc : pRECT;code : WPARAM):BOOL;inline;
 Function TreeView_GetItemRect( hwnd : hwnd; hitem: HTREEITEM; var prc : TRECT;code : Bool):BOOL;inline;
 
 CONST
@@ -9929,6 +9930,9 @@ const
   TDF_RTL_LAYOUT                      = $2000;
   TDF_NO_DEFAULT_RADIO_BUTTON         = $4000;
   TDF_CAN_BE_MINIMIZED                = $8000;
+  TDF_NO_SET_FOREGROUND               = $00010000;
+  TDF_SIZE_TO_CONTENT                 = $01000000;
+
 
 type
   TASKDIALOG_FLAGS = Integer;                         // Note: _TASKDIALOG_FLAGS is an int
@@ -9994,6 +9998,7 @@ const
   TD_SHIELD_ERROR_ICON    = MAKEINTRESOURCEW(Word(-7));
   TD_SHIELD_OK_ICON       = MAKEINTRESOURCEW(Word(-8));
   TD_SHIELD_GRAY_ICON     = MAKEINTRESOURCEW(Word(-9));
+  TD_QUESTION_ICON        = MAKEINTRESOURCEW(Word(32514)); 
 
   // _TASKDIALOG_COMMON_BUTTON_FLAGS enum
   TDCBF_OK_BUTTON            = $0001; // selected control return value IDOK
@@ -11823,9 +11828,9 @@ end;
 // #define TreeView_GetItemRect(hwnd, hitem, prc, code) \
 //     (*(HTREEITEM *)prc = (hitem), (BOOL)SNDMSG((hwnd), TVM_GETITEMRECT, (WPARAM)(code), (LPARAM)(RECT *)(prc)))
 
-Function TreeView_GetItemRect( hwnd : hwnd; hitem: HTREEITEM; code : WPARAM; prc : pRECT):BOOL;inline;
+Function TreeView_GetItemRect( hwnd : hwnd; hitem: HTREEITEM;  prc : pRECT; code : WPARAM):BOOL;inline;
 Begin
- HTREEITEM(prc):=HITEM;
+ PHTREEITEM(prc)^:=HITEM;
  Result:=Bool(SendMessage((hwnd), TVM_GETITEMRECT, code, LPARAM(prc)));
 end;
 

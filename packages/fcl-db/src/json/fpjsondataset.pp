@@ -1,6 +1,21 @@
 {$mode objfpc}
 {$h+}
 unit fpjsondataset;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
+
+    fpjson dataset code
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 
 interface
 
@@ -174,11 +189,11 @@ type
     FValues: TVariantArray;
     function GetFieldComparer(Index : Integer): TFieldComparer;
   Protected
-    procedure ConstructItems(aFields: String); virtual;
+    procedure ConstructItems(const aFields: String); virtual;
     function DataTypeToComparerClass(aFieldType: TFieldType): TFieldComparerClass;
     Function Compare(aRowindex : integer) : Integer;
   Public
-    Constructor Create(aDataset : TBaseJSONDataset; aFields : String; aValues : Variant; aOptions : TLocateOptions);
+    Constructor Create(aDataset : TBaseJSONDataset; const aFields : String; aValues : Variant; aOptions : TLocateOptions);
     Destructor Destroy; override;
     Property Dataset : TBaseJSONDataset Read FDataset;
     property Items [Index : Integer] : TFieldComparer Read GetFieldComparer;
@@ -252,7 +267,7 @@ type
     // Initialize Date/Time info in all date/time fields. Called during InternalOpen
     procedure InitDateTimeFields; virtual;
     // Convert JSON date S to DateTime for Field F
-    function ConvertDateTimeField(S: String; F: TField): TDateTime; virtual;
+    function ConvertDateTimeField(const S: String; F: TField): TDateTime; virtual;
     // Format JSON date to from DT for Field F
     function FormatDateTimeField(DT : TDateTime; F: TField): String; virtual;
     // Create fieldmapper. A descendent MUST implement this.
@@ -452,7 +467,7 @@ begin
   Result:=Items[Index];
 end;
 
-procedure TRecordComparer.ConstructItems(aFields : String);
+procedure TRecordComparer.ConstructItems(const aFields : String);
 
 Var
   L : Tlist;
@@ -518,7 +533,7 @@ begin
     end;
 end;
 
-constructor TRecordComparer.Create(aDataset: TBaseJSONDataset; aFields: String; aValues: Variant; aOptions: TLocateOptions);
+constructor TRecordComparer.Create(aDataset: TBaseJSONDataset; const aFields: String; aValues: Variant; aOptions: TLocateOptions);
 
 Var
   L,H,I : Integer;
@@ -1047,7 +1062,7 @@ begin
   PRecInfo(Buffer)^.RowIndex := PNativeInt(Data)^;
 end;
 
-function TBaseJSONDataSet.ConvertDateTimeField(S : String; F : TField) : TDateTime;
+function TBaseJSONDataSet.ConvertDateTimeField(const S : String; F : TField) : TDateTime;
 
 Var
   Ptrn : string;

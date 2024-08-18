@@ -41,11 +41,12 @@ begin
     P.Dependencies.Add('univint',[darwin,iphonesim,ios]);
 
     P.Directory:=ADirectory;
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
 
     P.Options.Add('-S2h');
 
     T:=P.Targets.AddProgram('fpdoc.pp');
+    T.Dependencies.AddUnit('fpdocstrs');
     T.Dependencies.AddUnit('dglobals');
     T.Dependencies.AddUnit('dw_ipflin');
     T.Dependencies.AddUnit('dwriter');
@@ -57,6 +58,8 @@ begin
     T.Dependencies.AddUnit('dwlinear');
     T.Dependencies.AddUnit('dw_txt');
     T.Dependencies.AddUnit('dw_linrtf');
+    T.Dependencies.AddUnit('dw_basemd');
+    T.Dependencies.AddUnit('dw_markdown');
 
     T:=P.Targets.AddProgram('makeskel.pp');
     T.ResourceStrings:=true;
@@ -67,24 +70,27 @@ begin
     T:=P.Targets.AddProgram('fpclasschart.pp');
     T.ResourceStrings:=true;
 
-    T := P.Targets.AddUnit('dglobals.pp');
+    T := P.Targets.AddUnit('fpdocstrs.pp');
     T.install:=false;
     T.ResourceStrings:=true;
+
+    T := P.Targets.AddUnit('dglobals.pp');
+    T.install:=false;
 
     T := P.Targets.AddUnit('dwriter.pp');
     T.install:=false;
-    T.ResourceStrings:=true;
 
     T := P.Targets.AddUnit('fpdocxmlopts.pas');
     T.install:=false;
-    T.ResourceStrings:=true;
 
     P.Targets.AddUnit('dw_xml.pp').install:=false;
     P.Targets.AddUnit('sh_pas.pp').install:=false;
     P.Targets.AddUnit('dw_html.pp').install:=false;
+    P.Targets.AddUnit('dw_basemd.pp').install:=false;
+    P.Targets.AddUnit('dw_markdown.pp').install:=false;
     T:=P.Targets.AddUnit('dw_latex.pp');
     T.install:=false;
-    T.ResourceStrings:=true;
+
     P.Targets.AddUnit('dw_txt.pp').install:=false;
     P.Targets.AddUnit('dw_man.pp').install:=false;
     P.Targets.AddUnit('dwlinear.pp').install:=false;

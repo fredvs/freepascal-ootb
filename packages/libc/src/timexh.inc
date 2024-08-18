@@ -90,7 +90,7 @@ const
 
 // Type
 
-function __adjtimex(var __ntx:timex):longint;cdecl;external clib name '__adjtimex' + LIBC_SUFFIX ;
-function adjtimex(var __ntx:timex):longint;cdecl;external clib name 'adjtimex' + LIBC_SUFFIX ;
-function ntp_gettime(var __ntv:ntptimeval):longint;cdecl;external clib name 'ntp_gettime' + LIBC_SUFFIX ;
-function ntp_adjtime(var __tntx:timex):longint;cdecl;external clib name 'ntp_adjtime' + LIBC_SUFFIX ;
+function __adjtimex(var __ntx:timex):longint;cdecl;external clib name '__adjtimex';
+function adjtimex(var __ntx:timex):longint;cdecl;external clib name 'adjtimex';
+function ntp_gettime(var __ntv:ntptimeval):longint;cdecl;external clib name 'ntp_gettime';
+function ntp_adjtime(var __tntx:timex):longint;cdecl;external clib name 'ntp_adjtime';

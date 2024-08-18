@@ -19,6 +19,11 @@
   exceptions in the constructors }
 {$IMPLICITEXCEPTIONS OFF}
 
+{ We don't want the compiler to use fastmath
+  optimization because it considers negative zeroes
+  as normal zeroes }
+{$OPTIMIZATION NOFASTMATH}
+
 { This define enables codepage-aware compiler messages handling. Turning it on
   forces code page conversion from the codepage, specified in the .msg file to
   CP_ACP, before printing the message to the console. Enable this for host
@@ -31,6 +36,31 @@
 {$ifndef EXTDEBUG}
   {$define USEINLINE}
 {$endif EXTDEBUG}
+
+{$ifdef DEBUG_ALL_OPT}
+  { for aopt unit }
+  {$define DEBUG_OPTALLOC}
+  {$define DEBUG_INSTRUCTIONREGISTERDEPENDENCIES}
+  {for CPU/aoptcpu unit }
+  {$define DEBUG_AOPTCPU}
+  {$define DEBUG_PREREGSCHEDULER (arm specific) }
+  { for aoptobj unit }
+  {$define DEBUG_AOPTOBJ}
+  {$define ALLOCREGDEBUG}
+  { for optconstprop unit }
+  {$define DEBUG_CONSTPROP}
+  { for optcse unit }
+  {$define CSEDEBUG}
+  { for optdeadstore unit }
+  {$define DEBUG_DEADSTORE}
+  { for optdfa unit }
+  {$define DEBUG_DFA}
+  { for optloop unit }
+  {$define DEBUG_OPTFORLOOP}
+  {$define DEBUG_OPTSTRENGTH}
+  { for optvirt unit }
+  {$define DEBUG_DEVIRT}
+{$endif}
 
 {$define USEEXCEPT}
 
@@ -287,6 +317,11 @@
 {$ifndef FPC_SOFT_FPUX80}
 {$error Cross-compiling from systems without support for an 80 bit extended floating point type to i386 is not yet supported at this time }
 {$endif}
+{$endif}
+
+{ when compiling with an LLVM-based compiler, default to LLVM unless -dNOLLVM is specified }
+{$if defined(CPULLVM) and not defined(NOLLVM)}
+{$define LLVM}
 {$endif}
 
 { llvm backends partially use other backends for parameter info calculation,

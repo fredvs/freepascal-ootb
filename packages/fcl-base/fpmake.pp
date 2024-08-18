@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.Dependencies.Add('univint',[Darwin,iPhoneSim,ios]);
     p.Dependencies.Add('rtl-objpas');
 
@@ -83,6 +83,8 @@ begin
           AddUnit('contnrs');
         end;
     T:=P.Targets.AddUnit('iostream.pp');
+    T:=P.Targets.AddUnit('chainstream.pp');
+    T:=P.Targets.AddUnit('lzwstream.pp');
     T:=P.Targets.AddUnit('nullstream.pp');
       T.ResourceStrings:=true;
     T:=P.Targets.AddUnit('maskutils.pp');
@@ -130,10 +132,14 @@ begin
       T.ResourceStrings:=true;
     T:=P.Targets.addUnit('advancedsingleinstance.pas',AllOSes-[atari]);
       T.ResourceStrings:=true;
+    T:=P.Targets.AddUnit('fpthreadpool.pp',AllOSes-[go32v2,nativent,atari]);
+      T.Dependencies.AddUnit('syncobjs');
+      T.ResourceStrings:=true;
     // Additional sources
     P.Sources.AddSrcFiles('src/win/fclel.*', P.Directory);
     // Install windows resources
     P.InstallFiles.Add('src/win/fclel.res',AllWindowsOSes,'$(unitinstalldir)');
+    T:=P.Targets.addUnit('basenenc.pp');
 
     // Examples
     P.ExamplePath.Add('examples');
@@ -199,6 +205,7 @@ begin
       T:=P.Targets.AddExampleProgram('tstelgtk.pp');
       T:=P.Targets.AddExampleProgram('txmlreg.pp');
       T:=P.Targets.AddExampleProgram('xmldump.pp');
+      T:=P.Targets.AddExampleProgram('testthreadpool.pp');
 
       // example data files.
       // README

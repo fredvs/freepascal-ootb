@@ -26,7 +26,7 @@ interface
 {$if (defined(BSD) or defined(SUNOS)) and defined(FPC_USE_LIBC)}
 {$define USE_VFORK}
 {$endif}
-
+{$DEFINE HAS_FILEGETDATETIMEINFO}
 {$DEFINE OS_FILESETDATEBYNAME}
 {$DEFINE HAS_SLEEP}
 {$DEFINE HAS_OSERROR}
@@ -49,11 +49,25 @@ interface
 uses
 {$IFDEF LINUX}linux,{$ENDIF}
 {$IFDEF FreeBSD}freebsd,{$ENDIF}
-  Unix,errors,sysconst,Unixtype;
+  baseunix, Unix,errors,sysconst,Unixtype;
 
 {$IF defined(LINUX) or defined(FreeBSD)}
 {$DEFINE HAVECLOCKGETTIME}
 {$ENDIF}
+
+{$IF defined(DARWIN)}
+{$DEFINE HAS_ISFILENAMECASEPRESERVING}
+{$DEFINE HAS_ISFILENAMECASESENSITIVE}
+{$ENDIF}
+
+{$if defined(LINUX)}
+  {$if sizeof(clong)<8}
+    {$DEFINE USE_STATX}
+    {$DEFINE USE_UTIMENSAT}
+  {$endif sizeof(clong)<=4}
+
+  {$DEFINE USE_FUTIMES}
+{$endif}
 
 { Include platform independent interface part }
 {$i sysutilh.inc}
@@ -86,7 +100,7 @@ Uses
 {$ifdef android}
   dl,
 {$endif android}
-  {$ifdef FPC_USE_LIBC}initc{$ELSE}Syscall{$ENDIF}, Baseunix, unixutil;
+  {$ifdef FPC_USE_LIBC}initc{$ELSE}Syscall{$ENDIF},  unixutil;
 
 type
   tsiginfo = record
@@ -292,55 +306,6 @@ procedure UnhookSignal(RtlSigNum: Integer; OnlyIfHooked: Boolean = True);
 
 { Include SysCreateGUID function }
 {$i suuid.inc}
-
-Const
-{Date Translation}
-  C1970=2440588;
-  D0   =   1461;
-  D1   = 146097;
-  D2   =1721119;
-
-
-Procedure JulianToGregorian(JulianDN:LongInt;Var Year,Month,Day:Word);
-Var
-  YYear,XYear,Temp,TempMonth : LongInt;
-Begin
-  Temp:=((JulianDN-D2) shl 2)-1;
-  JulianDN:=Temp Div D1;
-  XYear:=(Temp Mod D1) or 3;
-  YYear:=(XYear Div D0);
-  Temp:=((((XYear mod D0)+4) shr 2)*5)-3;
-  Day:=((Temp Mod 153)+5) Div 5;
-  TempMonth:=Temp Div 153;
-  If TempMonth>=10 Then
-   Begin
-     inc(YYear);
-     dec(TempMonth,12);
-   End;
-  inc(TempMonth,3);
-  Month := TempMonth;
-  Year:=YYear+(JulianDN*100);
-end;
-
-
-
-Procedure EpochToLocal(epoch:longint;var year,month,day,hour,minute,second:Word);
-{
-  Transforms Epoch time into local time (hour, minute,seconds)
-}
-Var
-  DateNum: LongInt;
-Begin
-  inc(Epoch,TZSeconds);
-  Datenum:=(Epoch Div 86400) + c1970;
-  JulianToGregorian(DateNum,Year,Month,day);
-  Epoch:=Abs(Epoch Mod 86400);
-  Hour:=Epoch Div 3600;
-  Epoch:=Epoch Mod 3600;
-  Minute:=Epoch Div 60;
-  Second:=Epoch Mod 60;
-End;
-
 
 function GetTickCount64: QWord;
 var
@@ -560,8 +525,14 @@ end;
 
 Function FileSeek (Handle,FOffset,Origin : Longint) : Longint;
 
+Var
+  I : Int64;
+
 begin
-  result:=longint(FileSeek(Handle,int64(FOffset),Origin));
+  I:=FileSeek(Handle,int64(FOffset),Origin);
+  if I>High(Longint) then
+     Raise EInOutError.CreateFmt(SErrPosToBigForLongint,[I]);
+  result:=I;
 end;
 
 
@@ -596,17 +567,68 @@ begin
     end;
 end;
 
-Function FileAge (Const FileName : RawByteString): Longint;
+
+Function FileAge (Const FileName : RawByteString): Int64;
 Var
   Info : Stat;
   SystemFileName: RawByteString;
+{$ifdef USE_STATX}
+  Infox : TStatx;
+{$endif USE_STATX}
 begin
   SystemFileName:=ToSingleByteFileSystemEncodedFileName(FileName);
+
+{$ifdef USE_STATX}
+  { first try statx }
+  if {$ifdef FPC_USE_LIBC} (@statx<>nil) and {$endif}
+     (statx(AT_FDCWD,pchar(SystemFileName),0,STATX_MTIME or STATX_MODE,Infox)>=0) and not(fpS_ISDIR(Infox.stx_mode)) then
+    begin
+      Result:=Infox.stx_mtime.tv_sec;
+      exit;
+    end;
+{$endif USE_STATX}
+
   If  (fpstat(pchar(SystemFileName),Info)<0) or fpS_ISDIR(info.st_mode) then
     exit(-1)
   else 
     Result:=info.st_mtime;
 end;
+
+
+function FileGetDateTimeInfo(const FileName: string; out DateTime: TDateTimeInfoRec; FollowLink: Boolean = True): Boolean;
+
+var
+  FN : AnsiString;
+  st: tstat;
+{$IFDEF USE_STATX}
+  stx : tstatx;
+  flags : Integer;
+
+const
+  STATXMASK = STATX_MTIME or STATX_ATIME or STATX_CTIME;
+{$ENDIF}
+begin
+  FN:=FileName;
+  {$ifdef USE_STATX}
+  flags:=0;
+  if Not FollowLink then
+    Flags:=AT_SYMLINK_NOFOLLOW;
+  if {$ifdef FPC_USE_LIBC} (@statx<>nil) and {$endif}
+    (statx(AT_FDCWD,PAnsiChar(FN),FLags,STATXMASK, stx)>=0) then
+    begin
+    DateTime.Data:=stx;
+    Exit(True);
+    end;
+  {$else}
+  if (FollowLink and (fpstat(FN,st) = 0)) or
+    (not FollowLink and (fplstat(fn, st) = 0)) then
+  begin
+    DateTime.Data:=st;
+    Result := True;
+  end;
+  {$endif}
+end;
+
 
 
 Function LinuxToWinAttr (const FN : RawByteString; Const Info : Stat) : Longint;
@@ -634,6 +656,36 @@ begin
         Result := Result or faDirectory;
     end;
 end;
+
+
+{$ifdef USE_STATX}
+Function LinuxToWinAttr (const FN : RawByteString; Const Info : TStatx) : Longint;
+Var
+  LinkInfo : Stat;
+  nm : RawByteString;
+begin
+  Result:=faArchive;
+  If fpS_ISDIR(Info.stx_mode) then
+    Result:=Result or faDirectory;
+  nm:=ExtractFileName(FN);
+  If (Length(nm)>=2) and
+     (nm[1]='.') and
+     (nm[2]<>'.')  then
+    Result:=Result or faHidden;
+  If (Info.stx_Mode and S_IWUSR)=0 Then
+     Result:=Result or faReadOnly;
+  If fpS_ISSOCK(Info.stx_mode) or fpS_ISBLK(Info.stx_mode) or fpS_ISCHR(Info.stx_mode) or fpS_ISFIFO(Info.stx_mode) Then
+     Result:=Result or faSysFile;
+  If fpS_ISLNK(Info.stx_mode) Then
+    begin
+      Result:=Result or faSymLink;
+      // Windows reports if the link points to a directory.
+      { as we are only interested in the st_mode field here, we do not need to use statx }
+      if (fpstat(pchar(FN),LinkInfo)>=0) and fpS_ISDIR(LinkInfo.st_mode) then
+        Result := Result or faDirectory;
+    end;
+end;
+{$endif USE_STATX}
 
 
 function FileGetSymLinkTarget(const FileName: RawByteString; out SymLinkRec: TRawbyteSymLinkRec): Boolean;
@@ -923,26 +975,61 @@ end;
 
 Function FindGetFileInfo(const s: RawByteString; var f: TAbstractSearchRec; var Name: RawByteString):boolean;
 Var
+{$ifdef USE_STATX}
+  stx : linux.tstatx;
+{$endif USE_STATX}
   st : baseunix.stat;
   WinAttr : longint;
 begin
-  if Assigned(f.FindHandle) and ( (PUnixFindData(F.FindHandle)^.searchattr and faSymlink) > 0) then
-    FindGetFileInfo:=(fplstat(pointer(s),st)=0)
+{$ifdef USE_STATX}
+{$ifdef FPC_USE_LIBC}
+  if (@statx=nil) then
+    FindGetFileInfo:=false
   else
-    FindGetFileInfo:=(fpstat(pointer(s),st)=0);
-  if not FindGetFileInfo then
-    exit;
-  WinAttr:=LinuxToWinAttr(s,st);
-  FindGetFileInfo:=(WinAttr and Not(PUnixFindData(f.FindHandle)^.searchattr))=0;
-
+{$endif}
+  if Assigned(f.FindHandle) and ( (PUnixFindData(F.FindHandle)^.searchattr and faSymlink) > 0) then
+    FindGetFileInfo:=statx(AT_FDCWD,pointer(s),AT_SYMLINK_NOFOLLOW,STATX_ALL,stx)=0
+  else
+    begin
+        FindGetFileInfo:=statx(AT_FDCWD,pointer(s),0,STATX_ALL,stx)=0;
+    end;
   if FindGetFileInfo then
     begin
-      Name:=ExtractFileName(s);
-      f.Attr:=WinAttr;
-      f.Size:=st.st_Size;
-      f.Mode:=st.st_mode;
-      f.Time:=st.st_mtime;
-      FindGetFileInfo:=true;
+      WinAttr:=LinuxToWinAttr(s,stx);
+      FindGetFileInfo:=(WinAttr and Not(PUnixFindData(f.FindHandle)^.searchattr))=0;
+
+      if FindGetFileInfo then
+        begin
+          Name:=ExtractFileName(s);
+          f.Attr:=WinAttr;
+          f.Size:=stx.stx_Size;
+          f.Mode:=stx.stx_mode;
+          f.Time:=stx.stx_mtime.tv_sec;
+          FindGetFileInfo:=true;
+        end;
+    end
+  { no statx? try stat }
+  else if fpgeterrno=ESysENOSYS then
+{$endif USE_STATX}
+    begin
+      if Assigned(f.FindHandle) and ( (PUnixFindData(F.FindHandle)^.searchattr and faSymlink) > 0) then
+        FindGetFileInfo:=(fplstat(pointer(s),st)=0)
+      else
+        FindGetFileInfo:=(fpstat(pointer(s),st)=0);
+      if not FindGetFileInfo then
+        exit;
+      WinAttr:=LinuxToWinAttr(s,st);
+      FindGetFileInfo:=(WinAttr and Not(PUnixFindData(f.FindHandle)^.searchattr))=0;
+
+      if FindGetFileInfo then
+        begin
+          Name:=ExtractFileName(s);
+          f.Attr:=WinAttr;
+          f.Size:=st.st_Size;
+          f.Mode:=st.st_mode;
+          f.Time:=st.st_mtime;
+          FindGetFileInfo:=true;
+        end;
     end;
 end;
 
@@ -1044,23 +1131,46 @@ Begin
 End;
 
 
-Function FileGetDate (Handle : Longint) : Longint;
-
-Var Info : Stat;
-
+Function FileGetDate (Handle : Longint) : Int64;
+Var
+  Info : Stat;
+{$ifdef USE_STATX}
+  Infox : TStatx;
+{$endif USE_STATX}
+  Char0 : char;
 begin
-  If (fpFStat(Handle,Info))<0 then
-    Result:=-1
-  else
-    Result:=Info.st_Mtime;
+  Result:=-1;
+{$ifdef USE_STATX}
+  Char0:=#0;
+  if {$ifdef FPC_USE_LIBC} (@statx<>nil) and {$endif}
+     (statx(Handle,@Char0,AT_EMPTY_PATH,STATX_MTIME,Infox)=0) then
+    Result:=Infox.stx_Mtime.tv_sec
+  else if fpgeterrno=ESysENOSYS then
+{$endif USE_STATX}
+    begin
+      If fpFStat(Handle,Info)=0 then
+        Result:=Info.st_Mtime;
+    end;
 end;
 
 
-Function FileSetDate (Handle,Age : Longint) : Longint;
-
+Function FileSetDate (Handle : Longint;Age : Int64) : Longint;
+{$ifdef USE_FUTIMES}
+var
+  times : tkernel_timespecs;
+{$endif USE_FUTIMES}
 begin
-  // Impossible under Linux from FileHandle !!
+  Result:=0;
+{$ifdef USE_FUTIMES}
+  times[0].tv_sec:=Age;
+  times[0].tv_nsec:=0;
+  times[1].tv_sec:=Age;
+  times[1].tv_nsec:=0;
+  if futimens(Handle,times) = -1 then
+    Result:=fpgeterrno;
+{$else USE_FUTIMES}
   FileSetDate:=-1;
+{$endif USE_FUTIMES}
 end;
 
 
@@ -1114,18 +1224,69 @@ begin
   Result:=fpAccess(PChar(SystemFileName),W_OK)<>0;
 end;
 
-Function FileSetDate (Const FileName : RawByteString; Age : Longint) : Longint;
+Function FileSetDate (Const FileName : RawByteString; Age : Int64) : Longint;
 var
   SystemFileName: RawByteString;
+{$ifdef USE_UTIMENSAT}
+  times : tkernel_timespecs;
+{$endif USE_UTIMENSAT}
   t: TUTimBuf;
 begin
   SystemFileName:=ToSingleByteFileSystemEncodedFileName(FileName);
   Result:=0;
-  t.actime:= Age;
-  t.modtime:=Age;
-  if fputime(PChar(SystemFileName), @t) = -1 then
+{$ifdef USE_UTIMENSAT}
+  times[0].tv_sec:=Age;
+  times[0].tv_nsec:=0;
+  times[1].tv_sec:=Age;
+  times[1].tv_nsec:=0;
+  if utimensat(AT_FDCWD,PChar(SystemFileName),times,0) = -1 then
     Result:=fpgeterrno;
+  if fpgeterrno=ESysENOSYS then
+{$endif USE_UTIMENSAT}
+    begin
+      Result:=0;
+      t.actime:= Age;
+      t.modtime:=Age;
+      if fputime(PChar(SystemFileName), @t) = -1 then
+        Result:=fpgeterrno;
+    end
 end;
+
+{$IF defined(DARWIN)}
+Function IsFileNameCaseSensitive(Const aFileName : RawByteString) : Boolean;
+var
+  res : clong;
+begin
+  res:=FpPathconf(PChar(aFileName),11 {_PC_CASE_SENSITIVE });
+  { fall back to default if path is not found }
+  if res<0 then
+    Result:=FileNameCaseSensitive
+  else
+     Result:=res<>0;
+end;
+
+Function IsFileNameCaseSensitive(Const aFileName : UnicodeString) : Boolean;
+begin
+  Result:=IsFileNameCaseSensitive(RawByteString(aFileName));
+end;
+
+Function IsFileNameCasePreserving(Const aFileName : RawByteString) : Boolean;
+var
+  res : clong;
+begin
+  res:=FpPathconf(PChar(aFileName),12 { _PC_CASE_PRESERVING });
+  if res<0 then
+    { fall back to default if path is not found }
+    Result:=FileNameCasePreserving
+  else
+     Result:=res<>0;
+end;
+
+Function IsFileNameCasePreserving(Const aFileName : UnicodeString) : Boolean;
+begin
+  Result:=IsFileNameCasePreserving(RawByteString(aFileName));
+end;
+{$ENDIF defined(DARWIN)}
 
 {****************************************************************************
                               Disk Functions
@@ -1154,42 +1315,54 @@ var
   Drives   : byte = 4;
   DriveStr : array[4..26] of pchar;
 
-Function AddDisk(const path:string) : Byte;
+Function GetDriveStr(Drive : Byte) : Pchar;
+
 begin
-  if not (DriveStr[Drives]=nil) then
+  case Drive of
+    Low(FixDriveStr)..High(FixDriveStr):
+      Result := FixDriveStr[Drive];
+    Low(DriveStr)..High(DriveStr):
+      Result := DriveStr[Drive];
+    else
+      Result := nil;
+  end;
+end;
+
+Function DiskFree(Drive: Byte): int64;
+var
+  p : PChar;
+  fs : TStatfs;
+Begin
+  p:=GetDriveStr(Drive);
+  if (p<>nil) and (fpStatFS(p, @fs)<>-1) then
+    DiskFree := int64(fs.bavail)*int64(fs.bsize)
+  else
+    DiskFree := -1;
+End;
+
+Function DiskSize(Drive: Byte): int64;
+var
+  p : PChar;
+  fs : TStatfs;
+Begin
+  p:=GetDriveStr(Drive);
+  if (p<>nil) and (fpStatFS(p, @fs)<>-1) then
+    DiskSize := int64(fs.blocks)*int64(fs.bsize)
+  else
+    DiskSize := -1;
+End;
+
+Function AddDisk(const path: string): Byte;
+begin
+  if DriveStr[Drives]<>nil then
    FreeMem(DriveStr[Drives]);
   GetMem(DriveStr[Drives],length(Path)+1);
   StrPCopy(DriveStr[Drives],path);
   Result:=Drives;
   inc(Drives);
-  if Drives>26 then
-   Drives:=4;
+  if Drives>High(DriveStr) then
+   Drives:=Low(DriveStr);
 end;
-
-
-Function DiskFree(Drive: Byte): int64;
-var
-  fs : tstatfs;
-Begin
-  if ((Drive in [Low(FixDriveStr)..High(FixDriveStr)]) and (not (fixdrivestr[Drive]=nil)) and (fpstatfs(StrPas(fixdrivestr[drive]),@fs)<>-1)) or
-     ((Drive in [Low(DriveStr)..High(DriveStr)]) and (not (drivestr[Drive]=nil)) and (fpstatfs(StrPas(drivestr[drive]),@fs)<>-1)) then
-   Diskfree:=int64(fs.bavail)*int64(fs.bsize)
-  else
-   Diskfree:=-1;
-End;
-
-
-
-Function DiskSize(Drive: Byte): int64;
-var
-  fs : tstatfs;
-Begin
-  if ((Drive in [Low(FixDriveStr)..High(FixDriveStr)]) and (not (fixdrivestr[Drive]=nil)) and (fpstatfs(StrPas(fixdrivestr[drive]),@fs)<>-1)) or
-     ((Drive in [Low(DriveStr)..High(DriveStr)]) and (not (drivestr[Drive]=nil)) and (fpstatfs(StrPas(drivestr[drive]),@fs)<>-1)) then
-   DiskSize:=int64(fs.blocks)*int64(fs.bsize)
-  else
-   DiskSize:=-1;
-End;
 
 
 Procedure FreeDriveStr;
@@ -1223,6 +1396,17 @@ Function GetEpochTime: cint;
 }
 begin
   GetEpochTime:=fptime;
+end;
+
+Procedure DoGetUniversalDateTime(var year, month, day, hour, min,  sec, msec, usec : word);
+
+var
+  tz:timeval;
+begin
+  fpgettimeofday(@tz,nil);
+  EpochToUniversal(tz.tv_sec,year,month,day,hour,min,sec);
+  msec:=tz.tv_usec div 1000;
+  usec:=tz.tv_usec mod 1000;
 end;
 
 // Now, adjusted to local time.
@@ -1299,6 +1483,7 @@ var
   usecs : Word;
 begin
   DoGetLocalDateTime(SystemTime.Year, SystemTime.Month, SystemTime.Day,SystemTime.Hour, SystemTime.Minute, SystemTime.Second, SystemTime.MilliSecond, usecs);
+  SystemTime.DayOfWeek:=DayOfWeek(EncodeDate(SystemTime.Year,SystemTime.Month,SystemTime.Day))-1;
 end ;
 {$endif}
 
@@ -1408,7 +1593,7 @@ Begin
   if pid=0 then
    begin
    {The child does the actual exec, and then exits}
-      fpexecv(pchar(pointer(LPath)),Cmdline2);
+      fpexecve(pchar(pointer(LPath)),Cmdline2,envp);
      { If the execve fails, we return an exitvalue of 127, to let it be known}
      fpExit(127);
    end
@@ -1663,10 +1848,38 @@ begin
   Flush(Output);
 end;
 
+function GetUniversalTime(var SystemTime: TSystemTime): Boolean;
+var
+  usecs : Word;
+begin
+  DoGetUniversalDateTime(SystemTime.Year, SystemTime.Month, SystemTime.Day,SystemTime.Hour, SystemTime.Minute, SystemTime.Second, SystemTime.MilliSecond, usecs);
+  Result:=True;
+end;
+
 function GetLocalTimeOffset: Integer;
 
 begin
  Result := -Tzseconds div 60; 
+end;
+
+function GetLocalTimeOffset(const DateTime: TDateTime; const InputIsUTC: Boolean; out Offset: Integer): Boolean;
+
+var
+  Year, Month, Day, Hour, Minute, Second, MilliSecond: word;
+  UnixTime: Int64;
+  lTZInfo: TTZInfo;
+begin
+  DecodeDate(DateTime, Year, Month, Day);
+  DecodeTime(DateTime, Hour, Minute, Second, MilliSecond);
+  UnixTime:=UniversalToEpoch(Year, Month, Day, Hour, Minute, Second);
+
+  {$if declared(GetLocalTimezone)}
+  GetLocalTimeOffset:=GetLocalTimezone(UnixTime,InputIsUTC,lTZInfo);
+  if GetLocalTimeOffset then
+    Offset:=-lTZInfo.seconds div 60;
+  {$else}
+  GetLocalTimeOffset:=False;
+  {$endif}
 end;
 
 {$ifdef android}

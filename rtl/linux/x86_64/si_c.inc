@@ -37,20 +37,38 @@
 
 {$L abitag.o}
 var
-  libc_environ: pchar; external name '__environ@GLIBC_2.2.5';
-  libc_fpu_control: word; external name '__fpu_control@GLIBC_2.2.5';
-  libc_init_proc: procedure; external name '_init@GLIBC_2.2.5';
-  libc_fini_proc: procedure; external name '_fini@GLIBC_2.2.5';
+  libc_environ: pchar; external name '__environ';
+  libc_fpu_control: word; external name '__fpu_control';
+  libc_init_proc: procedure; external name '_init';
+  libc_fini_proc: procedure; external name '_fini';
 
   fpc_ret,fpc_ret_rbp : pointer;
 
-procedure libc_atexit; external name '__libc_atexit@GLIBC_2.2.5';
-procedure libc_exit; external name '__libc_exit@GLIBC_2.2.5';
-procedure libc_init; external name '__libc_init@GLIBC_2.2.5';
-procedure libc_setfpucw; external name '__setfpucw@GLIBC_2.2.5';
-procedure libc_start_main; external name '__libc_start_main@GLIBC_2.2.5';
+procedure libc_atexit; external name '__libc_atexit';
+procedure libc_exit; external name '__libc_exit';
+procedure libc_init; external name '__libc_init';
+procedure libc_setfpucw; external name '__setfpucw';
+procedure libc_start_main; external name '__libc_start_main';
 
 procedure _FPC_libc_haltproc(e:longint); forward;
+
+procedure ___libc_csu_init; external name '__libc_csu_init';
+
+{$if FPC_FULLVERSION>30202}
+procedure __libc_csu_init; public name '__libc_csu_init'; assembler;
+  asm
+    .weak __libc_csu_init
+  end;
+{$endif FPC_FULLVERSION>30202}
+
+procedure ___libc_csu_fini; external name '__libc_csu_fini';
+
+{$if FPC_FULLVERSION>30202}
+procedure __libc_csu_fini; public name '__libc_csu_fini'; assembler;
+  asm
+    .weak __libc_csu_fini
+  end;
+{$endif FPC_FULLVERSION>30202}
 
 procedure main_stub; assembler; nostackframe;
   asm
@@ -86,7 +104,7 @@ procedure main_stub; assembler; nostackframe;
 
     { start the program }
     xorq    %rbp,%rbp
-    call    PASCALMAIN
+    call    PASCALMAIN@PLT
 {$endif FPC_HAS_INDIRECT_ENTRY_INFORMATION}
     hlt
   end;
@@ -155,14 +173,14 @@ procedure _FPC_libc_start; assembler; nostackframe; public name '_start';
     pushq %rsp
 
     { Pass address of our own entry points to .fini and .init.  }
-    movq $ini_dummy, %r8
-    movq $ini_dummy, %rcx
+    movq ___libc_csu_fini@GOTPCREL(%rip), %r8
+    movq ___libc_csu_init@GOTPCREL(%rip), %rcx
 
-    movq $main_stub, %rdi
+    movq main_stub@GOTPCREL(%rip), %rdi
 
     { Call the user's main function, and exit with its value.
      But let the libc call main.    }
-    call libc_start_main
+    call libc_start_main@PLT
 
     hlt                     { Crash if somehow `exit' does return.  }
   end;

@@ -154,10 +154,12 @@ implementation
 
       { Generic unaligned pseudo-instructions, seems ELF specific }
       use_ua_elf_systems = [system_mipsel_linux,system_mipseb_linux,system_mipsel_android,system_mipsel_embedded,system_mipseb_embedded];
-      ait_ua_elf_const2str : array[aitconst_16bit_unaligned..aitconst_64bit_unaligned]
-        of string[20]=(
-          #9'.2byte'#9,#9'.4byte'#9,#9'.8byte'#9
-        );
+      ait_ua_elf_const2str : array[aitconst_128bit..aitconst_64bit_unaligned] of string[20]=(
+        #9'.fixme128'#9,#9'.8byte'#9,#9'.4byte'#9,#9'.2byte'#9,#9'.byte'#9,
+        #9'.sleb128'#9,#9'.uleb128'#9,
+        #9'.rva'#9,#9'.secrel32'#9,#9'.8byte'#9,#9'.4byte'#9,#9'.2byte'#9,#9'.2byte'#9,
+        #9'.2byte'#9,#9'.4byte'#9,#9'.8byte'#9
+      );
 
 
 
@@ -271,7 +273,8 @@ implementation
           '.obcj_nlcatlist',
           '.objc_protolist',
           '.stack',
-          '.heap'
+          '.heap',
+          '.gcc_except_table'
         );
         secnames_pic : array[TAsmSectiontype] of string[length('__DATA, __datacoal_nt,coalesced')] = ('','',
           '.text',
@@ -330,7 +333,8 @@ implementation
           '.obcj_nlcatlist',
           '.objc_protolist',
           '.stack',
-          '.heap'
+          '.heap',
+          '.gcc_except_table'
         );
       var
         sep     : string[3];
@@ -940,7 +944,10 @@ implementation
                         internalerror(200404292);
                       if not(target_info.system in systems_aix) then
                         begin
-                          writer.AsmWrite(ait_const2str[aitconst_32bit]);
+                          if (target_info.system in use_ua_elf_systems) then
+                            writer.AsmWrite(ait_ua_elf_const2str[aitconst_32bit])
+                          else
+                            writer.AsmWrite(ait_const2str[aitconst_32bit]);
                           if target_info.endian = endian_little then
                             begin
                               writer.AsmWrite(tostr(longint(lo(tai_const(hp).value))));
@@ -1039,8 +1046,7 @@ implementation
                          if (constdef in ait_unaligned_consts) and
                             (target_info.system in use_ua_sparc_systems) then
                            writer.AsmWrite(ait_ua_sparc_const2str[constdef])
-                         else if (constdef in ait_unaligned_consts) and
-                                 (target_info.system in use_ua_elf_systems) then
+                         else if (target_info.system in use_ua_elf_systems) then
                            writer.AsmWrite(ait_ua_elf_const2str[constdef])
                          { we can also have unaligned pointers in packed record
                            constants, which don't get translated into
@@ -1890,7 +1896,8 @@ implementation
          sec_none (* sec_objc_nlcatlist *),
          sec_none (* sec_objc_protlist *),
          sec_none (* sec_stack *),
-         sec_none (* sec_heap *)
+         sec_none (* sec_heap *),
+         sec_none (* gcc_except_table *)
         );
       begin
         Result := inherited SectionName (SecXTable [AType], AName, AOrder);

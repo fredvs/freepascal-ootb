@@ -1438,6 +1438,19 @@ override COMPILER_UNITTARGETDIR=$(COMPILER_TARGETDIR)
 override UNITTARGETDIRPREFIX=$(TARGETDIRPREFIX)
 endif
 endif
+ifdef SYSROOTPATH
+override FPCOPT+=-XR$(SYSROOTPATH)
+else
+ifeq ($(OS_TARGET),$(OS_SOURCE))
+ifneq ($(findstring $(OS_TARGET),darwin),)
+ifneq ($(findstring $(CPU_TARGET),aarch64),)
+ifneq ($(wildcard /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk),)
+override FPCOPT+=-XR/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+endif
+endif
+endif
+endif
+endif
 ifdef CREATESHARED
 override FPCOPT+=-Cg
 endif
@@ -1711,7 +1724,6 @@ FPMAKE_OPT+=-bu
 ifndef BUILDFULLNATIVE
 FPMAKE_OPT+=-scp
 endif
-.NOTPARALLEL:
 fpmkunit_clean_bootstrap:
 	$(MAKE) -C fpmkunit clean_bootstrap
 fpmake$(SRCEXEEXT): fpmake.pp $(SUB_FPMAKE_SRCS) fpmake_add.inc fpmake_proc.inc
@@ -1789,4 +1801,5 @@ ppuinfo :
 	echo RMPPULOG list is "$(RMPPULOGLIST)"
 cleanppulogs : $(RMPPULOGLIST)
 testppudump :
-	$(MAKE) cleanppulogs ppulogs
+	$(MAKE) cleanppulogs
+	$(MAKE) ppulogs

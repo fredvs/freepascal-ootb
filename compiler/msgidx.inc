@@ -698,6 +698,10 @@ const
   cg_e_function_not_support_by_selected_instruction_set=06056;
   cg_f_max_units_reached=06057;
   cg_n_no_inline=06058;
+  cg_e_case_missing_value=06059;
+  cg_w_case_incomplete=06060;
+  cg_w_cannot_compile_subroutine=06061;
+  cg_w_interrupt_does_not_save_registers=06062;
   asmr_d_start_reading=07000;
   asmr_d_finish_reading=07001;
   asmr_e_none_label_contain_at=07002;
@@ -933,6 +937,7 @@ const
   link_e_comdat_size_differs=09218;
   link_e_comdat_content_differs=09219;
   link_e_comdat_selection_differs=09220;
+  link_e_unsupported_cross_endian_internal_linker=09223;
   unit_t_unitsearch=10000;
   unit_t_ppu_loading=10001;
   unit_u_ppu_name=10002;
@@ -1019,6 +1024,7 @@ const
   option_obsolete_switch=11018;
   option_obsolete_switch_use_new=11019;
   option_switch_bin_to_src_assembler=11020;
+  option_switch_bin_to_src_assembler_cross_endian=11068;
   option_incompatible_asm=11021;
   option_asm_forced=11022;
   option_using_file=11026;
@@ -1109,9 +1115,9 @@ const
   option_info=11024;
   option_help_pages=11025;
 
-  MsgTxtSize = 82822;
+  MsgTxtSize = 84002;
 
   MsgIdxMax : array[1..20] of longint=(
-    28,106,350,127,99,59,142,34,221,67,
-    63,20,30,1,1,1,1,1,1,1
+    28,106,350,127,99,63,142,34,224,67,
+    69,20,30,1,1,1,1,1,1,1
   );

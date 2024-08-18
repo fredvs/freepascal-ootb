@@ -2,10 +2,7 @@
 const
    CLOCKS_PER_SEC = 1000000;
 
-   
-function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf' + LIBC_SUFFIX ;
-
-
+function __sysconf(_para1:longint):longint;cdecl;external clib name '__sysconf';
 function CLK_TCK : __clock_t;
 
 const

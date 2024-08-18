@@ -127,7 +127,14 @@ const
       {ftTimeStamp} 'TIMESTAMP',
       {ftFMTBcd} 'NUMERIC(18,6)',
       {ftFixedWideChar} '',
-      {ftWideMemo} ''
+      {ftWideMemo} '',
+      {ftOraTimeStamp} '',
+      {ftOraInterval} '',
+      {ftLongWord} '',
+      {ftShortint} '',
+      {ftByte} '',
+      {ftExtended} '',
+      {ftSingle} ''
     );
 
   // names as returned by ODBC SQLGetInfo(..., SQL_DBMS_NAME, ...) and GetConnectionInfo(citServerType)
@@ -144,7 +151,7 @@ const
 
   // fall back mapping (e.g. in case GetConnectionInfo(citServerType) is not implemented)
   SQLConnTypeToServerTypeMap : array[TSQLConnType] of TSQLServerType =
-    (ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssPostgreSQL,ssFirebird,ssUnknown,ssOracle,ssSQLite,ssMSSQL,ssSybase);
+    (ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssMySQL,ssPostgreSQL,ssFirebird,ssUnknown,ssOracle,ssSQLite,ssMSSQL,ssSybase);
 
 
 function IdentifierCase(const s: string): string;
@@ -311,6 +318,7 @@ begin
       FieldtypeDefinitions[ftBytes]    := 'BINARY(5)';
       FieldtypeDefinitions[ftVarBytes] := 'VARBINARY(10)';
       FieldtypeDefinitions[ftMemo]     := 'TEXT';
+      FieldtypeDefinitions[ftLongWord] := 'INT UNSIGNED';
       // Add into my.ini: sql-mode="...,PAD_CHAR_TO_FULL_LENGTH,ANSI_QUOTES" or set it explicitly by:
       // PAD_CHAR_TO_FULL_LENGTH to avoid trimming trailing spaces contrary to SQL standard (MySQL 5.1.20+)
       FConnection.ExecuteDirect('SET SESSION sql_mode=''STRICT_ALL_TABLES,PAD_CHAR_TO_FULL_LENGTH,ANSI_QUOTES''');
@@ -571,15 +579,23 @@ begin
   if assigned(FTransaction) then
     begin
     try
-      if Ftransaction.Active then Ftransaction.Rollback;
-      Ftransaction.StartTransaction;
+      if Ftransaction.Active and not (stoUseImplicit in FTransaction.Options) then
+        begin
+        Ftransaction.Rollback;
+        Ftransaction.StartTransaction;
+        end;
       Fconnection.ExecuteDirect('DROP TABLE FPDEV');
-      Ftransaction.Commit;
+      if not (stoUseImplicit in FTransaction.Options) then
+        Ftransaction.Commit;
+      Fconnection.ExecuteDirect('DROP TABLE  FPDEV2');
+      if not (stoUseImplicit in FTransaction.Options) then
+        Ftransaction.Commit;
     Except
       on E: Exception do begin
         if dblogfilename<>'' then
           DoLogEvent(nil,detCustom,'Exception running DropNDatasets: '+E.Message);
-        if Ftransaction.Active then Ftransaction.Rollback
+        if Ftransaction.Active and not (stoUseImplicit in FTransaction.Options) then
+           Ftransaction.Rollback
       end;
     end;
     end;
@@ -590,10 +606,16 @@ begin
   if assigned(FTransaction) then
     begin
     try
-      if Ftransaction.Active then Ftransaction.Rollback;
-      Ftransaction.StartTransaction;
+      if Ftransaction.Active and not (stoUseImplicit in FTransaction.Options) then
+        begin
+        Ftransaction.Rollback;
+        Ftransaction.StartTransaction;
+        end;
+      if not (stoUseImplicit in FTransaction.Options) then
+        Ftransaction.StartTransaction;
       Fconnection.ExecuteDirect('DROP TABLE FPDEV_FIELD');
-      Ftransaction.Commit;
+      if not (stoUseImplicit in FTransaction.Options) then
+        Ftransaction.Commit;
     Except
       on E: Exception do begin
         if dblogfilename<>'' then

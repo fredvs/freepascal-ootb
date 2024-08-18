@@ -38,6 +38,7 @@ Type
     LogoWritten,
     ABISetExplicitly,
     FPUSetExplicitly,
+    LinkInternSetExplicitly,
     CPUSetExplicitly,
     OptCPUSetExplicitly: boolean;
     FileLevel : longint;
@@ -157,6 +158,27 @@ begin
 {$endif}
 end;
 
+procedure set_endianess_macros;
+  begin 
+    { endian define }
+    case target_info.endian of
+      endian_little :
+        begin
+          def_system_macro('ENDIAN_LITTLE');
+          def_system_macro('FPC_LITTLE_ENDIAN');
+          undef_system_macro('ENDIAN_BIG');
+          undef_system_macro('FPC_BIG_ENDIAN');
+        end;
+      endian_big :
+        begin
+          def_system_macro('ENDIAN_BIG');
+          def_system_macro('FPC_BIG_ENDIAN');
+          undef_system_macro('ENDIAN_LITTLE');
+          undef_system_macro('FPC_LITTLE_ENDIAN');
+        end;
+    end;
+  end;
+
 
 {****************************************************************************
                                  Toption
@@ -220,9 +242,11 @@ const
   AsmModeListPlaceholder = '$ASMMODES';
   ControllerListPlaceholder = '$CONTROLLERTYPES';
   FeatureListPlaceholder = '$FEATURELIST';
+  ModeSwitchListPlaceholder = '$MODESWITCHES';
+  CodeGenerationBackendPlaceholder = '$CODEGENERATIONBACKEND';
 
   procedure SplitLine (var OrigString: TCmdStr; const Placeholder: TCmdStr;
-                                                 var RemainderString: TCmdStr);
+                                                 out RemainderString: TCmdStr);
   var
     I: longint;
     HS2: TCmdStr;
@@ -264,7 +288,7 @@ const
      begin
       hs1:=targetinfos[target]^.shortname;
       if OrigString = '' then
-       WriteLn (hs1)
+       Comment (V_Normal, hs1)
       else
        begin
         hs := OrigString;
@@ -275,8 +299,6 @@ const
         Comment(V_Normal,hs);
        end;
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, OSTargetsPlaceholder, HS3);
   end;
 
   procedure ListCPUInstructionSets (OrigString: TCmdStr);
@@ -290,13 +312,14 @@ const
       if (OrigString = '') then
        begin
         if CPUTypeStr [CPU] <> '' then
-         WriteLn (CPUTypeStr [CPU]);
+         Comment (V_Normal, CPUTypeStr [CPU]);
        end
       else
        begin
         if length(hs1+cputypestr[cpu])>70 then
          begin
           hs:=OrigString;
+          HS1 := HS1 + ',';
           Replace(hs,CPUListPlaceholder,hs1);
           Comment(V_Normal,hs);
           hs1:=''
@@ -314,8 +337,6 @@ const
       Comment(V_Normal,hs);
       hs1:=''
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, CPUListPlaceholder, HS3);
   end;
 
   procedure ListFPUInstructionSets (OrigString: TCmdStr);
@@ -329,13 +350,14 @@ const
       if (OrigString = '') then
        begin
         if FPUTypeStr [FPU] <> '' then
-         WriteLn (FPUTypeStr [FPU]);
+         Comment (V_Normal, FPUTypeStr [FPU]);
        end
       else
        begin
         if length(hs1+fputypestr[fpu])>70 then
          begin
           hs:=OrigString;
+          HS1 := HS1 + ',';
           Replace(hs,FPUListPlaceholder,hs1);
           Comment(V_Normal,hs);
           hs1:=''
@@ -353,8 +375,6 @@ const
       Comment(V_Normal,hs);
       hs1:=''
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, FPUListPlaceholder, HS3);
   end;
 
   procedure ListABITargets (OrigString: TCmdStr);
@@ -370,7 +390,7 @@ const
       if hs1<>'' then
        begin
         if OrigString = '' then
-         WriteLn (HS1)
+         Comment (V_Normal, HS1)
         else
          begin
           hs:=OrigString;
@@ -379,8 +399,6 @@ const
          end;
        end;
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, ABIListPlaceholder, HS3);
   end;
 
   procedure ListOptimizations (OrigString: TCmdStr);
@@ -396,7 +414,7 @@ const
         if hs1<>'' then
          begin
           if OrigString = '' then
-           WriteLn (hs1)
+           Comment (V_Normal, hs1)
           else
            begin
             hs:=OrigString;
@@ -406,8 +424,6 @@ const
          end;
        end;
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, OptListPlaceholder, HS3);
   end;
 
   procedure ListWPOptimizations (OrigString: TCmdStr);
@@ -425,7 +441,7 @@ const
         if hs1<>'' then
          begin
           if OrigString = '' then
-           WriteLn (hs1)
+           Comment (V_Normal, hs1)
           else
            begin
             hs:=OrigString;
@@ -435,8 +451,6 @@ const
          end;
        end;
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, WPOListPlaceholder, HS3);
   end;
 
   procedure ListAsmModes (OrigString: TCmdStr);
@@ -451,7 +465,7 @@ const
       if hs1<>'' then
        begin
         if OrigString = '' then
-         WriteLn (hs1)
+         Comment (V_Normal, hs1)
         else
          begin
           hs:=OrigString;
@@ -460,8 +474,6 @@ const
          end;
        end;
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, AsmModeListPlaceholder, HS3);
   end;
 
   procedure ListControllerTypes (OrigString: TCmdStr);
@@ -479,7 +491,7 @@ const
         if (OrigString = '') then
          begin
           if Embedded_Controllers [ControllerType].ControllerTypeStr <> '' then
-           WriteLn (Embedded_Controllers [ControllerType].ControllerTypeStr);
+           Comment (V_Normal, Embedded_Controllers [ControllerType].ControllerTypeStr);
          end
         else
          begin
@@ -487,6 +499,7 @@ const
                                                                        >70 then
            begin
             hs:=OrigString;
+            HS1 := HS1 + ',';
             Replace(hs,ControllerListPlaceholder,hs1);
             Comment(V_Normal,hs);
             hs1:=''
@@ -504,8 +517,6 @@ const
         Comment(V_Normal,hs);
         hs1:=''
        end;
-      OrigString := HS3;
-      SplitLine (OrigString, ControllerListPlaceholder, HS3);
      end;
 {$POP}
   end;
@@ -521,13 +532,14 @@ const
       if (OrigString = '') then
        begin
         if FeatureStr [Feature] <> '' then
-         WriteLn (FeatureStr [Feature]);
+         Comment (V_Normal, FeatureStr [Feature]);
        end
       else
        begin
         if Length (HS1 + FeatureStr [Feature]) > 70 then
          begin
           HS := OrigString;
+          HS1 := HS1 + ',';
           Replace (HS, FeatureListPlaceholder, HS1);
           Comment (V_Normal, HS);
           HS1 := ''
@@ -545,9 +557,59 @@ const
       Comment (V_Normal, HS);
       HS1 := ''
      end;
-    OrigString := HS3;
-    SplitLine (OrigString, FeatureListPlaceholder, HS3);
   end;
+
+  procedure ListModeswitches (OrigString: TCmdStr);
+  var
+    Modeswitch: TModeswitch;
+  begin
+    SplitLine (OrigString, ModeswitchListPlaceholder, HS3);
+    HS1 := '';
+    for Modeswitch := Low (TModeswitch) to High (TModeswitch) do
+     begin
+      if (OrigString = '') then
+       begin
+        if ModeswitchStr [Modeswitch] <> '' then
+         Comment (V_Normal, ModeswitchStr [Modeswitch]);
+       end
+      else
+       begin
+        if Length (HS1 + ModeswitchStr [Modeswitch]) > 60 then
+         begin
+          HS := OrigString;
+          HS1 := HS1 + ',';
+          Replace (HS, ModeswitchListPlaceholder, HS1);
+          Comment (V_Normal, HS);
+          HS1 := ''
+         end
+        else if HS1 <> '' then
+         HS1 := HS1 + ',';
+        if ModeswitchStr [Modeswitch] <> '' then
+         HS1 := HS1 + ModeswitchStr [Modeswitch];
+       end;
+     end;
+    if (OrigString <> '') and (HS1 <> '') then
+     begin
+      HS := OrigString;
+      Replace (HS, ModeswitchListPlaceholder, HS1);
+      Comment (V_Normal, HS);
+      HS1 := ''
+     end;
+  end;
+
+  procedure ListCodeGenerationBackend (OrigString: TCmdStr);
+    begin
+      SplitLine (OrigString, CodeGenerationBackendPlaceholder, HS3);
+      hs1:=cgbackend2str[cgbackend];
+      if OrigString = '' then
+        Comment (V_Normal, hs1)
+      else
+        begin
+          hs:=OrigString;
+          Replace(hs,CodeGenerationBackendPlaceholder,hs1);
+          Comment(V_Normal,hs);
+        end;
+    end;
 
 begin
   if More = '' then
@@ -570,12 +632,16 @@ begin
        ListOptimizations (S)
       else if pos(WPOListPlaceholder,s)>0 then
        ListWPOptimizations (S)
+      else if Pos (ModeswitchListPlaceholder, S) > 0 then
+       ListModeswitches (S)
       else if pos(AsmModeListPlaceholder,s)>0 then
        ListAsmModes (S)
       else if pos(ControllerListPlaceholder,s)>0 then
        ListControllerTypes (S)
       else if pos(FeatureListPlaceholder,s)>0 then
        ListFeatures (S)
+      else if pos(CodeGenerationBackendPlaceholder,s)>0 then
+       ListCodeGenerationBackend (S)
       else
        Comment(V_Normal,s);
      end;
@@ -586,12 +652,14 @@ begin
     while J <= Length (More) do
      begin
       if J > 1 then
-       WriteLn;  (* Put empty line between multiple sections *)
+       Comment(V_Normal,'');  (* Put empty line between multiple sections *)
       case More [J] of
        'a': ListABITargets ('');
+       'b': Comment(V_Normal, cgbackend2str[cgbackend]);
        'c': ListCPUInstructionSets ('');
        'f': ListFPUInstructionSets ('');
        'i': ListAsmModes ('');
+       'm': ListModeswitches ('');
        'o': ListOptimizations ('');
        'r': ListFeatures ('');
        't': ListOSTargets ('');
@@ -1043,7 +1111,8 @@ begin
          (
           ((length(opt)>1) and (opt[2] in ['i','d','v','T','u','n','X','l','U'])) or
           ((length(opt)>3) and (opt[2]='F') and (opt[3]='e')) or
-          ((length(opt)>3) and (opt[2]='C') and (opt[3]='p')) or
+          ((length(opt)>2) and (opt[2]='C') and (opt[3] in ['a','b','f','p'])) or
+          ((length(opt)>3) and (opt[2]='C') and (opt[3] in ['a','f','p'])) or
           ((length(opt)>3) and (opt[2]='W') and (opt[3] in ['m','p']))
          )
         ) then
@@ -1178,6 +1247,7 @@ begin
                            target_info.endian:=endian_little
                          else
                            target_info.endian:=endian_big;
+                         set_endianess_macros;
                        end;
 
                     'c' :
@@ -1437,18 +1507,29 @@ begin
              end;
            'D' :
              begin
-               include(init_settings.globalswitches,cs_link_deffile);
                j:=1;
                while j<=length(more) do
                 begin
                   case more[j] of
                     'd' :
                       begin
+                        include(init_settings.globalswitches,cs_link_deffile);
                         description:=Copy(more,j+1,255);
+                        break;
+                      end;
+                    'D' :
+                      begin
+                        datestr:=Copy(more,j+1,255);
+                        break;
+                      end;
+                    'T' :
+                      begin
+                        timestr:=Copy(more,j+1,255);
                         break;
                       end;
                     'v' :
                       begin
+                        include(init_settings.globalswitches,cs_link_deffile);
                         dllversion:=Copy(more,j+1,255);
                         l:=pos('.',dllversion);
                         dllminor:=0;
@@ -1479,7 +1560,10 @@ begin
                         break;
                       end;
                     'w' :
-                      usewindowapi:=true;
+                      begin
+                        include(init_settings.globalswitches,cs_link_deffile);
+                        usewindowapi:=true;
+                       end;
                     '-' :
                       begin
                         exclude(init_settings.globalswitches,cs_link_deffile);
@@ -1791,7 +1875,7 @@ begin
            'i' :
              begin
                if (More='') or
-                    (More [1] in ['a', 'c', 'f', 'i', 'o', 'r', 't', 'u', 'w']) then
+                    (More [1] in ['a', 'b', 'c', 'f', 'i', 'm', 'o', 'r', 't', 'u', 'w']) then
                  WriteInfo (More)
                else
                  QuickInfo:=QuickInfo+More;
@@ -2307,6 +2391,20 @@ begin
                       end;
                     'F':
                       begin
+{$if defined(m68k)}
+                        if target_info.system in [system_m68k_atari] then
+                          begin
+                            if (length(More)>j) then
+                              begin
+                                val(Copy(More,j+1,255),ataritos_exe_flags,code);
+                                if code<>0 then
+                                  IllegalPara(opt);
+                              end
+                            else
+                              IllegalPara(opt);
+                            break;
+                          end;
+{$endif defined(m68k)}
                         if target_info.system in systems_os2 then
                           begin
                             if UnsetBool(More, j, opt, false) then
@@ -2516,7 +2614,10 @@ begin
                     'e' :
                       begin
                         If UnsetBool(More, j, opt, false) then
-                          exclude(init_settings.globalswitches,cs_link_extern)
+                          begin
+                            exclude(init_settings.globalswitches,cs_link_extern);
+                            linkinternsetexplicitly:=true;
+                          end
                         else
                           include(init_settings.globalswitches,cs_link_extern);
                       end;
@@ -2535,6 +2636,10 @@ begin
                           include(init_settings.globalswitches,cs_link_extern)
                         else
                           exclude(init_settings.globalswitches,cs_link_extern);
+                          begin
+                            exclude(init_settings.globalswitches,cs_link_extern);
+                            LinkInternSetExplicitly:=true;
+                          end;
                       end;
                     'n' :
                       begin
@@ -3356,14 +3461,10 @@ begin
     Order to read configuration file :
     try reading fpc.cfg in :
      1 - current dir
-     2 - compiler path
-     3 - configpath
-     4 - system path
+     2 - configpath
+     3 - compiler path
   }
-  if not FileExists(fn) then // current dir
-    if CfgFileExists(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn) then
-       foundfn:=IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn // dir of compiler
-    else 
+  if not FileExists(fn) then
    begin
 {$ifdef Unix}
      hs:=GetEnvironmentVariable('HOME');
@@ -3731,6 +3832,7 @@ begin
 
   { make cpu makros available when reading the config files the second time }
   def_cpu_macros;
+  set_endianess_macros;
 
   if tf_cld in target_info.flags then
     if not UpdateTargetSwitchStr('CLD', init_settings.targetswitches, true) then
@@ -3810,20 +3912,6 @@ begin
   { Stop if errors in options }
   if ErrorCount>0 then
    StopOptions(1);
-
-  { endian define }
-  case target_info.endian of
-    endian_little :
-      begin
-        def_system_macro('ENDIAN_LITTLE');
-        def_system_macro('FPC_LITTLE_ENDIAN');
-      end;
-    endian_big :
-      begin
-        def_system_macro('ENDIAN_BIG');
-        def_system_macro('FPC_BIG_ENDIAN');
-      end;
-  end;
 
   { Write logo }
   if option.ParaLogo then
@@ -3961,6 +4049,13 @@ begin
       option.paratargetasm:=as_clang_llvm;
     end;
 {$endif llvm}
+  if (option.paratargetasm=as_none) then
+    begin
+      if (target_info.endian<>source_info.endian) then
+        option.paratargetasm:=target_info.assemextern
+      else
+        option.paratargetasm:=target_info.assem;
+    end;
   { maybe override assembler }
   if (option.paratargetasm<>as_none) then
     begin
@@ -3988,7 +4083,6 @@ begin
         begin
           option.paratargetdbg:=dbg_dwarf2;
         end;
-
     end;
   {TOptionheck a second time as we might have changed assembler just above }
   option.checkoptionscompatibility;
@@ -3999,10 +4093,16 @@ begin
       Message(option_w_unsupported_debug_format);
 
   { switch assembler if it's binary and we got -a on the cmdline }
-  if (cs_asm_leave in init_settings.globalswitches) and
-     (af_outputbinary in target_asm.flags) then
+  if (af_outputbinary in target_asm.flags) and
+     ((cs_asm_leave in init_settings.globalswitches) or
+      { if -s is passed, we shouldn't call the internal assembler }
+      (cs_asm_extern in init_settings.globalswitches)) or
+      ((option.paratargetasm=as_none) and (target_info.endian<>source_info.endian)) then
    begin
-     Message(option_switch_bin_to_src_assembler);
+     if ((option.paratargetasm=as_none) and (target_info.endian<>source_info.endian)) then
+       Message(option_switch_bin_to_src_assembler_cross_endian)
+     else
+       Message(option_switch_bin_to_src_assembler);
 {$ifdef llvm}
      set_target_asm(as_clang_llvm);
 {$else}
@@ -4223,6 +4323,7 @@ begin
 
   { now we can define cpu and fpu type }
   def_cpu_macros;
+  set_endianess_macros;
 
   { Use init_settings cpu type for asm cpu type,
     if asmcputype is cpu_none,
@@ -4355,6 +4456,13 @@ begin
 
   if not option.LinkTypeSetExplicitly then
     set_default_link_type;
+  if source_info.endian<>target_info.endian then
+    begin
+      if option.LinkInternSetExplicitly then
+        Message(link_e_unsupported_cross_endian_internal_linker)
+      else
+        include(init_settings.globalswitches,cs_link_extern);
+    end;
 
   { Default alignment settings,
     1. load the defaults for the target

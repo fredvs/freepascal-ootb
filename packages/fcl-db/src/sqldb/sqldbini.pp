@@ -1,5 +1,19 @@
 unit sqldbini;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
 
+    SQLDB ini file support
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$mode objfpc}{$H+}
 {$modeswitch typehelpers}
 
@@ -24,13 +38,13 @@ Type
     Procedure ClearValues;
   Public
     Procedure LoadFromIni(Const aIni: TCustomIniFile; aOptions : TSQLDBIniOptions = []); overload;
-    Procedure LoadFromIni(Const aIni: TCustomIniFile; ASection : String; aOptions : TSQLDBIniOptions); overload;
+    Procedure LoadFromIni(Const aIni: TCustomIniFile; const ASection : String; aOptions : TSQLDBIniOptions); overload;
     Procedure LoadFromFile(Const aFileName : String; aOptions : TSQLDBIniOptions = []); overload;
     Procedure LoadFromFile(Const aFileName : String; Const ASection : String; aOptions : TSQLDBIniOptions); overload;
     Procedure SaveToFile(Const aFileName : String; aOptions : TSQLDBIniOptions = []);overload;
     Procedure SaveToFile(Const aFileName : String; Const ASection : String; aOptions : TSQLDBIniOptions = []);overload;
     Procedure SaveToIni(Const aIni: TCustomIniFile; aOptions : TSQLDBIniOptions = []); overload;
-    Procedure SaveToIni(Const aIni: TCustomIniFile; ASection : String; aOptions : TSQLDBIniOptions); overload;
+    Procedure SaveToIni(Const aIni: TCustomIniFile; const ASection : String; aOptions : TSQLDBIniOptions); overload;
   end;
 
 Var
@@ -68,7 +82,7 @@ Const
                      = (keyHost,KeyDatabaseName,KeyUserName,KeyPassword,KeyPort,keyParams,keyCharSet,keyRole);
   ParamSeps = [',',';',' '];
 
-procedure TSQLDBIniHelper.LoadFromIni(const aIni: TCustomIniFile; ASection: String; aOptions: TSQLDBIniOptions);
+procedure TSQLDBIniHelper.LoadFromIni(const aIni: TCustomIniFile; const ASection: String; aOptions: TSQLDBIniOptions);
 
 Var
   M,N,P : String;
@@ -169,7 +183,7 @@ begin
   SaveToIni(aIni,DefaultSection,aOptions);
 end;
 
-procedure TSQLDBIniHelper.SaveToIni(const aIni: TCustomIniFile; ASection: String; aOptions: TSQLDBIniOptions);
+procedure TSQLDBIniHelper.SaveToIni(const aIni: TCustomIniFile; const ASection: String; aOptions: TSQLDBIniOptions);
 Var
   M,N,P : String;
   I : integer;

@@ -1,3 +1,19 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canneyt and other members of the
+    Free Pascal development team
+
+    datasource implementation
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
+
 { ---------------------------------------------------------------------
     TDatalink
   ---------------------------------------------------------------------}
@@ -639,6 +655,7 @@ procedure TDatasource.SetEnabled(Value: Boolean);
 
 begin
   FEnabled:=Value;
+  ProcessEvent(deUpdateState,0);
 end;
 
 
@@ -679,7 +696,7 @@ procedure TDataSource.ProcessEvent(Event : TDataEvent; Info : Ptrint);
 
 Const
     OnDataChangeEvents = [deRecordChange, deDataSetChange, deDataSetScroll,
-                          deLayoutChange,deUpdateState];
+                          deLayoutChange, deUpdateState];
 
 Var
   NeedDataChange : Boolean;
@@ -691,7 +708,7 @@ begin
     begin
     NeedDataChange:=(FState=dsInactive);
     FLastState:=FState;
-    If Assigned(Dataset) then
+    If Assigned(Dataset) and FEnabled then
       FState:=Dataset.State
     else
       FState:=dsInactive;

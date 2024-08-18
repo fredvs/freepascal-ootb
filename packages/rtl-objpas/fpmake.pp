@@ -42,7 +42,7 @@ begin
     P:=AddPackage('rtl-objpas');
     P.ShortName:='rtlo';
     P.Directory:=ADirectory;
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.Author := 'FPC core team';
     P.License := 'LGPL with modification, ';
     P.HomepageURL := 'www.freepascal.org';
@@ -65,6 +65,9 @@ begin
     P.IncludePath.Add('src/common',CommonSrcOSes);
 
     T:=P.Targets.AddUnit('system.uitypes.pp',uitypesOses);
+    T:=P.Targets.AddUnit('system.uiconsts.pp',uitypesOses);
+      T.Dependencies.AddUnit('system.uitypes');
+    T:=P.Targets.AddUnit('system.timespan.pp',uitypesOses);
 
     T:=P.Targets.AddUnit('strutils.pp',StrUtilsOses);
       T.ResourceStrings:=true;

@@ -1,5 +1,19 @@
 unit fpsimplejsonexport;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
 
+    Simple Json Export code
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$mode objfpc}{$H+}
 
 interface
@@ -44,7 +58,7 @@ Type
     procedure IncIndent;
     procedure OutputRow(const ARow: String);
     procedure SetJSONFormatSettings(const AValue: TSimpleJSONFormatSettings);
-    function TextString(S: String): String;
+    function TextString(const S: String): String;
   Protected
     Function  CreateFormatSettings : TCustomExportFormatSettings; override;
     Procedure DoBeforeExecute; override;
@@ -131,7 +145,7 @@ begin
   Inherited FormatSettings.Assign(AValue);
 end;
 
-function TCustomSimpleJSONExporter.TextString(S: String): String;
+function TCustomSimpleJSONExporter.TextString(const S: String): String;
 
 Var
   I,J,L : Integer;
@@ -222,13 +236,13 @@ Var
 
 begin
   if EF.Field.IsNull then
-    S:='NULL' // do not localize
+    S:='null' // do not localize
   else if EF.Field.DataType=ftBoolean then
     begin
     If EF.FIeld.AsBoolean then
-      S:='True' // Do not localize
+      S:='true' // Do not localize
     else
-      S:='False';// Do not localize
+      S:='false';// Do not localize
     end
   else if EF.Field.DataType=ftFloat then
     Str(EF.FIeld.asFloat,S)
@@ -239,10 +253,7 @@ begin
   If FCF=cfObject then
     S:='"'+EF.ExportedName+'" : '+S;
   If (FCurrentRow<>'') then
-    if FCF=cfObject then
-      FCurrentRow:=FCurrentRow+'; '
-    else
-      FCurrentRow:=FCurrentRow+', ';
+    FCurrentRow:=FCurrentRow+', ';
   FCurrentRow:=FCurrentRow+S;
 end;
 

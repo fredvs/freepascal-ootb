@@ -4,7 +4,7 @@
 
 [package]
 name=fpc
-version=3.2.2
+version=3.2.4-rc1
 
 [target]
 dirs=compiler rtl utils packages installer
@@ -20,8 +20,8 @@ fpcdir=.
 rule=help
 
 [prerules]
-REQUIREDVERSION=3.2.0
-REQUIREDVERSION2=3.2.2
+REQUIREDVERSION=3.2.2
+REQUIREDVERSION2=3.2.0
 
 
 # make versions < 3.77 (OS2 version) are buggy
@@ -192,7 +192,15 @@ ifneq ($(OPT),)
 OPTNEW+=$(OPT)
 endif
 CLEANOPTS=FPC=$(PPNEW)
-BUILDOPTS=FPC=$(PPNEW) FPCFPMAKE=$(FPCFPMAKENEW) RELEASE=1 'OPT=$(OPTNEW)'
+BUILDOPTS=FPC=$(PPNEW) FPCFPMAKE=$(FPCFPMAKENEW) RELEASE=1 'OPT=$(OPTNEW)' 'FPCMAKEOPT=$(OPT)'
+ifdef CROSSCOMPILE
+ifneq ($(CROSSASPROG),)
+BUILDOPTS+=ASPROG=$(CROSSASPROG)
+endif
+ifneq ($(CROSSASTARGET),)
+BUILDOPTS+=ASTARGET=$(CROSSASTARGET)
+endif
+endif
 INSTALLOPTS=FPC=$(PPNEW) ZIPDESTDIR=$(BASEDIR) FPCMAKE=$(FPCMAKENEW)
 
 # CPU targets for which we only build the compiler/rtl
@@ -205,6 +213,11 @@ ifdef BUILDFULLNATIVE
 UTILS=1
 endif
 endif
+endif
+
+INSTALLERTARGETS=emx go32v2 msdos os2
+ifneq ($(findstring $(OS_TARGET),$(INSTALLERTARGETS)),)
+INSTALLER=1
 endif
 
 [rules]
@@ -301,11 +314,17 @@ endif
 ifdef UTILS
         $(MAKE) utils_clean $(CLEANOPTS)
 endif
+ifdef INSTALLER
+        $(MAKE) installer_clean $(CLEANOPTS)
+endif
 # build everything
         $(MAKE) rtl_$(ALLTARGET) $(BUILDOPTS)
         $(MAKE) packages_$(ALLTARGET) $(BUILDOPTS)
 ifdef UTILS
         $(MAKE) utils_all $(BUILDOPTS)
+endif
+ifdef INSTALLER
+        $(MAKE) installer_all $(BUILDOPTS)
 endif
         $(ECHOREDIR) Build > $(BUILDSTAMP)
         $(ECHOREDIR) Build > base.$(BUILDSTAMP)

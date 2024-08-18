@@ -49,21 +49,8 @@ function crc32(crc: cardinal; buf: Pbyte; len: cardinal): cardinal;
 }
 
 function get_crc32_table: Pcardinal;  { can be used by asm versions of crc32() }
+function get_crc_table: Pcardinal; external name 'get_crc32_table';
 
-const
-  /// allow to assign proper signed symbol table name for a libc.so.6 method
-  {$if defined(linux) and defined(cpux86_64)}
-  LIBC_SUFFIX = '@GLIBC_2.2.5';
-  {$else}
-  {$if defined(linux) and defined(cpui386)}
-  LIBC_SUFFIX = '@GLIBC_2.0';
-  {$else}
-  LIBC_SUFFIX = '';
-  {$endif}
-  {$endif}
-
-
-function get_crc_table: Pcardinal; external name 'get_crc32_table' + LIBC_SUFFIX;
 
 
 (******************************************************************************

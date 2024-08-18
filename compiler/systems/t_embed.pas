@@ -74,7 +74,7 @@ const
 begin
   with Info do
    begin
-     ExeCmd[1]:='ld -g '+platform_select+' $OPT $DYNLINK $STATIC $GCSECTIONS $STRIP -L. -o $EXE -T $RES';
+     ExeCmd[1]:='ld -g '+platform_select+' $OPT $DYNLINK $STATIC $GCSECTIONS $STRIP $MAP -L. -o $EXE -T $RES';
    end;
 end;
 
@@ -183,11 +183,11 @@ begin
     while not SharedLibFiles.Empty do
      begin
       S:=SharedLibFiles.GetFirst;
-     if ((S <> 'c') and (Pos('libc.so',S) = 0)) then
+      if s<>'c' then
        begin
         i:=Pos(target_info.sharedlibext,S);
         if i>0 then
-           Insert(':',s,1);   // needed for the linker
+         Delete(S,i,255);
         LinkRes.Add('-l'+s);
        end
       else
@@ -813,6 +813,10 @@ begin
          Add('OUTPUT_ARCH(avr:51)');
        cpu_avr6:
          Add('OUTPUT_ARCH(avr:6)');
+       cpu_avrxmega3:
+         Add('OUTPUT_ARCH(avr:103)');
+       cpu_avrtiny:
+         Add('OUTPUT_ARCH(avr:100)');
        else
          Internalerror(2015072701);
       end;
@@ -1043,6 +1047,12 @@ begin
       Add('  .debug_str      0 : { *(.debug_str) }');
       Add('  .debug_loc      0 : { *(.debug_loc) }');
       Add('  .debug_macinfo  0 : { *(.debug_macinfo) }');
+      Add('  /* DWARF 3 */');
+      Add('  .debug_pubtypes 0 : { *(.debug_pubtypes) }');
+      Add('  .debug_ranges   0 : { *(.debug_ranges) }');
+      Add('  /* DWARF Extension.  */');
+      Add('  .debug_macro    0 : { *(.debug_macro) }');
+
       Add('}');
     end;
 {$endif AVR}
@@ -1250,22 +1260,29 @@ end;
 function TlinkerEmbedded.MakeExecutable:boolean;
 var
   binstr,
-  cmdstr  : TCmdStr;
+  cmdstr,
+  mapstr: TCmdStr;
   success : boolean;
   StaticStr,
   GCSectionsStr,
   DynLinkStr,
-  StripStr: string;
+  StripStr,
+  FixedExeFileName: string;
 begin
   { for future use }
   StaticStr:='';
   StripStr:='';
+  mapstr:='';
   DynLinkStr:='';
+  FixedExeFileName:=maybequoted(ScriptFixFileName(ChangeFileExt(current_module.exefilename,'.elf')));
 
   GCSectionsStr:='--gc-sections';
   //if not(cs_link_extern in current_settings.globalswitches) then
   if not(cs_link_nolink in current_settings.globalswitches) then
    Message1(exec_i_linking,current_module.exefilename);
+
+  if (cs_link_map in current_settings.globalswitches) then
+   mapstr:='-Map '+maybequoted(ChangeFileExt(current_module.exefilename,'.map'));
 
 { Write used files and libraries }
   WriteResponseFile();
@@ -1275,19 +1292,21 @@ begin
   Replace(cmdstr,'$OPT',Info.ExtraOptions);
   if not(cs_link_on_target in current_settings.globalswitches) then
    begin
-    Replace(cmdstr,'$EXE',(maybequoted(ScriptFixFileName(ChangeFileExt(current_module.exefilename,'.elf')))));
+    Replace(cmdstr,'$EXE',FixedExeFileName);
     Replace(cmdstr,'$RES',(maybequoted(ScriptFixFileName(outputexedir+Info.ResName))));
     Replace(cmdstr,'$STATIC',StaticStr);
     Replace(cmdstr,'$STRIP',StripStr);
+    Replace(cmdstr,'$MAP',mapstr);
     Replace(cmdstr,'$GCSECTIONS',GCSectionsStr);
     Replace(cmdstr,'$DYNLINK',DynLinkStr);
    end
   else
    begin
-    Replace(cmdstr,'$EXE',maybequoted(ScriptFixFileName(ChangeFileExt(current_module.exefilename,'.elf'))));
+    Replace(cmdstr,'$EXE',FixedExeFileName);
     Replace(cmdstr,'$RES',maybequoted(ScriptFixFileName(outputexedir+Info.ResName)));
     Replace(cmdstr,'$STATIC',StaticStr);
     Replace(cmdstr,'$STRIP',StripStr);
+    Replace(cmdstr,'$MAP',mapstr);
     Replace(cmdstr,'$GCSECTIONS',GCSectionsStr);
     Replace(cmdstr,'$DYNLINK',DynLinkStr);
    end;
@@ -1299,17 +1318,17 @@ begin
 
 { Post process }
   if success and not(cs_link_nolink in current_settings.globalswitches) then
-    success:=PostProcessExecutable(current_module.exefilename+'.elf',false);
+    success:=PostProcessExecutable(FixedExeFileName,false);
 
   if success and (target_info.system in [system_arm_embedded,system_avr_embedded,system_mipsel_embedded]) then
     begin
       success:=DoExec(FindUtil(utilsprefix+'objcopy'),'-O ihex '+
-        ChangeFileExt(current_module.exefilename,'.elf')+' '+
-        ChangeFileExt(current_module.exefilename,'.hex'),true,false);
+        FixedExeFileName+' '+
+        maybequoted(ScriptFixFileName(ChangeFileExt(current_module.exefilename,'.hex'))),true,false);
       if success then
         success:=DoExec(FindUtil(utilsprefix+'objcopy'),'-O binary '+
-          ChangeFileExt(current_module.exefilename,'.elf')+' '+
-          ChangeFileExt(current_module.exefilename,'.bin'),true,false);
+          FixedExeFileName+' '+
+          maybequoted(ScriptFixFileName(ChangeFileExt(current_module.exefilename,'.bin'))),true,false);
     end;
 
   MakeExecutable:=success;   { otherwise a recursive call to link method }

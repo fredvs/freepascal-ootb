@@ -1,5 +1,19 @@
 unit dbf_parser;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Pascal Ganaye,Micha Nelissen and other members of the
+    Free Pascal development team
 
+    DBF parser support
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 interface
 
 {$I dbf_common.inc}
@@ -39,7 +53,7 @@ type
 
     procedure FillExpressList; override;
     procedure HandleUnknownVariable(VarName: string); override;
-    function  GetVariableInfo(VarName: string): TDbfFieldDef;
+    function  GetVariableInfo(const VarName: string): TDbfFieldDef;
     function  CurrentExpression: string; override;
     procedure ValidateExpression(AExpression: string); virtual;
     function  GetResultType: TExpressionType; override;
@@ -462,7 +476,7 @@ begin
     ParseExpression(lExpression);
 end;
 
-function TDbfParser.GetVariableInfo(VarName: string): TDbfFieldDef;
+function TDbfParser.GetVariableInfo(const VarName: string): TDbfFieldDef;
 begin
   Result := TDbfFile(FDbfFile).GetFieldInfo(VarName);
 end;

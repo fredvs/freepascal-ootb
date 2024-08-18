@@ -270,7 +270,7 @@ implementation
       end;
 
 
-{$ifdef i386}
+{$if defined(i386)}
     { if more cpu dependend stuff is implemented, this needs more refactoring }
     procedure TDwarfAsmCFILowLevel.generate_initial_instructions(list:TAsmList);
       begin
@@ -281,7 +281,17 @@ implementation
         list.concat(tai_const.create_uleb128bit(dwarf_reg(NR_RETURN_ADDRESS_REG)));
         list.concat(tai_const.create_uleb128bit((-sizeof(aint)) div data_alignment_factor));
       end;
-{$else i386}
+{$elseif defined(avr)}
+    procedure TDwarfAsmCFILowLevel.generate_initial_instructions(list:TAsmList);
+      begin
+        list.concat(tai_const.create_8bit(DW_CFA_def_cfa));
+        list.concat(tai_const.create_uleb128bit(32));
+        list.concat(tai_const.create_uleb128bit(2));
+        list.concat(tai_const.create_8bit(DW_CFA_offset_extended));
+        list.concat(tai_const.create_uleb128bit(36));
+        list.concat(tai_const.create_uleb128bit((-1) div data_alignment_factor));
+      end;
+{$else}
     { if more cpu dependend stuff is implemented, this needs more refactoring }
     procedure TDwarfAsmCFILowLevel.generate_initial_instructions(list:TAsmList);
       begin
@@ -331,7 +341,7 @@ implementation
         }
         generate_initial_instructions(list);
 
-        list.concat(cai_align.create_zeros(4));
+        list.concat(cai_align.create_zeros(sizeof(pint)));
         list.concat(tai_label.create(lenendlabel));
         lenstartlabel:=nil;
         lenendlabel:=nil;
@@ -367,7 +377,7 @@ implementation
                 end;
               DW_CFA_End_Frame :
                 begin
-                  list.concat(cai_align.create_zeros(4));
+                  list.concat(cai_align.create_zeros(sizeof(pint)));
                   list.concat(tai_label.create(lenendlabel));
                   lenstartlabel:=nil;
                   lenendlabel:=nil;

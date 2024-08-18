@@ -4,7 +4,7 @@
 
 [package]
 name=compiler
-version=3.2.2
+version=3.2.4-rc1
 
 [target]
 programs=pp
@@ -129,6 +129,30 @@ ifndef RTLOPT
 RTLOPT:=$(OPT)
 endif
 
+SVNVERSION:=$(firstword $(wildcard $(addsuffix /svnversion$(SRCEXEEXT),$(SEARCHPATH))))
+
+ifndef GIT
+GIT:=$(firstword $(wildcard $(addsuffix /git$(SRCEXEEXT),$(SEARCHPATH))))
+endif
+
+DATE_FMT = +%Y/%m/%d
+ifdef SOURCE_DATE_EPOCH
+    COMPDATESTR ?= $(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u "$(DATE_FMT)")
+else
+   # does a git directory exist? ...
+   GIT_DIR = $(wildcard ../.git)
+   ifneq ($(GIT_DIR),)
+      # ... then take date from head
+      ifneq ($(GIT),)
+        COMPDATESTR:=$(shell $(GIT) log -1 --pretty=%cd --date=format:'%Y/%m/%d')
+      endif
+   endif
+endif
+
+ifdef COMPDATESTR
+override OPTNEW+=-DD$(COMPDATESTR)
+endif
+
 ifdef CYCLELEVEL
 ifeq ($(CYCLELEVEL),1)
 override LOCALOPT+=$(OPTLEVEL1)
@@ -159,6 +183,12 @@ override LOCALOPT+=$(LOCALOPTLEVEL4)
 override RTLOPT+=$(RTLOPTLEVEL4)
 override LOCALOPT+=$(OPTNEW)
 override RTLOPT+=$(OPTNEW)
+endif
+else
+ifdef COMPDATESTR
+ifeq ($(FPC_VERSION),$(PACKAGE_VERSION))
+override LOCALOPT+=-DD$(COMPDATESTR)
+endif
 endif
 endif
 
@@ -221,8 +251,15 @@ NOCPUDEF=1
 # Default message file
 MSGFILE=msg/error$(FPCLANG).msg
 
+PPUDUMPPROG:=$(firstword $(strip $(wildcard $(addsuffix /ppudump$(SRCEXEEXT),$(SEARCHPATH)))))
+ifndef PPUDUMP
+ifdef PPUDUMPPROG
+PPUDUMP=$(PPUDUMPPROG)
+else
+PPUDUMP=ppudump
+endif
+endif
 
-SVNVERSION:=$(firstword $(wildcard $(addsuffix /svnversion$(SRCEXEEXT),$(SEARCHPATH))))
 # Check if revision.inc is present
 REVINC:=$(wildcard revision.inc)
 ifneq ($(REVINC),)
@@ -232,6 +269,18 @@ override LOCALOPT+=-dREVINC
 # Automatically update revision.inc if
 # svnversion executable is available
 ifeq ($(REVSTR),)
+ifneq ($(wildcard ../.git),)
+ifneq ($(GIT),)
+GITDESCRIBE=$(shell $(GIT) describe --dirty)
+REVSTR:=$(word 2,$(subst -, ,$(GITDESCRIBE)))-$(word 3,$(subst -, ,$(GITDESCRIBE)))
+ifneq ($(shell $(GIT) log @{u}..),)
+REVSTR:=$(REVSTR)-unpushed
+endif
+ifneq ($(word 4,$(subst -, ,$(GITDESCRIBE))),)
+REVSTR:=$(REVSTR)-$(word 4,$(subst -, ,$(GITDESCRIBE)))
+endif
+export REVSTR
+else
 ifneq ($(SVNVERSION),)
 REVSTR:=$(subst r,,$(subst r1:,,r$(subst exported,,$(shell $(SVNVERSION) -c .))))
 export REVSTR
@@ -239,6 +288,8 @@ else
 ifeq ($(REVINC),force)
 REVSTR:=exported
 export REVSTR
+endif
+endif
 endif
 endif
 endif
@@ -819,12 +870,14 @@ cvstest:
 # This is also the case for other CPUs that don't support
 # 80bit real type.
 
+ifeq ($(findstring -dFPC_SOFT_FPUX80,$(LOCALOPT)),)
 ifeq ($(OS_SOURCE),win64)
   EXCLUDE_80BIT_TARGETS=1
 endif
 
 ifneq ($(findstring $(CPU_SOURCE),aarch64 arm avr jvm m68k mips mipsel powerpc powerpc64 sparc sparc64),)
   EXCLUDE_80BIT_TARGETS=1
+endif
 endif
 
 full: fullcycle
@@ -957,7 +1010,7 @@ vpath %.log-ppu $(PPUDIR) $(RTLPPUDIR) $(ALLPPUDIR)
 
 # Use installed ppudump
 %.log-ppu : %.ppu
-	ppudump -VA -M $< > $@
+	$(PPUDUMP) -VA -M $< > $@
 
 
 ./utils/ppudump$(EXEEXT):
@@ -976,7 +1029,8 @@ cleanrtlppulogs :
 	-$(RMPROG) $(RTLPPULOGLIST)
 
 testppudump :
-	$(MAKE) cleanrtlppulogs cleanppulogs ppulogs rtlppulogs
+	$(MAKE) cleanrtlppulogs cleanppulogs
+	$(MAKE) ppulogs rtlppulogs
 
 #####################################################################
 # local user configurable file

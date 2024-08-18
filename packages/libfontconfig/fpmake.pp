@@ -17,10 +17,10 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
-    P.OSes := [linux,freebsd, darwin]; // Darwin was tested!
+    P.OSes := [linux] + AllBSDOses; // Darwin was tested!
     T:=P.Targets.AddUnit('libfontconfig.pp');
     P.ExamplePath.Add('examples');
     P.Targets.AddExampleProgram('testfc.pp');

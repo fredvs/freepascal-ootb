@@ -131,7 +131,8 @@ implementation
       pass_1,
       ncal,ncon,ncnv,nadd,nld,nbas,nflw,nmem,nmat,nutils,
       nobjc,objcdef,
-      cgbase,procinfo;
+      cgbase,procinfo,
+      ppu;
 
    function geninlinenode(number : tinlinenumber;is_const:boolean;l : tnode) : tinlinenode;
 
@@ -843,7 +844,10 @@ implementation
                   end;
                 end;
               variantdef :
-                name:=procprefixes[do_read]+'variant';
+                begin
+                  name:=procprefixes[do_read]+'variant';
+                  current_module.flags:=current_module.flags or uf_uses_variants;
+                end;
               arraydef :
                 begin
                   if is_chararray(para.left.resultdef) then

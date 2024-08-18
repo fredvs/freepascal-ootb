@@ -1479,11 +1479,11 @@ mmxreg,mmxrm          \2\x0F\xEB\110                  PENT,MMX,SM
 xmmreg,xmmrm          \361\2\x0F\xEB\110              WILLAMETTE,SSE2,SM
 
 [PREFETCH,prefetchX]
-(Ch_All)
+(Ch_Rop1)
 mem                   \2\x0F\x0D\200                  PENT,3DNOW,SM
 
 [PREFETCHW,prefetchwX]
-(Ch_All)
+(Ch_Rop1)
 mem                   \2\x0F\x0D\201                  PENT,3DNOW,SM
 
 [PSLLD]
@@ -2164,7 +2164,7 @@ void                  \333\3\x0F\xA7\xE0              P6,CYRIX
 void                  \333\3\x0F\xA7\xE8              P6,CYRIX
 
 [CMOVcc,cmovCCX]
-(Ch_ROp1, Ch_RWOp2, Ch_RFLAGScc)
+(Ch_ROp1, Ch_WOp2, Ch_RFLAGScc)
 reg16|32|64,regmem    \320\1\x0F\13\x40\110          P6,SM
 
 [Jcc]
@@ -2515,19 +2515,19 @@ mem                   \2\x0F\xAE\200                  P6,SSE,FPU
 ;
 
 [PREFETCHNTA]
-(Ch_All)
+(Ch_Rop1)
 mem                   \2\x0F\x18\200                      KATMAI
 
 [PREFETCHT0]
-(Ch_All)
+(Ch_Rop1)
 mem                   \2\x0F\x18\201                      KATMAI
 
 [PREFETCHT1]
-(Ch_All)
+(Ch_Rop1)
 mem                   \2\x0F\x18\202                      KATMAI
 
 [PREFETCHT2]
-(Ch_All)
+(Ch_Rop1)
 mem                   \2\x0F\x18\203                      KATMAI
 
 [SFENCE]
@@ -3525,7 +3525,7 @@ xmmreg,xmmrm,imm       \361\3\x0F\x3A\x62\110\26               SSE42,SM2,SB,AR2
 xmmreg,xmmrm           \361\3\x0F\x38\x37\110                  SSE42,SM
 
 [POPCNT,popcntX]
-(Ch_All)
+(Ch_Wop2, Ch_Rop1)
 reg16,rm16             \333\320\2\x0F\xB8\110              386,SM,SSE4
 reg32,rm32             \333\320\2\x0F\xB8\110              386,SM,SSE4
 reg64,rm64             \333\320\2\x0F\xB8\110              386,SM,SSE4,X86_64

@@ -112,6 +112,7 @@ const
   rquote : string = '''';
   UseTimeout : boolean = false;
   emulatorname : string = '';
+  EmulatorOpts : string = '';
   TargetCanCompileLibraries : boolean = true;
   UniqueSuffix: string = '';
 
@@ -838,7 +839,7 @@ end;
 function RunCompiler(const ExtraPara: string):boolean;
 var
   args,LocalExtraArgs,
-  wpoargs : string;
+  wpoargs,wposuffix : string;
   passnr,
   passes  : longint;
   execres : boolean;
@@ -879,6 +880,7 @@ begin
   if Config.NeedOptions<>'' then
    AppendOptions(Config.NeedOptions,args);
   wpoargs:='';
+  wposuffix:='';
   if (Config.WpoPasses=0) or
      (Config.WpoParas='') then
     passes:=1
@@ -890,6 +892,7 @@ begin
     begin
       if (passes>1) then
         begin
+          wposuffix:='_'+tostr(passnr);
           wpoargs:=' -OW'+config.wpoparas+' -FW'+TestOutputFileName('',PPFile[current],'wp'+tostr(passnr));
           if (passnr>1) then
             wpoargs:=wpoargs+' -Ow'+config.wpoparas+' -Fw'+TestOutputFileName('',PPFile[current],'wp'+tostr(passnr-1));
@@ -898,12 +901,12 @@ begin
       { also get the output from as and ld that writes to stderr sometimes }
       StartTicks:=GetMicroSTicks;
     {$ifndef macos}
-      execres:=ExecuteRedir(CompilerBin,args+wpoargs,'',CompilerLogFile,'stdout');
+      execres:=ExecuteRedir(CompilerBin,args+wpoargs,'',CompilerLogFile+wposuffix,'stdout');
     {$else macos}
       {Due to that Toolserver is not reentrant, we have to asm and link via script.}
-      execres:=ExecuteRedir(CompilerBin,'-s '+args+wpoargs,'',CompilerLogFile,'stdout');
+      execres:=ExecuteRedir(CompilerBin,'-s '+args+wpoargs,'',CompilerLogFile+wposuffix,'stdout');
       if execres then
-        execres:=ExecuteRedir(TestOutputDir + ':ppas','','',CompilerLogFile,'stdout');
+        execres:=ExecuteRedir(TestOutputDir + ':ppas','','',CompilerLogFile+wpo_suffix,'stdout');
     {$endif macos}
       EndTicks:=GetMicroSTicks;
       Verbose(V_Debug,'Exitcode '+ToStr(ExecuteResult));
@@ -912,6 +915,8 @@ begin
           Verbose(V_Normal,'Compilation took '+ToStr(EndTicks-StartTicks)+' us');
         end;
 
+      if passes > 1 then
+        CopyFile(CompilerLogFile+wposuffix,CompilerLogFile,true);
       { Error during execution? }
       if (not execres) and (ExecuteResult=0) then
         begin
@@ -1314,7 +1319,7 @@ begin
       { Add -Ssource_file_name for dosbox_wrapper }
       if pos('dosbox_wrapper',EmulatorName)>0 then
         s:=s+' -S'+PPFile[current];
-      execres:=ExecuteEmulated(EmulatorName,s,FullExeLogFile,StartTicks,EndTicks);
+      execres:=ExecuteEmulated(EmulatorName,EmulatorOpts+' '+s,FullExeLogFile,StartTicks,EndTicks);
       {$I-}
        ChDir(OldDir);
       {$I+}
@@ -1543,30 +1548,31 @@ procedure getargs;
     writeln('dotest [Options] <File>');
     writeln;
     writeln('Options can be:');
-    writeln('  !ENV_NAME     parse environment variable ENV_NAME for options');
-    writeln('  -A            include ALL tests');
-    writeln('  -ADB          use ADB to run tests');
-    writeln('  -B            delete executable before remote upload');
-    writeln('  -C<compiler>  set compiler to use');
-    writeln('  -D            display execution time');
-    writeln('  -E            execute test also');
-    writeln('  -G            include graph tests');
-    writeln('  -I            include interactive tests');
-    writeln('  -K            include known bug tests');
-    writeln('  -L<ext>       set extension of temporary files (prevent conflicts with parallel invocations)');
-    writeln('  -M<emulator>  run the tests using the given emulator');
-    writeln('  -O            use timeout wrapper for (remote) execution');
-    writeln('  -P<path>      path to the tests tree on the remote machine');
-    writeln('  -R<remote>    run the tests remotely with the given rsh/ssh address');
-    writeln('  -S            use ssh instead of rsh');
-    writeln('  -T[cpu-]<os>  run tests for target cpu and os');
+    writeln('  !ENV_NAME           parse environment variable ENV_NAME for options');
+    writeln('  -A                  include ALL tests');
+    writeln('  -ADB                use ADB to run tests');
+    writeln('  -B                  delete executable before remote upload');
+    writeln('  -C<compiler>        set compiler to use');
+    writeln('  -D                  display execution time');
+    writeln('  -E                  execute test also');
+    writeln('  -G                  include graph tests');
+    writeln('  -I                  include interactive tests');
+    writeln('  -K                  include known bug tests');
+    writeln('  -L<ext>             set extension of temporary files (prevent conflicts with parallel invocations)');
+    writeln('  -M<emulator>        run the tests using the given emulator');
+    writeln('  -N<emulator opts.>  pass options to the emulator');
+    writeln('  -O                  use timeout wrapper for (remote) execution');
+    writeln('  -P<path>            path to the tests tree on the remote machine');
+    writeln('  -R<remote>          run the tests remotely with the given rsh/ssh address');
+    writeln('  -S                  use ssh instead of rsh');
+    writeln('  -T[cpu-]<os>        run tests for target cpu and os');
     writeln('  -U<remotepara>');
-    writeln('                pass additional parameter to remote program. Multiple -U can be used');
-    writeln('  -V            be verbose');
-    writeln('  -W            use putty compatible file names when testing (plink and pscp)');
-    writeln('  -X            don''t use COMSPEC');
-    writeln('  -Y<opts>      extra options passed to the compiler. Several -Y<opt> can be given.');
-    writeln('  -Z            remove temporary files (executable,ppu,o)');
+    writeln('                      pass additional parameter to remote program. Multiple -U can be used');
+    writeln('  -V                  be verbose');
+    writeln('  -W                  use putty compatible file names when testing (plink and pscp)');
+    writeln('  -X                  don''t use COMSPEC');
+    writeln('  -Y<opts>            extra options passed to the compiler. Several -Y<opt> can be given.');
+    writeln('  -Z                  remove temporary files (executable,ppu,o)');
     halt(1);
   end;
 
@@ -1629,6 +1635,8 @@ procedure getargs;
            end;
 
      'M' : EmulatorName:=Para;
+
+     'N' : EmulatorOpts:=Para;
 
      'O' : UseTimeout:=true;
 

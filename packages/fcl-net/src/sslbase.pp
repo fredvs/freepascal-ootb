@@ -1,4 +1,19 @@
 unit sslbase;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
+
+    SSL Base unit
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 
 {$mode objfpc}{$H+}
 
@@ -36,6 +51,7 @@ Type
   Private
     FStrData : Array[0..StrDataCount] of string;
     FCertData : Array[0..SSLDataCount] of TSSLData;
+    FTrustedCertsDir: String;
     function GetSSLData(AIndex: Integer): TSSLData;
     procedure SetSSLData(AIndex: Integer; AValue: TSSLData);
     function GetString(AIndex: Integer): String;
@@ -54,6 +70,8 @@ Type
     property PrivateKey : TSSLData Index 2 Read GetSSLData Write SetSSLData;
     property PFX: TSSLData Index 3 Read GetSSLData Write SetSSLData;
     property CertCA: TSSLData Index 4 Read GetSSLData Write SetSSLData;
+    // OpenSSL allows both a PEM file or a Dir. We separate out the dir.
+    Property TrustedCertsDir : String Read FTrustedCertsDir Write FTrustedCertsDir;
   end;
 
     { TX509Certificate }

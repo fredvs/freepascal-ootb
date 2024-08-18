@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.Dependencies.Add('fcl-base');
     P.Dependencies.Add('fcl-xml');
 
@@ -46,8 +46,7 @@ begin
     T:=P.Targets.AddUnit('xmlreg.pp');
 
     P.ExamplePath.Add('examples');
-    P.Targets.AddExampleProgram('tests/testbasics.pp');
-    P.Targets.AddExampleProgram('tests/regtestframework.pp');
+    P.Targets.AddExampleProgram('tests/tregtestframework.pp');
     // 'tests/Makefile
     // 'tests/Makefile.fpc
 

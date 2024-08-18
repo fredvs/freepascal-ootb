@@ -1535,8 +1535,16 @@ unit rgobj;
           { FIXME: temp variable r is needed here to avoid Internal error 20060521 }
           {        while compiling the compiler. }
           tmpr:=NR_STACK_POINTER_REG;
-          if regtype=getregtype(tmpr) then
+          { e.g. AVR does not have a stack pointer register }
+{$ifndef AVR}  { 3.2.x does not optimize away the if statement based on the
+                 first condition so the include(...) statement causes an compilation
+                 error }
+{$push}{$warnings off}
+          if (RS_STACK_POINTER_REG<>RS_INVALID) and
+{$pop}
+            (regtype=getregtype(tmpr)) then
             include(adj_colours,RS_STACK_POINTER_REG);
+{$endif AVR}
           {Assume a spill by default...}
           found:=false;
           {Search for a colour not in this list.}
@@ -1894,29 +1902,6 @@ unit rgobj;
                               internalerror(2015040501);
 {$endif}
                             setsupreg(reg,u);
-                            {
-                              Remove sequences of release and
-                              allocation of the same register like. Other combinations
-                              of release/allocate need to stay in the list.
-
-                                 # Register X released
-                                 # Register X allocated
-                            }
-                            if assigned(previous) and
-                               (ratype=ra_alloc) and
-                               (Tai(previous).typ=ait_regalloc) and
-                               (Tai_regalloc(previous).reg=reg) and
-                               (Tai_regalloc(previous).ratype=ra_dealloc) then
-                              begin
-                                q:=Tai(next);
-                                hp:=tai(previous);
-                                list.remove(hp);
-                                hp.free;
-                                list.remove(p);
-                                p.free;
-                                p:=q;
-                                continue;
-                              end;
                           end;
                       end;
                   end;
@@ -2158,8 +2143,9 @@ unit rgobj;
                   begin
                     if (getregtype(reg)=regtype) then
                       begin
-                        {A register allocation of a spilled register can be removed.}
-                        supreg:=getsupreg(reg);
+                        {A register allocation of the spilled register (and all coalesced registers)
+                         must be removed.}
+                        supreg:=get_alias(getsupreg(reg));
                         if supregset_in(regs_to_spill_set,supreg) then
                           begin
                             q:=Tai(p.next);
@@ -2413,6 +2399,20 @@ unit rgobj;
         { if no spilling for this instruction we can leave }
         if not spilled then
           exit;
+
+        { Check if the instruction is "OP reg1,reg2" and reg1 is coalesced with reg2 }
+        if (regs.reginfocount=1) and (instr.ops=2) and
+          (instr.oper[0]^.typ=top_reg) and (instr.oper[1]^.typ=top_reg) and
+          (getregtype(instr.oper[0]^.reg)=getregtype(instr.oper[1]^.reg)) then
+          begin
+            { Set both registers in the instruction to the same register }
+            setsupreg(instr.oper[0]^.reg, regs.reginfo[0].orgreg);
+            setsupreg(instr.oper[1]^.reg, regs.reginfo[0].orgreg);
+            { In case of MOV reg,reg no spilling is needed.
+              This MOV will be removed later in translate_registers() }
+            if instr.is_same_reg_move(regtype) then
+              exit;
+          end;
 
 {$if defined(x86) or defined(mips) or defined(sparcgen) or defined(arm) or defined(m68k)}
         { Try replacing the register with the spilltemp. This is useful only

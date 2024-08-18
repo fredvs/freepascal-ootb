@@ -78,10 +78,14 @@ type
     procedure TestM_Class;
     procedure TestM_ClassForward;
     procedure TestM_Class_Property;
+    procedure TestM_ClassForward_Generic;
     procedure TestM_Class_PropertyProtected;
     procedure TestM_Class_PropertyOverride;
+    procedure TestM_Class_PropertyOverride2;
+    procedure TestM_Class_PropertyInherited;
     procedure TestM_Class_MethodOverride;
     procedure TestM_Class_MethodOverride2;
+    procedure TestM_Class_NestedClass;
     procedure TestM_ClassInterface_Corba;
     procedure TestM_ClassInterface_NoHintsForMethod;
     procedure TestM_ClassInterface_NoHintsForImpl;
@@ -111,6 +115,7 @@ type
     procedure TestM_Hint_InterfaceUnitVariableUsed;
     procedure TestM_Hint_ValueParameterIsAssignedButNeverUsed;
     procedure TestM_Hint_LocalVariableIsAssignedButNeverUsed;
+    procedure TestM_Hint_PropertyIsAssignedButNeverUsed;
     procedure TestM_Hint_LocalXYNotUsed;
     procedure TestM_Hint_PrivateFieldIsNeverUsed;
     procedure TestM_Hint_PrivateFieldIsAssignedButNeverUsed;
@@ -176,6 +181,7 @@ type
     procedure TestWP_Attributes;
     procedure TestWP_Attributes_ForwardClass;
     procedure TestWP_Attributes_Params;
+    procedure TestWP_Attributes_PublishedFields; // ToDo
 
     // scope references
     procedure TestSR_Proc_UnitVar;
@@ -941,9 +947,9 @@ begin
   'begin',
   '  DoIt;']);
   AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "b" not used');
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableIsAssignedButNeverUsed,
-    'Local variable "c" is assigned but never used');
+  CheckUseAnalyzerHint(mtHint,nPAFieldNotUsed,'Field "b" not used');
+  CheckUseAnalyzerHint(mtHint,nPAFieldIsAssignedButNeverUsed,
+    'Field "c" is assigned but never used');
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -1150,6 +1156,30 @@ begin
   AnalyzeProgram;
 end;
 
+procedure TTestUseAnalyzer.TestM_ClassForward_Generic;
+begin
+  StartUnit(false);
+  Add([
+  '{$mode delphi}',
+  'interface',
+  'type',
+  '  {tobject_used}TObject = class',
+  '  end;',
+  '  TBird = class;',
+  '  TAnt = class end;',
+  '  TBird = class end;',
+  'implementation',
+  'type',
+  '  TBird2 = class;',
+  '  TAnt2 = class end;',
+  '  TBird2 = class end;',
+  'var Bird2: TBird2;',
+  'begin',
+  '  if Bird2=nil then;',
+  '']);
+  AnalyzeUnit;
+end;
+
 procedure TTestUseAnalyzer.TestM_Class_PropertyProtected;
 begin
   StartUnit(false);
@@ -1178,20 +1208,74 @@ end;
 procedure TTestUseAnalyzer.TestM_Class_PropertyOverride;
 begin
   StartProgram(false);
-  Add('type');
-  Add('  {#integer_used}integer = longint;');
-  Add('  {tobject_used}TObject = class');
-  Add('    {#fa_used}FA: integer;');
-  Add('    {#fb_notused}FB: integer;');
-  Add('    property {#obj_a_notused}A: integer read FA write FB;');
-  Add('  end;');
-  Add('  {tmobile_used}TMobile = class(TObject)');
-  Add('    {#fc_used}FC: integer;');
-  Add('    property {#mob_a_used}A write FC;');
-  Add('  end;');
-  Add('var {#m_used}M: TMobile;');
-  Add('begin');
-  Add('  M.A:=M.A;');
+  Add(['type',
+  '  {#integer_used}integer = longint;',
+  '  {tobject_used}TObject = class',
+  '    {#fa_used}FA: integer;',
+  '    {#fb_notused}FB: integer;',
+  '    property {#obj_a_notused}A: integer read FA write FB;',
+  '  end;',
+  '  {tmobile_used}TMobile = class(TObject)',
+  '    {#fc_used}FC: integer;',
+  '    property {#mob_a_used}A write FC;',
+  '  end;',
+  'var {#m_used}M: TMobile;',
+  'begin',
+  '  M.A:=M.A;']);
+  AnalyzeProgram;
+end;
+
+procedure TTestUseAnalyzer.TestM_Class_PropertyOverride2;
+begin
+  StartProgram(false);
+  Add(['type',
+  '  {#integer_used}integer = longint;',
+  '  {tobject_used}TObject = class',
+  '    {#fa_used}FA: integer;',
+  '    {#fb_used}FB: integer;',
+  '    property {#obj_a_used}A: integer read FA write FB;',
+  '  end;',
+  '  {tmobile_used}TMobile = class(TObject)',
+  '    {#fc_notused}FC: integer;',
+  '    property {#mob_a_notused}A write FC;',
+  '  end;',
+  'var',
+  '  {#m_used}M: TMobile;',
+  '  {#o_used}o: TObject;',
+  'begin',
+  '  o:=m;',
+  '  o.A:=o.A;',
+  '']);
+  AnalyzeProgram;
+end;
+
+procedure TTestUseAnalyzer.TestM_Class_PropertyInherited;
+begin
+  StartProgram(false);
+  Add(['type',
+  '  {tobject_used}TObject = class',
+  '    {#fa_used}FA: word;',
+  '    {#fb_used}FB: word;',
+  '    property {#obj_a_used}A: word write FA;',
+  '    property {#obj_b_used}B: word read FB;',
+  '  end;',
+  '  {tbird_used}TBird = class(TObject)',
+  '    {#fc_notused}FC: word;',
+  '    {#fd_notused}FD: word;',
+  '    procedure {#run_used}Run({#run_value_used}Value: word);',
+  '    property {#bird_a_notused}A write FC;',
+  '    property {#bird_b_notused}B write FD;',
+  '  end;',
+  'procedure TBird.Run(Value: word);',
+  'begin',
+  '  inherited A:=Value;',
+  '  Value:=inherited B;',
+  'end;',
+  'var',
+  '  {#b_used}b: TBird;',
+  'begin',
+  '  b.Run(3);',
+  '']);
   AnalyzeProgram;
 end;
 
@@ -1236,6 +1320,36 @@ begin
   Add('  o.DoA;');
   Add('  o:=TMobile.Create;'); // use TMobile after o.DoA
   AnalyzeProgram;
+end;
+
+procedure TTestUseAnalyzer.TestM_Class_NestedClass;
+begin
+  StartUnit(true,[supTObject]);
+  Add([
+  'interface',
+  'type',
+  '  TBird = class',
+  '  public type',
+  '    TWing = class',
+  '    private',
+  '      function GetCurrent: TBird;',
+  '    public',
+  '      function MoveNext: Boolean; reintroduce;',
+  '      property Current: TBird read GetCurrent;',
+  '    end;',
+  '  end;',
+  'implementation',
+  'function TBird.TWing.GetCurrent: TBird;',
+  'begin',
+  '  Result:=nil;',
+  'end;',
+  'function TBird.TWing.MoveNext: Boolean; reintroduce;',
+  'begin',
+  '  Result:=false;',
+  'end;',
+  '']);
+  AnalyzeUnit;
+  CheckUseAnalyzerUnexpectedHints;
 end;
 
 procedure TTestUseAnalyzer.TestM_ClassInterface_Corba;
@@ -1835,6 +1949,26 @@ begin
   CheckUseAnalyzerUnexpectedHints;
 end;
 
+procedure TTestUseAnalyzer.TestM_Hint_PropertyIsAssignedButNeverUsed;
+begin
+  StartProgram(true);
+  Add([
+  'type',
+  '  TObject = class',
+  '  private',
+  '    FSize: word;',
+  '  public',
+  '    property ReadSize: word read FSize;',
+  '    property WriteSize: word write FSize;',
+  '  end;',
+  'var o: TObject;',
+  'begin',
+  '  o.WriteSize:=o.ReadSize;',
+  '']);
+  AnalyzeProgram;
+  CheckUseAnalyzerUnexpectedHints;
+end;
+
 procedure TTestUseAnalyzer.TestM_Hint_LocalXYNotUsed;
 begin
   StartProgram(true);
@@ -2196,9 +2330,9 @@ begin
   Add('begin');
   Add('  Point(1);');
   AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableIsAssignedButNeverUsed,
-    'Local variable "X" is assigned but never used');
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "Y" not used');
+  CheckUseAnalyzerHint(mtHint,nPAFieldIsAssignedButNeverUsed,
+    'Field "X" is assigned but never used');
+  CheckUseAnalyzerHint(mtHint,nPAFieldNotUsed,'Field "Y" not used');
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -2237,7 +2371,7 @@ begin
   Add('begin');
   Add('  Point();');
   AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "Y" not used');
+  CheckUseAnalyzerHint(mtHint,nPAFieldNotUsed,'Field "Y" not used');
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -2303,7 +2437,7 @@ begin
   '  specialize Point<word>();',
   '']);
   AnalyzeProgram;
-  CheckUseAnalyzerHint(mtHint,nPALocalVariableNotUsed,'Local variable "Y" not used');
+  CheckUseAnalyzerHint(mtHint,nPAFieldNotUsed,'Field "Y" not used');
   CheckUseAnalyzerUnexpectedHints;
 end;
 
@@ -2603,7 +2737,9 @@ procedure TTestUseAnalyzer.TestWP_Published;
 begin
   StartProgram(false);
   Add('type');
-  Add('  {#tobject_used}TObject = class');
+  Add('  {#tobject_notypeinfo}TObject = class');
+  Add('  end;');
+  Add('  {#tobject_typeinfo}TBird = class');
   Add('  private');
   Add('    {#fcol_used}FCol: string;');
   Add('    {#fbird_notused}FBird: string;');
@@ -2613,9 +2749,9 @@ begin
   Add('    property {#col_used}Col: string read FCol;');
   Add('  end;');
   Add('var');
-  Add('  {#o_used}o: TObject;');
+  Add('  {#b_used}b: TBird;');
   Add('begin');
-  Add('  o:=nil;');
+  Add('  b:=nil;');
   AnalyzeWholeProgram;
 end;
 
@@ -3371,15 +3507,20 @@ begin
   '  TObject = class',
   '    constructor {#TObject_Create_used}Create;',
   '  end;',
+  '  {#TRedAttribute_notused}TRedAttribute = class',
+  '  end;',
   '  {#TCustomAttribute_used}TCustomAttribute = class',
   '  end;',
   '  [TCustom]',
   '  TBird = class;',
   '  TMyInt = word;',
   '  TBird = class end;',
-  'constructor TObject.Create; begin end;',
+  'constructor TObject.Create;',
   'begin',
-  '  if typeinfo(TBird)=nil then ;',
+  'end;',
+  'var b: TBird;',
+  'begin',
+  '  b:=TBird.Create;',
   '']);
   AnalyzeWholeProgram;
 end;
@@ -3411,6 +3552,46 @@ begin
   'begin',
   '  if typeinfo(o)=nil then ;',
   '  a.Destroy;',
+  '']);
+  AnalyzeWholeProgram;
+end;
+
+procedure TTestUseAnalyzer.TestWP_Attributes_PublishedFields;
+begin
+  exit;
+
+  StartProgram(false);
+  Add([
+  '{$modeswitch prefixedattributes}',
+  'type',
+  '  TObject = class',
+  '    constructor {#TObject_Create_notused}Create;',
+  '    destructor {#TObject_Destroy_used}Destroy; virtual;',
+  '  end;',
+  '  {#TCustomAttribute_used}TCustomAttribute = class',
+  '  end;',
+  '  {#BigAttribute_used}BigAttribute = class(TCustomAttribute)',
+  '    constructor {#Big_A_used}Create(Id: word = 3); overload;',
+  '    destructor {#Big_B_used}Destroy; override;',
+  '  end;',
+  '  {$M+}',
+  '  TBird = class',
+  '  public',
+  '    FColor: word;',
+  '  published',
+  '    Size: word;',
+  '    procedure Fly;',
+  '    [Big(3)]',
+  '    property Color: word read FColor;',
+  '  end;',
+  'constructor TObject.Create; begin end;',
+  'destructor TObject.Destroy; begin end;',
+  'constructor BigAttribute.Create(Id: word); begin end;',
+  'destructor BigAttribute.Destroy; begin end;',
+  'var',
+  '  b: TBird;',
+  'begin',
+  '  if typeinfo(b)=nil then ;',
   '']);
   AnalyzeWholeProgram;
 end;

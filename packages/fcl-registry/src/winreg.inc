@@ -1,3 +1,20 @@
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canneyt and other members of the
+    Free Pascal development team
+
+    Winapi Registry support
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
+
+
 Const
   RegDataWords : Array [TRegDataType] of DWORD
                = (REG_NONE,REG_SZ,REG_EXPAND_SZ,REG_BINARY,REG_DWORD,REG_DWORD_BIG_ENDIAN,
@@ -70,7 +87,28 @@ function TRegistry.DeleteKey(const Key: UnicodeString): Boolean;
 
 Var
   u: UnicodeString;
+  subkeys: TUnicodeStringArray;
+  k, old: HKEY;
+  i: integer;
 begin
+  old:=fCurrentKey;
+  k:=GetKey(Key);
+  if k <> 0 then
+    begin
+      fCurrentKey:=k;
+      try
+        subkeys:=GetKeyNames;
+        for i:=0 to High(subkeys) do
+          begin
+            Result:=DeleteKey(subkeys[i]);
+            if not Result then
+              exit;
+          end;
+      finally
+        fCurrentKey:=old;
+        CloseKey(k);
+      end;
+    end;
   u:=PRepKey(Key);
   FLastError:=RegDeleteKeyW(GetBaseKey(RelativeKey(Key)),PWideChar(u));
   Result:=FLastError=ERROR_SUCCESS;

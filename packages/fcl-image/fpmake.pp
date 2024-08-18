@@ -17,7 +17,7 @@ begin
 {$ifdef ALLPACKAGES}
     P.Directory:=ADirectory;
 {$endif ALLPACKAGES}
-    P.Version:='3.2.2';
+    P.Version:='3.2.4-rc1';
     P.Dependencies.Add('pasjpeg');
     P.Dependencies.Add('paszlib');
     P.Dependencies.Add('fcl-base');
@@ -57,6 +57,13 @@ begin
           AddUnit('fpimage');
           AddUnit('fpcanvas');
         end;
+    T:=P.Targets.AddUnit('polygonfilltools.pp');
+      with T.Dependencies do
+        begin
+          AddUnit('fpimage');
+          AddUnit('fpcanvas');
+          AddUnit('pixtools');
+        end; 
     T:=P.Targets.AddUnit('fpcanvas.pp');
       with T.Dependencies do
         begin
@@ -107,6 +114,7 @@ begin
           AddUnit('pixtools');
           AddUnit('ellipses');
           AddUnit('clipping');
+          AddUnit('polygonfilltools');
         end;
     T:=P.Targets.AddUnit('fpquantizer.pas');
       with T.Dependencies do
@@ -120,10 +128,12 @@ begin
           AddUnit('fpimage');
           AddUnit('bmpcomn');
         end;
+    T:=P.Targets.AddUnit('jpegcomn.pas');    
     T:=P.Targets.AddUnit('fpreadjpeg.pas');
       with T.Dependencies do
         begin
           AddUnit('fpimage');
+          Addunit('jpegcomn');
         end;
     T:=P.Targets.AddUnit('fpreadpcx.pas');
       with T.Dependencies do
@@ -165,10 +175,12 @@ begin
         begin
           AddUnit('fpimage');
         end;
+    T:=P.Targets.AddUnit('psdcomn.pas');
     T:=P.Targets.AddUnit('fpreadpsd.pas');
       with T.Dependencies do
         begin
           AddUnit('fpimage');
+          AddUnit('psdcomn');
         end;
     T:=P.Targets.AddUnit('xwdfile.pp');
     T:=P.Targets.AddUnit('fpreadxwd.pas');
@@ -187,7 +199,7 @@ begin
       with T.Dependencies do
         begin
           AddUnit('fpimage');
-          AddUnit('fpreadjpeg');
+          AddUnit('jpegcomn');
         end;
     T:=P.Targets.AddUnit('fpwritepcx.pas');
       with T.Dependencies do
@@ -290,12 +302,39 @@ begin
       Addunit('fpimgcmn');
       AddUnit('fpqrcodegen');
       end;
+    // qoi  
+    T:=P.Targets.AddUnit('qoicomn.pas');
+      with T.Dependencies do
+        begin
+          AddUnit('fpimage');
+          AddUnit('fpimgcmn');
+        end;
+    T:=P.Targets.AddUnit('fpreadqoi.pas');
+      with T.Dependencies do
+        begin
+          AddUnit('fpimage');
+          AddUnit('qoicomn');
+        end;
+    T:=P.Targets.AddUnit('fpwriteqoi.pas');
+      with T.Dependencies do
+        begin
+          AddUnit('fpimage');
+          AddUnit('qoicomn');
+        end;
+    T:=P.Targets.AddUnit('fpcolorspace.pas');
+      with T.Dependencies do
+        begin
+          AddInclude('fpspectraldata.inc');
+          AddUnit('fpimage');
+        end;
+      
 
     P.ExamplePath.Add('examples');
     T:=P.Targets.AddExampleProgram('drawing.pp');
     T:=P.Targets.AddExampleProgram('imgconv.pp');
     T:=P.Targets.AddExampleProgram('createbarcode.lpr');
-
+    T:=P.Targets.AddExampleProgram('wrpngf.pas');
+    T:=P.Targets.AddExampleProgram('wrqoif.pas');
 {$ifndef ALLPACKAGES}
     Run;
     end;

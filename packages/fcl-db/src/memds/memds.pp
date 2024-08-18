@@ -116,8 +116,8 @@ type
     function GetRecNo: Integer; override;
 
     // Own.
-    procedure SetFilterText(AValue: string); //silently drops filter
-    Procedure RaiseError(Fmt : String; Args : Array of const);
+    procedure SetFilterText(const AValue: string); //silently drops filter
+    Procedure RaiseError(const Fmt : String; Args : Array of const);
     Procedure CheckMarker(F : TStream; Marker : Integer);
     Procedure WriteMarker(F : TStream; Marker : Integer);
     Procedure ReadFieldDefsFromStream(F : TStream);
@@ -141,12 +141,12 @@ type
     Function  DataSize : Integer;
     Procedure Clear(ClearDefs : Boolean);{$IFNDEF FPC} overload; {$ENDIF}
     Procedure Clear;{$IFNDEF FPC} overload; {$ENDIF}
-    Procedure SaveToFile(AFileName : String);{$IFNDEF FPC} overload; {$ENDIF}
-    Procedure SaveToFile(AFileName : String; SaveData : Boolean);{$IFNDEF FPC} overload; {$ENDIF}
+    Procedure SaveToFile(const AFileName : String);{$IFNDEF FPC} overload; {$ENDIF}
+    Procedure SaveToFile(const AFileName : String; SaveData : Boolean);{$IFNDEF FPC} overload; {$ENDIF}
     Procedure SaveToStream(F : TStream); {$IFNDEF FPC} overload; {$ENDIF}
     Procedure SaveToStream(F : TStream; SaveData : Boolean);{$IFNDEF FPC} overload; {$ENDIF}
     Procedure LoadFromStream(F : TStream);
-    Procedure LoadFromFile(AFileName : String);
+    Procedure LoadFromFile(const AFileName : String);
     Procedure CopyFromDataset(DataSet : TDataSet); {$IFNDEF FPC} overload; {$ENDIF}
     Procedure CopyFromDataset(DataSet : TDataSet; CopyData : Boolean); {$IFNDEF FPC} overload; {$ENDIF}
 
@@ -281,7 +281,7 @@ begin
   S.WriteBuffer(Value,SizeOf(Value));
 end;
 
-Procedure WriteString(S : TStream; Value : String);
+Procedure WriteString(S : TStream; const Value : String);
 
 Var
   L : Integer;
@@ -452,7 +452,7 @@ begin
   Result:= getIntegerPointer(ffieldoffsets, fieldno-1)^;
 end;
 
-procedure TMemDataset.RaiseError(Fmt: String; Args: array of const);
+procedure TMemDataset.RaiseError(const Fmt: String; Args: array of const);
 
 begin
   Raise MDSError.CreateFmt(Fmt,Args);
@@ -486,6 +486,11 @@ begin
   ftVarBytes: result := FD.Size + SizeOf(Word);
   ftBlob, ftMemo, ftWideMemo:
               result := SizeOf(TMDSBlobField);
+  ftLongWord: Result := SizeOf(LongWord);
+  ftShortInt: Result := SizeOf(ShortInt);
+  ftByte:     Result := SizeOf(Byte);
+  ftExtended: Result := SizeOf(Extended);
+  ftSingle  : Result := SizeOf(Single);
  else
   RaiseError(SErrFieldTypeNotSupported,[FD.Name]);
  end;
@@ -700,7 +705,7 @@ begin
   FFileModified:=False;
 end;
 
-procedure TMemDataset.LoadFromFile(AFileName: String);
+procedure TMemDataset.LoadFromFile(const AFileName: String);
 
 Var
   F : TFileStream;
@@ -715,13 +720,13 @@ begin
 end;
 
 
-procedure TMemDataset.SaveToFile(AFileName: String);
+procedure TMemDataset.SaveToFile(const AFileName: String);
 
 begin
   SaveToFile(AFileName,True);
 end;
 
-procedure TMemDataset.SaveToFile(AFileName: String; SaveData: Boolean);
+procedure TMemDataset.SaveToFile(const AFileName: String; SaveData: Boolean);
 
 Var
   F : TFileStream;
@@ -1089,6 +1094,7 @@ begin
     begin
     FCurrRecNo:=Value-1;
     Resync([]);
+    DoAfterScroll;
     end;
 end;
 
@@ -1170,11 +1176,16 @@ begin
                   ftBoolean  : F1.AsBoolean:=F2.AsBoolean;
                   ftFloat    : F1.AsFloat:=F2.AsFloat;
                   ftLargeInt : F1.AsLargeInt:=F2.AsLargeInt;
-                  ftSmallInt : F1.AsInteger:=F2.AsInteger;
-                  ftInteger  : F1.AsInteger:=F2.AsInteger;
+                  ftSmallInt,
+                  ftInteger,
+                  ftShortInt,
+                  ftByte     : F1.AsInteger:=F2.AsInteger;
                   ftDate     : F1.AsDateTime:=F2.AsDateTime;
                   ftTime     : F1.AsDateTime:=F2.AsDateTime;
                   ftDateTime : F1.AsDateTime:=F2.AsDateTime;
+                  ftLongWord : F1.AsLongWord:=F2.AsLongWord;
+                  ftExtended : F1.AsExtended:=F2.AsExtended;
+                  ftSingle   : F1.AsSingle:=F2.AsSingle;
                   else         F1.AsString:=F2.AsString;
                 end;
               end;
@@ -1294,7 +1305,7 @@ begin
   end;
 end;
 
-procedure TMemDataset.SetFilterText(AValue: string);
+procedure TMemDataset.SetFilterText(const AValue: string);
 begin
   // Just do nothing; filter is not implemented
 end;

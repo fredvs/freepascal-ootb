@@ -19,13 +19,13 @@ unit freetype;
 
 interface
 
-uses sysutils, classes, {$IFDEF DYNAMIC}freetypehdyn{$ELSE}freetypeh{$ENDIF}, FPImgCmn;
+uses sysutils, classes, math, {$IFDEF DYNAMIC}freetypehdyn{$ELSE}freetypeh{$ENDIF}, FPImgCmn;
 
 { TODO : take resolution in account to find the size }
 { TODO : speed optimization: search glyphs with a hash-function/tree/binary search/... }
 { TODO : memory optimization: TStringBitmaps keeps for each differnet character
          only 1 bitmap }
-{ TODO : load other files depending on the extention }
+{ TODO : load other files depending on the extension }
 { possible TODO : different sizes/resolutions for x and y }
 { possible TODO : TFontmanager can fill a list of all the fonts he can find
               fontfiles and faces available in a fontfile }
@@ -44,7 +44,7 @@ type
   TBitmapType = (btBlackWhite, bt256Gray);
   TFontBitmap = record
     height, width, pitch,
-    x,y, advanceX, advanceY : integer;
+    x,y, bearingX, bearingY, advanceX, advanceY : integer;
     data : PByteArray;
   end;
   PFontBitmap = ^TFontBitmap;
@@ -114,7 +114,7 @@ type
       FTLib : PFT_Library;
       FList : TList;
       FPaths : TStringList;
-      FExtention : string;
+      FExtension : string;
       FResolution : integer;
       CurFont : TMgrFont;
       CurSize : PMgrSize;
@@ -122,7 +122,7 @@ type
       UseKerning : boolean;
       function GetSearchPath : string;
       procedure SetSearchPath (AValue : string);
-      procedure SetExtention (AValue : string);
+      procedure SetExtension (AValue : string);
       Procedure DoMakeString (Text : Array of cardinal; ABitmaps  : TBaseStringBitmaps);
       Procedure DoMakeString (Text : Array of cardinal; angle: real; ABitmaps  : TBaseStringBitmaps);
     protected
@@ -160,31 +160,35 @@ type
       function GetStringGray (FontId:integer; Text:Unicodestring; Size:real) : TUnicodeStringBitmaps;
       // Anti Aliased gray scale, following the direction of the font (left to right, top to bottom, ...)
       property SearchPath : string read GetSearchPath write SetSearchPath;
-      property DefaultExtention : string read FExtention write SetExtention;
+      property DefaultExtension : string read FExtension write SetExtension;
+      property DefaultExtention : string read FExtension write SetExtension; deprecated 'Use DefaultExtension';
       property Resolution : integer read Fresolution write FResolution;
   end;
 
-const
-  sErrErrorsInCleanup : string = '%d errors detected while freeing a Font Manager object';
-  sErrFontFileNotFound : string = 'Font file "%s" not found';
-  sErrFreeType : string = 'Error %d while %s';
-  sInitializing : string = 'initializing font engine';
-  sDestroying : string = 'destroying font engine';
-  sErrErrorInCleanup : string = 'freeing Font Manager object';
-  sErrSetPixelSize : string = 'setting pixel size %d (resolution %d)';
-  sErrSetCharSize : string = 'setting char size %d (resolution %d)';
-  sErrLoadingGlyph : string = 'loading glyph';
-  sErrKerning : string = 'determining kerning distance';
-  sErrMakingString1 : string = 'making string bitmaps step 1';
-  sErrMakingString2 : string = 'making string bitmaps step 2';
-  sErrMakingString3 : string = 'making string bitmaps step 3';
-  sErrMakingString4 : string = 'making string bitmaps step 4';
-  sErrLoadFont : string = 'loading font %d from file %s';
-  sErrInitializing : string = 'initializing FreeType';
-  sErrDestroying : string = 'finalizing FreeType';
+Resourcestring
+  sErrErrorsInCleanup = '%d errors detected while freeing a Font Manager object';
+  sErrFontFileNotFound = 'Font file "%s" not found';
+  sErrFreeType = 'Error %d while %s';
+  sInitializing = 'initializing font engine';
+  sDestroying = 'destroying font engine';
+  sErrErrorInCleanup = 'freeing Font Manager object';
+  sErrSetPixelSize = 'setting pixel size %d (resolution %d)';
+  sErrSetCharSize = 'setting char size %d (resolution %d)';
+  sErrLoadingGlyph = 'loading glyph';
+  sErrKerning = 'determining kerning distance';
+  sErrMakingString1 = 'making string bitmaps step 1';
+  sErrMakingString2 = 'making string bitmaps step 2';
+  sErrMakingString3 = 'making string bitmaps step 3';
+  sErrMakingString4 = 'making string bitmaps step 4';
+  sErrLoadFont = 'loading font %d from file %s';
+  sErrInitializing = 'initializing FreeType';
+  sErrDestroying = 'finalizing FreeType';
 
-  DefaultFontExtention : string = '.ttf';
+Const
+  DefaultFontExtension = '.ttf';
+  DefaultFontExtention = DefaultFontExtension deprecated 'Use DefaultFontExtension';
 
+Var
   // Standard location for fonts in the Operating System
   {$ifdef Darwin}
   DefaultSearchPath : string = '/Library/Fonts/';
@@ -193,9 +197,9 @@ const
   {$endif}
 
   {$IFDEF MAC}
-  DefaultResolution : integer = 72;
+  DefaultResolution : Integer = 72;
   {$ELSE}
-  DefaultResolution : integer = 96;
+  DefaultResolution : Integer = 96;
   {$ENDIF}
 
 implementation
@@ -326,7 +330,7 @@ begin
     FTError (sErrInitializing, r);
     end;
   SearchPath := DefaultSearchPath;
-  DefaultExtention := DefaultFontExtention;
+  DefaultExtension := DefaultFontExtension;
   Resolution := DefaultResolution;
 end;
 
@@ -394,15 +398,15 @@ begin
     end;
 end;
 
-procedure TFontManager.SetExtention (AValue : string);
+procedure TFontManager.SetExtension (AValue : string);
 begin
-  if AValue <> '' then
-    if AValue[1] <> '.' then
-      FExtention := '.' + AValue
-    else
-      FExtention := AValue
+  if AValue = '' then
+    FExtension:=''
   else
-    AValue := '';
+    if AValue[1] <> '.' then
+      FExtension := '.' + AValue
+    else
+      FExtension := AValue;
 end;
 
 function TFontManager.SearchFont (afilename:string; doraise : boolean = true) : string;
@@ -411,8 +415,8 @@ var p,fn : string;
     r : integer;
 begin
   Result:='';
-  if (pos('.', afilename)=0) and (DefaultFontExtention<>'') then
-    fn := afilename + DefaultFontExtention
+  if (ExtractFileExt(afilename)='') and (DefaultExtension<>'') then
+    fn := afilename + DefaultExtension
   else
     fn := aFilename;
   if FileExists(fn) then
@@ -538,13 +542,14 @@ begin
 end;
 
 procedure TFontManager.MakeTransformation (angle:real; out Transformation:FT_Matrix);
+var asin,acos : Real;
 begin
   with Transformation do
     begin
-    xx := round( cos(angle)*$10000);
-    xy := round(-sin(angle)*$10000);
-    yx := round( sin(angle)*$10000);
-    yy := round( cos(angle)*$10000);
+      sincos(Angle,asin,acos);
+      yx:=round(asin*$10000);
+      xx:=round(acos*$10000);
+      xy:=-yx; yy:=xx;
     end;
 end;
 
@@ -687,15 +692,20 @@ begin
         begin
         with gl^.advance do
           begin
-          advanceX := x div 64;
-          advanceY := y div 64;
+          // do not use shr 16 - rotated text can have negative advances
+          advanceX := x div 65536;
+          advanceY := y div 65536;
           end;
         with bm^ do
           begin
           height := bitmap.rows;
           width := bitmap.width;
-          x := {(pos.x div 64)} + left;  // transformed bitmap has correct x,y
-          y := {(pos.y div 64)} - top;   // not transformed has only a relative correction
+          // transformed bitmap has correct x,y
+          x := {(pos.x div 64)} + left;
+          y := {(pos.y div 64)} - top;
+          // bearings are not supported for rotated text (don't make sense)
+          bearingX := 0;
+          bearingY := 0;
           buf := PByteArray(bitmap.buffer);
           reverse := (bitmap.pitch < 0);
           if reverse then
@@ -783,6 +793,7 @@ var g : PMgrGlyph;
     pos, kern : FT_Vector;
     buf : PByteArray;
     reverse : boolean;
+    bmpr : PFontBitmap;
 begin
   if (CurRenderMode = FT_RENDER_MODE_MONO) then
     ABitmaps.FMode := btBlackWhite
@@ -807,22 +818,29 @@ begin
       end;
     // render the glyph
     FTCheck(FT_Glyph_Copy (g^.glyph, gl),sErrMakingString1);
-    FTCheck(FT_Glyph_To_Bitmap (gl, CurRenderMode, @pos, true),sErrMakingString4);
+    FTCheck(FT_Glyph_To_Bitmap (gl, CurRenderMode, PFT_Vector(0), true),sErrMakingString4);
     // Copy what is needed to record
     bm := PFT_BitmapGlyph(gl);
-    with ABitmaps.Bitmaps[r]^ do
+    bmpr := ABitmaps.Bitmaps[r];
+    with bmpr^ do
       begin
+      // glyph size including bearings all around
       with gl^.advance do
         begin
-        advanceX := x shr 6;
-        advanceY := y shr 6;
+        advanceX := x shr 16;
+        advanceY := y shr 16;
         end;
       with bm^ do
         begin
+        // glyph pixel size
         height := bitmap.rows;
         width := bitmap.width;
-        x := (pos.x shr 6) + left;   // transformed bitmap has correct x,y
-        y := (pos.y shr 6) - top;    // not transformed has only a relative correction
+        // origin of the glyph
+        x := pos.x shr 6;
+        y := pos.y shr 6;
+        // bearing - where the pixels start relative to x/y origin
+        bearingX := left;
+        bearingY := top;
         buf := PByteArray(bitmap.buffer);
         reverse := (bitmap.pitch < 0);
         if reverse then
@@ -842,11 +860,8 @@ begin
         end;
       end;
     // place position for next glyph
-    // The previous code in this place used shr 10, which
-    // produces wrongly spaced text and looks very ugly
-    // for more information see: http://bugs.freepascal.org/view.php?id=17156
-    pos.x := pos.x + (gl^.advance.x shr 11);
-    // pos.y := pos.y + (gl^.advance.y shr 6); // for angled texts also
+    // pos is in 26.6 format, whereas advance is in 16.16 format - we need (shr (16-6)) for the conversion
+    pos.x := pos.x + (gl^.advance.x shr 10);
     if prevx > pos.x then
       pos.x := prevx;
     // finish rendered glyph
@@ -990,39 +1005,41 @@ end;
 
 procedure TBAseStringBitmaps.CalculateGlobals;
 var
-  l,r : integer;
+  r : integer;
+  Bmp : PFontBitmap;
 
 begin
   if count = 0 then
     Exit;
-  l:=0;
-  // Find first non-empty bitmap. Bitmaps can be empty for spaces.
-  While (l<Count) and (BitMaps[l]^.Width=0) and (BitMaps[l]^.Height=0) do
-    Inc(l);
-  if L<Count then
-    with BitMaps[0]^ do
-      begin
-      FBounds.left := x;
-      FBounds.top := y + height;
-      FBounds.bottom := y;
-      FBounds.right := x + width;
-      end;
-  // Find last non-empty bitmap
-  r:=Count-1;
-  While (R>l) and (BitMaps[r]^.Width=0) and (BitMaps[r]^.Height=0) do
-    Dec(r);
-  if R>L then
-    With Bitmaps[R]^ do
-      FBounds.right := x + width;
+  Bmp := Bitmaps[0];
+  with Bmp^ do
+    begin
+    FBounds.left := x;
+    FBounds.top := y + bearingY;
+    FBounds.bottom := y + bearingY - height;
+    end;
+  Bmp := Bitmaps[Count-1];
+  With Bmp^ do
+    begin
+    FBounds.right := x + advanceX;
+    // typographically it is not correct to check the real width of the character
+    //   because accents can exceed the advance (e.g. í - the dash goes beyond the character
+    //   but i and í should have the same width)
+    // on the other hand for some fonts the advance is always 1px short also for normal characters
+    //   and also with this we support rotated text
+    if FBounds.right < x + bearingX + width then
+      FBounds.right := x + bearingX + width;
+    end;
   // check top/bottom of other bitmaps
   for r := 1 to count-1 do
     begin
-    with Bitmaps[r]^ do
+    Bmp := Bitmaps[r];
+    with Bmp^ do
       begin
-      if FBounds.top < y + height then
-        FBounds.top := y + height;
-      if FBounds.bottom > y then
-        FBounds.bottom := y;
+      if FBounds.top < y + bearingY then
+        FBounds.top := y + bearingY;
+      if FBounds.bottom > y + bearingY - height then
+        FBounds.bottom := y + bearingY - height;
       end;
     end;
 end;

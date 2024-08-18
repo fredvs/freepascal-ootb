@@ -23,10 +23,13 @@ interface
 
 type
   generic TDeque<T>=class
-  private
+  public
   type
     PT=^T;
+  protected
+  type
     TArr=array of T;
+  private
   var
     FData:TArr;
     FDataSize:SizeUInt;
@@ -213,8 +216,10 @@ end;
 
 procedure TDeque.ClearData;
 var
-  i: SizeUint;
+  i: SizeInt;
 begin
+  if Length(FData)=0 then
+    exit;
   if IsManagedType(T) then
     for i := Low(FData) to High(FData) do
       Finalize(FData[i]);
@@ -236,7 +241,7 @@ const
   cSizeSmall = 1*1024*1024;
   cSizeBig = 256*1024*1024;
 var
-  i,OldEnd,
+  OldEnd,
   DataSize,CurLast,EmptyElems,Elems:SizeUInt;
 begin
   OldEnd:=FCapacity;

@@ -1,5 +1,19 @@
 unit IBConnection;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
 
+    Interbase database connection component
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$mode objfpc}{$H+}
 
 {$Define LinkDynamically}
@@ -41,7 +55,7 @@ type
   { TIBCursor }
 
   TIBCursor = Class(TSQLCursor)
-    protected
+  protected
     Status               : TStatusVector;
     TransactionHandle    : pointer;
     StatementHandle      : pointer;
@@ -49,6 +63,7 @@ type
     in_SQLDA             : PXSQLDA;
     ParamBinding         : array of integer;
     FieldBinding         : array of integer;
+    CursorName : String;
   end;
 
   TIBTrans = Class(TSQLHandle)
@@ -70,13 +85,14 @@ type
     FBlobSegmentSize       : word; //required for backward compatibilty; not used
     FUseConnectionCharSetIfNone: Boolean;
     FWireCompression       : Boolean;
+    FCursorCount : Integer;
     procedure ConnectFB;
 
     procedure AllocSQLDA(var aSQLDA : PXSQLDA;Count : integer);
 
     // Metadata:
     procedure GetDatabaseInfo; //Queries for various information from server once connected
-    function InterpretTransactionParam(S: String; var TPB: AnsiChar; out AValue: String): Boolean;
+    function InterpretTransactionParam(const S: String; var TPB: AnsiChar; out AValue: String): Boolean;
     procedure ResetDatabaseInfo; //Useful when disconnecting
     function GetDialect: integer;
     function GetODSMajorVersion: integer;
@@ -90,7 +106,8 @@ type
     procedure GetFloat(CurrBuff, Buffer : pointer; Size : Byte);
     procedure SetFloat(CurrBuff: pointer; Dbl: Double; Size: integer);
 
-    procedure CheckError(ProcName : string; Status : PISC_STATUS);
+    procedure CheckError(const ProcName : string; Status : PISC_STATUS;IgnoreErrors : Array of Longint); overload;
+    procedure CheckError(const ProcName : string; Status : PISC_STATUS); overload;
     procedure SetParameters(cursor : TSQLCursor; aTransation : TSQLTransaction; AParams : TParams);
     procedure FreeSQLDABuffer(var aSQLDA : PXSQLDA);
     function  IsDialectStored: boolean;
@@ -167,7 +184,13 @@ const
   SQL_NULL = 32767;
   INVALID_DATA = -1;
 
-procedure TIBConnection.CheckError(ProcName : string; Status : PISC_STATUS);
+procedure TIBConnection.CheckError(const ProcName : string; Status : PISC_STATUS);
+
+begin
+  CheckError(ProcName,Status,[]);
+end;
+
+procedure TIBConnection.CheckError(const ProcName : string; Status : PISC_STATUS; IgnoreErrors : Array of Longint);
 var
   i,ErrorCode : longint;
   Msg, SQLState : string;
@@ -179,6 +202,10 @@ begin
   if ((Status[0] = 1) and (Status[1] <> 0)) then
     begin
     ErrorCode := Status[1];
+    if Length(IgnoreErrors)>0 then
+      for I in IgnoreErrors do
+        if I=ErrorCode then
+          Exit;
 {$IFDEF LinkDynamically}
     if assigned(fb_sqlstate) then // >= Firebird 2.5
     begin
@@ -236,7 +263,7 @@ begin
   else result := true;
 end;
 
-function TIBConnection.InterpretTransactionParam(S: String; var TPB: AnsiChar;
+function TIBConnection.InterpretTransactionParam(const S: String; var TPB: AnsiChar;
   out AValue: String): Boolean;
 
 Const
@@ -253,27 +280,28 @@ Const
 
 Var
   P : Integer;
-
+  LS : String;
 begin
   TPB:=#0;
   Result:=False;
-  P:=Pos('=',S);
+  LS:=S;
+  P:=Pos('=',LS);
   If P<>0 then
     begin
-    AValue:=Copy(S,P+1,Length(S)-P);
-    S:=Copy(S,1,P-1);
+    AValue:=Copy(LS,P+1,Length(LS)-P);
+    LS:=Copy(LS,1,P-1);
     end;
-  S:=LowerCase(S);
-  P:=Pos(Prefix,S);
+  LS:=LowerCase(LS);
+  P:=Pos(Prefix,LS);
   if P<>0 then
-    Delete(S,1,P+PrefixLen-1);
-  Result:=(Copy(S,1,7)='version') and (Length(S)=8);
+    Delete(LS,1,P+PrefixLen-1);
+  Result:=(Copy(LS,1,7)='version') and (Length(LS)=8);
   if Result then
-    TPB:=S[8]
+    TPB:=LS[8]
   else
     begin
     P:=MaxParam;
-    While (P>0) and (S<>TPBNames[P]) do
+    While (P>0) and (LS<>TPBNames[P]) do
       Dec(P);
     Result:=P>0;
     if Result then
@@ -773,6 +801,7 @@ begin
   curs.sqlda := nil;
   curs.StatementHandle := nil;
   curs.FPrepared := False;
+  curs.CursorName:='';
   AllocSQLDA(curs.SQLDA,0);
   result := curs;
 end;
@@ -784,6 +813,7 @@ begin
     begin
     AllocSQLDA(SQLDA,-1);
     AllocSQLDA(in_SQLDA,-1);
+    SetLength(FieldBinding,0);
     end;
   FreeAndNil(cursor);
 end;
@@ -808,6 +838,7 @@ begin
     begin
     DatabaseHandle := GetHandle;
     TransactionHandle := aTransaction.Handle;
+    CursorName:='';
 
     if isc_dsql_allocate_statement(@Status[0], @DatabaseHandle, @StatementHandle) <> 0 then
       CheckError('PrepareStatement', Status);
@@ -900,13 +931,18 @@ procedure TIBConnection.UnPrepareStatement(cursor : TSQLCursor);
 
 begin
   with cursor as TIBcursor do
+  begin
     if assigned(StatementHandle) Then
       begin
         if isc_dsql_free_statement(@Status[0], @StatementHandle, DSQL_Drop) <> 0 then
           CheckError('FreeStatement', Status);
         StatementHandle := nil;
         FPrepared := False;
+        CursorName:='';
       end;
+    FreeSQLDABuffer(SQLDA);
+    FreeSQLDABuffer(in_SQLDA);
+  end;
 end;
 
 procedure TIBConnection.FreeSQLDABuffer(var aSQLDA : PXSQLDA);
@@ -917,6 +953,7 @@ begin
 {$push}
 {$R-}
   if assigned(aSQLDA) then
+    begin
     for x := 0 to aSQLDA^.SQLN - 1 do
       begin
       reAllocMem(aSQLDA^.SQLVar[x].SQLData,0);
@@ -926,6 +963,7 @@ begin
         aSQLDA^.SQLVar[x].sqlind := nil;
         end
       end;
+    end;
 {$pop}
 end;
 
@@ -943,22 +981,30 @@ begin
     FieldNameQuoteChars := NoQuotes
   else
     FieldNameQuoteChars := DoubleQuotes;
+  FCursorCount:=0;
 end;
 
 procedure TIBConnection.FreeFldBuffers(cursor : TSQLCursor);
 
+
 begin
   with cursor as TIBCursor do
     begin
-    FreeSQLDABuffer(SQLDA);
-    FreeSQLDABuffer(in_SQLDA);
-    SetLength(FieldBinding,0);
+    if FSelectable and (CursorName<>'') then
+      begin
+      if isc_dsql_free_statement(@Status, @StatementHandle, DSQL_close)<>0 then
+        // If transaction was closed (keepOpenOnCommit, then the cursor is already closed.
+        CheckError('Close Cursor', Status, [335544577]); 
+      end;
     end;
 end;
 
 procedure TIBConnection.Execute(cursor: TSQLCursor;atransaction:tSQLtransaction; AParams : TParams);
-var TransactionHandle : pointer;
-    out_SQLDA : PXSQLDA;
+var
+  TransactionHandle : pointer;
+  out_SQLDA : PXSQLDA;
+  S: String;
+
 begin
   TransactionHandle := aTransaction.Handle;
   if Assigned(APArams) and (AParams.count > 0) then SetParameters(cursor, atransaction, AParams);
@@ -972,6 +1018,17 @@ begin
       out_SQLDA := nil;
     if isc_dsql_execute2(@Status[0], @TransactionHandle, @StatementHandle, 1, in_SQLDA, out_SQLDA) <> 0 then
       CheckError('Execute', Status);
+    if FSelectable then
+      begin
+      if CursorName='' then
+        begin
+        Inc(FCursorCount);
+        CursorName:='sqldbcursor'+IntToStr(FCursorCount);
+        end;
+      if isc_dsql_set_cursor_name(@Status[0], @StatementHandle, PChar(CursorName) , 0) <> 0 then
+        CheckError('Open Cursor', Status);
+    end
+    else
   end;
 end;
 

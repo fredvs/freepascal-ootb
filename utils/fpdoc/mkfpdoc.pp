@@ -12,6 +12,11 @@ const
   DefCPUTarget   = {$I %FPCTARGETCPU%};
   DefFPCVersion  = {$I %FPCVERSION%};
   DefFPCDate     = {$I %FPCDATE%};
+{$IFDEF FPC_BIG_ENDIAN}
+  DefEndianNess = 'FPC_BIG_ENDIAN';
+{$ELSE}
+  DefEndianNess = 'FPC_LITTLE_ENDIAN';
+{$ENDIF}
 
 Type
 
@@ -22,6 +27,7 @@ Type
     FBaseDescrDir: String;
     FBaseInputDir: String;
     FCurPackage : TFPDocPackage;
+    FExamplesPath: String;
     FProcessedUnits : TStrings;
     FOnLog: TPasParserLogHandler;
     FPParserLogEvents: TPParserLogEvents;
@@ -29,10 +35,12 @@ Type
     FProjectMacros: TStrings;
     FScannerLogEvents: TPScannerLogEvents;
     FVerbose: Boolean;
+    function GetLogLevels: TFPDocLogLevels;
     function GetOptions: TEngineOptions;
     function GetPackages: TFPDocPackages;
     procedure SetBaseDescrDir(AValue: String);
     procedure SetBaseInputDir(AValue: String);
+    procedure SetExamplesPath(AValue: String);
     procedure SetProjectMacros(AValue: TStrings);
   Protected
     Function FixInputFile(Const AFileName : String) : String;
@@ -42,6 +50,8 @@ Type
     procedure SetVerbose(AValue: Boolean); virtual;
     Procedure DoLog(Const Msg : String);
     procedure DoLog(Const Fmt : String; Args : Array of Const);
+    Procedure DoLogSender(Sender : TObject; Const Msg : String);
+    // Create documetation by specified Writer class
     procedure CreateOutput(APackage: TFPDocPackage; Engine: TFPDocEngine); virtual;
   Public
     Constructor Create(AOwner : TComponent); override;
@@ -60,12 +70,14 @@ Type
     // When set, they will be prepended to non-absolute filenames.
     Property BaseInputDir : String Read FBaseInputDir Write SetBaseInputDir;
     Property BaseDescrDir : String Read FBaseDescrDir Write SetBaseDescrDir;
+    Property ExamplesPath : String Read FExamplesPath Write SetExamplesPath;
     // Macros used when loading the project file
     Property ProjectMacros : TStrings Read FProjectMacros Write SetProjectMacros;
   end;
 
 implementation
 
+uses fpdocstrs;
 
 { TFPDocCreator }
 
@@ -77,6 +89,9 @@ begin
     begin
     ScannerLogEvents:=[sleFile];
     ParserLogEvents:=[];
+    Options.InfoUsedFile:= true;
+    Options.WarnDocumentationEmpty:= true;
+    Options.WarnXCT:= true;
     end
   else
     begin
@@ -94,6 +109,14 @@ end;
 procedure TFPDocCreator.DoLog(const Fmt: String; Args: array of const);
 begin
   DoLog(Format(Fmt,Args));
+end;
+
+procedure TFPDocCreator.DoLogSender ( Sender: TObject; const Msg: String ) ;
+begin
+  if Assigned(Sender) then
+    DoLog(Format('%s - Sender: %s', [Msg, Sender.ClassName]))
+  else
+    DoLog(Msg);
 end;
 
 procedure TFPDocCreator.HandleOnParseUnit(Sender: TObject;
@@ -116,7 +139,7 @@ begin
        SplitInputFIleOption(S,UN,Opts);
        if CompareText(ChangeFileExt(ExtractFileName(Un),''),AUnitName)=0 then
          begin
-         AInputFile:=FixInputFile(UN)+' '+Opts;
+         AInputFile:=FixInputFile(UN)+' '+Opts+' -d'+Options.EndianNess;
          OSTarget:=FProject.Options.OSTarget;
          CPUTarget:=FProject.Options.CPUTarget;
          FProcessedUnits.Add(UN);
@@ -168,6 +191,14 @@ begin
     FBaseInputDir:=IncludeTrailingPathDelimiter(FBaseInputDir);
 end;
 
+procedure TFPDocCreator.SetExamplesPath(AValue: String);
+begin
+  if FExamplesPath=AValue then Exit;
+  FExamplesPath:=AValue;
+  If FExamplesPath<>'' then
+    FExamplesPath:=IncludeTrailingPathDelimiter(FExamplesPath);
+end;
+
 procedure TFPDocCreator.SetProjectMacros(AValue: TStrings);
 begin
   if FProjectMacros=AValue then Exit;
@@ -187,6 +218,7 @@ begin
   FProject.Options.StopOnParseError:=False;
   FProject.Options.CPUTarget:=DefCPUTarget;
   FProject.Options.OSTarget:=DefOSTarget;
+  FProject.Options.EndianNess:=DefEndianNess;
   FProcessedUnits:=TStringList.Create;
   FProjectMacros:=TStringList.Create;
 end;
@@ -208,7 +240,9 @@ Var
   Cmd,Arg : String;
 
 begin
+  // Now is used the specified writer
   WriterClass:=GetWriterClass(Options.Backend);
+  // ALL CONTENT CREATED HERE
   Writer:=WriterClass.Create(Engine.Package,Engine);
   With Writer do
     Try
@@ -225,13 +259,33 @@ begin
           If not InterPretOption(Cmd,Arg) then
             DoLog(SCmdLineInvalidOption,[Cmd+'='+Arg]);
           end;
-      WriteDoc;
+      // Create documentation by writer
+      WriteDocumentation();
     Finally
       Free;
     end;
-  Writeln('Content file : ',APackage.ContentFile);
+  // Output content files
+  if FVerbose then
+    DoLog('Content file : '+APackage.ContentFile);
   if Length(APackage.ContentFile) > 0 then
     Engine.WriteContentFile(APackage.ContentFile);
+end;
+
+function TFPDocCreator.GetLogLevels: TFPDocLogLevels;
+
+  Procedure DoOpt(doSet : Boolean; aLevel: TFPDocLogLevel);
+
+  begin
+    if DoSet then
+      Result:=Result+[aLevel];
+  end;
+
+begin
+  Result:=[];
+  DoOpt(Options.WarnNoNode,dleWarnNoNode);
+  DoOpt(Options.InfoUsedFile,dleWarnUsedFile);
+  DoOpt(Options.WarnDocumentationEmpty,dleDocumentationEmpty);
+  DoOpt(Options.WarnXCT,dleXCT);
 end;
 
 procedure TFPDocCreator.CreateDocumentation(APackage: TFPDocPackage;
@@ -242,21 +296,27 @@ var
   Engine : TFPDocEngine;
   Cmd,Arg : String;
   WriterClass: TFPDocWriterClass;
-
+  eMsg: String;
 begin
   Cmd:='';
   FCurPackage:=APackage;
   Engine:=TFPDocEngine.Create;
   try
+    Engine.OnLog:= @DoLogSender;
+    Engine.ExamplesPath:=Self.ExamplesPath;
+    // get documentation Writer html, latex, and other
     WriterClass:=GetWriterClass(Options.Backend);
     For J:=0 to Apackage.Imports.Count-1 do
       begin
       Arg:=Apackage.Imports[j];
+      // conversion import FilePathes
       WriterClass.SplitImport(Arg,Cmd);
+      // create tree of imported objects
       Engine.ReadContentFile(Arg, Cmd);
       end;
     for i := 0 to APackage.Descriptions.Count - 1 do
       Engine.AddDocFile(FixDescrFile(APackage.Descriptions[i]),Options.donttrim);
+    // set engine options
     Engine.SetPackageName(APackage.Name);
     Engine.Output:=APackage.Output;
     Engine.OnLog:=Self.OnLog;
@@ -265,31 +325,57 @@ begin
     Engine.HideProtected:=Options.HideProtected;
     Engine.HidePrivate:=Not Options.ShowPrivate;
     Engine.OnParseUnit:=@HandleOnParseUnit;
-    Engine.WarnNoNode:=Options.WarnNoNode;
+    Engine.DocLogLevels:=GetLogLevels;
+    Engine.FalbackSeeAlsoLinks:= Options.FallBackSeeAlsoLinks;
     if Length(Options.Language) > 0 then
       TranslateDocStrings(Options.Language);
+    // scan the input source files
     for i := 0 to APackage.Inputs.Count - 1 do
       try
-        SplitInputFileOption(APackage.Inputs[i],Cmd,Arg);
-        Cmd:=FixInputFile(Cmd);
-        if FProcessedUnits.IndexOf(Cmd)=-1 then
+        try
+          eMsg:='';
+          // get options from input packages
+          SplitInputFileOption(APackage.Inputs[i],Cmd,Arg);
+          arg:=Arg+' -d'+Options.EndianNess;
+          // make absolute filepath
+          Cmd:=FixInputFile(Cmd);
+          if FProcessedUnits.IndexOf(Cmd)=-1 then
           begin
-          FProcessedUnits.Add(Cmd);
-          ParseSource(Engine,Cmd+' '+Arg, Options.OSTarget, Options.CPUTarget,[poUseStreams]);
+            FProcessedUnits.Add(Cmd);
+            // Parce sources for OS Target
+            //WriteLn(Format('Parsing unit: %s', [ExtractFilenameOnly(Cmd)]));
+            ParseSource(Engine,Cmd+' '+Arg, Options.OSTarget, Options.CPUTarget,[poUseStreams]); // poSkipDefaultDefs
           end;
-      except
-        on E: EParserError do
-          If Options.StopOnParseError then
-            Raise
-          else
+          //else WriteLn(Format('Processed unit: %s', [ExtractFilenameOnly(Cmd)]));
+        except
+          on E: EParserError do
             begin
-            DoLog('Error: %s(%d,%d): %s',[E.Filename, E.Row, E.Column, E.Message]);
-            DoLog('Ignoring error, continuing with next unit (if any).');
+              eMsg:= Format('Parser error: %s (%d,%d): %s',[E.Filename, E.Row, E.Column, E.Message]);
+              If Options.StopOnParseError then Raise;
             end;
-      end;
+          on E: EFileNotFoundError do
+            begin
+              eMsg:= Format('Error: file not found - %s', [E.Message]);
+              If Options.StopOnParseError then Raise;
+            end;
+          on E: Exception do
+            begin
+              eMsg:= Format('Error: %s', [E.Message]);
+              If Options.StopOnParseError then Raise;
+            end;
+        end; // try except
+      finally
+        if eMsg <> '' then
+        begin
+          DoLog(eMsg);
+          If not Options.StopOnParseError then
+            DoLog('Ignoring error, continuing with next unit (if any).');
+        end;
+      end; // try finally
     if Not ParseOnly then
       begin
       Engine.StartDocumenting;
+      // Create documentation
       CreateOutput(APackage,Engine);
       end;
   finally

@@ -58,7 +58,7 @@
 
 
   {$ifndef OS_FILESETDATEBYNAME}
-  Function FileSetDate (Const FileName : RawByteString;Age : Longint) : Longint;
+  Function FileSetDate (Const FileName : RawByteString;Age : Int64) : Longint;
   Var
     fd : THandle;
   begin
@@ -79,7 +79,7 @@
   end;
 
 
-  Function FileSetDate (Const FileName : UnicodeString;Age : Longint) : Longint;
+  Function FileSetDate (Const FileName : UnicodeString;Age : Int64) : Longint;
   Var
     fd : THandle;
   begin
@@ -254,6 +254,19 @@ end;
     end;
 
 
+    function Exception.GetBaseException : Exception;
+      var
+        _ExceptObjectStack : PExceptObject;
+      begin
+        _ExceptObjectStack:=RaiseList;
+        While Assigned(_ExceptObjectStack) do
+          begin
+            result:=Exception(_ExceptObjectStack^.FObject);
+            _ExceptObjectStack:=_ExceptObjectStack^.Next;
+          end;
+      end;
+
+
     Constructor EVariantError.CreateCode (Code : longint);
     begin
        case Code of
@@ -285,6 +298,28 @@ end;
        end;
        ErrCode:=Code;
     end;
+
+  
+constructor EInOutArgumentException.Create(const aMsg, aPath: string); overload;
+
+begin
+  Path:=aPath;
+  Inherited Create(aMsg);
+end;
+
+constructor EInOutArgumentException.CreateRes(ResStringRec: PResStringRec; const aPath: string); overload;
+
+begin
+  Path:=aPath;
+  Inherited CreateRes(ResStringRec);
+end;
+
+constructor EInOutArgumentException.CreateFmt(const fmt: string;  const args : array of const; const aPath : String);
+
+begin
+  Path:=aPath;
+  inherited CreateFmt(fmt,args);
+end;
 
 {$if defined(win32) or defined(win64) or defined (wince)}
 function EExternal.GetExceptionRecord: PExceptionRecord;
@@ -609,6 +644,20 @@ begin
   Raise OutOfMemory;
 end;
 
+procedure ListIndexError(aIndex,aMax: Integer; aObj: TObject);
+
+var
+ aClassName : string;
+
+begin
+  if Assigned(aObj) then
+    aClassName:=aObj.ClassName
+  else
+    aClassName:='<nil>';  
+  Raise EListError.CreateFmt(SErrListIndexExt,[aIndex,aClassName,aMax])
+end;
+
+
 { ---------------------------------------------------------------------
     Initialization/Finalization/exit code
   ---------------------------------------------------------------------}
@@ -823,4 +872,364 @@ begin
   else
     Result:=ifFalse;
 end;
+
+generic function Exchange<T>(var target:T; const newvalue:T) :T;
+begin
+  Result := target;
+  target := newvalue;
+end;
 {$ENDIF}
+
+Function ArrayOfConstToStrArray(Args: array of const) : TUTF8StringDynArray;
+
+var
+  i: Integer;
+  O : TObject;
+  C : TClass;
+  S : String;
+
+begin
+  SetLength(Result,Length(Args));
+  for i:=Low(Args) to High(Args) do
+    case Args[i].VType of
+      vtInteger:      Result[i]:=IntToStr(Args[i].VInteger);
+      vtBoolean:      Result[i]:=BoolToStr(Args[i].VBoolean);
+      vtChar:         Result[i] := Args[i].VChar;
+      {$ifndef FPUNONE}
+      vtExtended:     Result[i]:= FloatToStr(Args[i].VExtended^);
+      {$ENDIF}
+      vtString:       Result[i] := Args[i].VString^;
+      vtPointer:      Result[i] := '0x'+HexStr(PtrInt(Args[i].VPointer),SizeOF(PtrInt));
+      vtPChar:        Result[i] := Args[i].VPChar;
+      vtObject:
+        begin
+        O:=Args[i].VObject;
+        if Assigned(O) then
+          begin
+          try
+            S:=O.ClassName;
+          except
+            S:='<Invalid instance>';
+          end;
+          end
+        else
+          S:='';
+        Result[I] := '<Object '+S+' 0x'+HexStr(PtrInt(O),SizeOF(PtrInt))+'>';
+        end;
+      vtClass:
+        begin
+        C:=Args[i].VClass;
+        if Assigned(C) then
+          begin
+          try
+            S:=C.ClassName;
+          except
+            S:='<Invalid Class>';
+          end;
+          end
+        else
+          S:='';
+        Result[I] := '<Class '+S+' 0x'+HexStr(PtrInt(C),SizeOF(PtrInt))+'>';
+        end;
+      vtWideChar:     Result[i] := UTF8Encode(Args[i].VWideChar);
+      vtPWideChar:    Result[i] := UTF8Encode(Args[i].VPWideChar^);
+      vtAnsiString:   Result[i] := AnsiString(Args[i].VAnsiString);
+      vtCurrency:     Result[i] := FLoatToSTr(Args[i].VCurrency^);
+      vtVariant:      Result[i] := Args[i].VVariant^;
+      vtInterface:    Result[I] := '<Interface 0x'+HexStr(PtrInt(Args[i].VInterface),SizeOF(PtrInt))+'>';
+      vtWidestring:   Result[i] := UTF8ENcode(WideString(Args[i].VWideString));
+      vtInt64:        Result[i] := IntToStr(Args[i].VInt64^);
+      vtQWord:        Result[i] := IntToStr(Args[i].VQWord^);
+      vtUnicodeString:Result[i] := UTF8Encode(UnicodeString(Args[i].VUnicodeString));
+    end;
+end;
+
+Function ArrayOfConstToStr(Args: array of const ; aSeparator : Char = ','; aQuoteBegin : Char = '"'; aQuoteEnd : Char = '"') : UTF8String;
+
+  Procedure Add(s: UTF8String);
+
+  begin
+    if aQuoteBegin<>#0 then
+      S:=aQuoteBegin+S;
+    if aQuoteEnd<>#0 then
+      S:=S+aQuoteEnd;
+    if Result<>'' then
+      Result:=Result+aSeparator;
+    Result:=Result+S;
+  end;
+
+
+Var
+  S : UTF8String;
+
+begin
+  Result:='';
+  For S in ArrayOfConstToStrArray(Args) do
+    Add(S);
+end;
+
+Function GetCompiledArchitecture : TOSVersion.TArchitecture;
+
+begin
+  Result:=arOther;
+  {$ifdef i386}
+  Result:=arIntelX86;
+  {$endif i386}
+
+  {$ifdef m68k}
+  Result:=arM68k;
+  {$endif m68k}
+
+  {$ifdef powerpc}
+  Result:=arPowerPC
+  {$endif powerpc}
+
+  {$ifdef powerpc64}
+  Result:=arPower64
+  {$endif powerpc64}
+
+  {$ifdef arm}
+  Result:=arARM32;
+  {$endif arm}
+
+  {$ifdef aarch64}
+  Result:=arARM64
+  {$endif aarch64}
+
+  {$ifdef sparc}
+  Result:=arSparc;
+  {$endif sparc}
+
+  {$ifdef sparc64}
+  Result:=arSparc64;
+  {$endif sparc64}
+
+  {$ifdef CPUX86_64}
+  Result:=arIntelX64;
+  {$endif x86_64}
+
+  {$ifdef mipsel}
+  Result:=arMipsel
+  {$else : not mipsel}
+    {$ifdef mips}
+      Result:=arMips;
+    {$endif mips}
+  {$endif not mipsel}
+
+  {$ifdef riscv32}
+  Result:=arRiscV32;
+  {$endif riscv32}
+
+  {$ifdef riscv64}
+  Result:=arRiscV64;
+  {$endif riscv64}
+
+  {$ifdef xtensa}
+  Result:=arXtensa;
+  {$endif xtensa}
+
+  {$ifdef wasm32}
+  Result:=arWasm32;
+  {$endif wasm32}
+
+  {$ifdef loongarch64}
+  Result:=arLoongArch64;
+  {$endif loongarch64}
+end;
+
+Function GetCompiledPlatform : TOSVersion.TPlatform;
+
+begin
+  Result:=pfOther;
+  {$IFDEF WINDOWS}
+  Result:=pfWindows;
+  {$ENDIF}
+  {$Ifdef darwin}
+  Result:=pfMacOS;
+  {$ENDIF}
+  {$IFDEF IOS}
+  Result:=pfiOS;
+  {$ENDIF}
+  {$IFDEF ANDROID}
+  Result:=pfAndroid;
+  {$ENDIF}
+  {$IFDEF LINUX}
+  Result:=pfLinux;
+  {$ENDIF}
+  {$IFDEF GO32V2}
+  Result:=pfGo32v2;
+  {$ENDIF}
+  {$IFDEF OS2}
+  Result:=pfOS2;
+  {$ENDIF}
+  {$IFDEF FREEBSD}
+  Result:=pfFreeBSD;
+  {$ENDIF}
+  {$IFDEF BEOS}
+  Result:=pfBeos;
+  {$ENDIF}
+  {$IFDEF NETBSD}
+  Result:=pfNetBSD;
+  {$ENDIF}
+  {$IFDEF AMIGA}
+  Result:=pfAmiga;
+  {$ENDIF}
+  {$IFDEF ATARI}
+  Result:=pfAtari;
+  {$ENDIF}
+  {$IFDEF SUNOS}
+  Result:=pfSolaris;
+  {$ENDIF}
+  {$IFDEF QNX}
+  Result:=pfQNX;
+  {$ENDIF}
+  {$IFDEF Netware}
+  Result:=pfNetware;
+  {$ENDIF}
+  {$IFDEF OpenBSD}
+  Result:=pfOpenBSD;
+  {$ENDIF}
+  {$IFDEF WDosX}
+  Result:=pfWDosX;
+  {$ENDIF}
+  {$IFDEF PALMOS}
+  Result:=pfPalmos;
+  {$ENDIF}
+  {$IFDEF MacOSClassic}
+  Result:=pfMacOSClassic;
+  {$ENDIF}
+  {$IFDEF DARWIN}
+  Result:=pfDarwin;
+  {$ENDIF}
+  {$IFDEF EMX}
+  Result:=pfEMX;
+  {$ENDIF}
+  {$IFDEF WATCOM}
+  Result:=pfWatcom;
+  {$ENDIF}
+  {$IFDEF MORPHOS}
+  Result:=pfMorphos;
+  {$ENDIF}
+  {$IFDEF NETWLIBC}
+  Result:=pfNetwLibC;
+  {$ENDIF}
+  {$IFDEF WINCE}
+  Result:=pfWinCE;
+  {$ENDIF}
+  {$IFDEF GBA}
+  Result:=pfGBA;
+  {$ENDIF}
+  {$IFDEF NDS}
+  Result:=pfNDS;
+  {$ENDIF}
+  {$IFDEF EMBEDDED}
+  Result:=pfEmbedded;
+  {$ENDIF}
+  {$IFDEF SYMBIAN}
+  Result:=pfSymbian;
+  {$ENDIF}
+  {$IFDEF HAIKU}
+  Result:=pfHaiku;
+  {$ENDIF}
+  {$IFDEF IPHONESIM}
+  Result:=pfIPhoneSim;
+  {$ENDIF}
+  {$IFDEF AIX}
+  Result:=pfAIX;
+  {$ENDIF}
+  {$IFDEF JAVA}
+  Result:=pfJava;
+  {$ENDIF}
+  {$IFDEF NATIVENT}
+  Result:=pfNativeNT;
+  {$ENDIF}
+  {$IFDEF MSDOS}
+  Result:=pfMSDos;
+  {$ENDIF}
+  {$IFDEF WII}
+  Result:=pfWII;
+  {$ENDIF}
+  {$IFDEF AROS}
+  Result:=pfAROS;
+  {$ENDIF}
+  {$IFDEF DRAGONFLY}
+  Result:=pfDragonFly;
+  {$ENDIF}
+  {$IFDEF WIN16}
+  Result:=pfWin16;
+  {$ENDIF}
+  {$IFDEF FREERTOS}
+  Result:=pfFreeRTOS;
+  {$ENDIF}
+  {$IFDEF ZXSPECTRUM}
+  Result:=pfZXSpectrum;
+  {$ENDIF}
+  {$IFDEF MSXDOS}
+  Result:=pfMSXDOS;
+  {$ENDIF}
+  {$IFDEF AMSTRADCPC}
+  Result:=pfAmstradCPC;
+  {$ENDIF}
+  {$IFDEF SINCLAIRQL}
+  Result:=pfSinclairQL;
+  {$ENDIF}
+  {$IFDEF WASI}
+  Result:=pfWasi;
+  {$ENDIF}
+end;
+
+class constructor TOSVersion.Create;
+
+{$IFNDEF HAS_OSVERSION}
+var
+  S : String;
+{$ENDIF}
+begin
+  FArchitecture:=GetCompiledArchitecture;
+  FPlatform:=GetCompiledPlatform;
+  FBuild:=0;
+  FMajor:=0;
+  FMinor:=0;
+  FServicePackMajor:=0;
+  FServicePackMinor:=0;
+{$IFDEF HAS_OSVERSION}
+  InitOSVersion;
+{$ELSE}
+  WriteStr(S,GetCompiledPlatform);
+  FName:=Copy(S,3);
+  WriteStr(S,GetCompiledArchitecture);
+  FFull:=Copy(S,3)+'-'+FName;
+{$ENDIF}
+end;
+
+class function TOSVersion.Check(aMajor: Integer): Boolean; overload; static; inline;
+
+begin
+  Result:=(Major>=aMajor);
+end;
+
+
+class function TOSVersion.Check(aMajor, aMinor: Integer): Boolean; overload; static; inline;
+
+begin
+ Result:=(Major>aMajor)
+         or ((Major=aMajor) and (Minor>=aMinor))
+end;
+
+
+class function TOSVersion.Check(aMajor, aMinor, aServicePackMajor: Integer): Boolean; overload; static; inline;
+
+begin
+  Result:=(Major>AMajor)
+          or ((Major=aMajor) and (Minor>aMinor))
+          or ((Major=aMajor) and (Minor=aMinor) and (ServicePackMajor>=aServicePackMajor));
+end;
+
+
+class function TOSVersion.ToString: string; static;
+
+begin
+  Result:=FFull;
+end;
+
+

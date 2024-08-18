@@ -54,6 +54,10 @@
      WINBOOL = longbool;
      BOOL = WINBOOL;
 
+     // newer APIs (e.g. threadpool) have this:
+     // can't find exact true/false conventions here, so for now keep it byte
+     WINAPIBOOLEAN = Byte;
+
      CALTYPE = cardinal;
      CALID = cardinal;
 
@@ -70,16 +74,16 @@
      ULONG32 = cardinal;
      DWORD = cardinal;
 
-     PINTEGER = ^longint;
+     PINTEGER = plongint;
      PBOOL    = ^BOOL;
 
      LONGLONG  = int64;
-     PLONGLONG = ^LONGLONG;
-     LPLONGLONG = ^LONGLONG;
+     PLONGLONG = pint64;
+     LPLONGLONG = pint64;
      ULONGLONG  = qword;      // used in AMD64 CONTEXT
-     PULONGLONG = ^ULONGLONG; //
+     PULONGLONG = pqword; //
      DWORD64 = qword;         //
-     PDWORD64 = ^DWORD64;     //
+     PDWORD64 = pqword;     //
 
 
      INT_PTR = PtrInt;
@@ -113,7 +117,7 @@
      HDC = HANDLE;
      HDDEDATA = HANDLE;
      HDESK = HANDLE;
-     HDEVNOTIFY = HANDLE;
+     HDEVNOTIFY = POINTER;
      HDROP = HANDLE;
      HDWP = HANDLE;
      HENHMETAFILE = HANDLE;
@@ -623,9 +627,10 @@
 
      LPCFHOOKPROC = function (_para1:HWND; _para2:UINT; _para3:WPARAM; _para4:LPARAM):UINT_PTR;stdcall;
 
-     PTHREAD_START_ROUTINE = Pointer;
+     PTHREAD_START_ROUTINE = function(p:pointer):integer; stdcall;
 
      LPTHREAD_START_ROUTINE = PTHREAD_START_ROUTINE;
+     TThreadStartRoutine    = PTHREAD_START_ROUTINE;  
 
      EDITSTREAMCALLBACK = function (_para1:DWORD_PTR; _para2:LPBYTE; _para3:LONG; _para4:PLONG):DWORD;stdcall;
 
@@ -749,6 +754,8 @@
      PFNPROCESSPOLICIES  = function (_para1:HWND; _para2:LPCTSTR; _para3:LPCTSTR; _para4:LPCTSTR; _para5:DWORD):WINBOOL;stdcall;
      TIMEFMT_ENUMPROCEX  = function (TimeFormat : LPWSTR; AppData : LPARAM) : BOOL; stdcall;
 
+     WAITORTIMERCALLBACK  = procedure (arg1:PVoid;arg2:WINAPIBOOLEAN); stdcall;
+
   (*  Not convertable by H2PAS
   #define SECURITY_NULL_SID_AUTHORITY     {0,0,0,0,0,0}
   #define SECURITY_WORLD_SID_AUTHORITY    {0,0,0,0,0,1}
@@ -835,6 +842,8 @@ type
      PCCSTYLEFLAGA = ^CCSTYLEFLAGA;
 
      LPCCSTYLEFLAGA = ^CCSTYLEFLAGA;
+     EXECUTION_STATE = DWORD;
+     PEXECUTION_STATE = ^EXECUTION_STATE;
 
 {$endif read_interface}
 

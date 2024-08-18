@@ -74,6 +74,7 @@ Function AnsiReverseString(const AText: AnsiString): AnsiString;inline;
 Function StuffString(const AText: string; AStart, ALength: Cardinal;  const ASubText: string): string;
 Function RandomFrom(const AValues: array of string): string; overload;
 Function IfThen(AValue: Boolean; const ATrue: string; const AFalse: string = ''): string; overload;
+Function IfThen(AValue: Boolean; const ATrue: TStringDynArray; const AFalse: TStringDynArray = nil): TStringDynArray; overload;
 function NaturalCompareText (const S1 , S2 : string ): Integer ;
 function NaturalCompareText(const Str1, Str2: string; const ADecSeparator, AThousandSeparator: Char): Integer;
 
@@ -173,6 +174,7 @@ resourcestring
 function IsEmptyStr(const S: string; const EmptyChars: TSysCharSet): Boolean;
 function DelSpace(const S: string): string;
 function DelChars(const S: string; Chr: Char): string;
+function DelChars(const S: string; Chars: TSysCharSet): string;
 function DelSpace1(const S: string): string;
 function Tab2Space(const S: string; Numb: Byte): string;
 function NPos(const C: string; S: string; N: Integer): SizeInt;
@@ -212,8 +214,8 @@ function IsWordPresent(const W, S: string; const WordDelims: TSysCharSet): Boole
 function FindPart(const HelpWilds, InputStr: string): SizeInt;
 function IsWild(InputStr, Wilds: string; IgnoreCase: Boolean): Boolean;
 function XorString(const Key, Src: ShortString): ShortString;
-function XorEncode(const Key, Source: string): string;
-function XorDecode(const Key, Source: string): string;
+function XorEncode(const Key, Source: Ansistring): Ansistring;
+function XorDecode(const Key, Source: Ansistring): Ansistring;
 function GetCmdLineArg(const Switch: string; SwitchChars: TSysCharSet): string;
 function Numb2USA(const S: string): string;
 function Hex2Dec(const S: string): Longint;
@@ -222,7 +224,7 @@ function Dec2Numb(N: Longint; Len, Base: Byte): string;
 function Numb2Dec(S: string; Base: Byte): Longint;
 function IntToBin(Value: Longint; Digits, Spaces: Integer): string;
 function IntToBin(Value: Longint; Digits: Integer): string;
-function intToBin(Value: int64; Digits:integer): string;
+function IntToBin(Value: int64; Digits:integer): string;
 function IntToRoman(Value: Longint): string;
 function TryRomanToInt(S: String; out N: LongInt; Strictness: TRomanConversionStrictness = rcsRelaxed): Boolean;
 function RomanToInt(const S: string; Strictness: TRomanConversionStrictness = rcsRelaxed): Longint;
@@ -247,7 +249,7 @@ function PosSet (const c:string;const s : ansistring ):SizeInt;
 function PosSetEx (const c:TSysCharSet;const s : ansistring;count:Integer ):SizeInt;
 function PosSetEx (const c:string;const s : ansistring;count:Integer ):SizeInt;
 
-Procedure Removeleadingchars(VAR S : AnsiString; Const CSet:TSysCharset);
+Procedure RemoveLeadingchars(VAR S : AnsiString; Const CSet:TSysCharset);
 Procedure RemoveTrailingChars(VAR S : AnsiString;Const CSet:TSysCharset);
 Procedure RemovePadChars(VAR S : AnsiString;Const CSet:TSysCharset);
 
@@ -289,6 +291,8 @@ Function SplitCommandLine(S : UnicodeString) : TUnicodeStringArray;
 
 
 implementation
+
+uses sysconst; // HexDigits
 
 (*
   FindMatchesBoyerMooreCaseSensitive
@@ -436,7 +440,7 @@ begin
       AddMatch(i+1);
       //Only first match ?
       if not aMatchAll then break;
-      inc(i,DeltaJumpTable2[0]);
+      inc(i,DeltaJumpTable2[0]+1);
     end else begin
       i:=i + Max(DeltaJumpTable1[ord(s[i])],DeltaJumpTable2[j]);
     end;
@@ -588,7 +592,7 @@ begin
       AddMatch(i+1);
       //Only first match ?
       if not aMatchAll then break;
-      inc(i,DeltaJumpTable2[0]);
+      inc(i,DeltaJumpTable2[0]+1);
     end else begin
       i:=i + Max(DeltaJumpTable1[Ord(lCaseArray[Ord(s[i])])],DeltaJumpTable2[j]);
     end;
@@ -1150,24 +1154,34 @@ end;
 function DupeString(const AText: string; ACount: Integer): string;
 
 var
-  Len: SizeInt;
-  Source, Target: PByte;
-  
+  Len, BitIndex, Rp: SizeInt;
+
 begin
   Len := Length(AText);
+  if (Len = 0) or (ACount <= 0) then
+    Exit('');
+  if ACount = 1 then
+    Exit(AText);
+
   SetLength(Result, ACount * Len);
-  // Use PByte to skip implicit UniqueString, because SetLength always unique
-  Target := PByte(Result);
-  if Target = nil then // ACount = 0 or AText = ''
-    Exit;
-  // Now ACount > 0 and Len > 0
-  Source := PByte(AText);
-  repeat
-    Move(Source[0], Target[0], Len * SizeOf(Char));
-    Inc(Target, Len * SizeOf(Char));
-    Dec(ACount);
-  until ACount = 0;
-end;   
+  Rp := 0;
+
+  // Build up ACount repeats by duplicating the string built so far and adding another AText if corresponding ACount binary digit is 1.
+  // For example, ACount = 5 = %101 will, starting from the empty string:
+  // (1) duplicate (count = 0), add AText (count = 1)
+  // (0) duplicate (count = 2)
+  // (1) duplicate (count = 4), add AText (count = 5)
+  for BitIndex := BsrDWord(ACount) downto 0 do
+  begin
+    Move(Pointer(Result)^, PChar(Pointer(Result))[Rp], Rp * SizeOf(Char));
+    Inc(Rp, Rp);
+    if ACount shr BitIndex and 1 <> 0 then
+    begin
+      Move(Pointer(AText)^, PChar(Pointer(Result))[Rp], Len * SizeOf(Char));
+      Inc(Rp, Len);
+    end;
+  end;
+end;
 
 function ReverseString(const AText: string): string;
 
@@ -1206,9 +1220,9 @@ begin
   if ALength> k then
     ALength:=k;
   SetLength(Result,i+j-ALength);
-  move (AText[1],result[1],AStart-1);
-  move (ASubText[1],result[AStart],j);
-  move (AText[AStart+ALength], Result[AStart+j],i+1-AStart-ALength);
+  move (AText[1],result[1],AStart-1*SizeOf(Char));
+  move (ASubText[1],result[AStart],j*SizeOf(Char));
+  move (AText[AStart+ALength], Result[AStart+j],(i+1-AStart-ALength)*SizeOf(Char));
 end;
 
 function RandomFrom(const AValues: array of string): string;
@@ -1219,6 +1233,15 @@ begin
 end;
 
 function IfThen(AValue: Boolean; const ATrue: string; const AFalse: string): string;
+
+begin
+  if avalue then
+    result:=atrue
+  else
+    result:=afalse;
+end;
+
+Function IfThen(AValue: Boolean; const ATrue: TStringDynArray; const AFalse: TStringDynArray = nil): TStringDynArray; overload;
 
 begin
   if avalue then
@@ -1375,8 +1398,16 @@ begin
 end;
 
 function SplitString(const S, Delimiters: string): TStringDynArray;
+
+Var
+  a : Array of char;
+  I : Integer;
+  
 begin
-  Result := S.Split(Delimiters);
+  SetLength(A,Length(Delimiters));
+  For I:=1 to Length(Delimiters) do
+    A[I-1]:=Delimiters[i];
+  Result := S.Split(A);
 end;
 
 function NaturalCompareText (const S1 , S2 : string ): Integer ;
@@ -1991,16 +2022,54 @@ begin
     end;
 end;
 
-function DelSpace1(const S: string): string;
+function DelChars(const S: string; Chars: TSysCharSet): string;
 
 var
-  I : SizeInt;
+  I,J: SizeInt;
 
 begin
   Result:=S;
-  for i:=Length(Result) downto 2 do
-    if (Result[i]=' ') and (Result[I-1]=' ') then
-      Delete(Result,I,1);
+  if Chars=[] then exit;
+  I:=Length(Result);
+  While I>0 do
+    begin
+    if Result[I]in Chars then
+      begin
+      J:=I-1;
+      While (J>0) and (Result[J]in Chars) do
+       Dec(j);
+      Delete(Result,J+1,I-J);
+      I:=J+1;
+      end;
+    dec(I);
+    end;
+end;
+
+
+function DelSpace1(const S: string): string;
+
+var
+  I,J: SizeInt;
+
+begin
+  Result:=S;
+  I:=Length(Result);
+  While I>0 do
+    begin
+    if Result[I]=#32 then
+      begin
+      J:=I-1;
+      While (J>0) and (Result[J]=#32) do
+        Dec(j);
+      Inc(J);
+      if I<>J then
+        begin
+        Delete(Result,J+1,I-J);
+        I:=J+1;
+        end;
+      end;
+    dec(I);
+    end;
 end;
 
 function Tab2Space(const S: string; Numb: Byte): string;
@@ -2732,7 +2801,7 @@ end;
 
 function IntToBin(Value: Longint; Digits, Spaces: Integer): string;
 var endpos : integer;
-    p,p2:pchar;
+    p,p2:PChar;
     k: integer;
 begin
   Result:='';
@@ -2764,13 +2833,13 @@ begin
 end;
 
 function IntToBin(Value: Longint; Digits: Integer): string;
-var p,p2 : pchar;
+var p,p2 : PChar;
 begin
   result:='';
   if digits<=0 then exit;
   setlength(result,digits);
-  p:=pchar(pointer(@result[digits]));
-  p2:=pchar(pointer(@result[1]));
+  p:=PChar(pointer(@result[digits]));
+  p2:=PChar(pointer(@result[1]));
   // typecasts because we want to keep intto* delphi compat and take an integer
   while (p>=p2) and (cardinal(value)>0) do     
     begin
@@ -2784,13 +2853,13 @@ begin
 end;
 
 function intToBin(Value: int64; Digits:integer): string;
-var p,p2 : pchar;
+var p,p2 : PChar;
 begin
   result:='';
   if digits<=0 then exit;
   setlength(result,digits);
-  p:=pchar(pointer(@result[digits]));
-  p2:=pchar(pointer(@result[1]));
+  p:=PChar(pointer(@result[digits]));
+  p2:=PChar(pointer(@result[1]));
   // typecasts because we want to keep intto* delphi compat and take a signed val
   // and avoid warnings
   while (p>=p2) and (qword(value)>0) do     
@@ -2956,7 +3025,7 @@ begin
       Result[i]:=Chr(Byte(Key[1 + ((i - 1) mod Length(Key))]) xor Ord(Src[i]));
 end;
 
-function XorEncode(const Key, Source: string): string;
+function XorEncode(const Key, Source: Ansistring): Ansistring;
 
 var
   i: Integer;
@@ -2974,7 +3043,7 @@ begin
     end;
 end;
 
-function XorDecode(const Key, Source: string): string;
+function XorDecode(const Key, Source: Ansistring): Ansistring;
 var
   i: Integer;
   C: Char;
@@ -3010,7 +3079,7 @@ begin
     end;
 end;
 
-function RPosEX(C: char; const S: AnsiString; offs: cardinal): SizeInt;
+function RPosEx(C: char; const S: AnsiString; offs: cardinal): SizeInt;
 
 var I   : SizeUInt;
     p,p2: pChar;
@@ -3073,7 +3142,7 @@ begin
    end;
 end;
 
-function RPosex(const Substr: AnsiString; const Source: AnsiString; offs: cardinal): SizeInt;
+function RPosEx(const Substr: AnsiString; const Source: AnsiString; offs: cardinal): SizeInt;
 var
   MaxLen,llen : SizeInt;
   c : char;
@@ -3102,7 +3171,7 @@ begin
    end;
 end;
 
-function RPosEX(C: unicodechar; const S: UnicodeString; offs: cardinal): SizeInt;
+function RPosEx(C: unicodechar; const S: UnicodeString; offs: cardinal): SizeInt;
 
 var I   : SizeUInt;
     p,p2: PUnicodeChar;
@@ -3164,7 +3233,7 @@ begin
    end;
 end;
 
-function RPosex(const Substr: UnicodeString; const Source: UnicodeString; offs: cardinal): SizeInt;
+function RPosEx(const Substr: UnicodeString; const Source: UnicodeString; offs: cardinal): SizeInt;
 var
   MaxLen,llen : SizeInt;
   c : unicodechar;
@@ -3192,63 +3261,41 @@ begin
    end;
 end;
 
-// def from delphi.about.com:
-(*
-procedure BinToHex(BinValue, HexValue: PChar; BinBufSize: Integer);
-
-Const
-  HexDigits='0123456789ABCDEF';
-var
-  i : longint;
-begin
-  for i:=0 to binbufsize-1 do
-    begin
-    HexValue[0]:=hexdigits[1+((ord(binvalue^) shr 4))];
-    HexValue[1]:=hexdigits[1+((ord(binvalue^) and 15))];
-    inc(hexvalue,2);
-    inc(binvalue);
-    end;
-end;
-*)
-
 procedure BinToHex(BinValue: PAnsiChar; HexValue: PAnsiChar; BinBufSize: Integer);
-const
-  HexDigits : AnsiString='0123456789ABCDEF';
+
  var
    i : longint;
  begin
   for i:=0 to BinBufSize-1 do
   begin
-    HexValue[0]:=HexDigits[1+((Ord(BinValue[i]) shr 4))];
-    HexValue[1]:=HexDigits[1+((Ord(BinValue[i]) and 15))];
+    HexValue[0]:=HexDigits[((Ord(BinValue[i]) shr 4))];
+    HexValue[1]:=HexDigits[((Ord(BinValue[i]) and 15))];
     Inc(HexValue,2);
   end;
 end;
 
 procedure BinToHex(BinValue: PAnsiChar; HexValue: PWideChar; BinBufSize: Integer);
-const
-  HexDigits : WideString='0123456789ABCDEF';
+
 var
   i : longint;
 begin
   for i:=0 to BinBufSize-1 do
   begin
-    HexValue[0]:=HexDigits[1+((Ord(BinValue[i]) shr 4))];
-    HexValue[1]:=HexDigits[1+((Ord(BinValue[i]) and 15))];
+    HexValue[0]:=HexDigitsW[((Ord(BinValue[i]) shr 4))];
+    HexValue[1]:=HexDigitsW[((Ord(BinValue[i]) and 15))];
     Inc(HexValue,2);
   end;
 end;
 
 procedure BinToHex(const BinBuffer: TBytes; BinBufOffset: Integer; var HexBuffer: TBytes; HexBufOffset: Integer; Count: Integer);
-const
-  HexDigits : String='0123456789ABCDEF';
+
 var
   i : longint;
 begin
   for i:=0 to Count-1 do
   begin
-    HexBuffer[HexBufOffset+2*i+0]:=Byte(HexDigits[1+(BinBuffer[BinBufOffset + i] shr 4)]);
-    HexBuffer[HexBufOffset+2*i+1]:=Byte(HexDigits[1+(BinBuffer[BinBufOffset + i] and 15)]);
+    HexBuffer[HexBufOffset+2*i+0]:=Byte(HexDigits[(BinBuffer[BinBufOffset + i] shr 4)]);
+    HexBuffer[HexBufOffset+2*i+1]:=Byte(HexDigits[(BinBuffer[BinBufOffset + i] and 15)]);
   end;
 end;
 

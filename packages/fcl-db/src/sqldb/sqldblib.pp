@@ -1,5 +1,19 @@
 unit SQLDBLib;
+{
+    This file is part of the Free Pascal run time library.
+    Copyright (c) 1999-2022 by Michael van Canney and other members of the
+    Free Pascal development team
 
+    SQLDB Library Loader
+
+    See the file COPYING.FPC, included in this distribution,
+    for details about the copyright.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ **********************************************************************}
 {$mode objfpc}{$H+}
 
 interface
@@ -17,9 +31,9 @@ Type
     FEnabled: Boolean;
     FLibraryName: String;
     procedure CheckDisabled;
-    procedure SetCType(AValue: String);
+    procedure SetCType(const AValue: String);
     procedure SetEnabled(AValue: Boolean);
-    procedure SetLibraryName(AValue: String);
+    procedure SetLibraryName(const AValue: String);
   Protected
     Function GetConnectionDef : TConnectionDef;
     Procedure Loaded; override;
@@ -47,7 +61,7 @@ begin
     DatabaseError(SErrConnnected,Self);
 end;
 
-procedure TSQLDBLibraryLoader.SetCType(AValue: String);
+procedure TSQLDBLibraryLoader.SetCType(const AValue: String);
 begin
   if FCType=AValue then Exit;
   CheckDisabled;
@@ -56,7 +70,7 @@ begin
     SetDefaultLibraryName;
 end;
 
-procedure TSQLDBLibraryLoader.SetEnabled(AValue: Boolean);
+procedure TSQLDBLibraryLoader.SetEnabled(aValue: Boolean);
 begin
   if FEnabled=AValue then Exit;
   if (csLoading in ComponentState) then
@@ -68,7 +82,7 @@ begin
       UnloadLibrary;
 end;
 
-procedure TSQLDBLibraryLoader.SetLibraryName(AValue: String);
+procedure TSQLDBLibraryLoader.SetLibraryName(const AValue: String);
 begin
   if FLibraryName=AValue then Exit;
   CheckDisabled;

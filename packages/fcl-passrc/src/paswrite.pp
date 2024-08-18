@@ -122,6 +122,9 @@ type
     procedure WriteImplCommand(ACommand: TPasImplCommand);virtual;
     procedure WriteImplCommands(ACommands: TPasImplCommands); virtual;
     procedure WriteImplIfElse(AIfElse: TPasImplIfElse); virtual;
+    procedure WriteImplCaseOf(ACaseOf: TPasImplCaseOf); virtual;
+    procedure WriteImplCaseStatement(ACaseStatement: TPasImplCaseStatement;
+      AAutoInsertBeginEnd: boolean=true); virtual;
     procedure WriteImplForLoop(AForLoop: TPasImplForLoop); virtual;
     procedure WriteImplWhileDo(aWhileDo : TPasImplWhileDo); virtual;
     procedure WriteImplRepeatUntil(aRepeatUntil : TPasImplRepeatUntil); virtual;
@@ -433,9 +436,26 @@ procedure TPasWriter.WriteDummyExternalFunctions(aSection : TPasSection);
       end;
   end;
 
+  procedure DoCheckClass(C: TPasClassType; Force : Boolean; Prefix: String);
+  var
+    I: Integer;
+    M : TPasElement;
+
+  begin
+    if (C.ExternalName<>'') then
+      for I:=0 to C.Members.Count-1 do
+      begin
+        M:=TPasElement(C.members[I]);
+        if (M is TPasClassType) then
+          DoCheckClass(M as TPasClassType, Force, Prefix + C.SafeName + '.')
+        else
+          DoCheckElement(M, Force, Prefix + C.SafeName + '.');
+      end;
+  end;
+
 Var
-  I,J : Integer;
-  E,M : TPasElement;
+  I : Integer;
+  E : TPasElement;
   C : TPasClassType;
 
 begin
@@ -447,15 +467,7 @@ begin
     E:=TPasElement(aSection.Declarations[i]);
     DoCheckElement(E,False,'');
     if (E is TPasClassType) then
-      begin
-      C:=E as TPasClassType;
-      if (C.ExternalName<>'') then
-        For J:=0 to C.Members.Count-1 do
-          begin
-          M:=TPasElement(C.members[J]);
-          DoCheckElement(M,True,C.SafeName+'.');
-          end;
-      end;
+      DoCheckClass(E as TPasClassType, True, '');
     end;
   Addln;
   Addln('// end of dummy implementations');
@@ -1196,6 +1208,8 @@ begin
     end
   else if AElement.ClassType = TPasImplIfElse then
     WriteImplIfElse(TPasImplIfElse(AElement))
+  else if AElement.InheritsFrom(TPasImplCaseOf) then
+    WriteImplCaseOf(TPasImplCaseOf(aElement))
   else if AElement.ClassType = TPasImplForLoop then
     WriteImplForLoop(TPasImplForLoop(AElement))
   else if AElement.InheritsFrom(TPasImplWhileDo) then
@@ -1241,31 +1255,41 @@ begin
 end;
 
 procedure TPasWriter.WriteImplIfElse(AIfElse: TPasImplIfElse);
+
+Var
+  DoBeginEnd : Boolean;
+
 begin
   Add('if ' + AIfElse.Condition + ' then');
   if Assigned(AIfElse.IfBranch) then
-  begin
+    begin
     AddLn;
-    if (AIfElse.IfBranch.ClassType = TPasImplCommands) or
-      (AIfElse.IfBranch.ClassType = TPasImplBlock) then
+    DoBeginEnd:=(AIfElse.IfBranch.ClassType = TPasImplCommands) or
+                (AIfElse.IfBranch.ClassType = TPasImplBlock) or
+                Assigned(aIfElse.ElseBranch);
+    if DoBeginEnd then
       AddLn('begin');
     IncIndent;
-    WriteImplElement(AIfElse.IfBranch, False);
+    if AIfElse.IfBranch is TPasImplBeginBlock then
+       WriteImplBlock(TPasImplBeginBlock(AIfElse.IfBranch))
+     else
+       WriteImplElement(AIfElse.IfBranch, False);
     DecIndent;
-    if (AIfElse.IfBranch.ClassType = TPasImplCommands) or
-      (AIfElse.IfBranch.ClassType = TPasImplBlock) then
+    if DoBeginEnd then
+      begin
       if Assigned(AIfElse.ElseBranch) then
         Add('end ')
       else
         AddLn('end;')
+      end
     else
       if Assigned(AIfElse.ElseBranch) then
         AddLn;
-  end else
-    if not Assigned(AIfElse.ElseBranch) then
-      AddLn(';')
-    else
-      AddLn;
+    end
+  else if not Assigned(AIfElse.ElseBranch) then
+    AddLn(';')
+  else
+    AddLn;
 
   if Assigned(AIfElse.ElseBranch) then
     if AIfElse.ElseBranch.ClassType = TPasImplIfElse then
@@ -1277,12 +1301,78 @@ begin
       AddLn('else');
       IncIndent;
       WriteImplElement(AIfElse.ElseBranch, True);
-      if (not Assigned(AIfElse.Parent)) or
+{      if (not Assigned(AIfElse.Parent)) or
         (AIfElse.Parent.ClassType <> TPasImplIfElse) or
         (TPasImplIfElse(AIfElse.Parent).IfBranch <> AIfElse) then
-        AddLn(';');
+        AddLn(';');}
       DecIndent;
     end;
+end;
+
+procedure TPasWriter.WriteImplCaseStatement(ACaseStatement: TPasImplCaseStatement;AAutoInsertBeginEnd:boolean=true);
+var
+  i: Integer;
+begin
+  for i := 0 to ACaseStatement.Expressions.Count - 1 do
+     begin
+       if i>0 then add(', ');
+       add(GetExpr(TPasExpr(ACaseStatement.Expressions[i])))
+     end;
+  add(': ');
+  IncIndent;
+  //JC: If no body is assigned, omit the whole block
+  if assigned(ACaseStatement.Body) then
+    begin
+      if AAutoInsertBeginEnd then
+        begin
+          addLn('begin');
+          IncIndent;
+        end;
+      //JC: if the body already is a begin-end-Block, the begin of that block is omitted
+      if ACaseStatement.Body is TPasImplBeginBlock then
+         WriteImplBlock(TPasImplBeginBlock(ACaseStatement.Body))
+       else
+         WriteImplElement(ACaseStatement.Body,false);
+      if AAutoInsertBeginEnd then
+        begin
+          DecIndent;
+          Add('end'); //JC: No semicolon or Linefeed here !
+          // Otherwise there would be a problem with th else-statement.
+        end;
+    end;
+  DecIndent;
+end;
+
+procedure TPasWriter.WriteImplCaseOf(ACaseOf: TPasImplCaseOf);
+var
+  i: Integer;
+
+begin
+  Add('case %s of', [GetExpr(ACaseOf.CaseExpr)]);
+  IncIndent;
+  for i := 0 to ACaseOf.Elements.Count - 1 do
+  begin
+    if TPasElement(ACaseOf.Elements[i]) is TPasImplCaseStatement then
+      begin
+        if i >0 then
+          AddLn(';')
+        else
+          AddLn;
+        WriteImplCaseStatement(TPasImplCaseStatement(ACaseOf.Elements[i]),True);
+      end;
+  end;
+  if assigned(ACaseOf.ElseBranch) then
+    begin
+      AddLn;
+      AddLn('else');
+      IncIndent;
+      WriteImplBlock(ACaseOf.ElseBranch);
+      DecIndent;
+    end
+  else
+    AddLn(';');
+  DecIndent;
+  AddLn('end;');
 end;
 
 
@@ -1327,9 +1417,14 @@ end;
 
 procedure TPasWriter.WriteImplRaise(aRaise: TPasImplRaise);
 begin
-  Add('raise %s',[GetExpr(aRaise.ExceptObject)]);
-  if aRaise.ExceptAddr<>Nil then
-    Add(' at %s',[GetExpr(aRaise.ExceptAddr)]);
+  if assigned(aRaise.ExceptObject) then
+    begin
+    Add('raise %s',[GetExpr(aRaise.ExceptObject)]);
+    if aRaise.ExceptAddr<>Nil then
+      Add(' at %s',[GetExpr(aRaise.ExceptAddr)]);
+    end
+  else
+    Add('raise');
   Addln(';');
 end;
 
@@ -1381,15 +1476,21 @@ begin
   With aForLoop do
     begin
     If LoopType=ltIn then
-      AddLn('for %s in %s do',[GetExpr(VariableName),GetExpr(StartExpr)])
+      Add('for %s in %s do',[GetExpr(VariableName),GetExpr(StartExpr)])
     else
-      AddLn('for %s:=%s %s %s do',[GetExpr(VariableName),GetExpr(StartExpr),
+      Add('for %s:=%s %s %s do',[GetExpr(VariableName),GetExpr(StartExpr),
                                    ToNames[Down],GetExpr(EndExpr)]);
-    IncIndent;
-    WriteImplElement(Body, True);
-    DecIndent;
-    if (Body is TPasImplBlock) and
-       (Body is TPasImplCommands) then
+    if assigned(Body) then
+      begin
+        AddLn;
+        IncIndent;
+        WriteImplElement(Body, True);
+        DecIndent;
+        if (Body is TPasImplBlock) and
+           (Body is TPasImplCommands) then
+          AddLn(';');
+      end
+    else
       AddLn(';');
     end;
 end;
@@ -1400,12 +1501,18 @@ procedure TPasWriter.WriteImplWhileDo(aWhileDo: TPasImplWhileDo);
 begin
   With aWhileDo do
     begin
-    AddLn('While %s do',[GetExpr(ConditionExpr)]);
-    IncIndent;
-    WriteImplElement(Body, True);
-    DecIndent;
-    if (Body.InheritsFrom(TPasImplBlock)) and
-       (Body.InheritsFrom(TPasImplCommands)) then
+    Add('While %s do',[GetExpr(ConditionExpr)]);
+    if assigned(Body) then
+      begin
+        AddLn;
+        IncIndent;
+        WriteImplElement(Body, True);
+        DecIndent;
+        if (Body.InheritsFrom(TPasImplBlock)) and
+           (Body.InheritsFrom(TPasImplCommands)) then
+          AddLn(';');
+      end
+    else
       AddLn(';');
     end;
 end;
@@ -1561,7 +1668,7 @@ procedure WritePasFile(AElement: TPasElement; const AFilename: string);
 var
   Stream: TFileStream;
 begin
-  Stream := TFileStream.Create(AFilename, fmCreate);
+  Stream := TFileStream.Create(AFilename, fmCreate or fmShareDenyNone);
   try
     WritePasFile(AElement, Stream);
   finally

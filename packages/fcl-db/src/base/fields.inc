@@ -63,7 +63,35 @@ end;
 destructor TFieldDef.Destroy;
 
 begin
-  Inherited destroy;
+  Inherited Destroy;
+end;
+
+function TFieldDef.AddChild: TFieldDef;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TFieldDef.AddChild
+  // Adds a new TFieldDef object to the ChildDefs array.
+end;
+
+function TFieldDef.GetChildDefs: TFieldDefs;
+begin
+  Result:=nil;
+end;
+
+procedure TFieldDef.SetChildDefs(AValue: TFieldDefs);
+begin
+
+end;
+
+function TFieldDef.HasChildDefs: Boolean;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TFieldDef.HasChildDefs
+  Result:=False;
+end;
+
+function TFieldDef.GetParentDef: TFieldDef;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TFieldDef.ParentDef
+  Result:=nil;
 end;
 
 procedure TFieldDef.Assign(APersistent: TPersistent);
@@ -89,7 +117,7 @@ begin
     inherited Assign(APersistent);
 end;
 
-function TFieldDef.CreateField(AOwner: TComponent): TField;
+function TFieldDef.CreateField(AOwner: TComponent; ParentField: TObjectField = nil; const FieldName: string = ''; CreateChildren: Boolean = True): TField;
 
 var TheField : TFieldClass;
 
@@ -147,6 +175,11 @@ procedure TFieldDef.SetPrecision(const AValue: Longint);
 begin
   FPrecision := AValue;
   Changed(False);
+end;
+
+function TFieldDef.GetSize: Integer;
+begin
+  Result := FSize;
 end;
 
 procedure TFieldDef.SetSize(const AValue: Integer);
@@ -249,9 +282,11 @@ begin
   Result:=TFieldDef;
 end;
 
-constructor TFieldDefs.Create(ADataSet: TDataSet);
+constructor TFieldDefs.Create(AOwner: TPersistent);
+var ADataSet: TDataSet;
 begin
-  Inherited Create(ADataset, Owner, FieldDefClass);
+  ADataSet := AOwner as TDataSet;
+  Inherited Create(ADataset, AOwner, FieldDefClass);
 end;
 
 function TFieldDefs.Add(const AName: string; ADataType: TFieldType; ASize, APrecision: Integer;
@@ -340,6 +375,7 @@ Const
   SFloat = 'Float';
   SInteger = 'Integer';
   SLargeInt = 'LargeInt';
+  SLongWord = 'LongWord';
   SVariant = 'Variant';
   SString = 'String';
   SBytes = 'Bytes';
@@ -370,7 +406,7 @@ end;
 function TField.AccessError(const TypeName: string): EDatabaseError;
 
 begin
-  Result:=EDatabaseError.CreateFmt(SinvalidTypeConversion,[TypeName,FFieldName]);
+  Result:=EDatabaseError.CreateFmt(SInvalidTypeConversion,[TypeName,FFieldName]);
 end;
 
 procedure TField.Assign(Source: TPersistent);
@@ -513,13 +549,23 @@ end;
 function TField.GetAsDateTime: TDateTime;
 
 begin
-  raise AccessError(SdateTime);
+  raise AccessError(SDateTime);
+end;
+
+function TField.GetAsExtended: Extended;
+begin
+  Result := GetAsFloat;
 end;
 
 function TField.GetAsFloat: Double;
 
 begin
   raise AccessError(SDateTime);
+end;
+
+function TField.GetAsSingle: Single;
+begin
+  Result := GetAsFloat;
 end;
 
 function TField.GetAsLargeInt: Largeint;
@@ -533,6 +579,11 @@ begin
   Result:=GetAsInteger;
 end;
 
+function TField.GetAsLongWord: LongWord;
+begin
+  raise AccessError(SLongWord);
+end;
+
 function TField.GetAsInteger: Longint;
 
 begin
@@ -544,7 +595,6 @@ function TField.GetAsVariant: variant;
 begin
   raise AccessError(SVariant);
 end;
-
 
 function TField.GetAsString: string;
 begin
@@ -718,7 +768,7 @@ procedure TField.CalcLookupValue;
 begin
   if FLookupCache then
     Value := LookupList.ValueOfKey(FDataSet.FieldValues[FKeyFields])
-  else if Assigned(FLookupDataSet) and FDataSet.Active then
+  else if Assigned(FLookupDataSet) and FLookupDataSet.Active then
     Value := FLookupDataSet.Lookup(FLookupKeyfields, FDataSet.FieldValues[FKeyFields], FLookupresultField);
 end;
 
@@ -866,6 +916,16 @@ begin
   Raise AccessError(SDateTime);
 end;
 
+procedure TField.SetAsSingle(AValue: Single);
+begin
+  SetAsFloat(AValue);
+end;
+
+procedure TField.SetAsExtended(AValue: Extended);
+begin
+  SetAsFloat(AValue);
+end;
+
 procedure TField.SetAsFloat(AValue: Double);
 
 begin
@@ -890,6 +950,11 @@ end;
 procedure TField.SetAsLongint(AValue: Longint);
 begin
   SetAsInteger(AValue);
+end;
+
+procedure TField.SetAsLongWord(AValue: LongWord);
+begin
+  raise AccessError(SLongWord);
 end;
 
 procedure TField.SetAsInteger(AValue: Longint);
@@ -1089,6 +1154,11 @@ begin
   FieldKind := ValueToLookupMap[AValue];
 end;
 
+procedure TField.SetParentField(AField: TObjectField);
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TField.ParentField
+end;
+
 procedure TField.SetReadOnly(const AValue: Boolean);
 begin
   if (FReadOnly<>AValue) then
@@ -1171,6 +1241,11 @@ function TStringField.GetAsLargeInt: Largeint;
 
 begin
   Result:=StrToInt64(GetAsString);
+end;
+
+function TStringField.GetAsLongWord: LongWord;
+begin
+  Result:=StrToDWord(GetAsString);
 end;
 
 function TStringField.GetAsString: String;
@@ -1307,6 +1382,11 @@ end;
 
 procedure TStringField.SetAsLargeInt(AValue: Largeint);
 
+begin
+  SetAsString(IntToStr(AValue));
+end;
+
+procedure TStringField.SetAsLongWord(AValue: LongWord);
 begin
   SetAsString(IntToStr(AValue));
 end;
@@ -1518,10 +1598,10 @@ begin
     DatabaseErrorFmt(SInvalidFieldSize,[AValue]);
 end;
 
-procedure TNumericField.RangeError(AValue, Min, Max: Double);
+procedure TNumericField.RangeError(const AValue, Min, Max: Extended);
 
 begin
-  DatabaseErrorFmt(SFieldError+SRangeError2,[DisplayName,AValue,Min,Max]);
+  DatabaseErrorFmt(SFieldError+SRangeError2, [DisplayName,AValue,Min,Max]);
 end;
 
 procedure TNumericField.SetDisplayFormat(const AValue: string);
@@ -1566,7 +1646,7 @@ begin
   SetDataType(ftInteger);
   FMinRange:=Low(LongInt);
   FMaxRange:=High(LongInt);
-  FValidchars:=['+','-','0'..'9'];
+  FValidChars:=['+','-','0'..'9'];
 end;
 
 function TLongintField.GetAsFloat: Double;
@@ -1585,6 +1665,11 @@ function TLongintField.GetAsInteger: Longint;
 begin
   If Not GetValue(Result) then
     Result:=0;
+end;
+
+function TLongintField.GetAsLongWord: LongWord;
+begin
+  Result:=GetAsInteger;
 end;
 
 function TLongintField.GetAsVariant: Variant;
@@ -1621,7 +1706,7 @@ var l : longint;
     fmt : string;
 
 begin
-  Atext:='';
+  AText:='';
   If Not GetValue(l) then exit;
   If ADisplayText or (FEditFormat='') then
     fmt:=FDisplayFormat
@@ -1636,17 +1721,17 @@ end;
 function TLongintField.GetValue(var AValue: Longint): Boolean;
 
 var L : Longint;
-    P : PLongint;
 
 begin
   L:=0;
-  P:=@L;
-  Result:=GetData(P);
+  Result:=GetData(@L);
   If Result then
     Case DataType of
-      ftInteger,ftAutoInc  : AValue:=PLongint(P)^;
-      ftWord               : AValue:=PWord(P)^;
-      ftSmallint           : AValue:=PSmallint(P)^;
+      ftInteger,ftAutoInc  : AValue:=PLongint(@L)^;
+      ftSmallint           : AValue:=PSmallint(@L)^;
+      ftWord               : AValue:=PWord(@L)^;
+      ftShortint           : AValue:=PShortint(@L)^;
+      ftByte               : AValue:=PByte(@L)^;
     end;
 end;
 
@@ -1673,6 +1758,11 @@ begin
       RangeError(AValue,FMinValue,FMaxValue)
     else
       RangeError(AValue,FMinRange,FMaxRange);
+end;
+
+procedure TLongintField.SetAsLongWord(AValue: LongWord);
+begin
+  SetAsInteger(AValue);
 end;
 
 procedure TLongintField.SetVarValue(const AValue: Variant);
@@ -1724,10 +1814,229 @@ begin
     RangeError(AValue,FMinRange,FMaxRange);
 end;
 
+{ TShortintField }
+
+function TShortintField.GetDataSize: Integer;
+begin
+  Result:=SizeOf(Shortint);
+end;
+
+constructor TShortintField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  SetDataType(ftShortInt);
+  FMinRange:=Low(ShortInt);
+  FMaxRange:=High(ShortInt);
+end;
+
+{ TByteField }
+
+function TByteField.GetDataSize: Integer;
+begin
+  Result:=SizeOf(Byte);
+end;
+
+constructor TByteField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  SetDataType(ftByte);
+  FMinRange:=Low(Byte);
+  FMaxRange:=High(Byte);
+  FValidChars:=['+','0'..'9'];
+end;
+
+{ TSmallintField }
+
+function TSmallintField.GetDataSize: Integer;
+
+begin
+  Result:=SizeOf(SmallInt);
+end;
+
+constructor TSmallintField.Create(AOwner: TComponent);
+
+begin
+  inherited Create(AOwner);
+  SetDataType(ftSmallInt);
+  FMinRange:=-32768;
+  FMaxRange:=32767;
+end;
+
+
+{ TWordField }
+
+function TWordField.GetDataSize: Integer;
+
+begin
+  Result:=SizeOf(Word);
+end;
+
+constructor TWordField.Create(AOwner: TComponent);
+
+begin
+  inherited Create(AOwner);
+  SetDataType(ftWord);
+  FMinRange:=0;
+  FMaxRange:=65535;
+  FValidChars:=['+','0'..'9'];
+end;
+
+{ TAutoIncField }
+
+constructor TAutoIncField.Create(AOwner: TComponent);
+
+begin
+  Inherited Create(AOWner);
+  SetDataType(ftAutoInc);
+end;
+
+Procedure TAutoIncField.SetAsInteger(AValue: Longint);
+
+begin
+  // Some databases allows insertion of explicit values into identity columns
+  // (some of them also allows (some not) updating identity columns)
+  // So allow it at client side and leave check for server side
+  //if not(FDataSet.State in [dsFilter,dsSetKey,dsInsert]) then
+  //  DataBaseError(SCantSetAutoIncFields);
+  inherited;
+end;
+
+{ ---------------------------------------------------------------------
+    TLongWordField
+  ---------------------------------------------------------------------}
+
+constructor TLongWordField.Create(AOwner: TComponent);
+begin
+  Inherited Create(AOwner);
+  SetDataType(ftLongWord);
+  FValidChars:=['+','0'..'9'];
+end;
+
+function TLongWordField.CheckRange(AValue: LargeInt): Boolean;
+begin
+  if (FMinValue<>0) or (FMaxValue<>0) then
+    Result := (AValue>=FMinValue) and (AValue<=FMaxValue)
+  else
+    Result := (AValue>=0) and (AValue<=High(LongWord));
+end;
+
+procedure TLongWordField.SetMinValue(AValue: LongWord);
+begin
+  FMinValue:=AValue
+end;
+
+procedure TLongWordField.SetMaxValue(AValue: LongWord);
+begin
+  FMaxValue:=AValue
+end;
+
+function TLongWordField.GetAsFloat: Double;
+begin
+  Result:=GetAsLongWord;
+end;
+
+function TLongWordField.GetAsInteger: Longint;
+begin
+  Result:=GetAsLongWord;
+end;
+
+function TLongWordField.GetAsLargeInt: Largeint;
+begin
+  Result:=GetAsLongWord;
+end;
+
+function TLongWordField.GetAsLongWord: LongWord;
+begin
+  if not GetValue(Result) then
+    Result:=0;
+end;
+
+function TLongWordField.GetAsString: string;
+begin
+  Result:=IntToStr(GetAsLongWord);
+end;
+
+function TLongWordField.GetAsVariant: variant;
+var L: LongWord;
+begin
+  If GetValue(L) then
+    Result:=L
+  else
+    Result:=Null;
+end;
+
+function TLongWordField.GetDataSize: Integer;
+begin
+  Result:=SizeOf(LongWord);
+end;
+
+procedure TLongWordField.GetText(var AText: string; ADisplayText: Boolean);
+var
+  L : LongWord;
+  fmt : string;
+begin
+  if GetValue(L) then
+    begin
+    if ADisplayText or (FEditFormat='') then
+      fmt:=FDisplayFormat
+    else
+      fmt:=FEditFormat;
+    if fmt<>'' then
+      AText:=FormatFloat(fmt,L)
+    else
+      Str(L,AText);
+    end
+  else
+    AText:='';
+end;
+
+function TLongWordField.GetValue(var AValue: LongWord): Boolean;
+begin
+  Result:=GetData(@AValue);
+end;
+
+procedure TLongWordField.SetAsFloat(AValue: Double);
+begin
+  SetAsLargeInt(Round(AValue));
+end;
+
+procedure TLongWordField.SetAsInteger(AValue: Longint);
+begin
+  SetAsLargeInt(AValue);
+end;
+
+procedure TLongWordField.SetAsLargeInt(AValue: Largeint);
+begin
+  if (AValue>=0) and (AValue<=High(LongWord)) then
+    SetAsLongWord(AValue)
+  else
+    RangeError(AValue,0,High(LongWord));
+end;
+
+procedure TLongWordField.SetAsLongWord(AValue: LongWord);
+begin
+  if CheckRange(AValue) then
+    SetData(@AValue)
+  else
+    RangeError(AValue,FMinValue,FMaxValue);
+end;
+
+procedure TLongWordField.SetAsString(const AValue: string);
+begin
+  if AValue='' then
+    Clear
+  else
+    SetAsLongWord(StrToDWord(AValue));
+end;
+
+procedure TLongWordField.SetVarValue(const AValue: Variant);
+begin
+  SetAsLongWord(AValue);
+end;
+
 { ---------------------------------------------------------------------
     TLargeintField
   ---------------------------------------------------------------------}
-
 
 constructor TLargeintField.Create(AOwner: TComponent);
 
@@ -1736,7 +2045,7 @@ begin
   SetDataType(ftLargeint);
   FMinRange:=Low(Largeint);
   FMaxRange:=High(Largeint);
-  FValidchars:=['+','-','0'..'9'];
+  FValidChars:=['+','-','0'..'9'];
 end;
 
 function TLargeintField.GetAsFloat: Double;
@@ -1750,6 +2059,11 @@ function TLargeintField.GetAsLargeInt: Largeint;
 begin
   If Not GetValue(Result) then
     Result:=0;
+end;
+
+function TLargeintField.GetAsLongWord: LongWord;
+begin
+  Result:=GetAsLargeInt;
 end;
 
 function TLargeIntField.GetAsVariant: Variant;
@@ -1828,6 +2142,11 @@ begin
     RangeError(AValue,FMinValue,FMaxValue);
 end;
 
+procedure TLargeintField.SetAsLongWord(AValue: LongWord);
+begin
+  SetAsLargeInt(AValue);
+end;
+
 procedure TLargeintField.SetAsInteger(AValue: Longint);
 
 begin
@@ -1884,62 +2203,6 @@ begin
     RangeError(AValue,FMinRange,FMaxRange);
 end;
 
-{ TSmallintField }
-
-function TSmallintField.GetDataSize: Integer;
-
-begin
-  Result:=SizeOf(SmallInt);
-end;
-
-constructor TSmallintField.Create(AOwner: TComponent);
-
-begin
-  inherited Create(AOwner);
-  SetDataType(ftSmallInt);
-  FMinRange:=-32768;
-  FMaxRange:=32767;
-end;
-
-
-{ TWordField }
-
-function TWordField.GetDataSize: Integer;
-
-begin
-  Result:=SizeOf(Word);
-end;
-
-constructor TWordField.Create(AOwner: TComponent);
-
-begin
-  inherited Create(AOwner);
-  SetDataType(ftWord);
-  FMinRange:=0;
-  FMaxRange:=65535;
-  FValidchars:=['+','0'..'9'];
-end;
-
-{ TAutoIncField }
-
-constructor TAutoIncField.Create(AOwner: TComponent);
-
-begin
-  Inherited Create(AOWner);
-  SetDataType(ftAutoInc);
-end;
-
-Procedure TAutoIncField.SetAsInteger(AValue: Longint);
-
-begin
-  // Some databases allows insertion of explicit values into identity columns
-  // (some of them also allows (some not) updating identity columns)
-  // So allow it at client side and leave check for server side
-  //if not(FDataSet.State in [dsFilter,dsSetKey,dsInsert]) then
-  //  DataBaseError(SCantSetAutoIncFields);
-  inherited;
-end;
-
 { TFloatField }
 
 procedure TFloatField.SetCurrency(const AValue: Boolean);
@@ -1972,18 +2235,12 @@ begin
     Result:=0.0;
 end;
 
-function TFloatField.GetAsVariant: Variant;
-
-var f : Double;
-
+function TFloatField.GetAsLargeInt: LargeInt;
 begin
-  If GetData(@f) then
-    Result := f
-  else
-    Result:=Null;
+  Result:=Round(GetAsFloat);
 end;
 
-function TFloatField.GetAsLargeInt: LargeInt;
+function TFloatField.GetAsLongWord: LongWord;
 begin
   Result:=Round(GetAsFloat);
 end;
@@ -2005,6 +2262,17 @@ begin
     Result:='';
 end;
 
+function TFloatField.GetAsVariant: Variant;
+
+var f : Double;
+
+begin
+  If GetData(@f) then
+    Result := f
+  else
+    Result:=Null;
+end;
+
 function TFloatField.GetDataSize: Integer;
 
 begin
@@ -2014,15 +2282,15 @@ end;
 procedure TFloatField.GetText(var AText: string; ADisplayText: Boolean);
 
 Var
-    fmt : string;
-    E : Double;
-    Digits : integer;
-    ff: TFloatFormat;
+  Fmt : string;
+  f : Double;
+  Digits : integer;
+  ff: TFloatFormat;
 
 begin
   AText:='';
-  If Not GetData(@E) then exit;
-  If ADisplayText or (Length(FEditFormat) = 0) Then
+  if not GetData(@f) then exit;
+  if ADisplayText or (Length(FEditFormat) = 0) Then
     Fmt:=FDisplayFormat
   else
     Fmt:=FEditFormat;
@@ -2032,18 +2300,17 @@ begin
     ff := ffGeneral
   else
     begin
-    Digits := CurrencyDecimals;
+    Digits := DefaultFormatSettings.CurrencyDecimals;
     if ADisplayText then
       ff := ffCurrency
     else
       ff := ffFixed;
     end;
 
-
-  If fmt<>'' then
-    AText:=FormatFloat(fmt,E)
+  if Fmt<>'' then
+    AText:=FormatFloat(Fmt, f)
   else
-    AText:=FloatToStrF(E,ff,FPrecision,Digits);
+    AText:=FloatToStrF(f, ff, FPrecision, Digits);
 end;
 
 procedure TFloatField.SetAsBCD(const AValue: TBCD);
@@ -2061,6 +2328,11 @@ begin
 end;
 
 procedure TFloatField.SetAsLargeInt(AValue: LargeInt);
+begin
+  SetAsFloat(AValue);
+end;
+
+procedure TFloatField.SetAsLongWord(AValue: LongWord);
 begin
   SetAsFloat(AValue);
 end;
@@ -2097,13 +2369,13 @@ begin
   Inherited Create(AOwner);
   SetDataType(ftFloat);
   FPrecision:=15;
-  FValidChars := [DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
+  FValidChars := [DefaultFormatSettings.DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
 end;
 
-Function TFloatField.CheckRange(AValue : Double) : Boolean;
+function TFloatField.CheckRange(AValue : Double) : Boolean;
 
 begin
-  If (FMinValue<>0) or (FMaxValue<>0) then
+  if (FMinValue<>0) or (FMaxValue<>0) then
     Result:=(AValue>=FMinValue) and (AValue<=FMaxValue)
   else
     Result:=True;
@@ -2117,6 +2389,340 @@ begin
   inherited Create(AOwner);
   SetDataType(ftCurrency);
   Currency := True;
+end;
+
+{ TExtendedField }
+
+constructor TExtendedField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  SetDataType(ftExtended);
+  FPrecision:=15;
+  FValidChars := [DefaultFormatSettings.DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
+end;
+
+procedure TExtendedField.SetPrecision(const AValue: Longint);
+begin
+  if (AValue = -1) or (AValue > 1) then
+    FPrecision := AValue
+  else
+    FPrecision := 2;
+end;
+
+function TExtendedField.GetAsBCD: TBCD;
+var e: Extended;
+begin
+  if GetData(@e) then
+    Result := DoubleToBCD(e)
+  else
+    Result := NullBCD;
+end;
+
+function TExtendedField.GetAsExtended: Extended;
+begin
+  if not GetData(@Result) then
+    Result := 0.0;
+end;
+
+function TExtendedField.GetAsFloat: Double;
+begin
+  Result := GetAsExtended;
+end;
+
+function TExtendedField.GetAsLargeInt: LargeInt;
+begin
+  Result := Round(GetAsExtended);
+end;
+
+function TExtendedField.GetAsLongWord: LongWord;
+begin
+  Result := Round(GetAsExtended);
+end;
+
+function TExtendedField.GetAsInteger: Longint;
+begin
+  Result := Round(GetAsExtended);
+end;
+
+function TExtendedField.GetAsString: string;
+var e: Extended;
+begin
+  if GetData(@e) then
+    Result := FloatToStr(e)
+  else
+    Result := '';
+end;
+
+function TExtendedField.GetAsVariant: Variant;
+var e: Extended;
+begin
+  if GetData(@e) then
+    Result := e
+  else
+    Result := Null;
+end;
+
+function TExtendedField.GetDataSize: Integer;
+begin
+  Result:=SizeOf(Extended);
+end;
+
+procedure TExtendedField.GetText(var AText: string; ADisplayText: Boolean);
+var
+  Fmt: string;
+  e: Extended;
+  Digits: integer;
+  ff: TFloatFormat;
+begin
+  AText:='';
+  if not GetData(@e) then Exit;
+  if ADisplayText or (FEditFormat = '') then
+    Fmt := FDisplayFormat
+  else
+    Fmt := FEditFormat;
+
+  Digits := 0;
+  if not FCurrency then
+    ff := ffGeneral
+  else
+    begin
+    Digits := DefaultFormatSettings.CurrencyDecimals;
+    if ADisplayText then
+      ff := ffCurrency
+    else
+      ff := ffFixed;
+    end;
+
+  if Fmt<>'' then
+    AText := FormatFloat(Fmt, e)
+  else
+    AText := FloatToStrF(e, ff, FPrecision, Digits);
+end;
+
+procedure TExtendedField.SetAsBCD(const AValue: TBCD);
+begin
+  SetAsExtended(BCDToDouble(AValue));
+end;
+
+procedure TExtendedField.SetAsExtended(AValue: Extended);
+begin
+  if CheckRange(AValue) then
+    SetData(@AValue)
+  else
+    RangeError(AValue,FMinValue,FMaxValue);
+end;
+
+procedure TExtendedField.SetAsFloat(AValue: Double);
+begin
+  SetAsExtended(AValue);
+end;
+
+procedure TExtendedField.SetAsLargeInt(AValue: LargeInt);
+begin
+  SetAsExtended(AValue);
+end;
+
+procedure TExtendedField.SetAsLongWord(AValue: LongWord);
+begin
+  SetAsExtended(AValue);
+end;
+
+procedure TExtendedField.SetAsInteger(AValue: Longint);
+begin
+  SetAsExtended(AValue);
+end;
+
+procedure TExtendedField.SetAsString(const AValue: string);
+var e: Extended;
+begin
+  if AValue='' then
+    Clear
+  else
+    begin
+    if not TryStrToFloat(AValue, e) then
+      DatabaseErrorFmt(SNotAFloat, [AValue]);
+    SetAsExtended(e);
+    end;
+end;
+
+procedure TExtendedField.SetVarValue(const AValue: Variant);
+begin
+  SetAsExtended(AValue);
+end;
+
+function TExtendedField.CheckRange(AValue: Extended) : Boolean;
+begin
+  if (FMinValue<>0) or (FMaxValue<>0) then
+    Result := (AValue>=FMinValue) and (AValue<=FMaxValue)
+  else
+    Result := True;
+end;
+
+{ TSingleField }
+
+constructor TSingleField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  SetDataType(ftSingle);
+  FPrecision:=7;
+  FValidChars := [DefaultFormatSettings.DecimalSeparator, '+', '-', '0'..'9', 'E', 'e'];
+end;
+
+procedure TSingleField.SetPrecision(const AValue: Longint);
+begin
+  if (AValue = -1) or (AValue > 1) then
+    FPrecision := AValue
+  else
+    FPrecision := 2;
+end;
+
+function TSingleField.GetAsBCD: TBCD;
+var f: Single;
+begin
+  if GetData(@f) then
+    Result := DoubleToBCD(f)
+  else
+    Result := NullBCD;
+end;
+
+function TSingleField.GetAsSingle: Single;
+begin
+  if not GetData(@Result) then
+    Result := 0.0;
+end;
+
+function TSingleField.GetAsFloat: Double;
+begin
+  Result := GetAsSingle;
+end;
+
+function TSingleField.GetAsLargeInt: LargeInt;
+begin
+  Result := Round(GetAsSingle);
+end;
+
+function TSingleField.GetAsLongWord: LongWord;
+begin
+  Result := Round(GetAsSingle);
+end;
+
+function TSingleField.GetAsInteger: Longint;
+begin
+  Result := Round(GetAsSingle);
+end;
+
+function TSingleField.GetAsString: string;
+var f: Single;
+begin
+  if GetData(@f) then
+    Result := FloatToStr(f)
+  else
+    Result := '';
+end;
+
+function TSingleField.GetAsVariant: Variant;
+var f: Single;
+begin
+  if GetData(@f) then
+    Result := f
+  else
+    Result := Null;
+end;
+
+function TSingleField.GetDataSize: Integer;
+begin
+  Result:=SizeOf(Single);
+end;
+
+procedure TSingleField.GetText(var AText: string; ADisplayText: Boolean);
+var
+  Fmt: string;
+  f: Single;
+  Digits: integer;
+  ff: TFloatFormat;
+begin
+  AText:='';
+  if not GetData(@f) then Exit;
+  if ADisplayText or (FEditFormat = '') then
+    Fmt := FDisplayFormat
+  else
+    Fmt := FEditFormat;
+
+  Digits := 0;
+  if not FCurrency then
+    ff := ffGeneral
+  else
+    begin
+    Digits := DefaultFormatSettings.CurrencyDecimals;
+    if ADisplayText then
+      ff := ffCurrency
+    else
+      ff := ffFixed;
+    end;
+
+  if Fmt<>'' then
+    AText := FormatFloat(Fmt, f)
+  else
+    AText := FloatToStrF(f, ff, FPrecision, Digits);
+end;
+
+procedure TSingleField.SetAsBCD(const AValue: TBCD);
+begin
+  SetAsSingle(BCDToDouble(AValue));
+end;
+
+procedure TSingleField.SetAsSingle(AValue: Single);
+begin
+  if CheckRange(AValue) then
+    SetData(@AValue)
+  else
+    RangeError(AValue,FMinValue,FMaxValue);
+end;
+
+procedure TSingleField.SetAsFloat(AValue: Double);
+begin
+  SetAsSingle(AValue);
+end;
+
+procedure TSingleField.SetAsLargeInt(AValue: LargeInt);
+begin
+  SetAsSingle(AValue);
+end;
+
+procedure TSingleField.SetAsLongWord(AValue: LongWord);
+begin
+  SetAsSingle(AValue);
+end;
+
+procedure TSingleField.SetAsInteger(AValue: Longint);
+begin
+  SetAsSingle(AValue);
+end;
+
+procedure TSingleField.SetAsString(const AValue: string);
+var f: Single;
+begin
+  if AValue='' then
+    Clear
+  else
+    begin
+    if not TryStrToFloat(AValue, f) then
+      DatabaseErrorFmt(SNotAFloat, [AValue]);
+    SetAsSingle(f);
+    end;
+end;
+
+procedure TSingleField.SetVarValue(const AValue: Variant);
+begin
+  SetAsSingle(AValue);
+end;
+
+function TSingleField.CheckRange(AValue: Single) : Boolean;
+begin
+  if (FMinValue<>0) or (FMaxValue<>0) then
+    Result := (AValue>=FMinValue) and (AValue<=FMaxValue)
+  else
+    Result := True;
 end;
 
 { TBooleanField }
@@ -2194,7 +2800,14 @@ var Temp : string;
 begin
   Temp:=UpperCase(AValue);
   if Temp='' then
-    Clear
+    begin
+    if FDisplays[True,True]='' then
+      SetAsBoolean(True)
+    else if FDisplays[True,False]='' then
+      SetAsBoolean(False)
+    else
+      Clear
+    end
   else if pos(Temp, FDisplays[True,True])=1 then
     SetAsBoolean(True)
   else if pos(Temp, FDisplays[True,False])=1 then
@@ -2221,11 +2834,13 @@ Procedure TBooleanField.SetDisplayValues(const AValue : String);
 var I : longint;
 
 begin
+  if aValue='' then
+    DatabaseErrorFmt(SFieldError+SInvalidDisplayValues,[DisplayName,AValue]);
   If FDisplayValues<>AValue then
     begin
     I:=Pos(';',AValue);
-    If (I<2) or (I=Length(AValue)) then
-      DatabaseErrorFmt(SFieldError+SInvalidDisplayValues,[DisplayName,AValue]);
+    If I=0 then
+      I:=Length(aValue)+1;
     FdisplayValues:=AValue;
     // Store display values and their uppercase equivalents;
     FDisplays[False,True]:=Copy(AValue,1,I-1);
@@ -2722,7 +3337,7 @@ begin
   Inherited Create(AOwner);
   FMaxValue := 0;
   FMinValue := 0;
-  FValidChars := [DecimalSeparator, '+', '-', '0'..'9'];
+  FValidChars := [DefaultFormatSettings.DecimalSeparator, '+', '-', '0'..'9'];
   SetDataType(ftBCD);
   Precision := 18;
   Size := 4;
@@ -2742,7 +3357,7 @@ begin
   Inherited Create(AOwner);
   FMaxValue := 0;
   FMinValue := 0;
-  FValidChars := [DecimalSeparator, '+', '-', '0'..'9'];
+  FValidChars := [DefaultFormatSettings.DecimalSeparator, '+', '-', '0'..'9'];
   SetDataType(ftFMTBCD);
 // Max.precision for NUMERIC,DECIMAL datatypes supported by some databases:
 //  Firebird-18; Oracle,SqlServer-38; MySQL-65; PostgreSQL-1000
@@ -2801,6 +3416,11 @@ begin
     Result := BCDToInteger(bcd)
   else
     Result := 0;
+end;
+
+function TFMTBCDField.GetAsLongWord: LongWord;
+begin
+  Result:=GetAsLargeInt;
 end;
 
 function TFMTBCDField.GetAsInteger: Longint;
@@ -2898,9 +3518,14 @@ begin
   SetAsBCD(IntegerToBCD(AValue));
 end;
 
+procedure TFMTBCDField.SetAsLongWord(AValue: LongWord);
+begin
+  SetAsLargeInt(AValue);
+end;
+
 procedure TFMTBCDField.SetAsInteger(AValue: Longint);
 begin
-  SetAsBCD(IntegerToBCD(AValue));
+  SetAsLargeInt(AValue);
 end;
 
 procedure TFMTBCDField.SetAsString(const AValue: string);
@@ -3437,6 +4062,57 @@ end;
 procedure TVariantField.SetVarValue(const aValue: Variant);
 begin
   SetData(@aValue);
+end;
+
+{ TObjectField }
+
+function TObjectField.GetFieldCount: Integer;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.GetFieldCount
+  Result:=0;
+end;
+
+function TObjectField.GetFields: TFields;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.GetFields
+  Result := FFieldFields;
+end;
+
+function TObjectField.GetFieldValue(AIndex: Integer): Variant;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.GetFieldValue
+  Result:=NULL;
+end;
+
+procedure TObjectField.SetFieldValue(AIndex: Integer; const AValue: Variant);
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.SetFieldValue
+end;
+
+procedure TObjectField.SetParentField(AField: TObjectField);
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.SetParentField
+  inherited SetParentField(AField);
+end;
+
+function TObjectField.GetAsVariant: Variant;
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.GetAsVariant
+  Result:=NULL;
+end;
+
+procedure TObjectField.SetVarValue(const AValue: Variant);
+begin
+  // http://docwiki.embarcadero.com/Libraries/Sydney/en/Data.DB.TObjectField.SetVarValue
+end;
+
+{ TArrayField }
+
+constructor TArrayField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  SetDataType(ftArray);
+  Size := 10;
 end;
 
 { TFieldsEnumerator }

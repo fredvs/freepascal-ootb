@@ -43,16 +43,16 @@ uses
 
 type
   IComparer<T> = interface
-    function Compare(constref Left, Right: T): Integer; overload;
+    function Compare(const Left, Right: T): Integer; overload;
   end;
 
-  TOnComparison<T> = function(constref Left, Right: T): Integer of object;
-  TComparisonFunc<T> = function(constref Left, Right: T): Integer;
+  TOnComparison<T> = function(const Left, Right: T): Integer of object;
+  TComparisonFunc<T> = function(const Left, Right: T): Integer;
 
   TComparer<T> = class(TInterfacedObject, IComparer<T>)
   public
     class function Default: IComparer<T>; static;
-    function Compare(constref ALeft, ARight: T): Integer; virtual; abstract; overload;
+    function Compare(const ALeft, ARight: T): Integer; virtual; abstract; overload;
 
     class function Construct(const AComparison: TOnComparison<T>): IComparer<T>; overload;
     class function Construct(const AComparison: TComparisonFunc<T>): IComparer<T>; overload;
@@ -62,7 +62,7 @@ type
   private
     FComparison: TOnComparison<T>;
   public
-    function Compare(constref ALeft, ARight: T): Integer; override;
+    function Compare(const ALeft, ARight: T): Integer; override;
     constructor Create(AComparison: TOnComparison<T>);
   end;
 
@@ -70,17 +70,17 @@ type
   private
     FComparison: TComparisonFunc<T>;
   public
-    function Compare(constref ALeft, ARight: T): Integer; override;
+    function Compare(const ALeft, ARight: T): Integer; override;
     constructor Create(AComparison: TComparisonFunc<T>);
   end;
 
   IEqualityComparer<T> = interface
-    function Equals(constref ALeft, ARight: T): Boolean;
-    function GetHashCode(constref AValue: T): UInt32;
+    function Equals(const ALeft, ARight: T): Boolean;
+    function GetHashCode(const AValue: T): UInt32;
   end;
 
   IExtendedEqualityComparer<T> = interface(IEqualityComparer<T>)
-    procedure GetHashList(constref AValue: T; AHashList: PUInt32); // for double hashing and more
+    procedure GetHashList(const AValue: T; AHashList: PUInt32); // for double hashing and more
   end;
 
   ShortString1 = string[1];
@@ -125,37 +125,37 @@ type
   TCompare = class
   protected
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class function _Binary(constref ALeft, ARight): Integer;
+    class function _Binary(const ALeft, ARight): Integer;
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class function _DynArray(constref ALeft, ARight: Pointer): Integer;
+    class function _DynArray(const ALeft, ARight: Pointer): Integer;
   public
-    class function Integer(constref ALeft, ARight: Integer): Integer;
-    class function Int8(constref ALeft, ARight: Int8): Integer;
-    class function Int16(constref ALeft, ARight: Int16): Integer;
-    class function Int32(constref ALeft, ARight: Int32): Integer;
-    class function Int64(constref ALeft, ARight: Int64): Integer;
-    class function UInt8(constref ALeft, ARight: UInt8): Integer;
-    class function UInt16(constref ALeft, ARight: UInt16): Integer;
-    class function UInt32(constref ALeft, ARight: UInt32): Integer;
-    class function UInt64(constref ALeft, ARight: UInt64): Integer;
-    class function Single(constref ALeft, ARight: Single): Integer;
-    class function Double(constref ALeft, ARight: Double): Integer;
-    class function Extended(constref ALeft, ARight: Extended): Integer;
-    class function Currency(constref ALeft, ARight: Currency): Integer;
-    class function Comp(constref ALeft, ARight: Comp): Integer;
-    class function Binary(constref ALeft, ARight; const ASize: SizeInt): Integer;
-    class function DynArray(constref ALeft, ARight: Pointer; const AElementSize: SizeInt): Integer;
-    class function ShortString1(constref ALeft, ARight: ShortString1): Integer;
-    class function ShortString2(constref ALeft, ARight: ShortString2): Integer;
-    class function ShortString3(constref ALeft, ARight: ShortString3): Integer;
-    class function &String(constref ALeft, ARight: string): Integer;
-    class function ShortString(constref ALeft, ARight: ShortString): Integer;
-    class function AnsiString(constref ALeft, ARight: AnsiString): Integer;
-    class function WideString(constref ALeft, ARight: WideString): Integer;
-    class function UnicodeString(constref ALeft, ARight: UnicodeString): Integer;
-    class function Method(constref ALeft, ARight: TMethod): Integer;
-    class function Variant(constref ALeft, ARight: PVariant): Integer;
-    class function Pointer(constref ALeft, ARight: PtrUInt): Integer;
+    class function Integer(const ALeft, ARight: Integer): Integer;
+    class function Int8(const ALeft, ARight: Int8): Integer;
+    class function Int16(const ALeft, ARight: Int16): Integer;
+    class function Int32(const ALeft, ARight: Int32): Integer;
+    class function Int64(const ALeft, ARight: Int64): Integer;
+    class function UInt8(const ALeft, ARight: UInt8): Integer;
+    class function UInt16(const ALeft, ARight: UInt16): Integer;
+    class function UInt32(const ALeft, ARight: UInt32): Integer;
+    class function UInt64(const ALeft, ARight: UInt64): Integer;
+    class function Single(const ALeft, ARight: Single): Integer;
+    class function Double(const ALeft, ARight: Double): Integer;
+    class function Extended(const ALeft, ARight: Extended): Integer;
+    class function Currency(const ALeft, ARight: Currency): Integer;
+    class function Comp(const ALeft, ARight: Comp): Integer;
+    class function Binary(const ALeft, ARight; const ASize: SizeInt): Integer;
+    class function DynArray(const ALeft, ARight: Pointer; const AElementSize: SizeInt): Integer;
+    class function ShortString1(const ALeft, ARight: ShortString1): Integer;
+    class function ShortString2(const ALeft, ARight: ShortString2): Integer;
+    class function ShortString3(const ALeft, ARight: ShortString3): Integer;
+    class function &String(const ALeft, ARight: string): Integer;
+    class function ShortString(const ALeft, ARight: ShortString): Integer;
+    class function AnsiString(const ALeft, ARight: AnsiString): Integer;
+    class function WideString(const ALeft, ARight: WideString): Integer;
+    class function UnicodeString(const ALeft, ARight: UnicodeString): Integer;
+    class function Method(const ALeft, ARight: TMethod): Integer;
+    class function Variant(const ALeft, ARight: PVariant): Integer;
+    class function Pointer(const ALeft, ARight: PtrUInt): Integer;
   end;
 
   { TEquals }
@@ -163,38 +163,38 @@ type
   TEquals = class
   protected
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class function _Binary(constref ALeft, ARight): Boolean;
+    class function _Binary(const ALeft, ARight): Boolean;
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class function _DynArray(constref ALeft, ARight: Pointer): Boolean;
+    class function _DynArray(const ALeft, ARight: Pointer): Boolean;
   public
-    class function Integer(constref ALeft, ARight: Integer): Boolean;
-    class function Int8(constref ALeft, ARight: Int8): Boolean;
-    class function Int16(constref ALeft, ARight: Int16): Boolean;
-    class function Int32(constref ALeft, ARight: Int32): Boolean;
-    class function Int64(constref ALeft, ARight: Int64): Boolean;
-    class function UInt8(constref ALeft, ARight: UInt8): Boolean;
-    class function UInt16(constref ALeft, ARight: UInt16): Boolean;
-    class function UInt32(constref ALeft, ARight: UInt32): Boolean;
-    class function UInt64(constref ALeft, ARight: UInt64): Boolean;
-    class function Single(constref ALeft, ARight: Single): Boolean;
-    class function Double(constref ALeft, ARight: Double): Boolean;
-    class function Extended(constref ALeft, ARight: Extended): Boolean;
-    class function Currency(constref ALeft, ARight: Currency): Boolean;
-    class function Comp(constref ALeft, ARight: Comp): Boolean;
-    class function Binary(constref ALeft, ARight; const ASize: SizeInt): Boolean;
-    class function DynArray(constref ALeft, ARight: Pointer; const AElementSize: SizeInt): Boolean;
-    class function &Class(constref ALeft, ARight: TObject): Boolean;
-    class function ShortString1(constref ALeft, ARight: ShortString1): Boolean;
-    class function ShortString2(constref ALeft, ARight: ShortString2): Boolean;
-    class function ShortString3(constref ALeft, ARight: ShortString3): Boolean;
-    class function &String(constref ALeft, ARight: String): Boolean;
-    class function ShortString(constref ALeft, ARight: ShortString): Boolean;
-    class function AnsiString(constref ALeft, ARight: AnsiString): Boolean;
-    class function WideString(constref ALeft, ARight: WideString): Boolean;
-    class function UnicodeString(constref ALeft, ARight: UnicodeString): Boolean;
-    class function Method(constref ALeft, ARight: TMethod): Boolean;
-    class function Variant(constref ALeft, ARight: PVariant): Boolean;
-    class function Pointer(constref ALeft, ARight: PtrUInt): Boolean;
+    class function Integer(const ALeft, ARight: Integer): Boolean;
+    class function Int8(const ALeft, ARight: Int8): Boolean;
+    class function Int16(const ALeft, ARight: Int16): Boolean;
+    class function Int32(const ALeft, ARight: Int32): Boolean;
+    class function Int64(const ALeft, ARight: Int64): Boolean;
+    class function UInt8(const ALeft, ARight: UInt8): Boolean;
+    class function UInt16(const ALeft, ARight: UInt16): Boolean;
+    class function UInt32(const ALeft, ARight: UInt32): Boolean;
+    class function UInt64(const ALeft, ARight: UInt64): Boolean;
+    class function Single(const ALeft, ARight: Single): Boolean;
+    class function Double(const ALeft, ARight: Double): Boolean;
+    class function Extended(const ALeft, ARight: Extended): Boolean;
+    class function Currency(const ALeft, ARight: Currency): Boolean;
+    class function Comp(const ALeft, ARight: Comp): Boolean;
+    class function Binary(const ALeft, ARight; const ASize: SizeInt): Boolean;
+    class function DynArray(const ALeft, ARight: Pointer; const AElementSize: SizeInt): Boolean;
+    class function &Class(const ALeft, ARight: TObject): Boolean;
+    class function ShortString1(const ALeft, ARight: ShortString1): Boolean;
+    class function ShortString2(const ALeft, ARight: ShortString2): Boolean;
+    class function ShortString3(const ALeft, ARight: ShortString3): Boolean;
+    class function &String(const ALeft, ARight: String): Boolean;
+    class function ShortString(const ALeft, ARight: ShortString): Boolean;
+    class function AnsiString(const ALeft, ARight: AnsiString): Boolean;
+    class function WideString(const ALeft, ARight: WideString): Boolean;
+    class function UnicodeString(const ALeft, ARight: UnicodeString): Boolean;
+    class function Method(const ALeft, ARight: TMethod): Boolean;
+    class function Variant(const ALeft, ARight: PVariant): Boolean;
+    class function Pointer(const ALeft, ARight: PtrUInt): Boolean;
   end;
 
   THashServiceClass = class of THashService;
@@ -239,34 +239,34 @@ type
       Hashes
 (**********************************************************************************************************************)
 
-    class function Int8         (constref AValue: Int8         ): UInt32; overload;
-    class function Int16        (constref AValue: Int16        ): UInt32; overload;
-    class function Int32        (constref AValue: Int32        ): UInt32; overload;
-    class function Int64        (constref AValue: Int64        ): UInt32; overload;
-    class function UInt8        (constref AValue: UInt8        ): UInt32; overload;
-    class function UInt16       (constref AValue: UInt16       ): UInt32; overload;
-    class function UInt32       (constref AValue: UInt32       ): UInt32; overload;
-    class function UInt64       (constref AValue: UInt64       ): UInt32; overload;
-    class function Single       (constref AValue: Single       ): UInt32; overload;
-    class function Double       (constref AValue: Double       ): UInt32; overload;
-    class function Extended     (constref AValue: Extended     ): UInt32; overload;
-    class function Currency     (constref AValue: Currency     ): UInt32; overload;
-    class function Comp         (constref AValue: Comp         ): UInt32; overload;
+    class function Int8         (const AValue: Int8         ): UInt32; overload;
+    class function Int16        (const AValue: Int16        ): UInt32; overload;
+    class function Int32        (const AValue: Int32        ): UInt32; overload;
+    class function Int64        (const AValue: Int64        ): UInt32; overload;
+    class function UInt8        (const AValue: UInt8        ): UInt32; overload;
+    class function UInt16       (const AValue: UInt16       ): UInt32; overload;
+    class function UInt32       (const AValue: UInt32       ): UInt32; overload;
+    class function UInt64       (const AValue: UInt64       ): UInt32; overload;
+    class function Single       (const AValue: Single       ): UInt32; overload;
+    class function Double       (const AValue: Double       ): UInt32; overload;
+    class function Extended     (const AValue: Extended     ): UInt32; overload;
+    class function Currency     (const AValue: Currency     ): UInt32; overload;
+    class function Comp         (const AValue: Comp         ): UInt32; overload;
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class function Binary       (constref AValue               ): UInt32; overload;
+    class function Binary       (const AValue               ): UInt32; overload;
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class function DynArray     (constref AValue: Pointer      ): UInt32; overload;
-    class function &Class       (constref AValue: TObject      ): UInt32; overload;
-    class function ShortString1 (constref AValue: ShortString1 ): UInt32; overload;
-    class function ShortString2 (constref AValue: ShortString2 ): UInt32; overload;
-    class function ShortString3 (constref AValue: ShortString3 ): UInt32; overload;
-    class function ShortString  (constref AValue: ShortString   ): UInt32; overload;
-    class function AnsiString   (constref AValue: AnsiString   ): UInt32; overload;
-    class function WideString   (constref AValue: WideString   ): UInt32; overload;
-    class function UnicodeString(constref AValue: UnicodeString): UInt32; overload;
-    class function Method       (constref AValue: TMethod      ): UInt32; overload;
-    class function Variant      (constref AValue: PVariant     ): UInt32; overload;
-    class function Pointer      (constref AValue: Pointer      ): UInt32; overload;
+    class function DynArray     (const AValue: Pointer      ): UInt32; overload;
+    class function &Class       (const AValue: TObject      ): UInt32; overload;
+    class function ShortString1 (const AValue: ShortString1 ): UInt32; overload;
+    class function ShortString2 (const AValue: ShortString2 ): UInt32; overload;
+    class function ShortString3 (const AValue: ShortString3 ): UInt32; overload;
+    class function ShortString  (const AValue: ShortString   ): UInt32; overload;
+    class function AnsiString   (const AValue: AnsiString   ): UInt32; overload;
+    class function WideString   (const AValue: WideString   ): UInt32; overload;
+    class function UnicodeString(const AValue: UnicodeString): UInt32; overload;
+    class function Method       (const AValue: TMethod      ): UInt32; overload;
+    class function Variant      (const AValue: PVariant     ): UInt32; overload;
+    class function Pointer      (const AValue: Pointer      ): UInt32; overload;
   public
     const MAX_HASHLIST_COUNT = 1;
     const HASH_FUNCTIONS_COUNT = 1;
@@ -295,35 +295,35 @@ type
       Hashes 2
 (**********************************************************************************************************************)
 
-    class procedure Int8         (constref AValue: Int8         ; AHashList: PUInt32); overload;
-    class procedure Int16        (constref AValue: Int16        ; AHashList: PUInt32); overload;
-    class procedure Int32        (constref AValue: Int32        ; AHashList: PUInt32); overload;
-    class procedure Int64        (constref AValue: Int64        ; AHashList: PUInt32); overload;
-    class procedure UInt8        (constref AValue: UInt8        ; AHashList: PUInt32); overload;
-    class procedure UInt16       (constref AValue: UInt16       ; AHashList: PUInt32); overload;
-    class procedure UInt32       (constref AValue: UInt32       ; AHashList: PUInt32); overload;
+    class procedure Int8         (const AValue: Int8         ; AHashList: PUInt32); overload;
+    class procedure Int16        (const AValue: Int16        ; AHashList: PUInt32); overload;
+    class procedure Int32        (const AValue: Int32        ; AHashList: PUInt32); overload;
+    class procedure Int64        (const AValue: Int64        ; AHashList: PUInt32); overload;
+    class procedure UInt8        (const AValue: UInt8        ; AHashList: PUInt32); overload;
+    class procedure UInt16       (const AValue: UInt16       ; AHashList: PUInt32); overload;
+    class procedure UInt32       (const AValue: UInt32       ; AHashList: PUInt32); overload;
 
-    class procedure UInt64       (constref AValue: UInt64       ; AHashList: PUInt32); overload;
-    class procedure Single       (constref AValue: Single       ; AHashList: PUInt32); overload;
-    class procedure Double       (constref AValue: Double       ; AHashList: PUInt32); overload;
-    class procedure Extended     (constref AValue: Extended     ; AHashList: PUInt32); overload;
-    class procedure Currency     (constref AValue: Currency     ; AHashList: PUInt32); overload;
-    class procedure Comp         (constref AValue: Comp         ; AHashList: PUInt32); overload;
+    class procedure UInt64       (const AValue: UInt64       ; AHashList: PUInt32); overload;
+    class procedure Single       (const AValue: Single       ; AHashList: PUInt32); overload;
+    class procedure Double       (const AValue: Double       ; AHashList: PUInt32); overload;
+    class procedure Extended     (const AValue: Extended     ; AHashList: PUInt32); overload;
+    class procedure Currency     (const AValue: Currency     ; AHashList: PUInt32); overload;
+    class procedure Comp         (const AValue: Comp         ; AHashList: PUInt32); overload;
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class procedure Binary       (constref AValue               ; AHashList: PUInt32); overload;
+    class procedure Binary       (const AValue               ; AHashList: PUInt32); overload;
     // warning ! self as PSpoofInterfacedTypeSizeObject
-    class procedure DynArray     (constref AValue: Pointer      ; AHashList: PUInt32); overload;
-    class procedure &Class       (constref AValue: TObject      ; AHashList: PUInt32); overload;
-    class procedure ShortString1 (constref AValue: ShortString1 ; AHashList: PUInt32); overload;
-    class procedure ShortString2 (constref AValue: ShortString2 ; AHashList: PUInt32); overload;
-    class procedure ShortString3 (constref AValue: ShortString3 ; AHashList: PUInt32); overload;
-    class procedure ShortString  (constref AValue: ShortString   ; AHashList: PUInt32); overload;
-    class procedure AnsiString   (constref AValue: AnsiString   ; AHashList: PUInt32); overload;
-    class procedure WideString   (constref AValue: WideString   ; AHashList: PUInt32); overload;
-    class procedure UnicodeString(constref AValue: UnicodeString; AHashList: PUInt32); overload;
-    class procedure Method       (constref AValue: TMethod      ; AHashList: PUInt32); overload;
-    class procedure Variant      (constref AValue: PVariant     ; AHashList: PUInt32); overload;
-    class procedure Pointer      (constref AValue: Pointer      ; AHashList: PUInt32); overload;
+    class procedure DynArray     (const AValue: Pointer      ; AHashList: PUInt32); overload;
+    class procedure &Class       (const AValue: TObject      ; AHashList: PUInt32); overload;
+    class procedure ShortString1 (const AValue: ShortString1 ; AHashList: PUInt32); overload;
+    class procedure ShortString2 (const AValue: ShortString2 ; AHashList: PUInt32); overload;
+    class procedure ShortString3 (const AValue: ShortString3 ; AHashList: PUInt32); overload;
+    class procedure ShortString  (const AValue: ShortString   ; AHashList: PUInt32); overload;
+    class procedure AnsiString   (const AValue: AnsiString   ; AHashList: PUInt32); overload;
+    class procedure WideString   (const AValue: WideString   ; AHashList: PUInt32); overload;
+    class procedure UnicodeString(const AValue: UnicodeString; AHashList: PUInt32); overload;
+    class procedure Method       (const AValue: TMethod      ; AHashList: PUInt32); overload;
+    class procedure Variant      (const AValue: PVariant     ; AHashList: PUInt32); overload;
+    class procedure Pointer      (const AValue: Pointer      ; AHashList: PUInt32); overload;
   public
     class procedure GetHashList(AKey: Pointer; ASize: SizeInt; AHashList: PUInt32; AOptions: TGetHashListOptions = []); virtual; abstract;
   end;
@@ -375,6 +375,8 @@ type
     class function SelectBinaryComparer(ATypeData: PTypeData; ASize: SizeInt): Pointer; static;
     class function SelectDynArrayComparer(ATypeData: PTypeData; ASize: SizeInt): Pointer; static;
   private const
+    UseBinaryMethods: set of TTypeKind = [tkUnknown, tkSet, tkFile, tkArray, tkRecord, tkObject];
+
     // IComparer VMT
     Comparer_Int8_VMT  : TComparerVMT = (STD_RAW_INTERFACE_METHODS; Compare: @TCompare.Int8);
     Comparer_Int16_VMT : TComparerVMT = (STD_RAW_INTERFACE_METHODS; Compare: @TCompare.Int16 );
@@ -758,13 +760,13 @@ type
     class function LookupExtendedEqualityComparer(ATypeInfo: PTypeInfo; ASize: SizeInt): Pointer; override;
   end;
 
-  TOnEqualityComparison<T> = function(constref ALeft, ARight: T): Boolean of object;
-  TEqualityComparisonFunc<T> = function(constref ALeft, ARight: T): Boolean;
+  TOnEqualityComparison<T> = function(const ALeft, ARight: T): Boolean of object;
+  TEqualityComparisonFunc<T> = function(const ALeft, ARight: T): Boolean;
 
-  TOnHasher<T> = function(constref AValue: T): UInt32 of object;
-  TOnExtendedHasher<T> = procedure(constref AValue: T; AHashList: PUInt32) of object;
-  THasherFunc<T> = function(constref AValue: T): UInt32;
-  TExtendedHasherFunc<T> = procedure(constref AValue: T; AHashList: PUInt32);
+  TOnHasher<T> = function(const AValue: T): UInt32 of object;
+  TOnExtendedHasher<T> = procedure(const AValue: T; AHashList: PUInt32) of object;
+  THasherFunc<T> = function(const AValue: T): UInt32;
+  TExtendedHasherFunc<T> = procedure(const AValue: T; AHashList: PUInt32);
 
   TEqualityComparer<T> = class(TInterfacedObject, IEqualityComparer<T>)
   public
@@ -776,8 +778,8 @@ type
     class function Construct(const AEqualityComparison: TEqualityComparisonFunc<T>;
       const AHasher: THasherFunc<T>): IEqualityComparer<T>; overload;
 
-    function Equals(constref ALeft, ARight: T): Boolean; virtual; overload; abstract;
-    function GetHashCode(constref AValue: T): UInt32;  virtual; overload; abstract;
+    function Equals(const ALeft, ARight: T): Boolean; virtual; overload; abstract;
+    function GetHashCode(const AValue: T): UInt32;  virtual; overload; abstract;
   end;
 
   { TDelegatedEqualityComparerEvent }
@@ -787,8 +789,8 @@ type
     FEqualityComparison: TOnEqualityComparison<T>;
     FHasher: TOnHasher<T>;
   public
-    function Equals(constref ALeft, ARight: T): Boolean; override;
-    function GetHashCode(constref AValue: T): UInt32; override;
+    function Equals(const ALeft, ARight: T): Boolean; override;
+    function GetHashCode(const AValue: T): UInt32; override;
 
     constructor Create(const AEqualityComparison: TOnEqualityComparison<T>;
       const AHasher: TOnHasher<T>);
@@ -799,8 +801,8 @@ type
     FEqualityComparison: TEqualityComparisonFunc<T>;
     FHasher: THasherFunc<T>;
   public
-    function Equals(constref ALeft, ARight: T): Boolean; override;
-    function GetHashCode(constref AValue: T): UInt32; override;
+    function Equals(const ALeft, ARight: T): Boolean; override;
+    function GetHashCode(const AValue: T): UInt32; override;
 
     constructor Create(const AEqualityComparison: TEqualityComparisonFunc<T>;
       const AHasher: THasherFunc<T>);
@@ -822,7 +824,7 @@ type
     class function Construct(const AEqualityComparison: TEqualityComparisonFunc<T>;
        const AExtendedHasher: TExtendedHasherFunc<T>): IExtendedEqualityComparer<T>; overload; reintroduce;
 
-    procedure GetHashList(constref AValue: T; AHashList: PUInt32); virtual; abstract;
+    procedure GetHashList(const AValue: T; AHashList: PUInt32); virtual; abstract;
   end;
 
   TDelegatedExtendedEqualityComparerEvents<T> = class(TExtendedEqualityComparer<T>)
@@ -831,11 +833,11 @@ type
     FHasher: TOnHasher<T>;
     FExtendedHasher: TOnExtendedHasher<T>;
 
-    function GetHashCodeMethod(constref AValue: T): UInt32;
+    function GetHashCodeMethod(const AValue: T): UInt32;
   public
-    function Equals(constref ALeft, ARight: T): Boolean; override;
-    function GetHashCode(constref AValue: T): UInt32; override;
-    procedure GetHashList(constref AValue: T; AHashList: PUInt32); override;
+    function Equals(const ALeft, ARight: T): Boolean; override;
+    function GetHashCode(const AValue: T): UInt32; override;
+    procedure GetHashList(const AValue: T; AHashList: PUInt32); override;
 
     constructor Create(const AEqualityComparison: TOnEqualityComparison<T>;
       const AHasher: TOnHasher<T>; const AExtendedHasher: TOnExtendedHasher<T>); overload;
@@ -849,14 +851,36 @@ type
     FHasher: THasherFunc<T>;
     FExtendedHasher: TExtendedHasherFunc<T>;
   public
-    function Equals(constref ALeft, ARight: T): Boolean; override;
-    function GetHashCode(constref AValue: T): UInt32; override;
-    procedure GetHashList(constref AValue: T; AHashList: PUInt32); override;
+    function Equals(const ALeft, ARight: T): Boolean; override;
+    function GetHashCode(const AValue: T): UInt32; override;
+    procedure GetHashList(const AValue: T; AHashList: PUInt32); override;
 
     constructor Create(const AEqualityComparison: TEqualityComparisonFunc<T>;
       const AHasher: THasherFunc<T>; const AExtendedHasher: TExtendedHasherFunc<T>); overload;
     constructor Create(const AEqualityComparison: TEqualityComparisonFunc<T>;
       const AExtendedHasher: TExtendedHasherFunc<T>); overload;
+  end;
+
+  TBinaryComparer<T> = class(TInterfacedObject, IComparer<T>)
+  public
+    function Compare(const ALeft, ARight: T): Integer;
+  end;
+
+  TBinaryEqualityComparer<T> = class(TInterfacedObject, IEqualityComparer<T>)
+  private
+    FHashFactory: THashFactoryClass;
+  public
+    constructor Create(AHashFactoryClass: THashFactoryClass);
+    function Equals(const ALeft, ARight: T): Boolean;
+    function GetHashCode(const AValue: T): UInt32;
+  end;
+
+  TBinaryExtendedEqualityComparer<T> = class(TBinaryEqualityComparer<T>, IExtendedEqualityComparer<T>)
+  private
+    FExtendedHashFactory: TExtendedHashFactoryClass;
+  public
+    constructor Create(AHashFactoryClass: TExtendedHashFactoryClass);
+    procedure GetHashList(const AValue: T; AHashList: PUInt32);
   end;
 
   { TDelphiHashFactory }
@@ -962,10 +986,10 @@ type
 
   TCustomComparer<T> = class(TSingletonImplementation, IComparer<T>, IEqualityComparer<T>, IExtendedEqualityComparer<T>)
   protected
-    function Compare(constref Left, Right: T): Integer; virtual; abstract;
-    function Equals(constref Left, Right: T): Boolean; reintroduce; overload; virtual; abstract;
-    function GetHashCode(constref Value: T): UInt32; reintroduce; overload; virtual; abstract;
-    procedure GetHashList(constref Value: T; AHashList: PUInt32); virtual; abstract;
+    function Compare(const Left, Right: T): Integer; virtual; abstract;
+    function Equals(const Left, Right: T): Boolean; reintroduce; overload; virtual; abstract;
+    function GetHashCode(const Value: T): UInt32; reintroduce; overload; virtual; abstract;
+    procedure GetHashList(const Value: T; AHashList: PUInt32); virtual; abstract;
   end;
 
   TOrdinalComparer<T, THashFactory> = class(TCustomComparer<T>)
@@ -1001,10 +1025,10 @@ type
   // anyway class var can't be used safely -> bug #24848
   TGOrdinalStringComparer<T, THashFactory> = class(TGStringComparer<T, THashFactory>)
   public
-    function Compare(constref ALeft, ARight: T): Integer; override;
-    function Equals(constref ALeft, ARight: T): Boolean; overload; override;
-    function GetHashCode(constref AValue: T): UInt32; overload; override;
-    procedure GetHashList(constref AValue: T; AHashList: PUInt32); override;
+    function Compare(const ALeft, ARight: T): Integer; override;
+    function Equals(const ALeft, ARight: T): Boolean; overload; override;
+    function GetHashCode(const AValue: T): UInt32; overload; override;
+    procedure GetHashList(const AValue: T; AHashList: PUInt32); override;
   end;
 
   TGOrdinalStringComparer<T> = class(TGOrdinalStringComparer<T, TDelphiQuadrupleHashFactory>);
@@ -1025,10 +1049,10 @@ type
 
   TGOrdinalIStringComparer<T, THashFactory> = class(TGIStringComparer<T, THashFactory>)
   public
-    function Compare(constref ALeft, ARight: T): Integer; override;
-    function Equals(constref ALeft, ARight: T): Boolean; overload; override;
-    function GetHashCode(constref AValue: T): UInt32; overload; override;
-    procedure GetHashList(constref AValue: T; AHashList: PUInt32); override;
+    function Compare(const ALeft, ARight: T): Integer; override;
+    function Equals(const ALeft, ARight: T): Boolean; overload; override;
+    function GetHashCode(const AValue: T): UInt32; overload; override;
+    procedure GetHashList(const AValue: T; AHashList: PUInt32); override;
   end;
 
   TGOrdinalIStringComparer<T> = class(TGOrdinalIStringComparer<T, TDelphiQuadrupleHashFactory>);
@@ -1048,7 +1072,10 @@ implementation
 
 class function TComparer<T>.Default: IComparer<T>;
 begin
-  Result := _LookupVtableInfo(giComparer, TypeInfo(T), SizeOf(T));
+  if GetTypeKind(T) in TComparerService.UseBinaryMethods then begin
+    Result := TBinaryComparer<T>.Create
+  end else
+    Result := _LookupVtableInfo(giComparer, TypeInfo(T), SizeOf(T));
 end;
 
 class function TComparer<T>.Construct(const AComparison: TOnComparison<T>): IComparer<T>;
@@ -1061,7 +1088,7 @@ begin
   Result := TDelegatedComparerFunc<T>.Create(AComparison);
 end;
 
-function TDelegatedComparerEvents<T>.Compare(constref ALeft, ARight: T): Integer;
+function TDelegatedComparerEvents<T>.Compare(const ALeft, ARight: T): Integer;
 begin
   Result := FComparison(ALeft, ARight);
 end;
@@ -1071,7 +1098,7 @@ begin
   FComparison := AComparison;
 end;
 
-function TDelegatedComparerFunc<T>.Compare(constref ALeft, ARight: T): Integer;
+function TDelegatedComparerFunc<T>.Compare(const ALeft, ARight: T): Integer;
 begin
   Result := FComparison(ALeft, ARight);
 end;
@@ -1138,22 +1165,22 @@ end;
   Comparers Int8 - Int32 and UInt8 - UInt32
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.Integer(constref ALeft, ARight: Integer): Integer;
+class function TCompare.Integer(const ALeft, ARight: Integer): Integer;
 begin
   Result := Math.CompareValue(ALeft, ARight);
 end;
 
-class function TCompare.Int8(constref ALeft, ARight: Int8): Integer;
+class function TCompare.Int8(const ALeft, ARight: Int8): Integer;
 begin
   Result := ALeft - ARight;
 end;
 
-class function TCompare.Int16(constref ALeft, ARight: Int16): Integer;
+class function TCompare.Int16(const ALeft, ARight: Int16): Integer;
 begin
   Result := ALeft - ARight;
 end;
 
-class function TCompare.Int32(constref ALeft, ARight: Int32): Integer;
+class function TCompare.Int32(const ALeft, ARight: Int32): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1163,7 +1190,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.Int64(constref ALeft, ARight: Int64): Integer;
+class function TCompare.Int64(const ALeft, ARight: Int64): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1173,17 +1200,17 @@ begin
     Exit(0);
 end;
 
-class function TCompare.UInt8(constref ALeft, ARight: UInt8): Integer;
+class function TCompare.UInt8(const ALeft, ARight: UInt8): Integer;
 begin
   Result := System.Integer(ALeft) - System.Integer(ARight);
 end;
 
-class function TCompare.UInt16(constref ALeft, ARight: UInt16): Integer;
+class function TCompare.UInt16(const ALeft, ARight: UInt16): Integer;
 begin
   Result := System.Integer(ALeft) - System.Integer(ARight);
 end;
 
-class function TCompare.UInt32(constref ALeft, ARight: UInt32): Integer;
+class function TCompare.UInt32(const ALeft, ARight: UInt32): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1193,7 +1220,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.UInt64(constref ALeft, ARight: UInt64): Integer;
+class function TCompare.UInt64(const ALeft, ARight: UInt64): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1207,7 +1234,7 @@ end;
   Comparers for Float types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.Single(constref ALeft, ARight: Single): Integer;
+class function TCompare.Single(const ALeft, ARight: Single): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1217,7 +1244,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.Double(constref ALeft, ARight: Double): Integer;
+class function TCompare.Double(const ALeft, ARight: Double): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1227,7 +1254,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.Extended(constref ALeft, ARight: Extended): Integer;
+class function TCompare.Extended(const ALeft, ARight: Extended): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1241,7 +1268,7 @@ end;
   Comparers for other number types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.Currency(constref ALeft, ARight: Currency): Integer;
+class function TCompare.Currency(const ALeft, ARight: Currency): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1251,7 +1278,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.Comp(constref ALeft, ARight: Comp): Integer;
+class function TCompare.Comp(const ALeft, ARight: Comp): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1265,14 +1292,14 @@ end;
   Comparers for binary data (records etc) and dynamics arrays
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare._Binary(constref ALeft, ARight): Integer;
+class function TCompare._Binary(const ALeft, ARight): Integer;
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
 begin
-  Result := CompareMemRange(@ALeft, @ARight, _self.Size);
+  Result := CompareMemRange(@ALeft, @ARight, _self.Size)
 end;
 
-class function TCompare._DynArray(constref ALeft, ARight: Pointer): Integer;
+class function TCompare._DynArray(const ALeft, ARight: Pointer): Integer;
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
   LLength, LLeftLength, LRightLength: Integer;
@@ -1290,12 +1317,12 @@ begin
     Result := LLeftLength - LRightLength;
 end;
 
-class function TCompare.Binary(constref ALeft, ARight; const ASize: SizeInt): Integer;
+class function TCompare.Binary(const ALeft, ARight; const ASize: SizeInt): Integer;
 begin
   Result := CompareMemRange(@ALeft, @ARight, ASize);
 end;
 
-class function TCompare.DynArray(constref ALeft, ARight: Pointer; const AElementSize: SizeInt): Integer;
+class function TCompare.DynArray(const ALeft, ARight: Pointer; const AElementSize: SizeInt): Integer;
 var
   LLength, LLeftLength, LRightLength: Integer;
 begin
@@ -1316,7 +1343,7 @@ end;
   Comparers for string types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.ShortString1(constref ALeft, ARight: ShortString1): Integer;
+class function TCompare.ShortString1(const ALeft, ARight: ShortString1): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1326,7 +1353,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.ShortString2(constref ALeft, ARight: ShortString2): Integer;
+class function TCompare.ShortString2(const ALeft, ARight: ShortString2): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1336,7 +1363,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.ShortString3(constref ALeft, ARight: ShortString3): Integer;
+class function TCompare.ShortString3(const ALeft, ARight: ShortString3): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1346,7 +1373,7 @@ begin
     Exit(0);
 end;
 
-class function TCompare.ShortString(constref ALeft, ARight: ShortString): Integer;
+class function TCompare.ShortString(const ALeft, ARight: ShortString): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1356,22 +1383,22 @@ begin
     Exit(0);
 end;
 
-class function TCompare.&String(constref ALeft, ARight: String): Integer;
+class function TCompare.&String(const ALeft, ARight: String): Integer;
 begin
   Result := CompareStr(ALeft, ARight);
 end;
 
-class function TCompare.AnsiString(constref ALeft, ARight: AnsiString): Integer;
+class function TCompare.AnsiString(const ALeft, ARight: AnsiString): Integer;
 begin
   Result := AnsiCompareStr(ALeft, ARight);
 end;
 
-class function TCompare.WideString(constref ALeft, ARight: WideString): Integer;
+class function TCompare.WideString(const ALeft, ARight: WideString): Integer;
 begin
   Result := WideCompareStr(ALeft, ARight);
 end;
 
-class function TCompare.UnicodeString(constref ALeft, ARight: UnicodeString): Integer;
+class function TCompare.UnicodeString(const ALeft, ARight: UnicodeString): Integer;
 begin
   Result := UnicodeCompareStr(ALeft, ARight);
 end;
@@ -1380,7 +1407,7 @@ end;
   Comparers for Delegates
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.Method(constref ALeft, ARight: TMethod): Integer;
+class function TCompare.Method(const ALeft, ARight: TMethod): Integer;
 begin
   Result := CompareMemRange(@ALeft, @ARight, SizeOf(System.TMethod));
 end;
@@ -1389,7 +1416,7 @@ end;
   Comparers for Variant
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.Variant(constref ALeft, ARight: PVariant): Integer;
+class function TCompare.Variant(const ALeft, ARight: PVariant): Integer;
 var
   LLeftString, LRightString: string;
 begin
@@ -1422,7 +1449,7 @@ end;
   Comparers for Pointer
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TCompare.Pointer(constref ALeft, ARight: PtrUInt): Integer;
+class function TCompare.Pointer(const ALeft, ARight: PtrUInt): Integer;
 begin
   if ALeft > ARight then
     Exit(1)
@@ -1442,47 +1469,47 @@ end;
   Equality Comparers Int8 - Int32 and UInt8 - UInt32
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.Integer(constref ALeft, ARight: Integer): Boolean;
+class function TEquals.Integer(const ALeft, ARight: Integer): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Int8(constref ALeft, ARight: Int8): Boolean;
+class function TEquals.Int8(const ALeft, ARight: Int8): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Int16(constref ALeft, ARight: Int16): Boolean;
+class function TEquals.Int16(const ALeft, ARight: Int16): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Int32(constref ALeft, ARight: Int32): Boolean;
+class function TEquals.Int32(const ALeft, ARight: Int32): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Int64(constref ALeft, ARight: Int64): Boolean;
+class function TEquals.Int64(const ALeft, ARight: Int64): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.UInt8(constref ALeft, ARight: UInt8): Boolean;
+class function TEquals.UInt8(const ALeft, ARight: UInt8): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.UInt16(constref ALeft, ARight: UInt16): Boolean;
+class function TEquals.UInt16(const ALeft, ARight: UInt16): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.UInt32(constref ALeft, ARight: UInt32): Boolean;
+class function TEquals.UInt32(const ALeft, ARight: UInt32): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.UInt64(constref ALeft, ARight: UInt64): Boolean;
+class function TEquals.UInt64(const ALeft, ARight: UInt64): Boolean;
 begin
   Result := ALeft = ARight;
 end;
@@ -1491,17 +1518,17 @@ end;
   Equality Comparers for Float types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.Single(constref ALeft, ARight: Single): Boolean;
+class function TEquals.Single(const ALeft, ARight: Single): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Double(constref ALeft, ARight: Double): Boolean;
+class function TEquals.Double(const ALeft, ARight: Double): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Extended(constref ALeft, ARight: Extended): Boolean;
+class function TEquals.Extended(const ALeft, ARight: Extended): Boolean;
 begin
   Result := ALeft = ARight;
 end;
@@ -1510,12 +1537,12 @@ end;
   Equality Comparers for other number types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.Currency(constref ALeft, ARight: Currency): Boolean;
+class function TEquals.Currency(const ALeft, ARight: Currency): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.Comp(constref ALeft, ARight: Comp): Boolean;
+class function TEquals.Comp(const ALeft, ARight: Comp): Boolean;
 begin
   Result := ALeft = ARight;
 end;
@@ -1524,14 +1551,14 @@ end;
   Equality Comparers for binary data (records etc) and dynamics arrays
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals._Binary(constref ALeft, ARight): Boolean;
+class function TEquals._Binary(const ALeft, ARight): Boolean;
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
 begin
-  Result := CompareMem(@ALeft, @ARight, _self.Size);
+  Result := CompareMem(@ALeft, @ARight, _self.Size)
 end;
 
-class function TEquals._DynArray(constref ALeft, ARight: Pointer): Boolean;
+class function TEquals._DynArray(const ALeft, ARight: Pointer): Boolean;
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
   LLength: Integer;
@@ -1543,12 +1570,12 @@ begin
   Result := CompareMem(ALeft, ARight, LLength * _self.Size);
 end;
 
-class function TEquals.Binary(constref ALeft, ARight; const ASize: SizeInt): Boolean;
+class function TEquals.Binary(const ALeft, ARight; const ASize: SizeInt): Boolean;
 begin
   Result := CompareMem(@ALeft, @ARight, ASize);
 end;
 
-class function TEquals.DynArray(constref ALeft, ARight: Pointer; const AElementSize: SizeInt): Boolean;
+class function TEquals.DynArray(const ALeft, ARight: Pointer; const AElementSize: SizeInt): Boolean;
 var
   LLength: Integer;
 begin
@@ -1563,7 +1590,7 @@ end;
   Equality Comparers for classes
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.&class(constref ALeft, ARight: TObject): Boolean;
+class function TEquals.&class(const ALeft, ARight: TObject): Boolean;
 begin
   if ALeft <> nil then
     Exit(ALeft.Equals(ARight))
@@ -1575,42 +1602,42 @@ end;
   Equality Comparers for string types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.ShortString1(constref ALeft, ARight: ShortString1): Boolean;
+class function TEquals.ShortString1(const ALeft, ARight: ShortString1): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.ShortString2(constref ALeft, ARight: ShortString2): Boolean;
+class function TEquals.ShortString2(const ALeft, ARight: ShortString2): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.ShortString3(constref ALeft, ARight: ShortString3): Boolean;
+class function TEquals.ShortString3(const ALeft, ARight: ShortString3): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.&String(constref ALeft, ARight: String): Boolean;
+class function TEquals.&String(const ALeft, ARight: String): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.ShortString(constref ALeft, ARight: ShortString): Boolean;
+class function TEquals.ShortString(const ALeft, ARight: ShortString): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.AnsiString(constref ALeft, ARight: AnsiString): Boolean;
+class function TEquals.AnsiString(const ALeft, ARight: AnsiString): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.WideString(constref ALeft, ARight: WideString): Boolean;
+class function TEquals.WideString(const ALeft, ARight: WideString): Boolean;
 begin
   Result := ALeft = ARight;
 end;
 
-class function TEquals.UnicodeString(constref ALeft, ARight: UnicodeString): Boolean;
+class function TEquals.UnicodeString(const ALeft, ARight: UnicodeString): Boolean;
 begin
   Result := ALeft = ARight;
 end;
@@ -1619,7 +1646,7 @@ end;
   Equality Comparers for Delegates
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.Method(constref ALeft, ARight: TMethod): Boolean;
+class function TEquals.Method(const ALeft, ARight: TMethod): Boolean;
 begin
   Result := (ALeft.Code = ARight.Code) and (ALeft.Data = ARight.Data);
 end;
@@ -1628,7 +1655,7 @@ end;
   Equality Comparers for Variant
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.Variant(constref ALeft, ARight: PVariant): Boolean;
+class function TEquals.Variant(const ALeft, ARight: PVariant): Boolean;
 begin
   Result := VarCompareValue(ALeft^, ARight^) = vrEqual;
 end;
@@ -1637,7 +1664,7 @@ end;
   Equality Comparers for Pointer
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function TEquals.Pointer(constref ALeft, ARight: PtrUInt): Boolean;
+class function TEquals.Pointer(const ALeft, ARight: PtrUInt): Boolean;
 begin
   Result := ALeft = ARight;
 end;
@@ -1650,42 +1677,42 @@ end;
   GetHashCode Int8 - Int32 and UInt8 - UInt32
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Int8(constref AValue: Int8): UInt32;
+class function THashFactory.Int8(const AValue: Int8): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Int8), 0);
 end;
 
-class function THashFactory.Int16(constref AValue: Int16): UInt32;
+class function THashFactory.Int16(const AValue: Int16): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Int16), 0);
 end;
 
-class function THashFactory.Int32(constref AValue: Int32): UInt32;
+class function THashFactory.Int32(const AValue: Int32): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Int32), 0);
 end;
 
-class function THashFactory.Int64(constref AValue: Int64): UInt32;
+class function THashFactory.Int64(const AValue: Int64): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Int64), 0);
 end;
 
-class function THashFactory.UInt8(constref AValue: UInt8): UInt32;
+class function THashFactory.UInt8(const AValue: UInt8): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.UInt8), 0);
 end;
 
-class function THashFactory.UInt16(constref AValue: UInt16): UInt32;
+class function THashFactory.UInt16(const AValue: UInt16): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.UInt16), 0);
 end;
 
-class function THashFactory.UInt32(constref AValue: UInt32): UInt32;
+class function THashFactory.UInt32(const AValue: UInt32): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.UInt32), 0);
 end;
 
-class function THashFactory.UInt64(constref AValue: UInt64): UInt32;
+class function THashFactory.UInt64(const AValue: UInt64): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.UInt64), 0);
 end;
@@ -1694,7 +1721,7 @@ end;
   GetHashCode for Float types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Single(constref AValue: Single): UInt32;
+class function THashFactory.Single(const AValue: Single): UInt32;
 var
   LMantissa: Float;
   LExponent: Integer;
@@ -1708,7 +1735,7 @@ begin
   Result := HASH_FACTORY.GetHashCode(@LExponent, SizeOf(System.Integer), Result);
 end;
 
-class function THashFactory.Double(constref AValue: Double): UInt32;
+class function THashFactory.Double(const AValue: Double): UInt32;
 var
   LMantissa: Float;
   LExponent: Integer;
@@ -1722,7 +1749,7 @@ begin
   Result := HASH_FACTORY.GetHashCode(@LExponent, SizeOf(System.Integer), Result);
 end;
 
-class function THashFactory.Extended(constref AValue: Extended): UInt32;
+class function THashFactory.Extended(const AValue: Extended): UInt32;
 var
   LMantissa: Float;
   LExponent: Integer;
@@ -1740,12 +1767,12 @@ end;
   GetHashCode for other number types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Currency(constref AValue: Currency): UInt32;
+class function THashFactory.Currency(const AValue: Currency): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Int64), 0);
 end;
 
-class function THashFactory.Comp(constref AValue: Comp): UInt32;
+class function THashFactory.Comp(const AValue: Comp): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Int64), 0);
 end;
@@ -1754,14 +1781,14 @@ end;
   GetHashCode for binary data (records etc) and dynamics arrays
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Binary(constref AValue): UInt32;
+class function THashFactory.Binary(const AValue): UInt32;
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, _self.Size, 0);
 end;
 
-class function THashFactory.DynArray(constref AValue: Pointer): UInt32;
+class function THashFactory.DynArray(const AValue: Pointer): UInt32;
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
 begin
@@ -1772,7 +1799,7 @@ end;
   GetHashCode for classes
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.&Class(constref AValue: TObject): UInt32;
+class function THashFactory.&Class(const AValue: TObject): UInt32;
 begin
   if AValue = nil then
     Exit($2A);
@@ -1784,37 +1811,37 @@ end;
   GetHashCode for string types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.ShortString1(constref AValue: ShortString1): UInt32;
+class function THashFactory.ShortString1(const AValue: ShortString1): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue), 0);
 end;
 
-class function THashFactory.ShortString2(constref AValue: ShortString2): UInt32;
+class function THashFactory.ShortString2(const AValue: ShortString2): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue), 0);
 end;
 
-class function THashFactory.ShortString3(constref AValue: ShortString3): UInt32;
+class function THashFactory.ShortString3(const AValue: ShortString3): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue), 0);
 end;
 
-class function THashFactory.ShortString(constref AValue: ShortString): UInt32;
+class function THashFactory.ShortString(const AValue: ShortString): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue), 0);
 end;
 
-class function THashFactory.AnsiString(constref AValue: AnsiString): UInt32;
+class function THashFactory.AnsiString(const AValue: AnsiString): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue) * SizeOf(System.AnsiChar), 0);
 end;
 
-class function THashFactory.WideString(constref AValue: WideString): UInt32;
+class function THashFactory.WideString(const AValue: WideString): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue) * SizeOf(System.WideChar), 0);
 end;
 
-class function THashFactory.UnicodeString(constref AValue: UnicodeString): UInt32;
+class function THashFactory.UnicodeString(const AValue: UnicodeString): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue[1], Length(AValue) * SizeOf(System.UnicodeChar), 0);
 end;
@@ -1823,7 +1850,7 @@ end;
   GetHashCode for Delegates
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Method(constref AValue: TMethod): UInt32;
+class function THashFactory.Method(const AValue: TMethod): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.TMethod), 0);
 end;
@@ -1832,7 +1859,7 @@ end;
   GetHashCode for Variant
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Variant(constref AValue: PVariant): UInt32;
+class function THashFactory.Variant(const AValue: PVariant): UInt32;
 begin
   try
     Result := HASH_FACTORY.UnicodeString(AValue^);
@@ -1845,7 +1872,7 @@ end;
   GetHashCode for Pointer
 {----------------------------------------------------------------------------------------------------------------------}
 
-class function THashFactory.Pointer(constref AValue: Pointer): UInt32;
+class function THashFactory.Pointer(const AValue: Pointer): UInt32;
 begin
   Result := HASH_FACTORY.GetHashCode(@AValue, SizeOf(System.Pointer), 0);
 end;
@@ -1860,42 +1887,42 @@ end;
   GetHashCode Int8 - Int32 and UInt8 - UInt32
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Int8(constref AValue: Int8; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Int8(const AValue: Int8; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Int8), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.Int16(constref AValue: Int16; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Int16(const AValue: Int16; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Int16), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.Int32(constref AValue: Int32; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Int32(const AValue: Int32; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Int32), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.Int64(constref AValue: Int64; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Int64(const AValue: Int64; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Int64), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.UInt8(constref AValue: UInt8; AHashList: PUInt32);
+class procedure TExtendedHashFactory.UInt8(const AValue: UInt8; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.UInt8), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.UInt16(constref AValue: UInt16; AHashList: PUInt32);
+class procedure TExtendedHashFactory.UInt16(const AValue: UInt16; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.UInt16), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.UInt32(constref AValue: UInt32; AHashList: PUInt32);
+class procedure TExtendedHashFactory.UInt32(const AValue: UInt32; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.UInt32), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.UInt64(constref AValue: UInt64; AHashList: PUInt32);
+class procedure TExtendedHashFactory.UInt64(const AValue: UInt64; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.UInt64), AHashList, []);
 end;
@@ -1904,7 +1931,7 @@ end;
   GetHashCode for Float types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Single(constref AValue: Single; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Single(const AValue: Single; AHashList: PUInt32);
 var
   LMantissa: Float;
   LExponent: Integer;
@@ -1918,7 +1945,7 @@ begin
   EXTENDED_HASH_FACTORY.GetHashList(@LExponent, SizeOf(System.Integer), AHashList, [ghloHashListAsInitData]);
 end;
 
-class procedure TExtendedHashFactory.Double(constref AValue: Double; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Double(const AValue: Double; AHashList: PUInt32);
 var
   LMantissa: Float;
   LExponent: Integer;
@@ -1932,7 +1959,7 @@ begin
   EXTENDED_HASH_FACTORY.GetHashList(@LExponent, SizeOf(System.Integer), AHashList, [ghloHashListAsInitData]);
 end;
 
-class procedure TExtendedHashFactory.Extended(constref AValue: Extended; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Extended(const AValue: Extended; AHashList: PUInt32);
 var
   LMantissa: Float;
   LExponent: Integer;
@@ -1950,12 +1977,12 @@ end;
   GetHashCode for other number types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Currency(constref AValue: Currency; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Currency(const AValue: Currency; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Int64), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.Comp(constref AValue: Comp; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Comp(const AValue: Comp; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Int64), AHashList, []);
 end;
@@ -1964,14 +1991,14 @@ end;
   GetHashCode for binary data (records etc) and dynamics arrays
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Binary(constref AValue; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Binary(const AValue; AHashList: PUInt32);
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, _self.Size, AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.DynArray(constref AValue: Pointer; AHashList: PUInt32);
+class procedure TExtendedHashFactory.DynArray(const AValue: Pointer; AHashList: PUInt32);
 var
   _self: TComparerService.PSpoofInterfacedTypeSizeObject absolute Self;
 begin
@@ -1982,7 +2009,7 @@ end;
   GetHashCode for classes
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.&Class(constref AValue: TObject; AHashList: PUInt32);
+class procedure TExtendedHashFactory.&Class(const AValue: TObject; AHashList: PUInt32);
 var
   LValue: PtrInt;
 begin
@@ -2001,37 +2028,37 @@ end;
   GetHashCode for string types
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.ShortString1(constref AValue: ShortString1; AHashList: PUInt32);
+class procedure TExtendedHashFactory.ShortString1(const AValue: ShortString1; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.ShortString2(constref AValue: ShortString2; AHashList: PUInt32);
+class procedure TExtendedHashFactory.ShortString2(const AValue: ShortString2; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.ShortString3(constref AValue: ShortString3; AHashList: PUInt32);
+class procedure TExtendedHashFactory.ShortString3(const AValue: ShortString3; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.ShortString(constref AValue: ShortString; AHashList: PUInt32);
+class procedure TExtendedHashFactory.ShortString(const AValue: ShortString; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.AnsiString(constref AValue: AnsiString; AHashList: PUInt32);
+class procedure TExtendedHashFactory.AnsiString(const AValue: AnsiString; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue) * SizeOf(System.AnsiChar), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.WideString(constref AValue: WideString; AHashList: PUInt32);
+class procedure TExtendedHashFactory.WideString(const AValue: WideString; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue) * SizeOf(System.WideChar), AHashList, []);
 end;
 
-class procedure TExtendedHashFactory.UnicodeString(constref AValue: UnicodeString; AHashList: PUInt32);
+class procedure TExtendedHashFactory.UnicodeString(const AValue: UnicodeString; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue[1], Length(AValue) * SizeOf(System.UnicodeChar), AHashList, []);
 end;
@@ -2040,7 +2067,7 @@ end;
   GetHashCode for Delegates
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Method(constref AValue: TMethod; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Method(const AValue: TMethod; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.TMethod), AHashList, []);
 end;
@@ -2049,7 +2076,7 @@ end;
   GetHashCode for Variant
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Variant(constref AValue: PVariant; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Variant(const AValue: PVariant; AHashList: PUInt32);
 begin
   try
     EXTENDED_HASH_FACTORY.UnicodeString(AValue^, AHashList);
@@ -2062,7 +2089,7 @@ end;
   GetHashCode for Pointer
 {----------------------------------------------------------------------------------------------------------------------}
 
-class procedure TExtendedHashFactory.Pointer(constref AValue: Pointer; AHashList: PUInt32);
+class procedure TExtendedHashFactory.Pointer(const AValue: Pointer; AHashList: PUInt32);
 begin
   EXTENDED_HASH_FACTORY.GetHashList(@AValue, SizeOf(System.Pointer), AHashList, []);
 end;
@@ -2141,16 +2168,7 @@ end;
 class function TComparerService.SelectBinaryComparer(ATypeData: PTypeData;
   ASize: SizeInt): Pointer;
 begin
-  case ASize of
-    1: Exit(@Comparer_UInt8_Instance);
-    2: Exit(@Comparer_UInt16_Instance);
-    4: Exit(@Comparer_UInt32_Instance);
-{$IFDEF CPU64}
-    8: Exit(@Comparer_UInt64_Instance)
-{$ENDIF}
-  else
-    Result := CreateInterface(@Comparer_Binary_VMT, ASize);
-  end;
+  Result := CreateInterface(@Comparer_Binary_VMT, ASize);
 end;
 
 class function TComparerService.SelectDynArrayComparer(ATypeData: PTypeData; ASize: SizeInt): Pointer;
@@ -2163,7 +2181,7 @@ var
   LInstance: PInstance;
 begin
   if ATypeInfo = nil then
-    Exit(SelectBinaryComparer(GetTypeData(ATypeInfo), ASize))
+    Exit(SelectBinaryComparer(Nil, ASize))
   else
   begin
     LInstance := @ComparerInstances[ATypeInfo.Kind];
@@ -2254,16 +2272,7 @@ end;
 class function THashService<T>.SelectBinaryEqualityComparer(ATypeData: PTypeData;
   ASize: SizeInt): Pointer;
 begin
-  case ASize of
-    1: Exit(@FEqualityComparer_UInt8_Instance);
-    2: Exit(@FEqualityComparer_UInt16_Instance);
-    4: Exit(@FEqualityComparer_UInt32_Instance);
-{$IFDEF CPU64}
-    8: Exit(@FEqualityComparer_UInt64_Instance)
-{$ENDIF}
-  else
-    Result := CreateInterface(@FEqualityComparer_Binary_VMT, ASize);
-  end;
+  Result := CreateInterface(@FEqualityComparer_Binary_VMT, ASize);
 end;
 
 class function THashService<T>.SelectDynArrayEqualityComparer(
@@ -2279,7 +2288,7 @@ var
   LSelectMethod: TSelectMethod;
 begin
   if ATypeInfo = nil then
-    Exit(SelectBinaryEqualityComparer(GetTypeData(ATypeInfo), ASize))
+    Exit(SelectBinaryEqualityComparer(Nil, ASize))
   else
   begin
     LInstance := @FEqualityComparerInstances[ATypeInfo.Kind];
@@ -2467,16 +2476,7 @@ end;
 class function TExtendedHashService<T>.SelectBinaryEqualityComparer(ATypeData: PTypeData;
   ASize: SizeInt): Pointer;
 begin
-  case ASize of
-    1: Exit(@FExtendedEqualityComparer_UInt8_Instance);
-    2: Exit(@FExtendedEqualityComparer_UInt16_Instance);
-    4: Exit(@FExtendedEqualityComparer_UInt32_Instance);
-{$IFDEF CPU64}
-    8: Exit(@FExtendedEqualityComparer_UInt64_Instance)
-{$ENDIF}
-  else
-    Result := CreateInterface(@FExtendedEqualityComparer_Binary_VMT, ASize);
-  end;
+  Result := CreateInterface(@FExtendedEqualityComparer_Binary_VMT, ASize);
 end;
 
 class function TExtendedHashService<T>.SelectDynArrayEqualityComparer(
@@ -2492,7 +2492,7 @@ var
   LSelectMethod: TSelectMethod;
 begin
   if ATypeInfo = nil then
-    Exit(SelectBinaryEqualityComparer(GetTypeData(ATypeInfo), ASize))
+    Exit(SelectBinaryEqualityComparer(Nil, ASize))
   else
   begin
     LInstance := @FExtendedEqualityComparerInstances[ATypeInfo.Kind];
@@ -2627,12 +2627,17 @@ end;
 
 class function TEqualityComparer<T>.Default: IEqualityComparer<T>;
 begin
-  Result := _LookupVtableInfo(giEqualityComparer, TypeInfo(T), SizeOf(T));
+  if GetTypeKind(T) in TComparerService.UseBinaryMethods then
+    Result := TBinaryEqualityComparer<T>.Create(Nil)
+  else
+    Result := _LookupVtableInfo(giEqualityComparer, TypeInfo(T), SizeOf(T));
 end;
 
 class function TEqualityComparer<T>.Default(AHashFactoryClass: THashFactoryClass): IEqualityComparer<T>;
 begin
-  if AHashFactoryClass.InheritsFrom(TExtendedHashFactory) then
+  if GetTypeKind(T) in TComparerService.UseBinaryMethods then
+    Result := TBinaryEqualityComparer<T>.Create(AHashFactoryClass)
+  else if AHashFactoryClass.InheritsFrom(TExtendedHashFactory) then
     Result := _LookupVtableInfoEx(giExtendedEqualityComparer, TypeInfo(T), SizeOf(T), AHashFactoryClass)
   else if AHashFactoryClass.InheritsFrom(THashFactory) then
     Result := _LookupVtableInfoEx(giEqualityComparer, TypeInfo(T), SizeOf(T), AHashFactoryClass);
@@ -2652,12 +2657,12 @@ end;
 
 { TDelegatedEqualityComparerEvents<T> }
 
-function TDelegatedEqualityComparerEvents<T>.Equals(constref ALeft, ARight: T): Boolean;
+function TDelegatedEqualityComparerEvents<T>.Equals(const ALeft, ARight: T): Boolean;
 begin
   Result := FEqualityComparison(ALeft, ARight);
 end;
 
-function TDelegatedEqualityComparerEvents<T>.GetHashCode(constref AValue: T): UInt32;
+function TDelegatedEqualityComparerEvents<T>.GetHashCode(const AValue: T): UInt32;
 begin
   Result := FHasher(AValue);
 end;
@@ -2671,12 +2676,12 @@ end;
 
 { TDelegatedEqualityComparerFunc<T> }
 
-function TDelegatedEqualityComparerFunc<T>.Equals(constref ALeft, ARight: T): Boolean;
+function TDelegatedEqualityComparerFunc<T>.Equals(const ALeft, ARight: T): Boolean;
 begin
   Result := FEqualityComparison(ALeft, ARight);
 end;
 
-function TDelegatedEqualityComparerFunc<T>.GetHashCode(constref AValue: T): UInt32;
+function TDelegatedEqualityComparerFunc<T>.GetHashCode(const AValue: T): UInt32;
 begin
   Result := FHasher(AValue);
 end;
@@ -2690,7 +2695,7 @@ end;
 
 { TDelegatedExtendedEqualityComparerEvents<T> }
 
-function TDelegatedExtendedEqualityComparerEvents<T>.GetHashCodeMethod(constref AValue: T): UInt32;
+function TDelegatedExtendedEqualityComparerEvents<T>.GetHashCodeMethod(const AValue: T): UInt32;
 var
   LHashList: array[0..1] of Int32;
   LHashListParams: array[0..3] of Int16 absolute LHashList;
@@ -2700,17 +2705,17 @@ begin
   Result := LHashList[1];
 end;
 
-function TDelegatedExtendedEqualityComparerEvents<T>.Equals(constref ALeft, ARight: T): Boolean;
+function TDelegatedExtendedEqualityComparerEvents<T>.Equals(const ALeft, ARight: T): Boolean;
 begin
   Result := FEqualityComparison(ALeft, ARight);
 end;
 
-function TDelegatedExtendedEqualityComparerEvents<T>.GetHashCode(constref AValue: T): UInt32;
+function TDelegatedExtendedEqualityComparerEvents<T>.GetHashCode(const AValue: T): UInt32;
 begin
   Result := FHasher(AValue);
 end;
 
-procedure TDelegatedExtendedEqualityComparerEvents<T>.GetHashList(constref AValue: T; AHashList: PUInt32);
+procedure TDelegatedExtendedEqualityComparerEvents<T>.GetHashList(const AValue: T; AHashList: PUInt32);
 begin
   FExtendedHasher(AValue, AHashList);
 end;
@@ -2731,12 +2736,12 @@ end;
 
 { TDelegatedExtendedEqualityComparerFunc<T> }
 
-function TDelegatedExtendedEqualityComparerFunc<T>.Equals(constref ALeft, ARight: T): Boolean;
+function TDelegatedExtendedEqualityComparerFunc<T>.Equals(const ALeft, ARight: T): Boolean;
 begin
   Result := FEqualityComparison(ALeft, ARight);
 end;
 
-function TDelegatedExtendedEqualityComparerFunc<T>.GetHashCode(constref AValue: T): UInt32;
+function TDelegatedExtendedEqualityComparerFunc<T>.GetHashCode(const AValue: T): UInt32;
 var
   LHashList: array[0..1] of Int32;
   LHashListParams: array[0..3] of Int16 absolute LHashList;
@@ -2751,7 +2756,7 @@ begin
     Result := FHasher(AValue);
 end;
 
-procedure TDelegatedExtendedEqualityComparerFunc<T>.GetHashList(constref AValue: T; AHashList: PUInt32);
+procedure TDelegatedExtendedEqualityComparerFunc<T>.GetHashList(const AValue: T; AHashList: PUInt32);
 begin
   FExtendedHasher(AValue, AHashList);
 end;
@@ -2774,14 +2779,20 @@ end;
 
 class function TExtendedEqualityComparer<T>.Default: IExtendedEqualityComparer<T>;
 begin
-  Result := _LookupVtableInfo(giExtendedEqualityComparer, TypeInfo(T), SizeOf(T));
+  if GetTypeKind(T) in TComparerService.UseBinaryMethods then
+    Result := TBinaryExtendedEqualityComparer<T>.Create(Nil)
+  else
+    Result := _LookupVtableInfo(giExtendedEqualityComparer, TypeInfo(T), SizeOf(T));
 end;
 
 class function TExtendedEqualityComparer<T>.Default(
   AExtenedHashFactoryClass: TExtendedHashFactoryClass
   ): IExtendedEqualityComparer<T>;
 begin
-  Result := _LookupVtableInfoEx(giExtendedEqualityComparer, TypeInfo(T), SizeOf(T), AExtenedHashFactoryClass);
+  if GetTypeKind(T) in TComparerService.UseBinaryMethods then
+    Result := TBinaryExtendedEqualityComparer<T>.Create(Nil)
+  else
+    Result := _LookupVtableInfoEx(giExtendedEqualityComparer, TypeInfo(T), SizeOf(T), AExtenedHashFactoryClass);
 end;
 
 class function TExtendedEqualityComparer<T>.Construct(
@@ -2810,6 +2821,49 @@ class function TExtendedEqualityComparer<T>.Construct(
   const AExtendedHasher: TExtendedHasherFunc<T>): IExtendedEqualityComparer<T>;
 begin
   Result := TDelegatedExtendedEqualityComparerFunc<T>.Create(AEqualityComparison, AExtendedHasher);
+end;
+
+{ TBinaryComparer<T> }
+
+function TBinaryComparer<T>.Compare(const ALeft, ARight: T): Integer;
+begin
+  Result := BinaryCompare(@ALeft, @ARight, SizeOf(T));
+end;
+
+{ TBinaryEqualityComparer<T> }
+
+constructor TBinaryEqualityComparer<T>.Create(AHashFactoryClass: THashFactoryClass);
+begin
+  if not Assigned(AHashFactoryClass) then
+    FHashFactory := TDefaultHashFactory
+  else
+    FHashFactory := AHashFactoryClass;
+end;
+
+function TBinaryEqualityComparer<T>.Equals(const ALeft, ARight: T): Boolean;
+begin
+  Result := CompareMem(@ALeft, @ARight, SizeOf(T));
+end;
+
+function TBinaryEqualityComparer<T>.GetHashCode(const AValue: T): UInt32;
+begin
+  Result := FHashFactory.GetHashCode(@AValue, SizeOf(T), 0);
+end;
+
+{ TBinaryExtendedEqualityComparer<T> }
+
+constructor TBinaryExtendedEqualityComparer<T>.Create(AHashFactoryClass: TExtendedHashFactoryClass);
+begin
+  if not Assigned(AHashFactoryClass) then
+    FExtendedHashFactory := TDelphiDoubleHashFactory
+  else
+    FExtendedHashFactory := AHashFactoryClass;
+  inherited Create(FExtendedHashFactory);
+end;
+
+procedure TBinaryExtendedEqualityComparer<T>.GetHashList(const AValue: T; AHashList: PUInt32);
+begin
+  FExtendedHashFactory.GetHashList(@AValue, SizeOf(T), AHashList, []);
 end;
 
 { TDelphiHashFactory }
@@ -3253,22 +3307,22 @@ end;
 
 { TGOrdinalStringComparer<T, THashFactory> }
 
-function TGOrdinalStringComparer<T, THashFactory>.Compare(constref ALeft, ARight: T): Integer;
+function TGOrdinalStringComparer<T, THashFactory>.Compare(const ALeft, ARight: T): Integer;
 begin
   Result := FComparer.Compare(ALeft, ARight);
 end;
 
-function TGOrdinalStringComparer<T, THashFactory>.Equals(constref ALeft, ARight: T): Boolean;
+function TGOrdinalStringComparer<T, THashFactory>.Equals(const ALeft, ARight: T): Boolean;
 begin
   Result := FEqualityComparer.Equals(ALeft, ARight);
 end;
 
-function TGOrdinalStringComparer<T, THashFactory>.GetHashCode(constref AValue: T): UInt32;
+function TGOrdinalStringComparer<T, THashFactory>.GetHashCode(const AValue: T): UInt32;
 begin
   Result := FEqualityComparer.GetHashCode(AValue);
 end;
 
-procedure TGOrdinalStringComparer<T, THashFactory>.GetHashList(constref AValue: T; AHashList: PUInt32);
+procedure TGOrdinalStringComparer<T, THashFactory>.GetHashList(const AValue: T; AHashList: PUInt32);
 begin
   FExtendedEqualityComparer.GetHashList(AValue, AHashList);
 end;
@@ -3290,22 +3344,22 @@ end;
 
 { TGOrdinalIStringComparer<T, THashFactory> }
 
-function TGOrdinalIStringComparer<T, THashFactory>.Compare(constref ALeft, ARight: T): Integer;
+function TGOrdinalIStringComparer<T, THashFactory>.Compare(const ALeft, ARight: T): Integer;
 begin
   Result := FComparer.Compare(ALeft.ToLower, ARight.ToLower);
 end;
 
-function TGOrdinalIStringComparer<T, THashFactory>.Equals(constref ALeft, ARight: T): Boolean;
+function TGOrdinalIStringComparer<T, THashFactory>.Equals(const ALeft, ARight: T): Boolean;
 begin
   Result := FEqualityComparer.Equals(ALeft.ToLower, ARight.ToLower);
 end;
 
-function TGOrdinalIStringComparer<T, THashFactory>.GetHashCode(constref AValue: T): UInt32;
+function TGOrdinalIStringComparer<T, THashFactory>.GetHashCode(const AValue: T): UInt32;
 begin
   Result := FEqualityComparer.GetHashCode(AValue.ToLower);
 end;
 
-procedure TGOrdinalIStringComparer<T, THashFactory>.GetHashList(constref AValue: T; AHashList: PUInt32);
+procedure TGOrdinalIStringComparer<T, THashFactory>.GetHashList(const AValue: T; AHashList: PUInt32);
 begin
   FExtendedEqualityComparer.GetHashList(AValue.ToLower, AHashList);
 end;
@@ -3328,6 +3382,10 @@ end;
 function _LookupVtableInfoEx(AGInterface: TDefaultGenericInterface; ATypeInfo: PTypeInfo; ASize: SizeInt;
   AFactory: THashFactoryClass): Pointer;
 begin
+  if ATypeInfo^.Kind in TComparerService.UseBinaryMethods then begin
+    System.Error(reInvalidCast);
+    Exit(Nil);
+  end;
   case AGInterface of
     giComparer:
         Exit(

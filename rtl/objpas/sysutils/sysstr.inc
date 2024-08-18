@@ -1,3 +1,4 @@
+
 {
     *********************************************************************
     Copyright (C) 1997, 1998 Gertjan Schouten
@@ -180,9 +181,8 @@ end;
 {$ENDIF}
 
 function CompareStr(const S1, S2: string): Integer;
-var res,count, count1, count2: SizeInt;
+var count, count1, count2: SizeInt;
 begin
-  result := 0;
   Count1 := Length(S1);
   Count2 := Length(S2);
   if Count1>Count2 then
@@ -740,69 +740,60 @@ end;
 
 function AdjustLineBreaks(const S: string; Style: TTextLineBreakStyle): string;
 var
-  Source,Dest: PChar;
-  DestLen: Integer;
-  I,J,L: Longint;
-
+  Sp,Se,SLiteralStart,SLiteralEnd,Rp: PChar;
 begin
-  Source:=Pointer(S);
-  L:=Length(S);
-  DestLen:=L;
-  I:=1;
-  while (I<=L) do
-    begin
-    case S[i] of
-      #10: if (Style=tlbsCRLF) then
-               Inc(DestLen);
-      #13: if (Style=tlbsCRLF) then
-             if (I<L) and (S[i+1]=#10) then
-               Inc(I)
-             else
-               Inc(DestLen)
-             else if (I<L) and (S[I+1]=#10) then
-               Dec(DestLen);
-    end;
-    Inc(I);
-    end;
-  if (DestLen=L) then
-    Result:=S
-  else
-    begin
-    SetLength(Result, DestLen);
-    FillChar(Result[1],DestLen,0);
-    Dest := Pointer(Result);
-    J:=0;
-    I:=0;
-    While I<L do
-      case Source[I] of
-        #10: begin
-             if Style=tlbsCRLF then
-               begin
-               Dest[j]:=#13;
-               Inc(J);
-              end;
-             Dest[J] := #10;
-             Inc(J);
-             Inc(I);
-             end;
-        #13: begin
-             if Style=tlbsCRLF then
-               begin
-               Dest[j] := #13;
-               Inc(J);
-               end;
-             Dest[j]:=#10;
-             Inc(J);
-             Inc(I);
-             if Source[I]=#10 then
-               Inc(I);
-             end;
-      else
-        Dest[j]:=Source[i];
-        Inc(J);
-        Inc(I);
-      end;
-    end;
+  Result:='';
+  repeat { Does two iterations, first is prepass, second fills the result with data and is distinguished by Assigned(Pointer(Result)). }
+    Rp:=Pointer(Result);
+    Sp:=PChar(S); { Readable #0 for empty string. }
+    Se:=Sp+Length(S);
+    SLiteralStart:=Sp;
+    repeat
+      while (Sp<Se) and not (Sp^ in [#13,#10]) do
+        Inc(Sp);
+      SLiteralEnd:=Sp; { Save position before consuming line ending. }
+      if Sp^=#10 then { These accesses rely on terminating #0. }
+        begin
+          Inc(Sp);
+          if Style=tlbsLF then
+            continue;
+        end
+      else if Sp^=#13 then
+        if Sp[1]=#10 then
+          begin
+            Inc(Sp,2);
+            if Style=tlbsCRLF then
+              continue;
+          end
+        else
+          begin
+            Inc(Sp);
+            if Style=tlbsCR then
+              continue;
+          end;
+      if Assigned(Pointer(Result)) then
+        Move(SLiteralStart^,Rp^,Pointer(SLiteralEnd)-Pointer(SLiteralStart)); { Byte difference to avoid signed div 2 on char = widechar. }
+      Inc(Pointer(Rp),Pointer(SLiteralEnd)-Pointer(SLiteralStart)); { Again, byte difference. }
+      if SLiteralEnd=Sp then
+        break;
+      SLiteralStart:=Sp;
+      Inc(Rp,1+ord(Style=tlbsCRLF));
+      if Assigned(Pointer(Result)) then
+        begin
+          if Style=tlbsCRLF then
+            Rp[-2]:=#13;
+          if Style=tlbsCR then
+            Rp[-1]:=#13
+          else
+            Rp[-1]:=#10;
+        end;
+    until false;
+    if Assigned(Pointer(Result)) then { Second pass finished. }
+      break;
+    if SLiteralStart=PChar(S) then { String is unchanged. }
+      Exit(S);
+    SetLength(Result,SizeUint(Pointer(Rp)-Pointer(Result)) div SizeOf(Char)); { Prepare second pass. }
+  until false;
 end;
 
 
@@ -869,16 +860,13 @@ begin
   result:=IntTostr(Value);
 end;
 
-function UIntToStr(Value: Cardinal): string; 
+function UIntToStr(Value: Cardinal): string;
 
 begin
   System.Str(Value, result);
 end;
 
 {   IntToHex returns a string representing the hexadecimal value of Value   }
-
-const
-   HexDigits: array[0..15] of char = '0123456789ABCDEF';
 
 function IntToHex(Value: Longint; Digits: integer): string;
 var i: integer;
@@ -921,7 +909,7 @@ end;
 
 function IntToHex(Value: Int8): string;
 begin
-  Result:=IntToHex(Value, 2*SizeOf(Int8));
+  Result:=IntToHex(LongInt(Value) and $ff, 2*SizeOf(Int8));
 end;
 
 function IntToHex(Value: UInt8): string;
@@ -931,7 +919,7 @@ end;
 
 function IntToHex(Value: Int16): string;
 begin
-  Result:=IntToHex(Value, 2*SizeOf(Int16));
+  Result:=IntToHex(LongInt(Value) and $ffff, 2*SizeOf(Int16));
 end;
 
 function IntToHex(Value: UInt16): string;
@@ -946,7 +934,7 @@ end;
 
 function IntToHex(Value: UInt32): string;
 begin
-  Result:=IntToHex(Value, 2*SizeOf(UInt32));
+  Result:=IntToHex(LongInt(Value), 2*SizeOf(UInt32));
 end;
 
 function IntToHex(Value: Int64): string;
@@ -960,30 +948,27 @@ begin
 end;
 
 function TryStrToInt(const s: string; out i : Longint) : boolean;
-var Error : word;
+var
+  Error : word;
 begin
   Val(s, i, Error);
-  TryStrToInt:=Error=0
+  TryStrToInt:=(Error=0)
 end;
+
 
 {   StrToInt converts the string S to an integer value,
     if S does not represent a valid integer value EConvertError is raised  }
-
 function StrToInt(const S: string): Longint;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then raise EConvertError.createfmt(SInvalidInteger,[S]);
-end ;
-
-
-function StrToInt64(const S: string): int64;
-var Error: word;
-begin
-  Val(S, result, Error);
-  if Error <> 0 then raise EConvertError.createfmt(SInvalidInteger,[S]);
+  if not(TryStrToInt(s,Result)) then
+    raise EConvertError.createfmt(SInvalidInteger,[S]);
 end;
 
+function StrToInt64(const S: string): int64;
+begin
+  if not(TryStrToInt64(s,Result)) then
+    raise EConvertError.createfmt(SInvalidInteger,[S]);
+end;
 
 function TryStrToInt64(const s: string; Out i : int64) : boolean;
 var Error : word;
@@ -992,12 +977,10 @@ begin
   TryStrToInt64:=Error=0
 end;
 
-
 function StrToQWord(const s: string): QWord;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then raise EConvertError.createfmt(SInvalidInteger,[S]);
+  if not(TryStrToQWord(s,Result)) then
+    raise EConvertError.createfmt(SInvalidInteger,[S]);
 end;
 
 function StrToUInt64(const s: string): UInt64;
@@ -1006,17 +989,20 @@ begin
 end;
 
 function StrToDWord(const s: string): DWord;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then raise EConvertError.createfmt(SInvalidInteger,[S]);
+  if not(TryStrToDWord(s,Result)) then
+    raise EConvertError.createfmt(SInvalidInteger,[S]);
 end;
 
 function TryStrToDWord(const s: string; Out D: DWord): boolean;
-var Error : word;
+var 
+  Error : word;
+  lq : QWord;
 begin
-  Val(s, D, Error);
-  TryStrToDWord:=Error=0
+  Val(s, lq, Error);
+  TryStrToDWord:=(Error=0) and (lq<=High(DWord));
+  if TryStrToDWord then
+    D:=lq;
 end;
 
 function StrToUInt(const s: string): Cardinal;
@@ -1043,22 +1029,18 @@ end;
 
 {   StrToIntDef converts the string S to an integer value,
     Default is returned in case S does not represent a valid integer value  }
-
 function StrToIntDef(const S: string; Default: Longint): Longint;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then result := Default;
-end ;
+  if not(TryStrToInt(s,Result)) then
+    result := Default;
+end;
 
 {   StrToDWordDef converts the string S to an DWord value,
     Default is returned in case S does not represent a valid DWord value  }
-
 function StrToDWordDef(const S: string; Default: DWord): DWord;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then result := Default;
+  if not(TryStrToDWord(s,Result)) then
+    result := Default;
 end;
 
 function StrToUIntDef(const S: string; Default: Cardinal): Cardinal;
@@ -1068,22 +1050,18 @@ end;
 
 {   StrToInt64Def converts the string S to an int64 value,
     Default is returned in case S does not represent a valid int64 value  }
-
 function StrToInt64Def(const S: string; Default: int64): int64;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then result := Default;
-end ;
+  if not(TryStrToInt64(s,Result)) then
+    result := Default;
+end;
 
 {   StrToQWordDef converts the string S to an QWord value,
     Default is returned in case S does not represent a valid QWord value  }
-
 function StrToQWordDef(const S: string; Default: QWord): QWord;
-var Error: word;
 begin
-  Val(S, result, Error);
-  if Error <> 0 then result := Default;
+  if not(TryStrToQWord(s,Result)) then
+    result := Default;
 end;
 
 function StrToUInt64Def(const S: string; Default: UInt64): UInt64;
@@ -1096,7 +1074,7 @@ end;
 function LoadStr(Ident: integer): string;
 begin
   result:='';
-end ;
+end;
 
 {   FmtLoadStr returns the string resource Ident and formats it accordingly   }
 
@@ -1151,6 +1129,23 @@ Function Format (Const Fmt : AnsiString; const Args : Array of const) : AnsiStri
 
 begin
   Result:=Format(Fmt,Args,DefaultFormatSettings);
+end;
+
+function SafeFormat (const Fmt: AnsiString; Args: array of const): UTF8String;
+
+begin
+  Result:=SafeFormat(Fmt,Args,DefaultFormatSettings);
+end;
+
+function SafeFormat (const Fmt: AnsiString; Args: array of const; const FormatSettings: TFormatSettings): UTF8String;
+
+begin
+  try
+    Result:=Format(Fmt,Args,FormatSettings);
+  except
+    On E : Exception do
+      Result:='Error "'+E.ClassName+'" during format('''+Fmt+''',['+ArrayOfConstToStr(Args,',','{','}')+']) : '+E.Message;
+  end;
 end;
 
 Function FormatBuf (Var Buffer; BufLen : Cardinal; Const Fmt; fmtLen : Cardinal; Const Args : Array of const; Const FormatSettings: TFormatSettings) : Cardinal;
