@@ -126,8 +126,9 @@ procedure TLinkerBSD.SetDefaultInfo;
 var
   LdProgram: string='ld';
 begin
-  if target_info.system in (systems_openbsd+systems_freebsd+[system_x86_64_dragonfly]) then
-    LdProgram:='ld.bfd';
+  if (target_info.system in (systems_openbsd+[system_x86_64_dragonfly])) or
+  (target_info.system in (systems_freebsd+[system_x86_64_freebsd])) then
+   LdProgram:='ld.bfd';
   LibrarySuffix:=' ';
   LdSupportsNoResponseFile := (target_info.system in ([system_m68k_netbsd]+systems_darwin));
   with Info do
@@ -149,7 +150,9 @@ begin
      else if target_info.system in systems_netbsd then
       DynamicLinker:='/usr/libexec/ld.elf_so'
      else if target_info.system=system_x86_64_dragonfly then
-      DynamicLinker:='/libexec/ld-elf.so.2'
+      DynamicLinker:='/libexec/ld-elf.so.2'  
+     else if target_info.system=system_x86_64_freebsd then 
+      DynamicLinker:='/libexec/ld-elf.so.1'  
      else
        DynamicLinker:='';
    end;
@@ -361,11 +364,11 @@ begin
      While not SharedLibFiles.Empty do
       begin
         S:=SharedLibFiles.GetFirst;
-        if (s<>'c') or reorder then
-         begin
+         if ((S <> 'c') and (Pos('libc.so',S) = 0)) or reorder then
+          begin
            i:=Pos(target_info.sharedlibext,S);
            if i>0 then
-            Delete(S,i,255);
+              Insert(':',s,1);   // needed for the linker
            LinkRes.Add('-l'+s);
          end
         else

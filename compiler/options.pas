@@ -3461,10 +3461,14 @@ begin
     Order to read configuration file :
     try reading fpc.cfg in :
      1 - current dir
-     2 - configpath
-     3 - compiler path
+     2 - compiler path
+     3 - configpath
+     4 - system path
   }
-  if not FileExists(fn) then
+  if not FileExists(fn) then // current dir
+    if CfgFileExists(IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn) then
+       foundfn:=IncludeTrailingBackslash(ExtractFilePath(ParamStr(0)))+fn // dir of compiler
+    else 
    begin
 {$ifdef Unix}
      hs:=GetEnvironmentVariable('HOME');

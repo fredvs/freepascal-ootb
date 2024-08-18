@@ -36,26 +36,24 @@
 {$asmmode gas}
 
 var
-  libc_environ: pchar; external name '__environ';
-  libc_fpu_control: word; external name '__fpu_control';
-  libc_init_proc: procedure; external name '_init';
-  libc_fini_proc: procedure; external name '_fini';
-  _etext: pointer; external name '_etext';
+  libc_environ: pchar; external name '__environ@GLIBC_2.2.5';
+  libc_fpu_control: word; external name '__fpu_control@GLIBC_2.2.5';
+  libc_init_proc: procedure; external name '_init@GLIBC_2.2.5';
+  libc_fini_proc: procedure; external name '_fini@GLIBC_2.2.5';
+  _etext: pointer; external name '_etext@GLIBC_2.2.5';
 
   fpc_ret,fpc_ret_rbp : pointer;
 
-procedure libc_atexit; external name 'atexit';
-procedure libc_exit; external name '__libc_exit';
-procedure libc_init; external name '__libc_init';
-procedure libc_setfpucw; external name '__setfpucw';
-procedure libc_start_main; external name '__libc_start_main';
-
-procedure gmon_monstartup; external name 'monstartup';
-procedure gmon_mcleanup; external name '_mcleanup';
+procedure libc_atexit; external name 'atexit@GLIBC_2.2.5';
+procedure libc_exit; external name '__libc_exit@GLIBC_2.2.5';
+procedure libc_init; external name '__libc_init@GLIBC_2.2.5';
+procedure libc_setfpucw; external name '__setfpucw@GLIBC_2.2.5';
+procedure libc_start_main; external name '__libc_start_main@GLIBC_2.2.5';
+procedure gmon_monstartup; external name 'monstartup@GLIBC_2.2.5';
+procedure gmon_mcleanup; external name '_mcleanup@GLIBC_2.2.5';
 
 procedure _FPC_libc_start; forward;
 procedure _FPC_libc_haltproc(e:longint); forward;
-
 
 procedure main_stub; assembler; nostackframe;
   asm

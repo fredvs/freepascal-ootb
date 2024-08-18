@@ -499,14 +499,17 @@ Implementation
       begin
         if s='' then
           exit;
-        { remove prefix 'lib' }
-        if Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix then
+      
+        if (Pos(target_info.sharedlibext + '.',S) = 0) then // no extended soname     
+        begin
+        if Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix then  { remove prefix 'lib' }
           Delete(s,1,length(target_info.sharedlibprefix));
         { remove extension if any }
         if Copy(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext))=target_info.sharedlibext then
           Delete(s,length(s)-length(target_info.sharedlibext)+1,length(target_info.sharedlibext)+1);
         { ready to be added }
-        SharedLibFiles.Concat(S);
+        end;
+       SharedLibFiles.Concat(S);
       end;
 
 
@@ -528,13 +531,15 @@ Implementation
       begin
         if s='' then
           exit;
-        { remove prefix 'lib' }
+         if (Pos(target_info.sharedclibext + '.',S) = 0) then // no extended soname    
+       begin
+     { remove prefix 'lib' }
         if Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix then
           Delete(s,1,length(target_info.sharedclibprefix));
         { remove extension if any }
         if Copy(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext))=target_info.sharedclibext then
           Delete(s,length(s)-length(target_info.sharedclibext)+1,length(target_info.sharedclibext)+1);
-        { ready to be added }
+        end;
         SharedLibFiles.Concat(S);
       end;
 

@@ -773,12 +773,12 @@ end;
 
 function ExcludeTrailingBackslash(const S: AnsiString): AnsiString;
 begin
-  Result:={$IFDEF FPC_DOTTEDUNITS}System.{$ENDIF}SysUtils.ExcludeTrailingBackslash(S);
+  Result:={$IFDEF FPC_DOTTEDUNITS}System.{$ENDIF}SysUtils.ExcludeLeadingPathDelimiter(S);
 end;
 
 function ExcludeTrailingPathDelimiter(const S: AnsiString): AnsiString;
 begin
-  Result:={$IFDEF FPC_DOTTEDUNITS}System.{$ENDIF}SysUtils.ExcludeTrailingPathDelimiter(S);
+  Result:={$IFDEF FPC_DOTTEDUNITS}System.{$ENDIF}SysUtils.ExcludeLeadingPathDelimiter(S);
 end;
 
 function ExpandFileNameCase(const FileName: AnsiString; out

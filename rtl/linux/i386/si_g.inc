@@ -37,14 +37,13 @@ var
   gmon_etext: pointer; external name '_etext';
   gmon_monstarted: longint = 0;
 
-procedure gmon_monstartup; external name 'monstartup';
-procedure gmon_mcleanup; external name '_mcleanup';
-
-procedure libc_atexit; external name '__libc_atexit';
-procedure libc_exit; external name '__libc_exit';
-procedure libc_init; external name '__libc_init';
-procedure libc_setfpucw; external name '__setfpucw';
-procedure libc_start_main; external name '__libc_start_main';
+procedure gmon_monstartup; external name 'monstartup@GLIBC_2.0';
+procedure gmon_mcleanup; external name '_mcleanup@GLIBC_2.0';
+procedure libc_atexit; external name '__libc_atexit@GLIBC_2.0';
+procedure libc_exit; external name '__libc_exit@GLIBC_2.0';
+procedure libc_init; external name '__libc_init@GLIBC_2.0';
+procedure libc_setfpucw; external name '__setfpucw@GLIBC_2.0';
+procedure libc_start_main; external name '__libc_start_main@GLIBC_2.0';
 
 {******************************************************************************
                        Process + profiling start/halt

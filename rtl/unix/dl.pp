@@ -17,14 +17,30 @@ unit dl;
 interface
 
 const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}
+
+const
 {$ifdef BSD}   // dlopen is in libc on FreeBSD.
   LibDL = 'c';
 {$else}
   {$ifdef HAIKU}
     LibDL = 'root';
   {$else}
+   {$ifdef linux}
+    LibDL = 'libdl.so.2';
+  {$else}
     LibDL = 'dl';
   {$endif}
+{$endif}
 {$endif}
 
 {$if defined(linux) or defined(freebsd) or defined(openbsd) or defined(dragonfly)}
@@ -85,19 +101,6 @@ type
     dli_saddr      : pointer;
   end;
 
-function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl;
-function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl;
-{$ifdef ELF}
-function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl;
-{$endif}
-function dlclose(Lib : Pointer) : Longint; cdecl; external libdl;
-function dlerror() : Pchar; cdecl; external libdl;
-
-{ overloaded for compatibility with hmodule }
-function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl;
-function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl;
-function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external; {$endif}
-
 type
   plink_map = ^link_map;
   link_map = record
@@ -107,14 +110,21 @@ type
     l_next, l_prev:^link_map; { Chain of loaded objects }
     {Plus additional fields private to the implementation }
   end;
-
-{$if defined(BSD) or defined(LINUX)}
-function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl;
-{$else}
-{ Fortunately investigating the sources of open source projects brought the understanding, that
-  `handle` is just a `struct link_map*` that contains full library name.}
+  
+function dlopen(Name : PChar; Flags : longint) : Pointer; cdecl; external libdl name 'dlopen'  + LIBC_SUFFIX ;
+function dlsym(Lib : Pointer; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym'  + LIBC_SUFFIX ;
+{$ifdef ELF}
+function dlvsym(Lib : Pointer; Name : Pchar; Version: Pchar) : Pointer; cdecl; external Libdl name 'dlvsym' + LIBC_SUFFIX ;
 {$endif}
+function dlclose(Lib : Pointer) : Longint; cdecl; external libdl name 'dlclose' + LIBC_SUFFIX ;
+function dlerror() : Pchar; cdecl; external libdl name 'dlerror' + LIBC_SUFFIX ;
 
+{ overloaded for compatibility with hmodule }
+function dlsym(Lib : PtrInt; Name : Pchar) : Pointer; cdecl; external Libdl name 'dlsym'  + LIBC_SUFFIX ;
+function dlclose(Lib : PtrInt) : Longint; cdecl; external libdl name 'dlclose'  + LIBC_SUFFIX ;
+function dladdr(Lib: pointer; info: Pdl_info): Longint; cdecl; {$if not defined(aix) and not defined(android)} external name 'dladdr'  + LIBC_SUFFIX ;{$endif}
+
+function dlinfo(Lib:pointer;request:longint;info:pointer):longint;cdecl;external Libdl name 'dlinfo'  + LIBC_SUFFIX ;
 
 implementation
 
@@ -136,7 +146,7 @@ uses
     begin
       SimpleExtractFilename:=Copy(s,PosLastSlash(s)+1,Length(s)-PosLastSlash(s));
     end;
-
+      
 
   procedure UnixGetModuleByAddr(addr: pointer; var baseaddr: pointer; var filename: openstring);
     var
@@ -147,6 +157,10 @@ uses
       dladdr(addr, @dlinfo);
       baseaddr:=dlinfo.dli_fbase;
       filename:=String(dlinfo.dli_fname);
+    {$ifdef darwin}
+      if SimpleExtractFilename(filename)=SimpleExtractFilename(ParamStr(0)) then
+        baseaddr:=nil;
+    {$endif darwin}
     end;
 
 {$ifdef aix}

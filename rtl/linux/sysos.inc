@@ -19,10 +19,22 @@
 
 const clib = 'c';
 
+const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}
+
 type libcint=longint;
      plibcint=^libcint;
 
-function geterrnolocation: Plibcint; cdecl;external clib name'__errno_location';
+function geterrnolocation: Plibcint; cdecl;external clib name'__errno_location' + LIBC_SUFFIX;
 
 function geterrno:libcint; [public, alias: 'FPC_SYS_GETERRNO'];
 

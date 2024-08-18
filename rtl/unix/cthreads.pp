@@ -62,6 +62,18 @@ interface
 
 {$define basicevents_with_pthread_cond}
 
+const
+  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}
+
 Procedure SetCThreadManager;
 
 implementation
@@ -424,14 +436,12 @@ Type  PINTRTLEvent = ^TINTRTLEvent;
       result:=dword(-1);
     end;
 
-
   function  CResumeThread  (threadHandle : TThreadID) : dword;
     begin
       result:=dword(-1);
     end;
 
-
-  procedure sched_yield; cdecl; external 'c' name 'sched_yield';
+  procedure sched_yield; cdecl; external 'c' name 'sched_yield' + LIBC_SUFFIX ;
 
   procedure CThreadSwitch;  {give time to other threads}
     begin

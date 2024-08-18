@@ -152,6 +152,4 @@ const
    ENOTSUP = EOPNOTSUPP;
    ECANCELED = 125;
 
-function __errno_location: PInteger; cdecl;external clib name '__errno_location';
-
-
+function __errno_location: PInteger; cdecl;external clib name '__errno_location' + LIBC_SUFFIX;
