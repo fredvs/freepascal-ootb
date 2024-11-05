@@ -112,11 +112,26 @@ const
    LOG_NOWAIT = $10;
    LOG_PERROR = $20;
    
-procedure closelog;cdecl;external clib name 'closelog@GLIBC_2.2.5';
-procedure openlog(__ident:Pchar; __option:longint; __facility:longint);cdecl;external clib name 'openlog@GLIBC_2.2.5';
-function setlogmask(__mask:longint):longint;cdecl;external clib name 'setlogmask@GLIBC_2.2.5';
-procedure syslog(__pri: Integer; __fmt: PChar; arg : array of const); cdecl; external clib name 'syslog@GLIBC_2.2.5';
-procedure vsyslog(__pri: Integer; Fmt: PChar; Arg: Pointer);cdecl; external clib name 'vsyslog@GLIBC_2.2.5';
+  // allow to assign proper signed symbol table name for a libc.so.6 method
+  {$if defined(linux) and defined(cpux86_64)}
+  LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpuaarch64)}
+  LIBC_SUFFIX = '@GLIBC_2.17';
+  {$else}
+  {$if defined(linux) and defined(cpui386)}
+  LIBC_SUFFIX = '@GLIBC_2.0';
+  {$else}
+  LIBC_SUFFIX = '';
+  {$endif}
+  {$endif}
+  {$endif}   
+   
+procedure closelog;cdecl;external clib name 'closelog' + LIBC_SUFFIX;
+procedure openlog(__ident:Pchar; __option:longint; __facility:longint);cdecl;external clib name 'openlog' + LIBC_SUFFIX;
+function setlogmask(__mask:longint):longint;cdecl;external clib name 'setlogmask' + LIBC_SUFFIX;
+procedure syslog(__pri: Integer; __fmt: PChar; arg : array of const); cdecl; external clib name 'syslog' + LIBC_SUFFIX;
+procedure vsyslog(__pri: Integer; Fmt: PChar; Arg: Pointer);cdecl; external clib name 'vsyslog' + LIBC_SUFFIX;
 
 { ---------------------------------------------------------------------
     Borland compatibility types

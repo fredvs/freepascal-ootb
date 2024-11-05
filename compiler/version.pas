@@ -34,10 +34,14 @@ interface
        {$if defined(linux) and defined(cpux86_64)}
        minorpatch = '_glibc225';
        {$else}
+       {$if defined(linux) and defined(cpuaarch64)}
+       minorpatch = '_glibc217';
+       {$else}
        {$if defined(linux) and defined(cpui386)}
        minorpatch = '_glibc20';
        {$else}
        minorpatch = ' ';
+       {$endif}
        {$endif}
        {$endif}
 

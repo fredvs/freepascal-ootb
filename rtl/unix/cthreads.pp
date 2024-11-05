@@ -63,14 +63,18 @@ interface
 {$define basicevents_with_pthread_cond}
 
 const
-  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  // allow to assign proper signed symbol table name for a libc.so.6 method
   {$if defined(linux) and defined(cpux86_64)}
   LIBC_SUFFIX = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpuaarch64)}
+  LIBC_SUFFIX = '@GLIBC_2.17';
   {$else}
   {$if defined(linux) and defined(cpui386)}
   LIBC_SUFFIX = '@GLIBC_2.0';
   {$else}
   LIBC_SUFFIX = '';
+  {$endif}
   {$endif}
   {$endif}
 

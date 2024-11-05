@@ -59,10 +59,14 @@ Uses
   unixcp;
   
 const
-  /// allow to assign proper signed symbol table name for a libc.so.6 method
+  // allow to assign proper signed symbol table name for a libc.so.6 method
   {$if defined(linux) and defined(cpux86_64)}
   LIBC_SUFFIX = '@GLIBC_2.2.5';
   LIBC_SUFFIX2 = '@GLIBC_2.2.5';
+  {$else}
+  {$if defined(linux) and defined(cpuaarch64)}
+  LIBC_SUFFIX = '@GLIBC_2.17';
+  LIBC_SUFFIX2 = '@GLIBC_2.17';
   {$else}
   {$if defined(linux) and defined(cpui386)}
   LIBC_SUFFIX = '@GLIBC_2.0';
@@ -72,6 +76,7 @@ const
   LIBC_SUFFIX2 = '';
   {$endif}
   {$endif}  
+  {$endif}
 
 Const
 {$ifndef useiconv}

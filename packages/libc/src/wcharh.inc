@@ -40,7 +40,7 @@ function btowc(__c:longint):wint_t;cdecl;external clib name 'btowc' + LIBC_SUFFI
 function wctob(__c:wint_t):longint;cdecl;external clib name 'wctob' + LIBC_SUFFIX;
 function mbsinit(__ps:Pmbstate_t):longint;cdecl;external clib name 'mbsinit' + LIBC_SUFFIX;
 function mbrtowc(__pwc:Pwchar_t; __s:Pchar; __n:size_t; __p:Pmbstate_t):size_t;cdecl;external clib name 'mbrtowc' + LIBC_SUFFIX;
-function wcrtomb(__s:Pchar; __wc:wchar_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'wcrtomb@GLIBC_2.2.5' + LIBC_SUFFIX;
+function wcrtomb(__s:Pchar; __wc:wchar_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'wcrtomb' + LIBC_SUFFIX;
 function __mbrlen(__s:Pchar; __n:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name '__mbrlen' + LIBC_SUFFIX;
 function mbrlen(__s:Pchar; __n:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'mbrlen' + LIBC_SUFFIX;
 function mbsrtowcs(__dst:Pwchar_t; __src:PPchar; __len:size_t; __ps:Pmbstate_t):size_t;cdecl;external clib name 'mbsrtowcs' + LIBC_SUFFIX;
