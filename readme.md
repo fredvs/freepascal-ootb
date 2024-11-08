@@ -7,7 +7,10 @@ This is a fork from Free Pascal. https://www.freepascal.org/
 
 Free Pascal OOTB works out of the box.
 
-The branch main is based on fpc 3.2.2 official release source.
+The last commits on branch main is based on fpc 3.2.4 release_3_2_4-branch.
+https://gitlab.com/freepascal.org/fpc/source/-/tree/release_3_2_4-branch
+ 
+Commits before 3.2.4 on branch main are based on fpc 3.2.2 official release source.
 https://gitlab.com/freepascal.org/fpc/source/-/tree/release_3_2_2/
 
 The branch fixes_3.0 is based on fpc 3.0.5.
@@ -36,16 +39,21 @@ Example:
 
 *-Fu/$FPCBINDIR/units/$fpctarget/rtl*
 
-NEW: Release OOTB-glibc255 for Linux 64 bit: with signed symbol
+NEW: Release OOTB-glibc255 for Linux 64 bit cpu x86_64: with signed symbol
 GLIBC_2.2.5. for all glibc methods and link with \'libdl.so.2\'. This is
 to have binaries that run on system with older or newer version of glibc
 than the one on the system-compilation.
 
-NEW: Release OOTB-glibc20 for Linux 32 bit: with signed symbol
+NEW: Release OOTB-glibc20 for Linux 32 bit cpu i386: with signed symbol
 GLIBC_2.0. for all glibc methods and link with \'libdl.so.2\'. This is
 to have binaries that run on system with older or newer version of glibc
 than the one on the system-compilation. Also fixed libc_csu_init and
 l_ibc_csu_fini\_ error at linking on last Linux distros.
+
+NEW: Release OOTB-glibc24 for Linux 32 bit cpu arm: with signed symbol
+GLIBC_2.4. for all glibc methods and link with \'libdl.so.2\'. This is
+to have binaries that run on system with older or newer version of glibc
+than the one on the system-compilation. 
 
 There is binary release for Windows 64/32 bit, Linux 64/32 bit and
 Rasbian ARM32/aarch64 Rpi, FreeBSD 64 bit.

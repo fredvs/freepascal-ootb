@@ -25,7 +25,10 @@ const
   LIBC_SUFFIX = '@GLIBC_2.2.5';
   {$else}
   {$if defined(linux) and defined(cpuaarch64)}
-  LIBC_SUFFIX = '@GLIBC_2.17';
+  LIBC_SUFFIX = ''; //  '@GLIBC_2.17'
+  {$else}
+  {$if defined(linux) and defined(cpuarm)}
+  LIBC_SUFFIX =  '@GLIBC_2.4';
   {$else}
   {$if defined(linux) and defined(cpui386)}
   LIBC_SUFFIX = '@GLIBC_2.0';
@@ -33,7 +36,8 @@ const
   LIBC_SUFFIX = '';
   {$endif}
   {$endif}
-  {$endif} 
+  {$endif}
+  {$endif}
 
 Const
   LibThreads = 'pthread';
