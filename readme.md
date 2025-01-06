@@ -7,7 +7,7 @@ This is a fork from Free Pascal. https://www.freepascal.org/
 
 Free Pascal OOTB works out of the box.
 
-The last commits on branch main is based on fpc 3.2.4 release_3_2_4-branch.
+The last commits on branch main are based on fpc 3.2.4 release_3_2_4-branch.
 https://gitlab.com/freepascal.org/fpc/source/-/tree/release_3_2_4-branch
  
 Commits before 3.2.4 on branch main are based on fpc 3.2.2 official release source.
