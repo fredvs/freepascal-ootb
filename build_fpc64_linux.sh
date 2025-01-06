@@ -7,7 +7,7 @@ COMPILER=fpc
 INSTALLDIR=/tmp/fpc-ootb/usr
 
 make clean
-rm -f -r /tmp/fpc-ootb/usr
+rm -f -r /tmp/fpc-ootb
 mkdir /tmp/fpc-ootb
 mkdir /tmp/fpc-ootb/usr
 
