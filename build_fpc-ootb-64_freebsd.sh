@@ -39,7 +39,7 @@ cp /tmp/fpc-ootb/usr/bin/h2pas ./fpc-ootb-64/tools/
 cp /tmp/fpc-ootb/usr/bin/fpcjres ./fpc-ootb-64/tools/
 cp /tmp/fpc-ootb/usr/bin/pas2js ./fpc-ootb-64/tools/
 
-tar -zcvf fpc-ootb-324-x86_64-linux_glibc225.tar.gz ./fpc-ootb-64
+tar -zcvf fpc-ootb-324-x86_64-freebsd.tar.gz ./fpc-ootb-64
 rm -f -r /tmp/fpc-ootb
 #rm -f -r ./fpc-ootb-64
 
