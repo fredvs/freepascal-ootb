@@ -34,7 +34,7 @@ ren C:\fpc-ootb-32\ppc386.exe fpc-ootb-32.exe
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\i386-win32\fp.exe C:\fpc-ootb-32\
 ren C:\fpc-ootb-32\fp.exe fpide-ootb-32.exe
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\i386-win32\pas2jslib.dll C:\fpc-ootb-32\lib\
-xcopy /E /R /Y /Q /S C:\fpc-ootb-tmp\units\i386-win32 C:\fpc-ootb-32\units
+xcopy /E /R /Y /Q /S C:\fpc-ootb-tmp\units\i386-win32 C:\fpc-ootb-32\units\i386-win32\
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\i386-win32\fpcres.exe C:\fpc-ootb-32\tools\
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\i386-win32\h2pas.exe C:\fpc-ootb-32\tools\
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\i386-win32\fpcjres.exe C:\fpc-ootb-32\tools\

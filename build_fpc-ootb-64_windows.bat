@@ -34,7 +34,7 @@ ren C:\fpc-ootb-64\ppcx64.exe fpc-ootb-64.exe
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\x86_64-win64\fp.exe C:\fpc-ootb-64\
 ren C:\fpc-ootb-64\fp.exe fpide-ootb-64.exe
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\x86_64-win64\pas2jslib.dll C:\fpc-ootb-64\lib\
-xcopy /E /R /Y /Q /S C:\fpc-ootb-tmp\units\x86_64-win64 C:\fpc-ootb-64\units
+xcopy /E /R /Y /Q /S C:\fpc-ootb-tmp\units\x86_64-win64 C:\fpc-ootb-64\units\x86_64-win64\
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\x86_64-win64\fpcres.exe C:\fpc-ootb-64\tools\
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\x86_64-win64\h2pas.exe C:\fpc-ootb-64\tools\
 xcopy /E /R /Y /Q C:\fpc-ootb-tmp\bin\x86_64-win64\fpcjres.exe C:\fpc-ootb-64\tools\
