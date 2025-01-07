@@ -40,7 +40,7 @@ interface
        {$if defined(linux) and defined(cpui386)}
        minorpatch = '_glibc20';
        {$else}
-       minorpatch = ' ';
+       minorpatch = '_ootb';
        {$endif}
        {$endif}
        {$endif}
