@@ -24,7 +24,7 @@ procedure _mcleanup; cdecl; external name '_mcleanup';
 function atexit(proc: TCdeclProcedure): cint; cdecl; external name 'atexit';
 procedure _monstartup(lowpc, highpc: u_long); cdecl; external name '_monstartup';
 procedure __init; cdecl; external name '__init';
-procedure c_exit(exit_code: cint); cdecl; noreturn; external name 'exit';
+procedure c_exit(exit_code: cint); cdecl; noreturn; external name '_exit';
 function _csu_finish(_argv: PPChar; _envp: PPChar; _cleanup: TCdeclProcedure): PPPChar; cdecl; external name '_csu_finish';
 
 procedure _FPC_proc___start(argc: LongInt; argv: PPChar; envp: Pointer; cleanup: TCdeclProcedure); cdecl; forward;

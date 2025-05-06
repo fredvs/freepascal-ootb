@@ -17,7 +17,7 @@
 {$asmmode att}
 
 procedure __init; cdecl; external name '__init';
-procedure c_exit(exit_code: cint); cdecl; noreturn; external name 'exit';
+procedure c_exit(exit_code: cint); cdecl; noreturn; external name '_exit'; // fred
 function _csu_finish(_argv: PPChar; _envp: PPChar; _cleanup: TCdeclProcedure): PPPChar; cdecl; external name '_csu_finish';
 
 procedure _FPC_proc___start(argc: LongInt; argv: PPChar; envp: Pointer; cleanup: TCdeclProcedure); cdecl; forward;
