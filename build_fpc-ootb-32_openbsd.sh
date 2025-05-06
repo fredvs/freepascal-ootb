@@ -30,7 +30,7 @@ cp ./ootb/readme.txt ./fpc-ootb-32/
 
 cp -rf ./license ./fpc-ootb-32
 
-cp /tmp/fpc-ootb/usr/lib/fpc/3.2.4/ppcx64 ./fpc-ootb-32/fpc-ootb-32
+cp /tmp/fpc-ootb/usr/lib/fpc/3.2.4/ppc386 ./fpc-ootb-32/fpc-ootb-32
 cp /tmp/fpc-ootb/usr/bin/fp ./fpc-ootb-32/fpide-ootb-32
 cp /tmp/fpc-ootb/usr/lib/libpas2jslib.so ./fpc-ootb-32/lib/
 cp -rf /tmp/fpc-ootb/usr/lib/fpc/3.2.4/units/i386-openbsd ./fpc-ootb-32/units
