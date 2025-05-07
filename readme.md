@@ -55,7 +55,7 @@ GLIBC_2.4. for all glibc methods and link with \'libdl.so.2\'. This is
 to have binaries that run on system with older or newer version of glibc
 than the one on the system-compilation. 
 
-There is binary release for Windows 64/32 bit, Linux 64/32 bit and
+There is binary release for Windows 64/32 bit, Linux 64/32 bit,
 Rasbian ARM32/aarch64 Rpi, FreeBSD 64 bit and OpenBSD 64/32 bit.
 
 https://github.com/fredvs/freepascal-ootb/releases
