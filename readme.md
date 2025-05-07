@@ -57,6 +57,7 @@ than the one on the system-compilation.
 
 There is binary release for Windows 64/32 bit, Linux 64/32 bit and
 Rasbian ARM32/aarch64 Rpi, FreeBSD 64 bit and OpenBSD 64/32 bit.
+
 https://github.com/fredvs/freepascal-ootb/releases
 
 *(Image on top is the Pascal's Mystic Hexagram)*
