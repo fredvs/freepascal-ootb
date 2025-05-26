@@ -499,8 +499,12 @@ Implementation
       begin
         if s='' then
           exit;
-      
+        
+        {$ifdef openbsd}
+        if true then
+        {$else}
         if (Pos(target_info.sharedlibext + '.',S) = 0) then // no extended soname     
+        {$endif}
         begin
         if Copy(s,1,length(target_info.sharedlibprefix))=target_info.sharedlibprefix then  { remove prefix 'lib' }
           Delete(s,1,length(target_info.sharedlibprefix));
@@ -531,8 +535,12 @@ Implementation
       begin
         if s='' then
           exit;
+         {$ifdef openbsd}
+        if true then
+        {$else}
          if (Pos(target_info.sharedclibext + '.',S) = 0) then // no extended soname    
-       begin
+        {$endif}
+        begin
      { remove prefix 'lib' }
         if Copy(s,1,length(target_info.sharedclibprefix))=target_info.sharedclibprefix then
           Delete(s,1,length(target_info.sharedclibprefix));
@@ -653,7 +661,7 @@ Implementation
         if (OrderedSymbols.Empty) or
            not(tf_supports_symbolorderfile in target_info.flags) then
           exit;
-        symfile:=TScript.Create(outputexedir+'symbol_order.fpc');
+        symfile:=TScript.Create(outputexedir+UniqueName('symbol_order')+'.fpc');
         item:=TCmdStrListItem(OrderedSymbols.First);
         while assigned(item) do
           begin
