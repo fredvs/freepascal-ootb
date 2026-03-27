@@ -21,7 +21,7 @@
 {$include gtkbox.inc}
 {$include gtkbbox.inc}
 {$include gtkbutton.inc}
-{$include gtkcalendar.inc}
+// {$include gtkcalendar.inc}
 {$include gtkcelleditable.inc}
 {$include gtkcellrenderer.inc}
 {$include gtkcellrenderertext.inc}
@@ -33,16 +33,16 @@
 {$include gtkcheckbutton.inc}
 {$include gtkcheckmenuitem.inc}
 {$include gtkclipboard.inc}
-{$include gtkclist.inc}
+// {$include gtkclist.inc}
 {$include gtkdialog.inc}
 {$include gtkvbox.inc}
 {$include gtkcolorsel.inc}
 {$include gtkcolorseldialog.inc}
 {$include gtkhbox.inc}
-{$include gtkcombo.inc}
-{$include gtkctree.inc}
+// {$include gtkcombo.inc}
+// {$include gtkctree.inc}
 {$include gtkdrawingarea.inc}
-{$include gtkcurve.inc}
+// {$include gtkcurve.inc}
 {$include gtkdnd.inc}
 {$include gtkeditable.inc}
 {$include gtkimcontext.inc}
@@ -52,10 +52,10 @@
 {$include gtkenums.inc}
 {$include gtkeventbox.inc}
 {$include fnmatch.inc}
-{$include gtkfilesel.inc}
+// {$include gtkfilesel.inc}
 {$include gtkfixed.inc}
 {$include gtkfontsel.inc}
-{$include gtkgamma.inc}
+// {$include gtkgamma.inc}
 {$include gtkgc.inc}
 {$include gtkhandlebox.inc}
 {$include gtkpaned.inc}
@@ -78,12 +78,12 @@
 {$include gtkimagemenuitem.inc}
 {$include gtkimcontextsimple.inc}
 {$include gtkimmulticontext.inc}
-{$include gtkinputdialog.inc}
+// {$include gtkinputdialog.inc}
 {$include gtkinvisible.inc}
-{$include gtkitemfactory.inc}
+// {$include gtkitemfactory.inc}
 {$include gtklayout.inc}
-{$include gtklist.inc}
-{$include gtklistitem.inc}
+// {$include gtklist.inc}
+// {$include gtklistitem.inc}
 {$include gtktreemodel.inc}
 {$include gtktreesortable.inc}
 {$include gtktreemodelsort.inc}
@@ -92,11 +92,11 @@
 {$include gtkmenubar.inc}
 {$include gtkmessagedialog.inc}
 {$include gtknotebook.inc}
-{$include gtkoldeditable.inc}
+// {$include gtkoldeditable.inc}
 {$include gtkoptionmenu.inc}
-{$include gtkpixmap.inc}
+// {$include gtkpixmap.inc}
 {$include gtkplug.inc}
-{$include gtkpreview.inc}
+// {$include gtkpreview.inc}
 {$include gtkprogress.inc}
 {$include gtkprogressbar.inc}
 {$include gtkradiobutton.inc}
@@ -104,7 +104,7 @@
 {$include gtkscrolledwindow.inc}
 {$include gtkselection.inc}
 {$include gtkseparatormenuitem.inc}
-{$include gtksignal.inc}
+// {$include gtksignal.inc}
 {$include gtksizegroup.inc}
 {$include gtksocket.inc}
 {$include gtkspinbutton.inc}
@@ -112,7 +112,7 @@
 {$include gtkstatusbar.inc}
 {$include gtktable.inc}
 {$include gtktearoffmenuitem.inc}
-{$include gtktext.inc}
+// {$include gtktext.inc}
 {$include gtktextiter.inc}
 {$include gtktexttag.inc}
 {$include gtktexttagtable.inc}
@@ -125,12 +125,12 @@
 {$include gtktextbuffer.inc}
 {$include gtktextlayout.inc}
 {$include gtktextview.inc}
-{$include gtktipsquery.inc}
+// {$include gtktipsquery.inc}
 {$include gtktooltips.inc}
 {$include gtktoolbar.inc}
-{$include gtktree.inc}
+// {$include gtktree.inc}
 {$include gtktreednd.inc}
-{$include gtktreeitem.inc}
+// {$include gtktreeitem.inc}
 {$include gtktreeselection.inc}
 {$include gtktreestore.inc}
 {$include gtktreeviewcolumn.inc}

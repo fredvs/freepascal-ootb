@@ -3,6 +3,9 @@
 
 {$IFDEF read_interface_types}
 type
+   PGtkTranslateFunc = ^TGtkTranslateFunc;
+   TGtkTranslateFunc = gchar;
+
    PGtkActionGroupPrivate = pointer;
 
    PGtkActionGroup = ^TGtkActionGroup;

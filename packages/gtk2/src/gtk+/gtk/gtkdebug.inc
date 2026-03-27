@@ -15,8 +15,8 @@ const
 {$endif}
 
 {$IFNDEF KYLIX}
-  var
-     gtk_debug_flags : guint;cvar;public;
+  // var
+  //    gtk_debug_flags : guint;cvar;public;
 {$ENDIF}
 {$ENDIF read_interface_rest}
 

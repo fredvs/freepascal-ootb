@@ -58,7 +58,11 @@ const
     {$ifdef UseCustomLibs}
     gdkpixbuflib = '';
     {$else}
-    gdkpixbuflib = 'libgdk_pixbuf-2.0.so';
+    gdkpixbuflib = '';
+    {$linklib ydk-pixbuf}
+    {$linklib glib-2.0}
+    {$linklib gobject-2.0}
+    {$linklib png}
     {$endif}
   {$endif}
 {$endif}

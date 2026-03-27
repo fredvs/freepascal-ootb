@@ -99,7 +99,20 @@ const
       {$ifdef UseCustomLibs}
       gtklib = '';
       {$else}
-      gtklib = 'libgtk-x11-2.0.so';
+      gtklib = '';
+      {$linklib ytk}
+      {$linklib ztk}
+      {$linklib pangocairo-1.0}
+      {$linklib cairo}
+      {$linklib gio-2.0}
+      {$linklib pangoft2-1.0}
+      {$linklib pango-1.0}
+      {$linklib gobject-2.0}
+      {$linklib glib-2.0}
+      {$linklib harfbuzz}
+      {$linklib fontconfig}
+      {$linklib freetype}
+      {$linklib m}
       {$endif}
     {$endif}
   {$ENDIF}

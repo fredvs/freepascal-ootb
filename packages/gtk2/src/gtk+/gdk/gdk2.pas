@@ -57,7 +57,18 @@ const
     {$ifdef UseCustomLibs}
     gdklib = '';
     {$else}
-    gdklib = 'libgdk-x11-2.0.so';
+    gdklib = '';
+    {$linklib ydk}
+    {$linklib pangocairo-1.0}
+    {$linklib pango-1.0}
+    {$linklib harfbuzz}
+    {$linklib cairo}
+    {$linklib gobject-2.0}
+    {$linklib glib-2.0}
+    {$linklib X11}
+    {$linklib Xext}
+    {$linklib Xrender}
+    {$linklib Xinerama}
     {$endif}
   {$endif}
 {$endif}
