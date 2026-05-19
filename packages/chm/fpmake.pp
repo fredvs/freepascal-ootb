@@ -33,6 +33,7 @@ begin
     D:=P.Dependencies.Add('fcl-base');
     D.Version:='3.2.3';
     D:=P.Dependencies.Add('rtl-generics');
+    D:=P.Dependencies.Add('rtl-objpas');
 
     P.SourcePath.Add('src');
     P.IncludePath.Add('src');
@@ -120,7 +121,6 @@ begin
 //    P.ProgramPath.Add('src');
     T:=P.Targets.AddProgram('chmls.lpr');
     T:=P.Targets.AddProgram('chmcmd.lpr');
-
 
 {$ifndef ALLPACKAGES}
     Run;
