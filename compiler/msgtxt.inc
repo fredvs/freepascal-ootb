@@ -1382,7 +1382,7 @@ const msgtxt : array[0..000352,1..240] of char=(
   '13027_E_Unit $1 is already contained in package $2'#000+
   '13028_W_Unit $1 is imported from in','directly required package $2'#000+
   '13029_U_PPL filename $1'#000+
-  '11023_Free Pascal Compiler version $FPCFULLVERSION [$FPCDATE] for $FPC'+
+  '11023_Free Pascal Compiler OOTB v. $FPCFULLVERSION [$FPCDATE] for $FPC'+
   'CPU'#010+
   'Copyright (c) 1993-2026 by Florian Klaempfl & friends.'#000+
   '11024_Free Pascal Compiler OOTB v. $FPCVERSION'#010+
