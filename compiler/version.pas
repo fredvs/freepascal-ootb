@@ -32,15 +32,15 @@ interface
        patch_nr   = '4';
        
        {$if defined(linux) and defined(cpux86_64)}
-       minorpatch = '_glibc225';
+       minorpatch = '-rc2_glibc225';
        {$else}
        {$if defined(linux) and defined(cpuaarch64)}
-       minorpatch = '_glibc217';
+       minorpatch = '-rc2_glibc217';
        {$else}
        {$if defined(linux) and defined(cpui386)}
-       minorpatch = '_glibc20';
+       minorpatch = '-rc2_glibc20';
        {$else}
-       minorpatch = ' ';
+       minorpatch = '-rc2';
        {$endif}
        {$endif}
        {$endif}
