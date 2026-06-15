@@ -67,7 +67,6 @@ type
     function Accept : Boolean; virtual;
     Function Close : Boolean; virtual;
     function Shutdown(BiDirectional : Boolean): boolean; virtual;
-    function CanRead(TimeOut : Integer): Boolean; virtual;
     function Recv(Const Buffer; Count: Integer): Integer; virtual;
     function Send(Const Buffer; Count: Integer): Integer; virtual;
     function BytesAvailable: Integer; virtual;
@@ -100,7 +99,6 @@ type
     Constructor Create (AHandle : Longint; AHandler : TSocketHandler = Nil);virtual;
     destructor Destroy; override;
     function Seek(Offset: Longint; Origin: Word): Longint; override;
-    Function CanRead(TimeOut : Integer): Boolean;
     Function Read (Var Buffer; Count : Longint) : longint; Override;
     Function Write (Const Buffer; Count : Longint) :Longint; Override;
     Property SocketOptions : TSocketOptions Read FSocketOptions
@@ -339,34 +337,6 @@ begin
   Result:=False;
 end;
 
-function TSocketHandler.CanRead(TimeOut : Integer): Boolean;
-{$if defined(unix) or defined(windows)}
-var
-  FDS: TFDSet;
-  TimeV: TTimeVal;
-{$endif}
-begin
-  Result:=False;
-{$if defined(unix) or defined(windows)}
-  TimeV.tv_usec := (TimeOut mod 1000) * 1000;
-  TimeV.tv_sec := TimeOut div 1000;
-{$endif}
-
-{$ifdef unix}
-  FDS := Default(TFDSet);
-  fpFD_Zero(FDS);
-  fpFD_Set(FSocket.Handle, FDS);
-  Result := fpSelect(Socket.Handle + 1, @FDS, @FDS, @FDS, @TimeV) > 0;
-{$else}
-{$ifdef windows}
-  FDS := Default(TFDSet);
-  FD_Zero(FDS);
-  FD_Set(FSocket.Handle, FDS);
-  Result := Select(Socket.Handle + 1, @FDS, @FDS, @FDS, @TimeV) > 0;
-{$endif}
-{$endif}
-end;
-
 function TSocketHandler.Recv(Const Buffer; Count: Integer): Integer;
 
 Var
@@ -457,11 +427,6 @@ begin
   If (FHandler=Nil) then
     FHandler:=TSocketHandler.Create;
   FHandler.SetSocket(Self);
-end;
-
-Function TSocketStream.CanRead (TimeOut : Integer) : Boolean;
-begin
- Result:=FHandler.CanRead(TimeOut);
 end;
 
 destructor TSocketStream.Destroy;
