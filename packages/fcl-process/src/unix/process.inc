@@ -317,6 +317,7 @@ Var
   res      : cint;
   FoundName,
   PName    : String;
+  SysCurrentDir: String;
 
 begin
   If (poUsePipes in Options) then
@@ -346,6 +347,13 @@ begin
           else
             raise EProcess.CreateFmt(SErrNoSuchProgram,[PName]);
         end;
+
+        // convert FCurrentDirectory codepage before fpFork, otherwise risk of deadlock with
+        // other thread also converting strings
+        if (FCurrentDirectory<>'') then
+          SysCurrentDir:=ToSingleByteFileSystemEncodedFileName(FCurrentDirectory)
+        else
+          SysCurrentDir:='';
 
 {$if (defined(DARWIN) or defined(SUNOS))}
         { can't use vfork in case the child has to be
@@ -382,10 +390,10 @@ begin
         else
           begin
             { We're in the child }
-            if (FCurrentDirectory<>'') then
+            if (SysCurrentDir<>'') then
                begin
 {$push}{$i-}
-                 ChDir(FCurrentDirectory);
+                 ChDir(SysCurrentDir);
                  { exit if the requested working directory does not exist (can
                    use DirectoryExists, that would not be atomic; cannot change
                    before forking because that would also change the CWD of the
@@ -413,7 +421,11 @@ begin
               end
             else if poNoConsole in Options then
               begin
-                fd:=FileOpen('/dev/null',fmOpenReadWrite or fmShareDenyNone);
+                // do not use FileOpen, it converts the filename codepage, risk of
+                // deadlock with other thread also converting strings
+                repeat
+                  fd:=fpopen(PAnsiChar('/dev/null'),O_RDWR);
+                until (fd<>-1) or (fpgeterrno<>ESysEINTR);
                 safefpdup2(fd,0);
                 safefpdup2(fd,1);
                 safefpdup2(fd,2);
@@ -523,13 +535,9 @@ end;
 Function TProcess.Terminate(AExitCode : Integer) : Boolean;
 
 begin
-  Result:=False;
   Result:=fpkill(Handle,SIGTERM)=0;
-  If Result then
-    begin
-    If Running then
-      Result:=fpkill(Handle,SIGKILL)=0;
-    end;
+  If Result and Running then
+    Result:=fpkill(Handle,SIGKILL)=0;
   { the fact that the signal has been sent does not
     mean that the process has already handled the
     signal -> wait instead of calling getexitstatus }
